@@ -27,17 +27,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ImmutableBitSet;
 import org.apache.kylin.cube.model.SelectRule;
-import org.apache.kylin.metadata.model.JoinTableDesc;
-import org.apache.kylin.metadata.model.MeasureDesc;
-import org.apache.kylin.metadata.model.TableRef;
-import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
+import org.apache.kylin.metadata.model.JoinTableDesc;
+import org.apache.kylin.metadata.model.MeasureDesc;
 import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.NDataModelManager;
+import org.apache.kylin.metadata.model.TableRef;
+import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.tool.bisync.model.ColumnDef;
 import org.apache.kylin.tool.bisync.model.JoinTreeNode;
@@ -67,6 +69,9 @@ public class SyncModelBuilder {
         markHasPermissionIndexedColumnsAndMeasures(columnDefMap, measureDefs, indexPlan, null, null,
                 syncContext.getModelElement());
         markComputedColumnVisibility(columnDefMap, measureDefs, syncContext.getKylinConfig().exposeComputedColumn());
+        addHiddenComputedColumns(columnDefMap, syncContext.getProjectName(), dataModelDesc,
+                syncContext.getKylinConfig().exposeModelRelatedComputedColumns());
+
         Set<String[]> hierarchies = getHierarchies(indexPlan);
         JoinTreeNode joinTree = generateJoinTree(dataModelDesc.getJoinTables(), dataModelDesc.getRootFactTableName());
 
@@ -85,6 +90,8 @@ public class SyncModelBuilder {
         markHasPermissionIndexedColumnsAndMeasures(columnDefMap, measureDefs, indexPlan, dimensions, measures,
                 syncContext.getModelElement());
         markComputedColumnVisibility(columnDefMap, measureDefs, syncContext.getKylinConfig().exposeComputedColumn());
+        addHiddenComputedColumns(columnDefMap, syncContext.getProjectName(), dataModelDesc,
+                syncContext.getKylinConfig().exposeModelRelatedComputedColumns());
         Set<String[]> hierarchies = getHierarchies(indexPlan);
         JoinTreeNode joinTree = generateJoinTree(dataModelDesc.getJoinTables(), dataModelDesc.getRootFactTableName());
 
@@ -106,6 +113,8 @@ public class SyncModelBuilder {
         markHasPermissionIndexedColumnsAndMeasures(columnDefMap, measureDefs, indexPlan, allAuthColumns, dimensions,
                 measures, syncContext.getModelElement());
         markComputedColumnVisibility(columnDefMap, measureDefs, syncContext.getKylinConfig().exposeComputedColumn());
+        addHiddenComputedColumns(columnDefMap, syncContext.getProjectName(), dataModelDesc,
+                syncContext.getKylinConfig().exposeModelRelatedComputedColumns());
         Set<String[]> hierarchies = getHierarchies(indexPlan).stream()
                 .map(hierarchyArray -> Arrays.stream(hierarchyArray).filter(renameColumnName(allAuthColumns)::contains)
                         .collect(Collectors.toSet()).toArray(new String[0]))
@@ -357,7 +366,7 @@ public class SyncModelBuilder {
     }
 
     private Set<String> convertColNames(NDataModel model, ComputedColumnDesc computedColumnDesc,
-                                              Set<String> normalColumns) {
+            Set<String> normalColumns) {
         Set<String> normalCols = convertCCToNormalCols(model, computedColumnDesc, normalColumns);
         Set<String> newAuthColumns = Sets.newHashSet();
         model.getAllTables().forEach(tableRef -> {
@@ -368,6 +377,7 @@ public class SyncModelBuilder {
         return newAuthColumns;
 
     }
+
     private Set<String> convertCCToNormalCols(NDataModel model, ComputedColumnDesc computedColumnDesc,
             Set<String> normalColumns) {
         Set<String> ccUsedColsWithModel = ComputedColumnUtil.getCCUsedColsWithModel(model, computedColumnDesc);
@@ -448,5 +458,31 @@ public class SyncModelBuilder {
             joinTree.setChildNodes(childNodes);
         }
         return joinTree;
+    }
+
+    private Map<String, ColumnDef> addHiddenComputedColumns(Map<String, ColumnDef> columnDefMap, String projectName,
+            NDataModel dataModelDesc, boolean exposeModelRelatedComputedColumns) {
+        if (exposeModelRelatedComputedColumns) {
+            NDataModelManager dataModelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                    projectName);
+            List<NDataModel> dataModelList = dataModelManager.listAllModels();
+            List<NDataModel> modelsSameRootFactTable = dataModelList.stream()
+                    .filter(nDataModel -> !nDataModel.isBroken() && !nDataModel.getId().equals(dataModelDesc.getId())
+                            && nDataModel.getRootFactTableName().equals(dataModelDesc.getRootFactTableName()))
+                    .collect(Collectors.toList());
+            modelsSameRootFactTable.forEach(nDataModel -> {
+                List<ComputedColumnDesc> ccDescs = nDataModel.getComputedColumnDescs();
+                Set<String> currModelCCs = dataModelDesc.getComputedColumnDescs().stream()
+                        .map(ComputedColumnDesc::getIdentName).collect(Collectors.toSet());
+                ccDescs.forEach(ccDesc -> {
+                    if (!currModelCCs.contains(ccDesc.getIdentName())) {
+                        ColumnDef computedColumnDef = new ColumnDef("dimension", ccDesc.getTableAlias(), null,
+                                ccDesc.getColumnName(), ccDesc.getDatatype(), true, true);
+                        columnDefMap.put(ccDesc.getTableAlias() + "." + ccDesc.getColumnName(), computedColumnDef);
+                    }
+                });
+            });
+        }
+        return columnDefMap;
     }
 }

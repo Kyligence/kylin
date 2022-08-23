@@ -18,15 +18,12 @@
 
 package org.apache.spark.sql
 
-import java.io.{BufferedReader, BufferedWriter, File, FileReader, FileWriter, PrintWriter}
-import java.net.URI
-import java.nio.file.Paths
-import org.apache.kylin.query.util.ExtractFactory
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.security.UserGroupInformation
-import org.apache.kylin.common.{KapConfig, KylinConfig}
 import org.apache.kylin.common.util.{HadoopUtil, Unsafe}
+import org.apache.kylin.common.{KapConfig, KylinConfig}
 import org.apache.kylin.metadata.query.BigQueryThresholdUpdater
+import org.apache.kylin.query.util.ExtractFactory
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.SparkSession.Builder
@@ -38,7 +35,9 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.springframework.expression.common.TemplateParserContext
 import org.springframework.expression.spel.standard.SpelExpressionParser
 
-import java.util
+import java.io._
+import java.net.URI
+import java.nio.file.Paths
 import scala.collection.JavaConverters._
 
 class KylinSession(
@@ -98,8 +97,8 @@ class KylinSession(
 }
 
 object KylinSession extends Logging {
-  def NORMAL_FAIR_SCHEDULER_FILE_NAME: String = "/fairscheduler.xml"
-  def QUERY_LIMIT_FAIR_SCHEDULER_FILE_NAME: String = "/query-limit-fair-scheduler.xml"
+  val NORMAL_FAIR_SCHEDULER_FILE_NAME: String = "/fairscheduler.xml"
+  val QUERY_LIMIT_FAIR_SCHEDULER_FILE_NAME: String = "/query-limit-fair-scheduler.xml"
 
   implicit class KylinBuilder(builder: Builder) {
     var queryCluster: Boolean = true
@@ -318,9 +317,9 @@ object KylinSession extends Logging {
       if (kapConfig.getKylinConfig.asyncProfilingEnabled()) {
         val plugins = sparkConf.get("spark.plugins", "")
         if (plugins.isEmpty) {
-          sparkConf.set("spark.plugins", "org.apache.kylin.query.asyncprofiler.AsyncProfilerSparkPlugin")
+          sparkConf.set("spark.plugins", "org.apache.kylin.query.asyncprofiler.QueryAsyncProfilerSparkPlugin")
         } else {
-          sparkConf.set("spark.plugins", "org.apache.kylin.query.asyncprofiler.AsyncProfilerSparkPlugin," + plugins)
+          sparkConf.set("spark.plugins", "org.apache.kylin.query.asyncprofiler.QueryAsyncProfilerSparkPlugin," + plugins)
         }
       }
 
@@ -344,7 +343,9 @@ object KylinSession extends Logging {
                                extensions: SparkSessionExtensions): SparkSessionExtensions = {
     extensionConfClassNames.foreach { extensionConfClassName =>
       try {
-        val extensionConfClass = Utils.classForName(extensionConfClassName)
+        // scalastyle:off classforname
+        val extensionConfClass = Class.forName(extensionConfClassName, true, Utils.getContextOrSparkClassLoader)
+        // scalastyle:on classforname
         val extensionConf = extensionConfClass.getConstructor().newInstance()
           .asInstanceOf[SparkSessionExtensions => Unit]
         extensionConf(extensions)

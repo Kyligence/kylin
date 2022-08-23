@@ -630,7 +630,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         Assert.assertNotNull(reModel);
         Assert.assertFalse(reModel.isBroken());
         Assert.assertEquals(9, reModel.getJoinTables().size());
-        Assert.assertEquals(17, reModel.getAllMeasures().size());
+        Assert.assertEquals(18, reModel.getAllMeasures().size());
         Assert.assertEquals(198, reModel.getAllNamedColumns().size());
         Assert.assertEquals("ORDER_ID", reModel.getAllNamedColumns().get(13).getName());
         Assert.assertEquals(NDataModel.ColumnStatus.TOMB, reModel.getAllNamedColumns().get(13).getStatus());
@@ -692,7 +692,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         Assert.assertNotNull(reModel);
         Assert.assertFalse(reModel.isBroken());
         Assert.assertEquals(9, reModel.getJoinTables().size());
-        Assert.assertEquals(17, reModel.getAllMeasures().size());
+        Assert.assertEquals(18, reModel.getAllMeasures().size());
         Assert.assertEquals(198, reModel.getAllNamedColumns().size());
         Assert.assertEquals("CAL_DT", reModel.getAllNamedColumns().get(2).getName());
         Assert.assertEquals("DEAL_YEAR", reModel.getAllNamedColumns().get(28).getName());
@@ -742,7 +742,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         Assert.assertNotNull(reModel);
         Assert.assertFalse(reModel.isBroken());
         Assert.assertEquals(9, reModel.getJoinTables().size());
-        Assert.assertEquals(17, reModel.getAllMeasures().size());
+        Assert.assertEquals(18, reModel.getAllMeasures().size());
         Assert.assertEquals(198, reModel.getAllNamedColumns().size());
         Assert.assertEquals("CAL_DT", reModel.getAllNamedColumns().get(2).getName());
         Assert.assertEquals("DEAL_YEAR", reModel.getAllNamedColumns().get(28).getName());
@@ -1047,25 +1047,58 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
     }
 
     @Test
-    public void testCheckEffectedJobs() throws Exception {
+    public void testReloadTableRemoveCol() throws Exception {
         NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
-        AbstractExecutable job1 = new NTableSamplingJob();
-        job1.setTargetSubject("DEFAULT.TEST_ORDER");
-        job1.setJobType(JobTypeEnum.TABLE_SAMPLING);
-        executableManager.addJob(job1);
-        removeColumn("DEFAULT.TEST_ORDER", "TEST_TIME_ENC");
+        AbstractExecutable job = new NTableSamplingJob();
+        String tableIdentity = "DEFAULT.TEST_ORDER";
+        job.setTargetSubject(tableIdentity);
+        job.setJobType(JobTypeEnum.TABLE_SAMPLING);
+        executableManager.addJob(job);
+        removeColumn(tableIdentity, "TEST_TIME_ENC");
 
         OpenPreReloadTableResponse response = tableService.preProcessBeforeReloadWithoutFailFast(PROJECT,
-                "DEFAULT.TEST_ORDER");
+                tableIdentity);
         Assert.assertTrue(response.isHasEffectedJobs());
         Assert.assertEquals(1, response.getEffectedJobs().size());
+        Assert.assertThrows(TABLE_RELOAD_HAVING_NOT_FINAL_JOB.getMsg(job.getId()), KylinException.class,
+                () -> tableService.preProcessBeforeReloadWithFailFast(PROJECT, tableIdentity));
+    }
 
-        try {
-            tableService.preProcessBeforeReloadWithFailFast(PROJECT, "DEFAULT.TEST_ORDER");
-            Assert.fail();
-        } catch (KylinException e) {
-            Assert.assertTrue(e.toString().contains(TABLE_RELOAD_HAVING_NOT_FINAL_JOB.getErrorCode().getCode()));
-        }
+    @Test
+    public void testReloadTableAddCol() throws Exception {
+        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        AbstractExecutable job = new NTableSamplingJob();
+        String tableIdentity = "DEFAULT.TEST_ORDER";
+        job.setTargetSubject(tableIdentity);
+        job.setJobType(JobTypeEnum.TABLE_SAMPLING);
+        executableManager.addJob(job);
+        addColumn(tableIdentity, true, new ColumnDesc("", "TEST_COL", "int", "", "", "", null));
+        OpenPreReloadTableResponse response = tableService.preProcessBeforeReloadWithoutFailFast(PROJECT,
+                tableIdentity);
+        Assert.assertTrue(response.isHasEffectedJobs());
+        Assert.assertEquals(1, response.getEffectedJobs().size());
+        tableService.preProcessBeforeReloadWithFailFast(PROJECT, tableIdentity);
+    }
+
+    @Test
+    public void testReloadTableChangeColType() throws Exception {
+        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        AbstractExecutable job = new NTableSamplingJob();
+        String tableIdentity = "DEFAULT.TEST_KYLIN_FACT";
+        job.setTargetSubject(tableIdentity);
+        job.setJobType(JobTypeEnum.TABLE_SAMPLING);
+        executableManager.addJob(job);
+        changeTypeColumn(tableIdentity, new HashMap<String, String>() {
+            {
+                put("SLR_SEGMENT_CD", "bigint");
+            }
+        }, true);
+        OpenPreReloadTableResponse response = tableService.preProcessBeforeReloadWithoutFailFast(PROJECT,
+                tableIdentity);
+        Assert.assertTrue(response.isHasEffectedJobs());
+        Assert.assertEquals(1, response.getEffectedJobs().size());
+        Assert.assertThrows(TABLE_RELOAD_HAVING_NOT_FINAL_JOB.getMsg(job.getId()), KylinException.class,
+                () -> tableService.preProcessBeforeReloadWithFailFast(PROJECT, tableIdentity));
     }
 
     @Test

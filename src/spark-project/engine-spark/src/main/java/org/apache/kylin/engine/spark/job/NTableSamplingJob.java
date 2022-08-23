@@ -25,7 +25,7 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.exception.ExecuteException;
-import org.apache.kylin.job.execution.DefaultChainedExecutableOnTable;
+import org.apache.kylin.job.execution.DefaultExecutableOnTable;
 import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.apache.kylin.job.execution.JobTypeEnum;
@@ -46,7 +46,7 @@ import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class NTableSamplingJob extends DefaultChainedExecutableOnTable {
+public class NTableSamplingJob extends DefaultExecutableOnTable {
     public NTableSamplingJob() {
         super();
     }

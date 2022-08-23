@@ -19,7 +19,7 @@
 package org.apache.kylin.engine.spark.job;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.kylin.job.execution.DefaultChainedExecutableOnModel;
+import org.apache.kylin.job.execution.DefaultExecutableOnModel;
 import org.apache.kylin.job.execution.ExecutableHandler;
 
 import com.google.common.base.Preconditions;
@@ -28,7 +28,7 @@ import lombok.val;
 
 public class ExecutableHandlerFactory {
 
-    public static ExecutableHandler createExecutableHandler(DefaultChainedExecutableOnModel job) {
+    public static ExecutableHandler createExecutableHandler(DefaultExecutableOnModel job) {
         val segmentIds = job.getTargetSegments();
         switch (job.getJobType()) {
         case INDEX_BUILD:

@@ -88,7 +88,7 @@ public class PropertiesDelegate extends Properties {
         return getAllProperties().keys();
     }
 
-    private synchronized Properties getAllProperties() {
+    private Properties getAllProperties() {
         Properties propertiesView = new Properties();
         if (this.configLoader != null) {
             propertiesView.putAll(this.configLoader.getProperties());

@@ -32,7 +32,6 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
-import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.kylin.common.KylinConfig;
@@ -312,31 +311,11 @@ public class ComputedColumnUtil {
     // model X contains table f,a,b,c, and model Y contains table f,a,b,d
     // if two cc involve table a,b, they might still be treated equal regardless of the model difference on c,d
     private static JoinsGraph getCCExprRelatedSubgraph(ComputedColumnDesc cc, NDataModel model) {
-        Set<String> aliasSets = getUsedAliasSet(cc.getExpression());
+        Set<String> aliasSets = CalciteParser.getUsedAliasSet(cc.getExpression());
         if (cc.getTableAlias() != null) {
             aliasSets.add(cc.getTableAlias());
         }
         return model.getJoinsGraph().getSubgraphByAlias(aliasSets);
-    }
-
-    public static Set<String> getUsedAliasSet(String expr) {
-        if (expr == null) {
-            return Sets.newHashSet();
-        }
-        SqlNode sqlNode = CalciteParser.getReadonlyExpNode(expr);
-
-        final Set<String> s = Sets.newHashSet();
-        SqlVisitor sqlVisitor = new SqlBasicVisitor() {
-            @Override
-            public Object visit(SqlIdentifier id) {
-                Preconditions.checkState(id.names.size() == 2);
-                s.add(id.names.get(0));
-                return null;
-            }
-        };
-
-        sqlNode.accept(sqlVisitor);
-        return s;
     }
 
     public static boolean isSameName(ComputedColumnDesc col1, ComputedColumnDesc col2) {

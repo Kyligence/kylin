@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.is;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1260,7 +1261,7 @@ public class IndexPlanServiceTest extends SourceTestCase {
 
         // mark a layout tobedelete
         indexManager.updateIndexPlan(modelId,
-                copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId, Sets.newHashSet(tobeDeleteLayoutId)));
+                copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId, Sets.newHashSet(tobeDeleteLayoutId), Collections.emptyMap()));
 
         //remove tobedelete layout from seg1
         val newDf = dfManager.getDataflow(modelId);

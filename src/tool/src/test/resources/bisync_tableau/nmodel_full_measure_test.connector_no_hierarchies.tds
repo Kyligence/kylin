@@ -95,23 +95,45 @@
       <relation type="table" connection="kyligence_odbc.06xjot407mgsfe1bnnyt60p4vjuf" name="BUYER_COUNTRY" table="[DEFAULT].[TEST_COUNTRY]"/>
     </relation>
     <cols>
+      <map key="[NEST5]" value="[TEST_KYLIN_FACT].[NEST5]"/>
       <map key="[CAL_DT]" value="[TEST_KYLIN_FACT].[CAL_DT]"/>
+      <map key="[NEST2]" value="[TEST_KYLIN_FACT].[NEST2]"/>
+      <map key="[NEST1]" value="[TEST_KYLIN_FACT].[NEST1]"/>
+      <map key="[NEST4]" value="[TEST_KYLIN_FACT].[NEST4]"/>
+      <map key="[ORDER_ID (TEST_ORDER)]" value="[TEST_ORDER].[ORDER_ID]"/>
+      <map key="[NEST3]" value="[TEST_KYLIN_FACT].[NEST3]"/>
+      <map key="[LEFTJOIN_SELLER_COUNTRY_ABBR]" value="[TEST_KYLIN_FACT].[LEFTJOIN_SELLER_COUNTRY_ABBR]"/>
+      <map key="[LEFTJOIN_BUYER_ID_AND_COUNTRY_NAME]" value="[TEST_KYLIN_FACT].[LEFTJOIN_BUYER_ID_AND_COUNTRY_NAME]"/>
+      <map key="[TEST_TIME_ENC]" value="[TEST_ORDER].[TEST_TIME_ENC]"/>
+      <map key="[LEFTJOIN_BUYER_COUNTRY_ABBR]" value="[TEST_KYLIN_FACT].[LEFTJOIN_BUYER_COUNTRY_ABBR]"/>
       <map key="[ORDER_ID (TEST_KYLIN_FACT)]" value="[TEST_KYLIN_FACT].[ORDER_ID]"/>
       <map key="[PRICE]" value="[TEST_KYLIN_FACT].[PRICE]"/>
-      <map key="[ORDER_ID (TEST_ORDER)]" value="[TEST_ORDER].[ORDER_ID]"/>
       <map key="[ITEM_COUNT]" value="[TEST_KYLIN_FACT].[ITEM_COUNT]"/>
+      <map key="[DEAL_YEAR]" value="[TEST_KYLIN_FACT].[DEAL_YEAR]"/>
+      <map key="[DEAL_AMOUNT]" value="[TEST_KYLIN_FACT].[DEAL_AMOUNT]"/>
       <map key="[TEST_DATE_ENC]" value="[TEST_ORDER].[TEST_DATE_ENC]"/>
-      <map key="[TEST_TIME_ENC]" value="[TEST_ORDER].[TEST_TIME_ENC]"/>
+      <map key="[LEFTJOIN_SELLER_ID_AND_COUNTRY_NAME]" value="[TEST_KYLIN_FACT].[LEFTJOIN_SELLER_ID_AND_COUNTRY_NAME]"/>
     </cols>
   </connection>
   <aliases enabled="yes"/>
+  <column caption="NEST5" datatype="real" name="[NEST5]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="CAL_DT" datatype="date" name="[CAL_DT]" role="dimension" type="ordinal"/>
+  <column caption="NEST2" datatype="real" name="[NEST2]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="NEST1" datatype="real" name="[NEST1]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="NEST4" datatype="real" name="[NEST4]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="ORDER_ID" datatype="integer" name="[ORDER_ID (TEST_ORDER)]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="NEST3" datatype="real" name="[NEST3]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="LEFTJOIN_SELLER_COUNTRY_ABBR" datatype="string" name="[LEFTJOIN_SELLER_COUNTRY_ABBR]" role="dimension" type="nominal" hidden="true"/>
+  <column caption="LEFTJOIN_BUYER_ID_AND_COUNTRY_NAME" datatype="string" name="[LEFTJOIN_BUYER_ID_AND_COUNTRY_NAME]" role="dimension" type="nominal" hidden="true"/>
+  <column caption="TEST_TIME_ENC" datatype="datetime" name="[TEST_TIME_ENC]" role="dimension" type="nominal"/>
+  <column caption="LEFTJOIN_BUYER_COUNTRY_ABBR" datatype="string" name="[LEFTJOIN_BUYER_COUNTRY_ABBR]" role="dimension" type="nominal" hidden="true"/>
   <column caption="ORDER_ID" datatype="integer" name="[ORDER_ID (TEST_KYLIN_FACT)]" role="dimension" type="ordinal"/>
   <column caption="PRICE" datatype="real" name="[PRICE]" role="dimension" type="ordinal" hidden="true"/>
-  <column caption="ORDER_ID" datatype="integer" name="[ORDER_ID (TEST_ORDER)]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="ITEM_COUNT" datatype="integer" name="[ITEM_COUNT]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="DEAL_YEAR" datatype="integer" name="[DEAL_YEAR]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="DEAL_AMOUNT" datatype="real" name="[DEAL_AMOUNT]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="TEST_DATE_ENC" datatype="date" name="[TEST_DATE_ENC]" role="dimension" type="ordinal"/>
-  <column caption="TEST_TIME_ENC" datatype="datetime" name="[TEST_TIME_ENC]" role="dimension" type="nominal"/>
+  <column caption="LEFTJOIN_SELLER_ID_AND_COUNTRY_NAME" datatype="string" name="[LEFTJOIN_SELLER_ID_AND_COUNTRY_NAME]" role="dimension" type="nominal" hidden="true"/>
   <column caption="TRANS_CNT" datatype="integer" name="[TRANS_CNT]" role="measure" type="quantitative">
     <calculation class="tableau" formula="COUNT(1)"/>
   </column>

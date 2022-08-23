@@ -96,14 +96,19 @@ public class DoubleQuotePushDownConverterTest extends NLocalFileMetadataTestCase
     }
 
     @Test
-    public void testConvertDoubleQuoteFailure() {
-        List<String> convertFailureUTs = Arrays.asList(
-                //quoted by `
-                "select ACCOUNT_ID as 中文id, ACCOUNT_COUNTRY as `country` from  `DEFAULT`.TEST_ACCOUNT where ACCOUNT_COUNTRY='RU'",
-                //syntax error
-                "select ACCOUNT_ID as 中文id, ACCOUNT_COUNTRY as country from1  \"DEFAULT\".TEST_ACCOUNT where ACCOUNT_COUNTRY='RU'");
+    public void convertBackTickQuoteNormal() {
+        String sql = "select ACCOUNT_ID as 中文id, ACCOUNT_COUNTRY as `country` from  `DEFAULT`.TEST_ACCOUNT where ACCOUNT_COUNTRY='RU'";
+        String expected = "select \"ACCOUNT_ID\" as \"中文ID\", \"ACCOUNT_COUNTRY\" as \"country\" from  \"DEFAULT\".\"TEST_ACCOUNT\" where \"ACCOUNT_COUNTRY\"='RU'";
+        final String real = DoubleQuotePushDownConverter.convertDoubleQuote(sql);
+        Assert.assertEquals(expected, real);
 
-        convertFailureUTs.forEach(this::testConvertFailure);
+    }
+
+    @Test
+    public void testConvertDoubleQuoteFailure() {
+        // wrong grammar sql
+        String sql = "select ACCOUNT_ID as 中文id, ACCOUNT_COUNTRY as country from1  \"DEFAULT\".TEST_ACCOUNT where ACCOUNT_COUNTRY='RU'";
+        testConvertFailure(sql);
 
     }
 

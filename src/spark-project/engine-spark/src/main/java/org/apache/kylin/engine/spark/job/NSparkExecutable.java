@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -63,11 +64,13 @@ import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.execution.StageBase;
+import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.plugin.asyncprofiler.BuildAsyncProfilerSparkPlugin;
 import org.apache.parquet.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,8 +81,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import io.kyligence.kap.engine.spark.job.ISparkJobHandler;
-import io.kyligence.kap.engine.spark.job.SparkAppDescription;
 import lombok.val;
 
 /**
@@ -111,6 +112,7 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
     protected static final String SPARK_MASTER = "spark.master";
     protected static final String DEPLOY_MODE = "spark.submit.deployMode";
     protected static final String CLUSTER_MODE = "cluster";
+    protected static final String SPARK_PLUGINS = "spark.plugins";
     protected ISparkJobHandler sparkJobHandler;
 
     private transient final List<StageBase> stages = Lists.newCopyOnWriteArrayList();
@@ -118,17 +120,11 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
 
     public NSparkExecutable() {
         super();
-        if(!KylinConfig.getInstanceFromEnv().isUTEnv()) {
-            logger.info("Has-args NSparkExecutable");
-        }
         initHandler();
     }
 
     public NSparkExecutable(Object notSetId) {
         super(notSetId);
-        if(!KylinConfig.getInstanceFromEnv().isUTEnv()) {
-            logger.info("No-args NSparkExecutable");
-        }
         initHandler();
     }
 
@@ -137,9 +133,21 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
     }
 
     protected void initHandler() {
-        logger.debug("Handler class name {}", KylinConfig.getInstanceFromEnv().getSparkBuildJobHandlerClassName());
         sparkJobHandler = (ISparkJobHandler) ClassUtil
                 .newInstance(KylinConfig.getInstanceFromEnv().getSparkBuildJobHandlerClassName());
+    }
+
+    @Override
+    public void killApplicationIfExistsOrUpdateStepStatus() {
+        val scheduler = NDefaultScheduler.getInstance(getProject());
+        Optional.ofNullable(scheduler.getContext()).ifPresent(context -> {
+            Optional.ofNullable(context.getRunningJobThread(this)).ifPresent(taskThread -> {
+                taskThread.interrupt();
+                context.removeRunningJob(this);
+            });
+        });
+
+        killOrphanApplicationIfExists(getId());
     }
 
     @Override
@@ -264,6 +272,9 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         sparkJobHandler.prepareEnviroment(project, jobId, getParams());
 
         String argsPath = createArgsFileOnHDFS(config, jobId);
+
+        checkParentJobStatus();
+
         if (config.isUTEnv()) {
             return runLocalMode(argsPath);
         } else {
@@ -345,17 +356,9 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         if (!originalConfig.isDevOrUT() && !checkHadoopWorkingDir()) {
             KylinConfig.getInstanceFromEnv().reloadKylinConfigPropertiesFromSiteProperties();
         }
-        KylinConfigExt kylinConfigExt = null;
         val project = getProject();
         Preconditions.checkState(StringUtils.isNotBlank(project), "job " + getId() + " project info is empty");
-        val dataflow = getParam(NBatchConstants.P_DATAFLOW_ID);
-        if (StringUtils.isNotBlank(dataflow)) {
-            val dataflowManager = NDataflowManager.getInstance(originalConfig, project);
-            kylinConfigExt = dataflowManager.getDataflow(dataflow).getConfig();
-        } else {
-            val projectInstance = NProjectManager.getInstance(originalConfig).getProject(project);
-            kylinConfigExt = projectInstance.getConfig();
-        }
+        KylinConfigExt kylinConfigExt = getKylinConfigExt(originalConfig, project);
 
         val jobOverrides = Maps.<String, String> newHashMap();
         val parentId = getParentId();
@@ -382,6 +385,19 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         return KylinConfigExt.createInstance(kylinConfigExt, jobOverrides);
     }
 
+    public KylinConfigExt getKylinConfigExt(KylinConfig originalConfig, String project) {
+        val dataflowId = getParam(NBatchConstants.P_DATAFLOW_ID);
+        if (StringUtils.isNotBlank(dataflowId)) {
+            val dataflowManager = NDataflowManager.getInstance(originalConfig, project);
+            val dataflow = dataflowManager.getDataflow(dataflowId);
+            if (null != dataflow) {
+                return dataflow.getConfig();
+            }
+        }
+        val projectInstance = NProjectManager.getInstance(originalConfig).getProject(project);
+        return projectInstance.getConfig();
+    }
+
     public SparkAppDescription getSparkAppDesc() {
         val desc = new SparkAppDescription();
 
@@ -401,7 +417,7 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
     }
 
     protected ExecuteResult runSparkSubmit(String hadoopConfDir, String kylinJobJar, String appArgs) {
-        killOrphanApplicationIfExists(getId());
+        sparkJobHandler.killOrphanApplicationIfExists(project, getId(), getConfig(), true, getSparkConf());
         try {
             Object cmd;
             val desc = getSparkAppDesc();
@@ -434,7 +450,7 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
     }
 
     public void killOrphanApplicationIfExists(String jobStepId) {
-        sparkJobHandler.killOrphanApplicationIfExists(project, jobStepId, getConfig(), getSparkConf());
+        sparkJobHandler.killOrphanApplicationIfExists(project, jobStepId, getConfig(), false, getSparkConf());
     }
 
     protected Map<String, String> getSparkConfigOverride(KylinConfig config) {
@@ -503,7 +519,7 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
                 return;
             }
             // dump metadata
-            ResourceStore.dumpResourceMaps(config, tmpDir, dumpMap, props);
+            ResourceStore.dumpResourceMaps(tmpDir, dumpMap, props);
         }
 
         // copy metadata to target metaUrl
@@ -668,6 +684,9 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         // Rewrite executor extra java options.
         rewriteExecutorExtraJavaOptions(kylinConf, sparkConf);
 
+        // Rewrite plugin options.
+        rewritePluginOptions(kylinConf, sparkConf);
+
         // Rewrite extra classpath.
         rewriteExtraClasspath(kylinConf, sparkConf);
 
@@ -709,6 +728,15 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
 
         if (kapConf.getPlatformZKEnable()) {
             sb.append(SPACE).append("-Djava.security.auth.login.config=").append(kapConf.getKerberosJaasConfPath());
+        }
+
+        if (kylinConf.buildJobProfilingEnabled()) {
+            sb.append(SPACE).append("-Dspark.profiler.flagsDir=")
+                    .append(kylinConf.getJobTmpProfilerFlagsDir(project, getId()));
+            sb.append(SPACE).append("-Dspark.profiler.collection.timeout=")
+                    .append(kylinConf.buildJobProfilingResultTimeout());
+            sb.append(SPACE).append("-Dspark.profiler.profiling.timeout=")
+                    .append(kylinConf.buildJobProfilingProfileTimeout());
         }
 
         sparkConf.put(DRIVER_EXTRA_JAVA_OPTIONS, sb.toString().trim());
@@ -780,6 +808,15 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         }
         String newOptions = "-Djava.security.krb5.conf=" + value + SPACE + originOptions;
         confMap.set(key, newOptions.trim());
+    }
+
+    private void rewritePluginOptions(KylinConfig kylinConf, Map<String, String> sparkConf) {
+        if (kylinConf.buildJobProfilingEnabled()) {
+            sparkConf.computeIfPresent(SPARK_PLUGINS, (pluginKey, pluginValue) -> pluginValue + ","
+                    + BuildAsyncProfilerSparkPlugin.class.getCanonicalName());
+            sparkConf.computeIfAbsent(SPARK_PLUGINS,
+                    pluginKey -> BuildAsyncProfilerSparkPlugin.class.getCanonicalName());
+        }
     }
 
     private void rewriteExtraClasspath(KylinConfig kylinConf, Map<String, String> sparkConf) {
@@ -859,4 +896,8 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         return Collections.unmodifiableSet(sparkFiles);
     }
 
+    @Override
+    public void cancelJob() {
+        killOrphanApplicationIfExists(getId());
+    }
 }

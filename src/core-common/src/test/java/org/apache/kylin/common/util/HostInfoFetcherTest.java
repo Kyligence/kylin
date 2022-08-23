@@ -23,17 +23,19 @@ import java.net.UnknownHostException;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
-public class HostInfoFetcherTest {
+class HostInfoFetcherTest {
 
     @Test
-    public void testDefaultHostInfoGetHostname() throws UnknownHostException {
-        Mockito.mockStatic(InetAddress.class).when(InetAddress::getLocalHost).thenThrow(UnknownHostException.class);
+    void testDefaultHostInfoGetHostname() {
 
-        DefaultHostInfoFetcher hostInfoFetcher = new DefaultHostInfoFetcher();
-
-        String hostname = hostInfoFetcher.getHostname();
-        Assertions.assertEquals("localhost", hostname);
+        try (MockedStatic<InetAddress> dummy = Mockito.mockStatic(InetAddress.class)) {
+            dummy.when(InetAddress::getLocalHost).thenThrow(UnknownHostException.class);
+            DefaultHostInfoFetcher hostInfoFetcher = new DefaultHostInfoFetcher();
+            String hostname = hostInfoFetcher.getHostname();
+            Assertions.assertEquals("localhost", hostname);
+        }
     }
 }

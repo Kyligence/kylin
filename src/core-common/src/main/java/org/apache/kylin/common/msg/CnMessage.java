@@ -16,24 +16,6 @@
  * limitations under the License.
  */
 
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.kylin.common.msg;
 
 import java.util.List;
@@ -44,6 +26,10 @@ import org.apache.kylin.common.annotation.Clarification;
 
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Part message is for enterprise.")
 public class CnMessage extends Message {
+
+    private static final String PARAMETER_NOT_ENABLED = "功能参数未启用，请检查参数 '%s'。";
+    private static final String PROFILING_STATUS_ERROR = "构建火焰图任务状态异常，";
+    private static final String TASK_TIMEOUT = "执行超时";
 
     protected CnMessage() {
 
@@ -834,7 +820,7 @@ public class CnMessage extends Message {
     }
 
     @Override
-    public String getChangeDegaultadmin() {
+    public String getChangeDefaultadmin() {
         return "无法修改系统默认内置管理员 ADMIN 用户的权限。";
     }
 
@@ -934,6 +920,26 @@ public class CnMessage extends Message {
     @Override
     public String getPermissionDenied() {
         return "拒绝访问";
+    }
+
+    @Override
+    public String getModifyPermissionOfSuperAdminFailed() {
+        return "超级管理员的权限不能被编辑。";
+    }
+
+    @Override
+    public String getGrantPermissionFailedByIllegalAuthorizingUser() {
+        return "编辑失败，只有超级管理员或有查询权限的系统管理员可以编辑用户的查询权限。";
+    }
+
+    @Override
+    public String getGrantPermissionFailedByNonSystemAdmin() {
+        return "编辑失败，你只能更改系统管理员的权限。";
+    }
+
+    @Override
+    public String getModifyOwnPermissionFailed() {
+        return "不能编辑自己的权限。";
     }
 
     @Override
@@ -1771,7 +1777,7 @@ public class CnMessage extends Message {
 
     @Override
     public String getAdminPermissionUpdateAbandon() {
-        return "管理员不支持被更新权限。";
+        return "项目管理员不支持被更新权限。";
     }
 
     @Override
@@ -2011,7 +2017,7 @@ public class CnMessage extends Message {
 
     @Override
     public String getParamTooLarge() {
-        return "参数 '%s' 太长， 最大 %s 字节。";
+        return "参数 '%s' 太长， 最大 %s KB。";
     }
 
     @Override
@@ -2108,5 +2114,55 @@ public class CnMessage extends Message {
     @Override
     public String getNonExistProject() {
         return "项目 %s 不存在，请检查后再重试.";
+    }
+
+    @Override
+    public String getInvalidMergeSegmentWithoutDFS() {
+        return "当前 Segments 所包含的索引未加载至 HDFS 存储/对象存储，请确保索引加载至 HDFS 存储后再合并。";
+    }
+
+    @Override
+    public String getDuplicateModelColumnAndMeasureName() {
+        return "模型中的列名 %s 与度量名 %s 重复，无法导出 TDS。请去除重名后再重试。";
+    }
+
+    @Override
+    public String getDuplicateDimensionNameAndMeasureName() {
+        return "维度名 %s 与度量名 %s 重复，无法导出 TDS。请去除重名后再重试。";
+    }
+
+    @Override
+    public String getDuplicateDimensionColAndMeasureName() {
+        return "维度的列名 %s 与度量名 %s 重复，无法导出 TDS。请去除重名后再重试。";
+    }
+
+    @Override
+    public String getProfilingNotEnabled() {
+        return "构建火焰图" + PARAMETER_NOT_ENABLED;
+    }
+
+    @Override
+    public String getProfilingNotStartError() {
+        return PROFILING_STATUS_ERROR + "收集任务未开始。";
+    }
+
+    @Override
+    public String getProfilingStartedError() {
+        return PROFILING_STATUS_ERROR + "收集任务正在执行。";
+    }
+
+    @Override
+    public String getProfilingJobNotStartError() {
+        return PROFILING_STATUS_ERROR + "Spark job 构建任务未开始。";
+    }
+
+    @Override
+    public String getProfilingJobFinishedError() {
+        return PROFILING_STATUS_ERROR + "Spark job 构建任务已结束。";
+    }
+
+    @Override
+    public String getProfilingCollectTimeout() {
+        return "构建火焰图任务" + TASK_TIMEOUT;
     }
 }

@@ -124,6 +124,10 @@ public class LoadInfo {
         return this;
     }
 
+    public String getTargetTable() {
+        return this.targetTable;
+    }
+
     public LoadInfo setOldSegmentId(String oldSegmentId) {
         this.oldSegmentId = oldSegmentId;
 

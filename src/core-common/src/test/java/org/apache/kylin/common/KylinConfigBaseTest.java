@@ -38,7 +38,9 @@ package org.apache.kylin.common;
 
 import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_SOURCE_ENABLE_KEY;
 import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_SOURCE_NAME_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -56,9 +58,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.util.Shell;
-import org.apache.kylin.common.util.TimeZoneUtils;
 import org.apache.kylin.common.constant.NonCustomProjectLevelConfig;
 import org.apache.kylin.common.util.ProcessUtils;
+import org.apache.kylin.common.util.TimeZoneUtils;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
@@ -897,7 +899,7 @@ class KylinConfigBaseTest {
         map.put("isMeasureNameCheckEnabled",
                 new PropertiesEntity("kylin.model.measure-name-check-enabled", "true", true));
         map.put("isConcurrencyFetchDataSourceSize",
-                new PropertiesEntity("kylin.job.concurrency-fetch-datasource-size-enabled", "false", false));
+                new PropertiesEntity("kylin.job.concurrency-fetch-datasource-size-enabled", "true", true));
         map.put("getConcurrencyFetchDataSourceSizeThreadNumber",
                 new PropertiesEntity("kylin.job.concurrency-fetch-datasource-size-thread_number", "10", 10));
         map.put("isSpark3ExecutorPrometheusEnabled",
@@ -919,6 +921,9 @@ class KylinConfigBaseTest {
                 new PropertiesEntity("kylin.source.load-hive-table-wait-sparder-seconds", "900", 900));
         map.put("getLoadHiveTableWaitSparderIntervals",
                 new PropertiesEntity("kylin.source.load-hive-table-wait-sparder-interval-seconds", "10", 10));
+        map.put("buildJobProfilingEnabled", new PropertiesEntity("kylin.engine.async-profiler-enabled", "false", false));
+        map.put("buildJobProfilingResultTimeout", new PropertiesEntity("kylin.engine.async-profiler-result-timeout", "60s", 60000L));
+        map.put("buildJobProfilingProfileTimeout", new PropertiesEntity("kylin.engine.async-profiler-profile-timeout", "5m", 300000L));
     }
 
     @Test
@@ -1015,8 +1020,8 @@ class KylinConfigBaseTest {
     void testMultipleUpdateEnvironment() {
         EnvironmentUpdateUtils.put("test.environment1", "test.value1");
         EnvironmentUpdateUtils.put("test.environment2", "test.value2");
-        assertEquals("Environment was not set propertly", "test.value1", System.getenv("test.environment1"));
-        assertEquals("Environment was not set propertly", "test.value2", System.getenv("test.environment2"));
+        assertEquals("test.value1", System.getenv("test.environment1"), "Environment was not set propertly");
+        assertEquals("test.value2", System.getenv("test.environment2"), "Environment was not set propertly");
     }
 
     @Test
@@ -1082,14 +1087,14 @@ class KylinConfigBaseTest {
     @Test
     void testMetadataUrlSetting() {
         val config = KylinConfig.getInstanceFromEnv();
-        Assert.assertEquals(config.getStreamingStatsUrl().toString(), config.getMetadataUrl().toString());
-        Assert.assertEquals(config.getQueryHistoryUrl().toString(), config.getMetadataUrl().toString());
+        assertEquals(config.getStreamingStatsUrl().toString(), config.getMetadataUrl().toString());
+        assertEquals(config.getQueryHistoryUrl().toString(), config.getMetadataUrl().toString());
         val pgUrl = "ke_metadata@jdbc,driverClassName=org.postgresql.Driver,"
                 + "url=jdbc:postgresql://sandbox:5432/kylin,username=postgres,password";
         config.setStreamingStatsUrl(pgUrl);
-        Assert.assertEquals(pgUrl, config.getStreamingStatsUrl().toString());
+        assertEquals(pgUrl, config.getStreamingStatsUrl().toString());
         config.setQueryHistoryUrl(pgUrl);
-        Assert.assertEquals(pgUrl, config.getQueryHistoryUrl().toString());
+        assertEquals(pgUrl, config.getQueryHistoryUrl().toString());
     }
 
     @Test
@@ -1098,14 +1103,14 @@ class KylinConfigBaseTest {
                 + "url=\"jdbc:mysql:replication://10.1.3.12:3306,10.1.3.11:3306/kylin_test?useUnicode=true&characterEncoding=utf8\","
                 + "username=kylin,password=test,maxTotal=20,maxIdle=20";
         StorageURL storageURL = StorageURL.valueOf(url);
-        Assert.assertEquals(url, storageURL.toString());
+        assertEquals(url, storageURL.toString());
     }
 
     @Test
     void getIsMetadataKeyCaseInSensitiveEnabled() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         boolean metadataKeyCaseInSensitiveEnabled = config.isMetadataKeyCaseInSensitiveEnabled();
-        Assert.assertFalse(metadataKeyCaseInSensitiveEnabled);
+        assertFalse(metadataKeyCaseInSensitiveEnabled);
     }
 
     @SetSystemProperty.SetSystemProperties({
@@ -1115,7 +1120,7 @@ class KylinConfigBaseTest {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         config = KylinConfig.getInstanceFromEnv();
         val metadataKeyCaseInSensitiveEnabled = config.isMetadataKeyCaseInSensitiveEnabled();
-        Assert.assertTrue(metadataKeyCaseInSensitiveEnabled);
+        assertTrue(metadataKeyCaseInSensitiveEnabled);
     }
 
     @SetSystemProperty.SetSystemProperties({
@@ -1126,22 +1131,87 @@ class KylinConfigBaseTest {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         config = KylinConfig.getInstanceFromEnv();
         val metadataKeyCaseInSensitiveEnabled = config.isMetadataKeyCaseInSensitiveEnabled();
-        Assert.assertFalse(metadataKeyCaseInSensitiveEnabled);
+        assertFalse(metadataKeyCaseInSensitiveEnabled);
     }
 
     @Test
     void testConnectClusterMangerParam() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
 
-        Assert.assertEquals(10, config.getClusterManagerHealthCheckMaxTimes());
+        assertEquals(10, config.getClusterManagerHealthCheckMaxTimes());
         config.setProperty("kylin.engine.cluster-manager-health-check-max-times", "0");
-        Assert.assertEquals(0, config.getClusterManagerHealthCheckMaxTimes());
+        assertEquals(0, config.getClusterManagerHealthCheckMaxTimes());
         config.setProperty("kylin.engine.cluster-manager-health-check-max-times", "-1");
-        Assert.assertEquals(-1, config.getClusterManagerHealthCheckMaxTimes());
+        assertEquals(-1, config.getClusterManagerHealthCheckMaxTimes());
 
-        Assert.assertEquals(120, config.getClusterManagerHealCheckIntervalSecond());
+        assertEquals(120, config.getClusterManagerHealCheckIntervalSecond());
         config.setProperty("kylin.engine.cluster-manager-heal-check-interval-second", "0");
-        Assert.assertEquals(0, config.getClusterManagerHealCheckIntervalSecond());
+        assertEquals(0, config.getClusterManagerHealCheckIntervalSecond());
+    }
+
+    @Test
+    void testJobSchedulerMode() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+
+        assertEquals("DAG", config.getJobSchedulerMode());
+        config.setProperty("kylin.engine.job-scheduler-mode", "CHAIN");
+        assertEquals("CHAIN", config.getJobSchedulerMode());
+        config.setProperty("kylin.engine.job-scheduler-mode", "DAG");
+        assertEquals("DAG", config.getJobSchedulerMode());
+    }
+
+    @Test
+    void testGetRoutineOpsTaskTimeOut() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        Assert.assertEquals(4 * 60 * 60 * 1000, config.getRoutineOpsTaskTimeOut());
+        config.setProperty("kylin.metadata.ops-cron-timeout", "30m");
+        Assert.assertEquals(30 * 60 * 1000, config.getRoutineOpsTaskTimeOut());
+        config.setProperty("kylin.metadata.ops-cron-timeout", "1d");
+        Assert.assertEquals(24 * 60 * 60 * 1000, config.getRoutineOpsTaskTimeOut());
+        config.setProperty("kylin.metadata.ops-cron-timeout", "4h");
+        Assert.assertEquals(4 * 60 * 60 * 1000, config.getRoutineOpsTaskTimeOut());
+    }
+
+    @Test
+    void testBuildJobProfilingEnabled() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        assertFalse(config.buildJobProfilingEnabled());
+        config.setProperty("kylin.engine.async-profiler-enabled", "true");
+        assertTrue(config.buildJobProfilingEnabled());
+    }
+
+    @Test
+    void testBuildJobProfilingResultTimeout() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        assertEquals(60000, config.buildJobProfilingResultTimeout());
+        config.setProperty("kylin.engine.async-profiler-result-timeout", "2m");
+        assertEquals(120000, config.buildJobProfilingResultTimeout());
+        // TODO We do not have a check for a negative time parameter, maybe we need this
+        //  in the whole range of KE parameters
+        config.setProperty("kylin.engine.async-profiler-result-timeout", "-1");
+        assertEquals(-1, config.buildJobProfilingResultTimeout());
+    }
+
+    @Test
+    void testBuildJobProfilingProfileTimeout() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        assertEquals(300000, config.buildJobProfilingProfileTimeout());
+        config.setProperty("kylin.engine.async-profiler-profile-timeout", "10s");
+        assertEquals(10000, config.buildJobProfilingProfileTimeout());
+        // TODO We do not have a check for a negative time parameter, maybe we need this
+        //  in the whole range of KE parameters
+        config.setProperty("kylin.engine.async-profiler-profile-timeout", "-1");
+        assertEquals(-1, config.buildJobProfilingProfileTimeout());
+    }
+
+    @Test
+    void testGetJobTmpProfilerFlagsDir() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        String project = "ke-project";
+        String jobId = "job-00001";
+        String jobTmpProfilerFlagsDir = config.getJobTmpProfilerFlagsDir(project, jobId);
+        String expectedDir = config.getJobTmpDir(project) + jobId + "/profiler_flags";
+        assertEquals(expectedDir, jobTmpProfilerFlagsDir);
     }
 }
 

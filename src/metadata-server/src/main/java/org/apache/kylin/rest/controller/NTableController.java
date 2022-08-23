@@ -26,7 +26,7 @@ import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_TABLE_RE
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.PROJECT_NOT_EXIST;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +40,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.request.AWSTableLoadRequest;
@@ -115,21 +116,20 @@ public class NTableController extends NBasicController {
             "AI" }, notes = "Update Param: is_fuzzy, page_offset, page_size; Update Response: no format!")
     @GetMapping(value = "", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
-    public EnvelopeResponse getTableDesc(@RequestParam(value = "ext", required = false) boolean withExt,
+    public EnvelopeResponse<Map<String, Object>> getTableDesc(@RequestParam(value = "ext", required = false) boolean withExt,
             @RequestParam(value = "project") String project,
             @RequestParam(value = "table", required = false) String table,
             @RequestParam(value = "database", required = false) String database,
             @RequestParam(value = "is_fuzzy", required = false, defaultValue = "false") boolean isFuzzy,
             @RequestParam(value = "page_offset", required = false, defaultValue = "0") Integer offset,
             @RequestParam(value = "page_size", required = false, defaultValue = "10") Integer limit,
-            @RequestParam(value = "source_type", required = false, defaultValue = "9") Integer sourceType)
-            throws IOException {
+            @RequestParam(value = "source_type", required = false, defaultValue = "9") Integer sourceType) {
 
         checkProjectName(project);
-        List<TableDesc> tableDescs = new ArrayList<>();
-
-        tableDescs.addAll(tableService.getTableDescByType(project, withExt, table, database, isFuzzy, sourceType));
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, getDataResponse("tables", tableDescs, offset, limit),
+        Pair<List<TableDesc>, Integer> tableDescAndSize = tableService.getTableDescByType(project, withExt, table,
+                database, isFuzzy, sourceType, Pair.newPair(offset, limit));
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
+                setFrontResponseData("tables", tableDescAndSize.getFirst(), tableDescAndSize.getSecond()),
                 "");
     }
 
@@ -148,11 +148,9 @@ public class NTableController extends NBasicController {
             throws Exception {
 
         String projectName = checkProjectName(project);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
-                tableService.getProjectTables(projectName, table, offset, limit, false, (databaseName, tableName) -> {
-                    return tableService.getTableDescByTypes(projectName, withExt, tableName, databaseName, isFuzzy,
-                            sourceType);
-                }), "");
+        NInitTablesResponse data = tableService.getProjectTables(projectName, table, Pair.newPair(offset, limit),
+                false, withExt, isFuzzy, sourceType);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, data, "");
     }
 
     @ApiOperation(value = "unloadTable", tags = { "AI" }, notes = "Update URL: {project}; Update Param: project")
@@ -246,7 +244,8 @@ public class NTableController extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, loadTableResponse, "");
     }
 
-    @ApiOperation(value = "loadAWSTablesCompatibleCrossAccount", tags = {"KC" },
+
+    @ApiOperation(value = "loadAWSTablesCompatibleCrossAccount", tags = {"KC"},
             notes = "Update Body: data_source_type, need_sampling, sampling_rows, data_source_properties")
     @PostMapping(value = "/compatibility/aws")
     @ResponseBody
@@ -346,10 +345,9 @@ public class NTableController extends NBasicController {
             @RequestParam(value = "page_offset", required = false, defaultValue = "0") Integer offset,
             @RequestParam(value = "page_size", required = false, defaultValue = "10") Integer limit) throws Exception {
         String projectName = checkProjectName(project);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
-                tableService.getProjectTables(projectName, table, offset, limit, true, (databaseName,
-                        tableName) -> tableService.getHiveTableNameResponses(projectName, databaseName, tableName)),
-                "");
+        NInitTablesResponse data = tableService.getProjectTables(projectName, table, new Pair<>(offset, limit), true,
+                false, false, Collections.emptyList());
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, data, "");
     }
 
     @ApiOperation(value = "getTablesAndColumns", tags = {

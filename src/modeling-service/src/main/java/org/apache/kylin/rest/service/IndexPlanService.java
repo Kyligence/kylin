@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,6 +34,7 @@ import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -41,12 +43,14 @@ import java.util.stream.Stream;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.SegmentOnlineMode;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.OutOfMaxCombinationException;
 import org.apache.kylin.common.exception.ServerErrorCode;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.engine.spark.smarter.IndexDependencyParser;
 import org.apache.kylin.job.common.SegmentUtil;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -54,17 +58,6 @@ import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
-import org.apache.kylin.metadata.model.SegmentStatusEnum;
-import org.apache.kylin.metadata.model.Segments;
-import org.apache.kylin.metadata.model.TableExtDesc;
-import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.rest.model.FuzzyKeySearcher;
-import org.apache.kylin.rest.response.AggIndexCombResult;
-import org.apache.kylin.rest.response.AggIndexResponse;
-import org.apache.kylin.rest.response.DiffRuleBasedIndexResponse;
-import org.apache.kylin.rest.util.AclEvaluate;
-import org.apache.kylin.rest.util.SpringContext;
-import org.apache.kylin.engine.spark.smarter.IndexDependencyParser;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexEntity.Source;
@@ -80,21 +73,32 @@ import org.apache.kylin.metadata.cube.model.RuleBasedIndex;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.SegmentStatusEnum;
+import org.apache.kylin.metadata.model.Segments;
+import org.apache.kylin.metadata.model.TableExtDesc;
+import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
+import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.sourceusage.SourceUsageManager;
 import org.apache.kylin.rest.aspect.Transaction;
+import org.apache.kylin.rest.model.FuzzyKeySearcher;
 import org.apache.kylin.rest.request.AggShardByColumnsRequest;
 import org.apache.kylin.rest.request.CreateBaseIndexRequest;
 import org.apache.kylin.rest.request.CreateBaseIndexRequest.LayoutProperty;
 import org.apache.kylin.rest.request.CreateTableIndexRequest;
 import org.apache.kylin.rest.request.UpdateRuleBasedCuboidRequest;
+import org.apache.kylin.rest.response.AggIndexCombResult;
+import org.apache.kylin.rest.response.AggIndexResponse;
 import org.apache.kylin.rest.response.AggShardByColumnsResponse;
 import org.apache.kylin.rest.response.BuildBaseIndexResponse;
 import org.apache.kylin.rest.response.BuildIndexResponse;
+import org.apache.kylin.rest.response.DiffRuleBasedIndexResponse;
 import org.apache.kylin.rest.response.IndexGraphResponse;
 import org.apache.kylin.rest.response.IndexResponse;
 import org.apache.kylin.rest.response.IndexStatResponse;
 import org.apache.kylin.rest.response.TableIndexResponse;
+import org.apache.kylin.rest.util.AclEvaluate;
+import org.apache.kylin.rest.util.SpringContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -110,6 +114,8 @@ import com.google.common.collect.Sets;
 
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import io.kyligence.kap.secondstorage.metadata.Manager;
+import io.kyligence.kap.secondstorage.metadata.TableFlow;
 import lombok.Setter;
 import lombok.val;
 import lombok.var;
@@ -417,11 +423,26 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
             Preconditions.checkNotNull(layout);
         }
 
-        indexPlanManager.updateIndexPlan(indexPlan.getUuid(), copyForWrite -> {
-            copyForWrite.markWhiteIndexToBeDelete(indexPlan.getUuid(), Sets.newHashSet(layoutIds));
-        });
+        Map<Long, Boolean> secondStorageLayoutStatus = getSecondStorageLayoutStatus(project, layoutIds, indexPlan);
+        indexPlanManager.updateIndexPlan(indexPlan.getUuid(), copyForWrite -> copyForWrite
+                .markWhiteIndexToBeDelete(indexPlan.getUuid(), Sets.newHashSet(layoutIds), secondStorageLayoutStatus));
 
         return true;
+    }
+
+    public Map<Long, Boolean> getSecondStorageLayoutStatus(String project, Set<Long> layoutIds, IndexPlan indexPlan) {
+        if (!SecondStorageUtil.isModelEnable(project, indexPlan.getUuid())) {
+            return Collections.emptyMap();
+        }
+        Map<Long, Boolean> secondStorageLayoutStatus = new HashMap<>(layoutIds.size());
+        for (long layoutId : layoutIds) {
+            if (indexPlan.getLayoutEntity(layoutId) != null && indexPlan.getLayoutEntity(layoutId).isBaseIndex()
+                    && indexPlan.getLayoutEntity(layoutId).getIndex().isTableIndex()) {
+                secondStorageLayoutStatus.put(layoutId,
+                        isSecondStorageLayoutReady(project, indexPlan.getUuid(), layoutId));
+            }
+        }
+        return secondStorageLayoutStatus;
     }
 
     public DiffRuleBasedIndexResponse calculateDiffRuleBasedIndex(UpdateRuleBasedCuboidRequest request) {
@@ -1163,7 +1184,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
             for (long layoutId : needDelete) {
                 NDataLayout dataLayout = segment.getLayout(layoutId);
                 // may no data before the last ready segments but have a add cuboid job.
-                if (null == dataLayout) {
+                if (null == dataLayout && !isSecondStorageLayoutReady(project, modelId, layoutId)) {
                     removeIndex(project, modelId, layoutId);
                 } else {
                     addIndexToBeDeleted(project, modelId, Sets.newHashSet(layoutId));
@@ -1172,11 +1193,28 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         }
     }
 
+    public boolean isSecondStorageLayoutReady(String project, String modelId, long layoutId) {
+        if (!SecondStorageUtil.isModelEnable(project, modelId)) {
+            return false;
+        }
+        if (!SegmentOnlineMode.ANY.toString().equalsIgnoreCase(NProjectManager.getInstance(getConfig())
+                .getProject(project).getConfig().getKylinEngineSegmentOnlineMode())) {
+            return false;
+        }
+        Optional<Manager<TableFlow>> tableFlowManager = SecondStorageUtil.tableFlowManager(getConfig(), project);
+        if (!tableFlowManager.isPresent()) {
+            return false;
+        }
+        Optional<TableFlow> tableFlow = tableFlowManager.get().get(modelId);
+        return tableFlow.map(flow -> flow.containsLayout(layoutId)).orElse(false);
+    }
+
     @Transaction(project = 0)
     public BuildBaseIndexResponse createBaseIndex(String project, CreateBaseIndexRequest request) {
         aclEvaluate.checkProjectWritePermission(project);
-        NDataModel model = getManager(NDataModelManager.class, project).getDataModelDesc(request.getModelId());
+        NDataModelManager modelManager = getManager(NDataModelManager.class, project);
         NIndexPlanManager indexPlanManager = getManager(NIndexPlanManager.class, project);
+        NDataModel model = modelManager.getDataModelDesc(request.getModelId());
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(request.getModelId());
 
         List<LayoutEntity> needCreateBaseLayouts = getNotCreateBaseLayout(model, indexPlan, request);
@@ -1184,9 +1222,14 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
                 copyForWrite -> copyForWrite.createAndAddBaseIndex(needCreateBaseLayouts));
 
         BuildBaseIndexResponse response = new BuildBaseIndexResponse();
+        LayoutEntity baseTableIndex = null;
         for (LayoutEntity layoutEntity : needCreateBaseLayouts) {
             response.addLayout(layoutEntity);
+            if (layoutEntity.getIndex().isTableIndex()) {
+                baseTableIndex = layoutEntity;
+            }
         }
+        modelManager.changeBaseIndexColumnStatusOfModel(model, baseTableIndex);
         modelChangeSupporters.forEach(listener -> listener.onUpdate(project, request.getModelId()));
         return response;
     }

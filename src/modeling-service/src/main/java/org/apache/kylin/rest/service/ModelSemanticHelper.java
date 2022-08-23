@@ -19,6 +19,7 @@ package org.apache.kylin.rest.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -46,6 +48,7 @@ import org.apache.kylin.common.exception.ServerErrorCode;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.ModifyTableNameSqlVisitor;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.utils.ComputedColumnEvalUtil;
 import org.apache.kylin.job.manager.JobManager;
@@ -81,6 +84,7 @@ import org.apache.kylin.metadata.model.UpdateImpact;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.model.tool.JoinDescNonEquiCompBean;
 import org.apache.kylin.metadata.model.tool.NonEquiJoinConditionVisitor;
+import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.model.util.scd2.SCD2CondChecker;
 import org.apache.kylin.metadata.model.util.scd2.SCD2Exception;
@@ -124,7 +128,7 @@ public class ModelSemanticHelper extends BasicService {
     private ModelSmartSupporter modelSmartSupporter;
 
     private static final Logger logger = LoggerFactory.getLogger(ModelSemanticHelper.class);
-    private ExpandableMeasureUtil expandableMeasureUtil = new ExpandableMeasureUtil((model, ccDesc) -> {
+    private final ExpandableMeasureUtil expandableMeasureUtil = new ExpandableMeasureUtil((model, ccDesc) -> {
         String ccExpression = KapQueryUtil.massageComputedColumn(model, model.getProject(), ccDesc,
                 AclPermissionUtil.prepareQueryContextACLInfo(model.getProject(), getCurrentUserGroups()));
         ccDesc.setInnerExpression(ccExpression);
@@ -467,6 +471,7 @@ public class ModelSemanticHelper extends BasicService {
 
     private NDataModel updateColumnsInit(NDataModel originModel, ModelRequest request, boolean saveCheck) {
         val expectedModel = convertToDataModel(request);
+        discardInvalidColsAndMeasForBrokenModel(request.getProject(), expectedModel);
 
         String project = request.getProject();
         expectedModel.init(KylinConfig.getInstanceFromEnv());
@@ -524,6 +529,18 @@ public class ModelSemanticHelper extends BasicService {
                     unusedColumn.setStatus(NDataModel.ColumnStatus.TOMB);
                     updateImpact.getRemovedOrUpdatedCCs().add(unusedColumn.getId());
                 });
+
+        Set<Integer> healthMeasureIdSet = request.getSimplifiedMeasures().stream().map(SimplifiedMeasure::getId)
+                .collect(Collectors.toSet());
+        List<Measure> allMeasures = originModel.getAllMeasures();
+        allMeasures.stream().filter(measure -> !measure.getName().equals("COUNT_ALL"))
+                .filter(measure -> !measure.isTomb()).forEach(measure -> {
+                    if (!healthMeasureIdSet.contains(measure.getId())) {
+                        log.warn("the measure({}) has been handled to tomb", measure.getName());
+                        measure.setTomb(true);
+                    }
+                });
+
         // move deleted CC's measure to TOMB
         List<Measure> currentMeasures = originModel.getEffectiveMeasures().values().asList();
         currentMeasures.stream().filter(measure -> {
@@ -1013,4 +1030,72 @@ public class ModelSemanticHelper extends BasicService {
         }
     }
 
+    public void discardInvalidColsAndMeasForBrokenModel(String project, NDataModel model) {
+        NTableMetadataManager tableMetadataManager = getManager(NTableMetadataManager.class, project);
+        Set<String> aliasDotColSet = new HashSet<>();
+        TableDesc rootFactTableDesc = tableMetadataManager.getTableDesc(model.getRootFactTableName());
+        Arrays.stream(rootFactTableDesc.getColumns()).forEach(columnDesc -> {
+            String aliasDotCol = rootFactTableDesc.getName() + "." + columnDesc.getName();
+            aliasDotColSet.add(aliasDotCol);
+        });
+        List<JoinTableDesc> joinTables = model.getJoinTables();
+        joinTables.forEach(joinTableDesc -> {
+            TableDesc tableDesc = tableMetadataManager.getTableDesc(joinTableDesc.getTable());
+            String joinTableAlias = joinTableDesc.getAlias();
+            Arrays.stream(tableDesc.getColumns()).forEach(colDesc -> {
+                String aliasDotCol = joinTableAlias + "." + colDesc.getName();
+                aliasDotColSet.add(aliasDotCol);
+            });
+        });
+
+        // check if CC-used column exists in tableDesc. If not, remove computed column desc
+        List<ComputedColumnDesc> computedColumnDescs = model.getComputedColumnDescs();
+        List<ComputedColumnDesc> validCCDescs = discardInvalidComputedColumnsForBrokenModel(aliasDotColSet,
+                computedColumnDescs);
+        model.setComputedColumnDescs(validCCDescs);
+
+        //check all named columns, rule out invalid model columns and CCs
+        List<NDataModel.NamedColumn> allNamedColumns = model.getAllNamedColumns();
+        allNamedColumns.stream().filter(NamedColumn::isExist).forEach(col -> {
+            String aliasDotColumn = col.getAliasDotColumn();
+            if (!aliasDotColSet.contains(aliasDotColumn)) {
+                col.setStatus(NDataModel.ColumnStatus.TOMB);
+            }
+        });
+
+        //check all measures, rule out invalid measures
+        List<NDataModel.Measure> allMeasures = model.getAllMeasures();
+        allMeasures.stream().filter(measure -> !measure.isTomb()).forEach(measure -> {
+            FunctionDesc functionDesc = measure.getFunction();
+            functionDesc.getParameters().forEach(p -> {
+                if (p.isColumnType()) {
+                    String aliasDotColumn = p.getValue();
+                    if (!aliasDotColSet.contains(aliasDotColumn)) {
+                        measure.setTomb(true);
+                    }
+                }
+            });
+        });
+    }
+
+    private List<ComputedColumnDesc> discardInvalidComputedColumnsForBrokenModel(Set<String> aliasDotColSet,
+            List<ComputedColumnDesc> computedColumnDescs) {
+        return computedColumnDescs.stream().map(ccDesc -> {
+            AtomicBoolean isValidCC = new AtomicBoolean(true);
+            List<Pair<String, String>> colsWithAlias = ComputedColumnUtil.ExprIdentifierFinder
+                    .getExprIdentifiers(ccDesc.getInnerExpression());
+            colsWithAlias.forEach(c -> {
+                String column = c.getFirst() + "." + c.getSecond();
+                if (!aliasDotColSet.contains(column)) {
+                    isValidCC.set(false);
+                }
+            });
+            if (!isValidCC.get()) {
+                return null;
+            }
+            String ccAlias = ccDesc.getTableAlias() + "." + ccDesc.getColumnName();
+            aliasDotColSet.add(ccAlias);
+            return ccDesc;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+    }
 }

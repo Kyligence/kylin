@@ -22,23 +22,31 @@ import static org.apache.kylin.common.util.TestUtils.getTestConfig;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.KylinConfigBase;
+import org.apache.kylin.common.persistence.AuditLog;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.StringEntity;
-import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.common.persistence.AuditLog;
+import org.apache.kylin.common.persistence.UnitMessages;
+import org.apache.kylin.common.persistence.event.Event;
+import org.apache.kylin.common.persistence.event.ResourceCreateOrUpdateEvent;
 import org.apache.kylin.common.persistence.metadata.jdbc.AuditLogRowMapper;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
+import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.junit.JdbcInfo;
 import org.apache.kylin.junit.annotation.JdbcMetadataInfo;
 import org.apache.kylin.junit.annotation.MetadataInfo;
@@ -111,6 +119,9 @@ class JdbcAuditLogStoreTest {
         Assert.assertEquals("USER1", allStep2.get(5).getOperator());
         Assert.assertEquals("USER1", allStep2.get(6).getOperator());
         Assert.assertEquals(2, allStep2.stream().map(AuditLog::getUnitId).distinct().count());
+        AuditLogStore auditLogStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
+                .getAuditLogStore();
+        auditLogStore.close();
     }
 
     @Test
@@ -204,10 +215,152 @@ class JdbcAuditLogStoreTest {
                                 unitId, null, LOCAL_INSTANCE },
                         new Object[] { 4, "/_global/p1/abc2", "abc".getBytes(charset), System.currentTimeMillis(), 0,
                                 unitId, null, LOCAL_INSTANCE }));
-        workerStore.catchup();
-        // catch up exception, load /_global/p1/abc3 from metadata
-        Assert.assertEquals(1, workerStore.listResourcesRecursively("/").size());
+        workerStore.getAuditLogStore().restore(3);
+        Assert.assertEquals(3, workerStore.listResourcesRecursively("/").size());
         ((JdbcAuditLogStore) workerStore.getAuditLogStore()).forceClose();
+    }
+
+    @Test
+    void testWaitLogAllCommit_DelayQueue(JdbcInfo info) throws Exception {
+        val workerStore = ResourceStore.getKylinMetaStore(getTestConfig());
+
+        workerStore.checkAndPutResource("/UUID", new StringEntity(RandomUtil.randomUUIDStr()), StringEntity.serializer);
+        Assertions.assertEquals(1, workerStore.listResourcesRecursively("/").size());
+        val url = getTestConfig().getMetadataUrl();
+        val jdbcTemplate = info.getJdbcTemplate();
+        String unitId = RandomUtil.randomUUIDStr();
+        String sql = "insert into %s (id, meta_key,meta_content,meta_ts,meta_mvcc,unit_id,operator,instance) values (?, ?, ?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.batchUpdate(String.format(Locale.ROOT, sql, url.getIdentifier() + "_audit_log"),
+                Arrays.asList(
+                        new Object[] { 900, "/_global/p1/abc", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE },
+                        new Object[] { 4, "/_global/p1/abc2", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE }));
+        workerStore.getAuditLogStore().restore(3);
+        Assertions.assertEquals(3, workerStore.listResourcesRecursively("/").size());
+
+        jdbcTemplate.batchUpdate(String.format(Locale.ROOT, sql, url.getIdentifier() + "_audit_log"),
+                Arrays.asList(
+                        new Object[] { 800, "/_global/p1/abc3", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE },
+                        new Object[] { 801, "/_global/p1/abc4", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE }));
+        workerStore.getAuditLogStore().catchup();
+
+        Awaitility.await().atMost(30, TimeUnit.SECONDS)
+                .until(() -> 5 == workerStore.listResourcesRecursively("/").size());
+
+        ((JdbcAuditLogStore) workerStore.getAuditLogStore()).forceClose();
+    }
+
+    @Test
+    void testFetchById(JdbcInfo info) throws IOException {
+        val workerStore = ResourceStore.getKylinMetaStore(getTestConfig());
+
+        workerStore.checkAndPutResource("/UUID", new StringEntity(RandomUtil.randomUUIDStr()), StringEntity.serializer);
+        Assertions.assertEquals(1, workerStore.listResourcesRecursively("/").size());
+        val url = getTestConfig().getMetadataUrl();
+        val jdbcTemplate = info.getJdbcTemplate();
+        String unitId = RandomUtil.randomUUIDStr();
+        String sql = "insert into %s (id, meta_key,meta_content,meta_ts,meta_mvcc,unit_id,operator,instance) values (?, ?, ?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.batchUpdate(String.format(Locale.ROOT, sql, url.getIdentifier() + "_audit_log"),
+                Arrays.asList(
+                        new Object[] { 1, "/_global/p1/abc", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE },
+                        new Object[] { 2, "/_global/p1/abc2", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE },
+                        new Object[] { 3, "/_global/p1/abc3", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE },
+                        new Object[] { 4, "/_global/p1/abc4", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE }));
+        val idList = Arrays.asList(2L, 3L);
+        val fetchResult = ((JdbcAuditLogStore) workerStore.getAuditLogStore()).fetch(idList);
+
+        Assertions.assertEquals(2, fetchResult.size());
+        Assertions.assertEquals(idList, fetchResult.stream().map(AuditLog::getId).collect(Collectors.toList()));
+        workerStore.getAuditLogStore().close();
+    }
+
+    @Test
+    void testGetMinMaxId(JdbcInfo info) throws IOException {
+        val workerStore = ResourceStore.getKylinMetaStore(getTestConfig());
+
+        workerStore.checkAndPutResource("/UUID", new StringEntity(RandomUtil.randomUUIDStr()), StringEntity.serializer);
+        Assertions.assertEquals(1, workerStore.listResourcesRecursively("/").size());
+        val url = getTestConfig().getMetadataUrl();
+        val jdbcTemplate = info.getJdbcTemplate();
+        String unitId = RandomUtil.randomUUIDStr();
+        String sql = "insert into %s (id, meta_key,meta_content,meta_ts,meta_mvcc,unit_id,operator,instance) values (?, ?, ?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.batchUpdate(String.format(Locale.ROOT, sql, url.getIdentifier() + "_audit_log"),
+                Arrays.asList(
+                        new Object[] { 11, "/_global/p1/abc", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE },
+                        new Object[] { 22, "/_global/p1/abc2", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE },
+                        new Object[] { 33, "/_global/p1/abc3", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE },
+                        new Object[] { 101, "/_global/p1/abc4", "abc".getBytes(charset), System.currentTimeMillis(), 0,
+                                unitId, null, LOCAL_INSTANCE }));
+        val auditLogStore = workerStore.getAuditLogStore();
+        Assertions.assertEquals(101, auditLogStore.getMaxId());
+        Assertions.assertEquals(11, auditLogStore.getMinId());
+        auditLogStore.close();
+    }
+
+    @Test
+    void testSaveWait_WithoutSleep(JdbcInfo info) throws IOException {
+        val workerStore = ResourceStore.getKylinMetaStore(getTestConfig());
+        workerStore.checkAndPutResource("/UUID", new StringEntity(RandomUtil.randomUUIDStr()), StringEntity.serializer);
+        Assertions.assertEquals(1, workerStore.listResourcesRecursively("/").size());
+        List<Event> events = Collections.singletonList(new ResourceCreateOrUpdateEvent(new RawResource("/p1/test",
+                ByteSource.wrap("test content".getBytes(StandardCharsets.UTF_8)), System.currentTimeMillis(), 0)));
+        val unitMessages = new UnitMessages(events);
+        val auditLogStore = workerStore.getAuditLogStore();
+        auditLogStore.save(unitMessages);
+
+        val result = auditLogStore.fetch(0, 2);
+        Assertions.assertEquals(1, result.size());
+        workerStore.getAuditLogStore().close();
+    }
+
+    @Test
+    void testSaveWait_WithSleep(JdbcInfo info) throws IOException {
+        getTestConfig().setProperty("kylin.env.unitofwork-simulation-enabled", KylinConfigBase.TRUE);
+        val workerStore = ResourceStore.getKylinMetaStore(getTestConfig());
+        workerStore.checkAndPutResource("/UUID", new StringEntity(RandomUtil.randomUUIDStr()), StringEntity.serializer);
+        Assertions.assertEquals(1, workerStore.listResourcesRecursively("/").size());
+        List<Event> events = Collections.singletonList(new ResourceCreateOrUpdateEvent(new RawResource("/p1/test",
+                ByteSource.wrap("test content".getBytes(StandardCharsets.UTF_8)), System.currentTimeMillis(), 0)));
+        val unitMessages = new UnitMessages(events);
+        val auditLogStore = workerStore.getAuditLogStore();
+
+        UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().unitName(UnitOfWork.GLOBAL_UNIT).sleepMills(100)
+                .maxRetry(1).processor(() -> {
+                    auditLogStore.save(unitMessages);
+                    return 0;
+                }).build());
+
+        val result = auditLogStore.fetch(0, 2);
+        Assertions.assertEquals(1, result.size());
+        workerStore.getAuditLogStore().close();
+    }
+
+    @Test
+    void testSaveWait_WithSleepNotInTrans(JdbcInfo info) throws IOException {
+        getTestConfig().setProperty("kylin.env.unitofwork-simulation-enabled", KylinConfigBase.TRUE);
+        val workerStore = ResourceStore.getKylinMetaStore(getTestConfig());
+        workerStore.checkAndPutResource("/UUID", new StringEntity(RandomUtil.randomUUIDStr()), StringEntity.serializer);
+        Assertions.assertEquals(1, workerStore.listResourcesRecursively("/").size());
+        List<Event> events = Collections.singletonList(new ResourceCreateOrUpdateEvent(new RawResource("/p1/test",
+                ByteSource.wrap("test content".getBytes(StandardCharsets.UTF_8)), System.currentTimeMillis(), 0)));
+        val unitMessages = new UnitMessages(events);
+        val auditLogStore = workerStore.getAuditLogStore();
+
+        auditLogStore.save(unitMessages);
+
+        val result = auditLogStore.fetch(0, 2);
+        Assertions.assertEquals(1, result.size());
+        workerStore.getAuditLogStore().close();
     }
 
     @Test
@@ -271,7 +424,7 @@ class JdbcAuditLogStoreTest {
 
         Assert.assertEquals(4, workerStore.listResourcesRecursively("/").size());
         stopped.compareAndSet(false, true);
-        ((JdbcAuditLogStore) workerStore.getAuditLogStore()).forceClose();
+        workerStore.getAuditLogStore().close();
     }
 
     @OverwriteProp(key = "kylin.metadata.audit-log.max-size", value = "1000")
@@ -317,7 +470,7 @@ class JdbcAuditLogStoreTest {
     }
 
     @Test
-    public void testGet() {
+    public void testGet() throws IOException {
         UnitOfWork.doInTransactionWithRetry(() -> {
             val store = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
             store.checkAndPutResource("/p1/123", ByteSource.wrap("123".getBytes(charset)), -1);
@@ -335,6 +488,7 @@ class JdbcAuditLogStoreTest {
 
         auditLog = auditLogStore.get("/p1/abc", 1);
         Assert.assertNull(auditLog);
+        auditLogStore.close();
     }
 
     @Test
@@ -342,7 +496,6 @@ class JdbcAuditLogStoreTest {
         val workerStore = ResourceStore.getKylinMetaStore(getTestConfig());
         changeProject("abc", false, info);
         AuditLogStore auditLogStore = new JdbcAuditLogStore(getTestConfig());
-        auditLogStore.forceCatchup();
         auditLogStore.catchupWithTimeout();
         Assert.assertEquals(1, workerStore.listResourcesRecursively("/").size());
         ((JdbcAuditLogStore) workerStore.getAuditLogStore()).forceClose();
@@ -358,6 +511,7 @@ class JdbcAuditLogStoreTest {
             workerStore.catchup();
             ((JdbcAuditLogStore) workerStore.getAuditLogStore()).forceClose();
         });
+        workerStore.getAuditLogStore().close();
     }
 
     @Test
@@ -396,6 +550,11 @@ class JdbcAuditLogStoreTest {
         workerStore.getAuditLogStore().reInit();
         Awaitility.await().atMost(6, TimeUnit.SECONDS)
                 .until(() -> 5 == workerStore.listResourcesRecursively("/").size());
+        closeReplayWorker(workerStore);
+    }
+
+    private void closeReplayWorker(ResourceStore workerStore) throws IOException {
+        workerStore.getAuditLogStore().close();
     }
 
     void changeProject(String project, boolean isDel, JdbcInfo info) throws Exception {

@@ -46,6 +46,7 @@ import org.apache.kylin.rest.request.ModelParatitionDescRequest;
 import org.apache.kylin.rest.request.ModelRequest;
 import org.apache.kylin.rest.request.ModelUpdateRequest;
 import org.apache.kylin.rest.request.MultiPartitionMappingRequest;
+import org.apache.kylin.rest.request.OpenModelRequest;
 import org.apache.kylin.rest.request.PartitionColumnRequest;
 import org.apache.kylin.rest.request.UpdateMultiPartitionValueRequest;
 import org.apache.kylin.rest.response.DataResult;
@@ -495,5 +496,20 @@ public class OpenModelControllerTest extends NLocalFileMetadataTestCase {
                 .andExpect(MockMvcResultMatchers.status().is5xxServerError())
                 .andExpect(MockMvcResultMatchers.content().string(
                         Matchers.containsString(REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY.getErrorCode().getCode())));
+    }
+
+    @Test
+    public void testUpdateModelSemantics() throws Exception {
+        String project = "default";
+        String modelAlias = "model1";
+        mockGetModelName(modelAlias, project, RandomUtil.randomUUIDStr());
+        OpenModelRequest request = new OpenModelRequest();
+        request.setProject(project);
+        request.setModelName(modelAlias);
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/models/modification").contentType(MediaType.APPLICATION_JSON)
+            .content(JsonUtil.writeValueAsString(request))
+            .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+            .andExpect(MockMvcResultMatchers.status().isOk());
+        Mockito.verify(openModelController).updateSemantic(Mockito.any(OpenModelRequest.class));
     }
 }

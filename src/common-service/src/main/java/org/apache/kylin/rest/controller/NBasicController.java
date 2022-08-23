@@ -56,6 +56,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -353,6 +354,13 @@ public class NBasicController {
         return isAdmin;
     }
 
+    public Map<String, Object> setFrontResponseData(String name, List<?> result, int actualSize) {
+        HashMap<String, Object> data = new HashMap<>();
+        data.put(name, result);
+        data.put("size", actualSize);
+        return data;
+    }
+
     public HashMap<String, Object> getDataResponse(String name, List<?> result, int offset, int limit) {
         HashMap<String, Object> data = new HashMap<>();
         data.put(name, PagingUtil.cutPage(result, offset, limit));
@@ -436,8 +444,7 @@ public class NBasicController {
                 .collect(Collectors.toList());
 
         if (!illegalStatus.isEmpty()) {
-            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, "status",
-                    "ONLINE, OFFLINE, WARNING, BROKEN");
+            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, "status", "ONLINE, OFFLINE, WARNING, BROKEN");
         }
         return formattedStatus;
     }
@@ -581,8 +588,7 @@ public class NBasicController {
     }
 
     public void checkStreamingEnabled() {
-        val conf = KylinConfig.getInstanceFromEnv();
-        if (!conf.streamingEnabled()) {
+        if (!KylinConfig.getInstanceFromEnv().streamingEnabled()) {
             throw new KylinException(ServerErrorCode.UNSUPPORTED_STREAMING_OPERATION,
                     MsgPicker.getMsg().getStreamingDisabled());
         }

@@ -148,11 +148,26 @@ object StorageUtils extends Logging {
 
   def getCurrentYarnConfiguration: YarnConfiguration = {
     val conf = new YarnConfiguration()
+    setSystemPropertiesToYarnYarnConfiguration(conf)
+    conf
+  }
+
+  private def setSystemPropertiesToYarnYarnConfiguration(conf: YarnConfiguration): Unit = {
     System.getProperties.entrySet()
       .asScala
       .filter(_.getKey.asInstanceOf[String].startsWith("spark.hadoop."))
       .map(entry => (entry.getKey.asInstanceOf[String].substring("spark.hadoop.".length), entry.getValue.asInstanceOf[String]))
       .foreach(tp => conf.set(tp._1, tp._2))
+  }
+
+  /**
+   * if write_hadoop_dir exists, Yarn Client Hadoop conf dir is write_hadoop_dir
+   * if not exists, use system env: HADOOP_CONF_DIR
+   * if HADOOP_CONF_DIR not exists. use system properties: kylin.hadoop.conf.dir
+   */
+  def getCurrentYarnConfigurationFromWriteCluster: YarnConfiguration = {
+    val conf = new YarnConfiguration(HadoopUtil.getHadoopConfFromSparkEngine)
+    setSystemPropertiesToYarnYarnConfiguration(conf)
     conf
   }
 }

@@ -21,6 +21,7 @@ import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLI
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.kylin.common.util.JsonUtil;
@@ -117,6 +118,10 @@ public class OpenTableControllerTest extends NLocalFileMetadataTestCase {
         String tableName = "TEST_KYLIN_FACT";
         String database = "DEFAULT";
 
+        TableDesc tableDesc = new TableDesc();
+        tableDesc.setName("TEST_KYLIN_FACT");
+        Mockito.when(tableService.getTableDescByType("default", true, tableName, database, false, 9, new Pair<>(0, 10)))
+                .thenReturn(Pair.newPair(Collections.singletonList(tableDesc), 1));
         mockMvc.perform(MockMvcRequestBuilders.get("/api/tables") //
                 .contentType(MediaType.APPLICATION_JSON) //
                 .param("project", project).param("table", tableName).param("database", database)

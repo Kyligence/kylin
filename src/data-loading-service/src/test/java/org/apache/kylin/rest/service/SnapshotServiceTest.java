@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
@@ -188,8 +187,8 @@ public class SnapshotServiceTest extends NLocalFileMetadataTestCase {
         String actual = "";
         try {
             snapshotService.buildSnapshots(PROJECT, databases, tables, Maps.newHashMap(), true, 3, null, null);
-        } catch (TransactionException e) {
-            actual = e.getCause().getMessage();
+        } catch (KylinException e) {
+            actual = e.getMessage();
         }
         Assert.assertEquals(expected, actual);
     }
@@ -227,7 +226,7 @@ public class SnapshotServiceTest extends NLocalFileMetadataTestCase {
         val tableManager = NTableMetadataManager.getInstance(getTestConfig(), PROJECT);
         long expectedTableSize = tableManager.listAllTables().stream()
                 .filter(tableDesc -> tableDesc.getDatabase().equals(database)).count();
-        Assert.assertEquals(expectedTableSize, allExecutables.size());
+        Assert.assertEquals(expectedTableSize - 1, allExecutables.size());
 
         // build snapshots of non-exist database
         databases = Sets.newHashSet("non-exist");
@@ -325,9 +324,9 @@ public class SnapshotServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(ExecutableState.READY, initialJob.getStatus());
         try {
             snapshotService.buildSnapshots(PROJECT, Sets.newHashSet(table), Maps.newHashMap(), false, 3, null, null);
-        } catch (TransactionException e) {
-            Assert.assertTrue(e.getCause() instanceof JobSubmissionException);
-            Assert.assertEquals(JOB_CREATE_CHECK_FAIL.getMsg(), (e.getCause()).getMessage());
+        } catch (KylinException e) {
+            Assert.assertTrue(e instanceof JobSubmissionException);
+            Assert.assertEquals(JOB_CREATE_CHECK_FAIL.getMsg(), e.getMessage());
         }
     }
 
@@ -382,17 +381,23 @@ public class SnapshotServiceTest extends NLocalFileMetadataTestCase {
         SecurityContextHolder.getContext()
                 .setAuthentication(new TestingAuthenticationToken("testuser", "testuser", Constant.ROLE_MODELER));
         List<SnapshotInfoResponse> responses = snapshotService.getProjectSnapshots(PROJECT, tablePattern, statusFilter,
-                Sets.newHashSet(), sortBy, true);
+                Sets.newHashSet(), sortBy, true, Pair.newPair(0, 10)).getFirst();
         Assert.assertEquals(0, responses.size());
         SecurityContextHolder.getContext()
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
         responses = snapshotService.getProjectSnapshots(PROJECT, tablePattern, statusFilter, Sets.newHashSet(), sortBy,
-                true);
+                true, Pair.newPair(0, 10)).getFirst();
         SnapshotInfoResponse response = responses.get(0);
         Assert.assertEquals(2, responses.size());
         Assert.assertEquals("SSB", response.getDatabase());
         Assert.assertEquals(Sets.newHashSet("LINEORDER", "P_LINEORDER"),
                 responses.stream().map(SnapshotInfoResponse::getTable).collect(Collectors.toSet()));
+    }
+
+    @Test
+    public void testCheckDatabaseAndTable() {
+        Pair<String, String> tableAndDatabase = Pair.newPair("SSB", "CUSTOM");
+        Assert.assertEquals(tableAndDatabase, snapshotService.checkDatabaseAndTable("SSB.CUSTOM"));
     }
 
     @Test
@@ -566,7 +571,8 @@ public class SnapshotServiceTest extends NLocalFileMetadataTestCase {
             return null;
         }, PROJECT);
         List<SnapshotInfoResponse> responses = snapshotService.getProjectSnapshots(PROJECT, null,
-                Sets.newHashSet(SnapshotStatus.BROKEN), Sets.newHashSet(), null, true);
+                Sets.newHashSet(SnapshotStatus.BROKEN), Sets.newHashSet(), null, true,
+                Pair.newPair(0, 10)).getFirst();
         Assert.assertEquals(1, responses.size());
     }
 

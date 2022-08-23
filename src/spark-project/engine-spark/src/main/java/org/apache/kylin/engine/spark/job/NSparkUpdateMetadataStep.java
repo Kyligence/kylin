@@ -27,7 +27,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.DefaultChainedExecutableOnModel;
+import org.apache.kylin.job.execution.DefaultExecutableOnModel;
 import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.apache.kylin.metadata.model.TableRef;
@@ -60,8 +60,8 @@ public class NSparkUpdateMetadataStep extends AbstractExecutable {
     @Override
     protected ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
         val parent = getParent();
-        Preconditions.checkArgument(parent instanceof DefaultChainedExecutableOnModel);
-        val handler = ((DefaultChainedExecutableOnModel) parent).getHandler();
+        Preconditions.checkArgument(parent instanceof DefaultExecutableOnModel);
+        val handler = ((DefaultExecutableOnModel) parent).getHandler();
         try {
             EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
                 handler.handleFinished();

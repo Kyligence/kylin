@@ -175,17 +175,15 @@ public class OpenSegmentControllerTest extends NLocalFileMetadataTestCase {
         String modelId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
         String project = "default";
         mockGetModelName(modelName, project, modelId);
-        when(nModelController.getSegments(modelId, project, "", 1, 5, "432", "2234", null, null, false,
-                "end_time", true)).thenReturn(
-                        new EnvelopeResponse<>(KylinException.CODE_SUCCESS, DataResult.get(mockSegments(), 1, 5), ""));
         mockMvc.perform(MockMvcRequestBuilders.get("/api/models/{model_name}/segments", modelName)
                 .contentType(MediaType.APPLICATION_JSON).param("page_offset", "1").param("project", project)
                 .param("page_size", "5").param("start", "432").param("end", "2234").param("sort_by", "end_time")
                 .param("reverse", "true").param("status", "")
+                .param("statuses", "").param("statuses_second_storage", "")
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
         Mockito.verify(openSegmentController).getSegments(modelName, project, "", 1, 5, "432", "2234", "end_time",
-                true);
+                true, Lists.newArrayList(), Lists.newArrayList());
     }
 
     private List<IndexResponse> getIndexResponses() throws Exception {

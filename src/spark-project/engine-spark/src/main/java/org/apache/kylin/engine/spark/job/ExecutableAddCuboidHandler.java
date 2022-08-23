@@ -24,7 +24,7 @@ import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.job.execution.DefaultChainedExecutableOnModel;
+import org.apache.kylin.job.execution.DefaultExecutableOnModel;
 import org.apache.kylin.job.execution.ExecutableHandler;
 import org.apache.kylin.engine.spark.merger.AfterBuildResourceMerger;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
@@ -39,7 +39,7 @@ import lombok.val;
 public class ExecutableAddCuboidHandler extends ExecutableHandler {
     private static final Logger logger = LoggerFactory.getLogger(ExecutableAddCuboidHandler.class);
 
-    public ExecutableAddCuboidHandler(DefaultChainedExecutableOnModel job) {
+    public ExecutableAddCuboidHandler(DefaultExecutableOnModel job) {
         this(job.getProject(), job.getTargetSubject(), job.getSubmitter(), null, job.getId());
     }
 

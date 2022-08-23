@@ -118,11 +118,13 @@ public class OpenSegmentController extends BaseController {
             @RequestParam(value = "start", required = false, defaultValue = "1") String start,
             @RequestParam(value = "end", required = false, defaultValue = "" + (Long.MAX_VALUE - 1)) String end,
             @RequestParam(value = "sort_by", required = false, defaultValue = "last_modified_time") String sortBy,
-            @RequestParam(value = "reverse", required = false, defaultValue = "false") Boolean reverse) {
+            @RequestParam(value = "reverse", required = false, defaultValue = "false") Boolean reverse,
+            @RequestParam(value = "statuses", required = false, defaultValue = "") List<String> statuses,
+            @RequestParam(value = "statuses_second_storage", required = false, defaultValue = "") List<String> statusesSecondStorage) {
         String projectName = checkProjectName(project);
         String modelId = getModel(modelAlias, projectName).getUuid();
         return segmentController.getSegments(modelId, projectName, status, offset, limit, start, end, null, null, false,
-                sortBy, reverse);
+                sortBy, reverse, statuses, statusesSecondStorage);
     }
 
     @ApiOperation(value = "getMultiPartitions", tags = { "DW" })

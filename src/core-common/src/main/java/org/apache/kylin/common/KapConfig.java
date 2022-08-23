@@ -608,6 +608,14 @@ public class KapConfig {
         return Long.parseLong(config.getOptional("kylin.kerberos.monitor-interval-minutes", "10"));
     }
 
+    public Long getKerberosTGTRenewalInterval() {
+        return Long.parseLong(config.getOptional("kylin.kerberos.tgt-renewal-interval-minutes", "10"));
+    }
+
+    public Long getKerberosTGTRetryInterval() {
+        return Long.parseLong(config.getOptional("kylin.kerberos.tgt-retry-interval-minutes", "60"));
+    }
+
     public String getKerberosPlatform() {
         return config.getOptional("kylin.kerberos.platform", "");
     }

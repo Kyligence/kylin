@@ -26,9 +26,9 @@ import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_DOWNLOAD_
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.UNSUPPORTED_STREAMING_OPERATION;
 import static org.apache.kylin.common.exception.ServerErrorCode.USER_UNAUTHORIZED;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.PARAMETER_INVALID_SUPPORT_LIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.BOOLEAN_TYPE_CHECK;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.INTEGER_NON_NEGATIVE_CHECK;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.PARAMETER_INVALID_SUPPORT_LIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.PROJECT_NOT_EXIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_CONFLICT_PARAMETER;
@@ -325,7 +325,7 @@ public class BaseController {
             return;
         }
         String paramStr = JsonUtil.writeValueAsString(param);
-        if (paramStr.length() * 2 > length) {
+        if (paramStr.length() * 2 > length * 1024) {
             throw new KylinException(INVALID_PARAMETER,
                     String.format(Locale.ROOT, MsgPicker.getMsg().getParamTooLarge(), paramName, length));
         }
@@ -357,8 +357,7 @@ public class BaseController {
                 .collect(Collectors.toList());
 
         if (!illegalStatus.isEmpty()) {
-            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, "status",
-                    "ONLINE, OFFLINE, WARNING, BROKEN");
+            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, "status", "ONLINE, OFFLINE, WARNING, BROKEN");
         }
         return formattedStatus;
     }

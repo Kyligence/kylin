@@ -71,7 +71,9 @@ import org.apache.kylin.common.KylinConfigBase;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.QueryErrorCode;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.persistence.transaction.AddS3CredentialToSparkBroadcastEventNotifier;
 import org.apache.kylin.common.persistence.transaction.TransactionException;
+import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.BufferedLogger;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.DateFormat;
@@ -167,6 +169,7 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
@@ -218,27 +221,34 @@ public class TableService extends BasicService {
     @Autowired
     private ClusterManager clusterManager;
 
-    public List<TableDesc> getTableDescByType(String project, boolean withExt, final String tableName,
-            final String database, boolean isFuzzy, int sourceType) throws IOException {
-        return getTableDesc(project, withExt, tableName, database, isFuzzy).stream()
-                .filter(tableDesc -> sourceType == tableDesc.getSourceType()).collect(Collectors.toList());
+    public Pair<List<TableDesc>, Integer> getTableDescByType(String project, boolean withExt, final String tableName,
+            final String database, boolean isFuzzy, int sourceType, Pair<Integer, Integer> offsetAndLimit) {
+        Pair<List<TableDesc>, Integer> tableDescAndSize = getTableDesc(project, withExt, tableName, database, isFuzzy,
+                offsetAndLimit);
+        return new Pair<>(tableDescAndSize.getFirst().stream()
+                .filter(tableDesc -> sourceType == tableDesc.getSourceType()).collect(Collectors.toList()),
+                tableDescAndSize.getSecond());
     }
 
-    public List<TableDesc> getTableDescByTypes(String project, boolean withExt, final String tableName,
-            final String database, boolean isFuzzy, List sourceType) throws IOException {
-        return getTableDesc(project, withExt, tableName, database, isFuzzy).stream()
-                .filter(tableDesc -> sourceType.contains(tableDesc.getSourceType())).collect(Collectors.toList());
+    public Pair<List<TableDesc>, Integer> getTableDescByTypes(String project, boolean withExt, final String tableName,
+            final String database, boolean isFuzzy, List<Integer> sourceType, Pair<Integer, Integer> offsetAndLimit) {
+        Pair<List<TableDesc>, Integer> tableDescAndSize = getTableDesc(project, withExt, tableName, database, isFuzzy,
+                offsetAndLimit);
+        return new Pair<>(tableDescAndSize.getFirst().stream()
+                .filter(tableDesc -> sourceType.contains(tableDesc.getSourceType())).collect(Collectors.toList()),
+                tableDescAndSize.getSecond());
     }
 
-    public List<TableDesc> getTableDesc(String project, boolean withExt, final String tableName, final String database,
-            boolean isFuzzy) throws IOException {
+    Pair<List<TableDesc>, Integer> getTableDesc(String project, boolean withExt, final String tableName,
+            final String database, boolean isFuzzy, Pair<Integer, Integer> offsetAndLimit) {
         aclEvaluate.checkProjectReadPermission(project);
+        boolean streamingEnabled = getConfig().streamingEnabled();
         NTableMetadataManager nTableMetadataManager = getManager(NTableMetadataManager.class, project);
         List<TableDesc> tables = Lists.newArrayList();
         //get table not fuzzy,can use getTableDesc(tableName)
         if (StringUtils.isNotEmpty(tableName) && !isFuzzy) {
             val tableDesc = nTableMetadataManager.getTableDesc(database + "." + tableName);
-            if (tableDesc != null && NTableMetadataManager.isTableAccessible(tableDesc))
+            if (tableDesc != null && tableDesc.isAccessible(streamingEnabled))
                 tables.add(tableDesc);
         } else {
             tables.addAll(nTableMetadataManager.listAllTables().stream().filter(tableDesc -> {
@@ -251,10 +261,13 @@ public class TableService extends BasicService {
                     return true;
                 }
                 return tableDesc.getName().toLowerCase(Locale.ROOT).contains(tableName.toLowerCase(Locale.ROOT));
-            }).filter(NTableMetadataManager::isTableAccessible).sorted(this::compareTableDesc)
+            }).filter(table -> table.isAccessible(streamingEnabled)).sorted(this::compareTableDesc)
                     .collect(Collectors.toList()));
         }
-        return getTablesResponse(tables, project, withExt);
+        // time cost most, try to cut tables here
+        int originTableSize = tables.size();
+        tables = PagingUtil.cutPage(tables, offsetAndLimit.getFirst(), offsetAndLimit.getSecond());
+        return new Pair<>(getTablesResponse(tables, project, withExt), originTableSize);
     }
 
     public int compareTableDesc(TableDesc table1, TableDesc table2) {
@@ -279,6 +292,7 @@ public class TableService extends BasicService {
         // save table meta
         List<String> saved = Lists.newArrayList();
         List<TableDesc> savedTables = Lists.newArrayList();
+        Set<TableExtDesc.S3RoleCredentialInfo> brodcasttedS3Conf = new HashSet<>();
         for (Pair<TableDesc, TableExtDesc> pair : allMeta) {
             TableDesc tableDesc = pair.getFirst();
             TableExtDesc extDesc = pair.getSecond();
@@ -319,8 +333,9 @@ public class TableService extends BasicService {
                 nTableExtDesc.init(project);
 
                 tableMetaMgr.saveTableExt(nTableExtDesc);
-                if (KylinConfig.getInstanceFromEnv().useDynamicS3RoleCredentialInTable()) {
-                    SparderEnv.addS3CredentialFromTableToSpark(nTableExtDesc, SparderEnv.getSparkSession());
+                if (!brodcasttedS3Conf.contains(extDesc.getS3RoleCredentialInfo())) {
+                    addAndBroadcastSparkSession(extDesc.getS3RoleCredentialInfo());
+                    brodcasttedS3Conf.add(extDesc.getS3RoleCredentialInfo());
                 }
             }
 
@@ -436,69 +451,72 @@ public class TableService extends BasicService {
         return tableDescResponse;
     }
 
-    private List<TableDesc> getTablesResponse(List<TableDesc> tables, String project, boolean withExt)
-            throws IOException {
+    private List<TableDesc> getTablesResponse(List<TableDesc> tables, String project, boolean withExt) {
         List<TableDesc> descs = new ArrayList<>();
         val projectManager = getManager(NProjectManager.class);
         val groups = getCurrentUserGroups();
         final List<AclTCR> aclTCRS = getManager(AclTCRManager.class, project)
                 .getAclTCRs(AclPermissionUtil.getCurrentUsername(), groups);
-        final boolean isAclGreen = AclPermissionUtil.canUseACLGreenChannel(project, groups, true);
-        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        final boolean isAclGreen = AclPermissionUtil.canUseACLGreenChannel(project, groups);
         List<NDataModel> healthyModels = projectManager.listHealthyModels(project);
         for (val originTable : tables) {
             TableDesc table = getAuthorizedTableDesc(project, isAclGreen, originTable, aclTCRS);
             if (Objects.isNull(table)) {
                 continue;
             }
-            TableDescResponse tableDescResponse;
-            val modelsUsingRootTable = Lists.<NDataModel> newArrayList();
-            val modelsUsingTable = Lists.<NDataModel> newArrayList();
-            for (NDataModel model : healthyModels) {
-                if (model.containsTable(table)) {
-                    modelsUsingTable.add(model);
-                }
+            descs.add(checkIfAddTableDescResponse(project, table, withExt, healthyModels, isAclGreen, aclTCRS));
+        }
+        return descs;
+    }
 
-                if (model.isRootFactTable(table)) {
-                    modelsUsingRootTable.add(model);
-                }
-            }
-
-            if (withExt) {
-                tableDescResponse = getTableResponse(table, project);
-            } else {
-                tableDescResponse = new TableDescResponse(table);
+    public TableDescResponse checkIfAddTableDescResponse(String project, TableDesc table, boolean withExt,
+            List<NDataModel> healthyModels, boolean isAclGreen, List<AclTCR> aclTCRS) {
+        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        TableDescResponse tableDescResponse;
+        val modelsUsingRootTable = Lists.<NDataModel> newArrayList();
+        val modelsUsingTable = Lists.<NDataModel> newArrayList();
+        for (NDataModel model : healthyModels) {
+            if (model.containsTable(table)) {
+                modelsUsingTable.add(model);
             }
 
-            TableExtDesc tableExtDesc = getManager(NTableMetadataManager.class, project).getTableExtIfExists(table);
-            if (tableExtDesc != null) {
-                tableDescResponse.setTotalRecords(tableExtDesc.getTotalRows());
-                tableDescResponse.setSamplingRows(tableExtDesc.getSampleRows());
-                tableDescResponse.setJodID(tableExtDesc.getJodID());
-                filterSamplingRows(project, tableDescResponse, isAclGreen, aclTCRS);
+            if (model.isRootFactTable(table)) {
+                modelsUsingRootTable.add(model);
             }
-
-            if (CollectionUtils.isNotEmpty(modelsUsingRootTable)) {
-                tableDescResponse.setRootFact(true);
-                tableDescResponse.setStorageSize(getStorageSize(project, modelsUsingRootTable, fs));
-            } else if (CollectionUtils.isNotEmpty(modelsUsingTable)) {
-                tableDescResponse.setLookup(true);
-                tableDescResponse.setStorageSize(getSnapshotSize(project, table.getIdentity(), fs));
-            }
-            Pair<Set<String>, Set<String>> tableColumnType = getTableColumnType(project, table, modelsUsingTable);
-            NDataLoadingRange dataLoadingRange = getManager(NDataLoadingRangeManager.class, project)
-                    .getDataLoadingRange(table.getIdentity());
-            if (null != dataLoadingRange) {
-                tableDescResponse.setPartitionedColumn(dataLoadingRange.getColumnName());
-                tableDescResponse.setPartitionedColumnFormat(dataLoadingRange.getPartitionDateFormat());
-                tableDescResponse.setSegmentRange(dataLoadingRange.getCoveredRange());
-            }
-            tableDescResponse.setForeignKey(tableColumnType.getSecond());
-            tableDescResponse.setPrimaryKey(tableColumnType.getFirst());
-            descs.add(tableDescResponse);
         }
 
-        return descs;
+        if (withExt) {
+            tableDescResponse = getTableResponse(table, project);
+        } else {
+            tableDescResponse = new TableDescResponse(table);
+        }
+
+        TableExtDesc tableExtDesc = getManager(NTableMetadataManager.class, project).getTableExtIfExists(table);
+        if (tableExtDesc != null) {
+            tableDescResponse.setTotalRecords(tableExtDesc.getTotalRows());
+            tableDescResponse.setSamplingRows(tableExtDesc.getSampleRows());
+            tableDescResponse.setJodID(tableExtDesc.getJodID());
+            filterSamplingRows(project, tableDescResponse, isAclGreen, aclTCRS);
+        }
+
+        if (CollectionUtils.isNotEmpty(modelsUsingRootTable)) {
+            tableDescResponse.setRootFact(true);
+            tableDescResponse.setStorageSize(getStorageSize(project, modelsUsingRootTable, fs));
+        } else if (CollectionUtils.isNotEmpty(modelsUsingTable)) {
+            tableDescResponse.setLookup(true);
+            tableDescResponse.setStorageSize(getSnapshotSize(project, table.getIdentity(), fs));
+        }
+        Pair<Set<String>, Set<String>> tableColumnType = getTableColumnType(project, table, modelsUsingTable);
+        NDataLoadingRange dataLoadingRange = getManager(NDataLoadingRangeManager.class, project)
+                .getDataLoadingRange(table.getIdentity());
+        if (null != dataLoadingRange) {
+            tableDescResponse.setPartitionedColumn(dataLoadingRange.getColumnName());
+            tableDescResponse.setPartitionedColumnFormat(dataLoadingRange.getPartitionDateFormat());
+            tableDescResponse.setSegmentRange(dataLoadingRange.getCoveredRange());
+        }
+        tableDescResponse.setForeignKey(tableColumnType.getSecond());
+        tableDescResponse.setPrimaryKey(tableColumnType.getFirst());
+        return tableDescResponse;
     }
 
     @VisibleForTesting
@@ -561,7 +579,7 @@ public class TableService extends BasicService {
 
     @VisibleForTesting
     TableDesc getAuthorizedTableDesc(String project, boolean isAclGreen, TableDesc originTable, List<AclTCR> aclTCRS) {
-        if (isAclGreen) {
+        if (isAclGreen || aclEvaluate.hasProjectAdminPermission(project)) {
             return originTable;
         }
         return getManager(AclTCRManager.class, project).getAuthorizedTableDesc(originTable, aclTCRS);
@@ -1182,16 +1200,17 @@ public class TableService extends BasicService {
         }, projectName);
     }
 
-    public Pair<String, List<String>> reloadAWSTableCompatibleCrossAccount(String projectName, S3TableExtInfo tableExtInfo,
-            boolean needSample, int maxRows, boolean needBuild, int priority, String yarnQueue) {
+    public Pair<String, List<String>> reloadAWSTableCompatibleCrossAccount(String projectName,
+            S3TableExtInfo tableExtInfo, boolean needSample, int maxRows, boolean needBuild, int priority,
+            String yarnQueue) {
         aclEvaluate.checkProjectWritePermission(projectName);
         return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             Pair<String, List<String>> pair = new Pair<>();
             List<String> buildingJobs = innerReloadTable(projectName, tableExtInfo.getName(), needBuild, tableExtInfo);
             pair.setSecond(buildingJobs);
             if (needSample && maxRows > 0) {
-                List<String> jobIds = tableSamplingService.sampling(Sets.newHashSet(tableExtInfo.getName()), projectName,
-                        maxRows, priority, yarnQueue, null);
+                List<String> jobIds = tableSamplingService.sampling(Sets.newHashSet(tableExtInfo.getName()),
+                        projectName, maxRows, priority, yarnQueue, null);
                 if (CollectionUtils.isNotEmpty(jobIds)) {
                     pair.setFirst(jobIds.get(0));
                 }
@@ -1202,7 +1221,7 @@ public class TableService extends BasicService {
 
     @Transaction(project = 0)
     List<String> innerReloadTable(String projectName, String tableIdentity, boolean needBuild,
-                 S3TableExtInfo tableExtInfo) throws Exception {
+            S3TableExtInfo tableExtInfo) throws Exception {
         val tableManager = getManager(NTableMetadataManager.class, projectName);
         val originTable = tableManager.getTableDesc(tableIdentity);
         Preconditions.checkNotNull(originTable,
@@ -1224,7 +1243,8 @@ public class TableService extends BasicService {
                 tableExtDesc.addDataSourceProp(TableExtDesc.S3_ENDPOINT_KEY, endpoint);
                 TableExtDesc copyExt = tableManager.copyForWrite(tableExtDesc);
                 tableManager.saveTableExt(copyExt);
-                refreshSparkSessionIfNecessary(copyExt);
+                // refresh spark session and broadcast
+                addAndBroadcastSparkSession(copyExt.getS3RoleCredentialInfo());
             }
             return jobs;
         }
@@ -1257,9 +1277,19 @@ public class TableService extends BasicService {
         return jobs;
     }
 
-    public void refreshSparkSessionIfNecessary(TableExtDesc extDesc) {
+    public void addAndBroadcastSparkSession(TableExtDesc.S3RoleCredentialInfo s3RoleCredentialInfo) {
+        if (s3RoleCredentialInfo == null) {
+            return;
+        }
+        if (Strings.isNullOrEmpty(s3RoleCredentialInfo.getEndpoint())
+                && Strings.isNullOrEmpty(s3RoleCredentialInfo.getRole())) {
+            return;
+        }
         if (KylinConfig.getInstanceFromEnv().useDynamicS3RoleCredentialInTable()) {
-            SparderEnv.addS3CredentialFromTableToSpark(extDesc, SparderEnv.getSparkSession());
+            SparderEnv.addS3Credential(s3RoleCredentialInfo, SparderEnv.getSparkSession());
+            EventBusFactory.getInstance()
+                    .postAsync(new AddS3CredentialToSparkBroadcastEventNotifier(s3RoleCredentialInfo.getBucket(),
+                            s3RoleCredentialInfo.getRole(), s3RoleCredentialInfo.getEndpoint()));
         }
     }
 
@@ -1467,9 +1497,9 @@ public class TableService extends BasicService {
         return duplicatedColumns;
     }
 
-    private void checkEffectedJobs(TableDesc newTableDesc) {
+    private void checkEffectedJobs(TableDesc newTableDesc, boolean isOnlyAddCol) {
         List<String> targetSubjectList = getEffectedJobs(newTableDesc, JobInfoEnum.JOB_TARGET_SUBJECT);
-        if (CollectionUtils.isNotEmpty(targetSubjectList)) {
+        if (CollectionUtils.isNotEmpty(targetSubjectList) && !isOnlyAddCol) {
             throw new KylinException(TABLE_RELOAD_HAVING_NOT_FINAL_JOB,
                     StringUtils.join(targetSubjectList.iterator(), ","));
         }
@@ -1537,7 +1567,7 @@ public class TableService extends BasicService {
 
         if (failFast) {
             checkNewColumn(project, newTableDesc.getIdentity(), Sets.newHashSet(context.getAddColumns()));
-            checkEffectedJobs(newTableDesc);
+            checkEffectedJobs(newTableDesc, context.isOnlyAddCols());
         } else {
             Set<String> duplicatedColumnsSet = Sets.newHashSet();
             Multimap<String, String> duplicatedColumns = getDuplicatedColumns(project, newTableDesc.getIdentity(),
@@ -1680,20 +1710,14 @@ public class TableService extends BasicService {
         NTableMetadataManager tableManager = getManager(NTableMetadataManager.class, project);
         List<TableDesc> tables = tableManager.listAllTables();
         Set<String> loadedDatabases = new HashSet<>();
-        for (TableDesc table : tables) {
-            if (NTableMetadataManager.isTableAccessible(table)) {
-                loadedDatabases.add(table.getDatabase());
-            }
-        }
+        boolean streamingEnabled = getConfig().streamingEnabled();
+        tables.stream().filter(table -> table.isAccessible(streamingEnabled))
+                .forEach(table -> loadedDatabases.add(table.getDatabase()));
         return loadedDatabases;
     }
 
-    public interface ProjectTablesFilter {
-        List process(String database, String table) throws Exception;
-    }
-
-    public NInitTablesResponse getProjectTables(String project, String table, Integer offset, Integer limit,
-            Boolean useHiveDatabase, ProjectTablesFilter projectTablesFilter) throws Exception {
+    public NInitTablesResponse getProjectTables(String project, String table, Pair<Integer, Integer> offsetAndLimit,
+            boolean useHiveDatabase, boolean withExt, boolean isFuzzy, List<Integer> sourceType) throws Exception {
         aclEvaluate.checkProjectReadPermission(project);
         NInitTablesResponse response = new NInitTablesResponse();
         if (table == null)
@@ -1703,20 +1727,33 @@ public class TableService extends BasicService {
             exceptDatabase = table.split("\\.", 2)[0].trim();
             table = table.split("\\.", 2)[1].trim();
         }
+        String notAllowedModifyTableName = table;
         Collection<String> databases = useHiveDatabase ? getSourceDbNames(project) : getLoadedDatabases(project);
         for (String database : databases) {
             if (exceptDatabase != null && !exceptDatabase.equalsIgnoreCase(database)) {
                 continue;
             }
-            List<?> tables;
+            // we may temporarily change the table name, but later to change back
             if (exceptDatabase == null && database.toLowerCase(Locale.ROOT).contains(table.toLowerCase(Locale.ROOT))) {
-                tables = projectTablesFilter.process(database, "");
-            } else {
-                tables = projectTablesFilter.process(database, table);
+                table = "";
             }
-            List<?> tablePage = PagingUtil.cutPage(tables, offset, limit);
+            // This means request api for showProjectTableNames
+            Pair<List<?>, Integer> tableDescAndSize = new Pair<>();
+            if (sourceType.isEmpty()) {
+                List<TableNameResponse> hiveTableNameResponses = getHiveTableNameResponses(project, database, table);
+                tableDescAndSize.setFirst(hiveTableNameResponses);
+                tableDescAndSize.setSecond(hiveTableNameResponses.size());
+            } else {
+                Pair<List<TableDesc>, Integer> tableDescByTypes = getTableDescByTypes(project, withExt, table, database,
+                        isFuzzy, sourceType, offsetAndLimit);
+                tableDescAndSize.setFirst(tableDescByTypes.getFirst());
+                tableDescAndSize.setSecond(tableDescByTypes.getSecond());
+            }
+            table = notAllowedModifyTableName;
+            List<?> tablePage = PagingUtil.cutPage(tableDescAndSize.getFirst(), offsetAndLimit.getFirst(),
+                    offsetAndLimit.getSecond());
             if (!tablePage.isEmpty()) {
-                response.putDatabase(database, tables.size(), tablePage);
+                response.putDatabase(database, tableDescAndSize.getSecond(), tablePage);
             }
         }
         return response;

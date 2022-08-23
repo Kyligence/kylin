@@ -22,9 +22,11 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.KylinConfigBase;
 import org.apache.kylin.common.util.BufferedLogger;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.ExecutableApplication;
+import org.apache.kylin.common.util.ShellException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,9 +40,10 @@ public class ForkBasedJobRunner extends JobRunnerFactory.AbstractJobRunner {
     }
 
     @Override
-    protected void doExecute(ExecutableApplication app, Map<String, String> args) throws Exception {
+    protected void doExecute(ExecutableApplication app, Map<String, String> args) throws ShellException {
         String finalCommand = String.format(Locale.ROOT, "bash -x %s/sbin/bootstrap.sh %s %s 2>>%s",
-                KylinConfig.getKylinHome(), app.getClass().getName(), formatArgs(args), getJobTmpDir() + "/job.log");
+                KylinConfigBase.getKylinHome(), app.getClass().getName(), formatArgs(args),
+                getJobTmpDir() + "/job.log");
         log.info("Try to execute {}", finalCommand);
         cliExecutor.execute(finalCommand, new BufferedLogger(log), jobId);
     }

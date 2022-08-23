@@ -19,6 +19,7 @@ package io.kyligence.kap.clickhouse;
 
 import io.kyligence.kap.clickhouse.factory.ClickHouseOperatorFactory;
 import io.kyligence.kap.clickhouse.factory.ClickHouseQueryFactory;
+import io.kyligence.kap.clickhouse.job.ClickHouseIndexClean;
 import io.kyligence.kap.clickhouse.job.ClickHouseIndexCleanJob;
 import io.kyligence.kap.guava20.shaded.common.base.Strings;
 import io.kyligence.kap.secondstorage.config.Node;
@@ -153,6 +154,7 @@ public class ClickHouseStorage implements SecondStoragePlugin {
         SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageLoadStep.class, ClickHouseLoad::new);
         SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageRefreshStep.class, ClickHouseRefresh::new);
         SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageMergeStep.class, ClickHouseMerge::new);
+        SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageIndexClean.class, ClickHouseIndexClean::new);
 
         SecondStorageFactoryUtils.register(SecondStorageMetadataFactory.class, new ClickHouseMetadataFactory());
         SecondStorageFactoryUtils.register(SecondStorageDatabaseOperatorFactory.class, new ClickHouseOperatorFactory());

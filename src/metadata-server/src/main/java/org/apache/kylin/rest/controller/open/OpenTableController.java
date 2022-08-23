@@ -111,16 +111,17 @@ public class OpenTableController extends NBasicController {
             @RequestParam(value = "ext", required = false, defaultValue = "true") boolean withExt,
             @RequestParam(value = "page_offset", required = false, defaultValue = "0") Integer offset,
             @RequestParam(value = "page_size", required = false, defaultValue = "10") Integer limit,
-            @RequestParam(value = "source_type", required = false, defaultValue = "9") Integer sourceType)
-            throws IOException {
+            @RequestParam(value = "source_type", required = false, defaultValue = "9") Integer sourceType) {
         checkProjectName(project);
         if (sourceType == ISourceAware.ID_STREAMING) {
             throw new KylinException(UNSUPPORTED_STREAMING_OPERATION,
                     MsgPicker.getMsg().getStreamingOperationNotSupport());
         }
-        List<TableDesc> result = tableService.getTableDescByType(project, withExt, table, database, isFuzzy,
-                sourceType);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, DataResult.get(result, offset, limit), "");
+        Pair<List<TableDesc>, Integer> tableDescAndSize = tableService.getTableDescByType(project, withExt, table, database, isFuzzy,
+                sourceType, new Pair<>(offset, limit));
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
+                new DataResult<>(tableDescAndSize.getFirst(), tableDescAndSize.getSecond(), offset, limit),
+                "");
     }
 
     @ApiOperation(value = "loadTables", tags = { "AI" })
@@ -173,6 +174,7 @@ public class OpenTableController extends NBasicController {
         updateDataSourceType(tableLoadRequest.getProject(), tableLoadRequest.getDataSourceType());
         return tableController.loadAWSTablesCompatibleCrossAccount(tableLoadRequest);
     }
+
 
     @ApiOperation(value = "preReloadTable", tags = { "AI" })
     @GetMapping(value = "/pre_reload")

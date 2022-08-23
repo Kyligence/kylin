@@ -365,7 +365,7 @@ public class NModelControllerTest extends NLocalFileMetadataTestCase {
         mockMvc.perform(MockMvcRequestBuilders.post("/api/models/check_partition_desc") //
                 .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(partitionDesc))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isInternalServerError());
+                .andExpect(MockMvcResultMatchers.status().isOk());
         partitionDesc.setPartitionDateFormat("yyyy'@:1008'MM''dd");
         mockMvc.perform(MockMvcRequestBuilders.post("/api/models/check_partition_desc") //
                 .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(partitionDesc))
@@ -375,17 +375,17 @@ public class NModelControllerTest extends NLocalFileMetadataTestCase {
         mockMvc.perform(MockMvcRequestBuilders.post("/api/models/check_partition_desc") //
                 .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(partitionDesc))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isInternalServerError());
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
         partitionDesc.setPartitionDateFormat("");
         mockMvc.perform(MockMvcRequestBuilders.post("/api/models/check_partition_desc") //
                 .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(partitionDesc))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isInternalServerError());
+                .andExpect(MockMvcResultMatchers.status().isOk());
         partitionDesc.setPartitionDateFormat("YYYY-dd-hh");
         mockMvc.perform(MockMvcRequestBuilders.post("/api/models/check_partition_desc") //
                 .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(partitionDesc))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isInternalServerError());
+                .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(nModelController, times(5)).checkPartitionDesc(Mockito.any(PartitionDesc.class));
     }
 
@@ -745,6 +745,16 @@ public class NModelControllerTest extends NLocalFileMetadataTestCase {
                 .param("server_host", "localhost").param("server_port", "8080").param("dimensions", "")
                 .param("measures", "").contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    public void testValidateExport() throws Exception {
+        String project = "default";
+        String modelName = "741ca86a-1f13-46da-a59f-95fb68615e3a";
+        when(modelService.validateExport(project, modelName)).thenReturn(Boolean.TRUE);
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/models/validate_export").param("model", modelName)
+                .param("project", project).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 

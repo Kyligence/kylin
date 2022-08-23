@@ -35,7 +35,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.DefaultChainedExecutable;
+import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.common.util.OptionBuilder;
@@ -206,7 +206,7 @@ public class JobDiagInfoTool extends AbstractInfoExtractorTool {
 
         // extract job step eventLogs
         Future eventLogTask = executorService.submit(() -> {
-            if (job instanceof DefaultChainedExecutable) {
+            if (job instanceof DefaultExecutable) {
                 recordTaskStartTime(JOB_EVENTLOGS);
                 val appIds = NExecutableManager.getInstance(getKylinConfig(), project).getYarnApplicationJobs(jobId);
                 Map<String, String> sparkConf = getKylinConfig().getSparkConfigOverride();

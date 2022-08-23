@@ -18,6 +18,8 @@
 
 package org.apache.kylin.rest.controller;
 
+import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
+import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_USER_NAME;
 import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_UPDATE_PASSWORD;
 import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_UPDATE_USER;
@@ -29,11 +31,10 @@ import static org.apache.kylin.common.exception.ServerErrorCode.SHORT_PASSWORD;
 import static org.apache.kylin.common.exception.ServerErrorCode.USER_NOT_EXIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.USER_AUTH_INFO_NOTFOUND;
 import static org.apache.kylin.rest.constant.Constant.ROLE_ADMIN;
-import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
-import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -47,26 +48,30 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
-import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.metadata.MetadataConstants;
-import org.apache.kylin.rest.constant.Constant;
-import org.apache.kylin.rest.exception.UnauthorizedException;
-import org.apache.kylin.rest.response.DataResult;
-import org.apache.kylin.rest.response.EnvelopeResponse;
-import org.apache.kylin.rest.service.AccessService;
-import org.apache.kylin.rest.service.IUserGroupService;
-import org.apache.kylin.rest.service.UserService;
-import org.apache.kylin.rest.util.AclEvaluate;
-import org.apache.kylin.rest.util.PagingUtil;
-import org.apache.kylin.util.PasswordEncodeFactory;
 import org.apache.kylin.common.persistence.transaction.AclTCRRevokeEventNotifier;
 import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.config.initialize.AfterMetadataReadyEvent;
+import org.apache.kylin.rest.constant.Constant;
+import org.apache.kylin.rest.exception.UnauthorizedException;
 import org.apache.kylin.rest.request.PasswordChangeRequest;
 import org.apache.kylin.rest.request.UserRequest;
+import org.apache.kylin.rest.response.DataResult;
+import org.apache.kylin.rest.response.EnvelopeResponse;
+import org.apache.kylin.rest.response.ManagedUserResponse;
+import org.apache.kylin.rest.security.AclPermission;
+import org.apache.kylin.rest.service.AccessService;
 import org.apache.kylin.rest.service.AclTCRService;
+import org.apache.kylin.rest.service.IUserGroupService;
+import org.apache.kylin.rest.service.OpenUserService;
+import org.apache.kylin.rest.service.UserAclService;
+import org.apache.kylin.rest.service.UserService;
+import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.CreateAdminUserUtils;
+import org.apache.kylin.rest.util.PagingUtil;
+import org.apache.kylin.util.PasswordEncodeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,6 +101,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import io.swagger.annotations.ApiOperation;
+import lombok.SneakyThrows;
 import lombok.val;
 
 @Controller
@@ -126,6 +132,10 @@ public class NUserController extends NBasicController {
     @Autowired
     @Qualifier("userGroupService")
     private IUserGroupService userGroupService;
+
+    @Autowired
+    @Qualifier("userAclService")
+    UserAclService userAclService;
 
     @Autowired
     private Environment env;
@@ -164,9 +174,9 @@ public class NUserController extends NBasicController {
         checkPasswordLength(password);
         checkPasswordCharacter(password);
         checkUserGroupNotEmpty(user.getAuthorities());
-        checkUserGroupExists(user.getAuthorities());
+        List<String> allGroups = userGroupService.getAllUserGroups();
+        checkUserGroupExists(user.getAuthorities(), allGroups);
         checkUserGroupNotDuplicated(user.getAuthorities());
-
         return createAdminUser(user);
     }
 
@@ -223,7 +233,8 @@ public class NUserController extends NBasicController {
             checkPasswordCharacter(mergeUser.getPassword());
         }
         mergeUser.setPassword(pwdEncode(mergeUser.getPassword()));
-        checkUserGroupExists(mergeUser.getAuthorities());
+        List<String> allGroups = userGroupService.getAllUserGroups();
+        checkUserGroupExists(mergeUser.getAuthorities(), allGroups);
         checkUserGroupNotDuplicated(mergeUser.getAuthorities());
         completeAuthorities(mergeUser);
 
@@ -310,13 +321,14 @@ public class NUserController extends NBasicController {
     @ResponseBody
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN)
     public EnvelopeResponse<String> batchCreate(@RequestBody List<ManagedUser> users) throws IOException {
+        List<String> allGroups = userGroupService.getAllUserGroups();
         for (ManagedUser user : users) {
             checkUsername(user.getUsername());
             val password = pwdBase64Decode(user.getPassword());
             checkPasswordLength(password);
             checkPasswordCharacter(password);
             checkUserGroupNotEmpty(user.getAuthorities());
-            checkUserGroupExists(user.getAuthorities());
+            checkUserGroupExists(user.getAuthorities(), allGroups);
             checkUserGroupNotDuplicated(user.getAuthorities());
             user.setPassword(password);
             createAdminUser(user);
@@ -361,7 +373,7 @@ public class NUserController extends NBasicController {
     @GetMapping(value = "")
     @ResponseBody
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN)
-    public EnvelopeResponse<DataResult<List<ManagedUser>>> listAllUsers(
+    public EnvelopeResponse<DataResult<List<ManagedUserResponse>>> listAllUsers(
             @RequestParam(value = "name", required = false) String nameSeg,
             @RequestParam(value = "is_case_sensitive", required = false) boolean isCaseSensitive,
             @RequestParam(value = "page_offset", required = false, defaultValue = "0") Integer pageOffset,
@@ -370,11 +382,37 @@ public class NUserController extends NBasicController {
         List<ManagedUser> usersByFuzzyMatching = userService.getManagedUsersByFuzzMatching(nameSeg, isCaseSensitive);
         List<ManagedUser> subList = PagingUtil.cutPage(usersByFuzzyMatching, pageOffset, pageSize);
         //LDAP users dose not have authorities
-        for (ManagedUser u : subList) {
-            userService.completeUserInfo(u);
+        if (userService instanceof OpenUserService) {
+            // invoke AdminUserAspect
+            userService.listAdminUsers();
         }
+        val superAdminUsers = userService.listSuperAdminUsers();
+        val userList = new ArrayList<ManagedUserResponse>();
+        for (ManagedUser u : subList) {
+            val managedUserResponse = new ManagedUserResponse();
+            managedUserResponse.setManagedUser(u);
+            userService.completeUserInfo(u);
+            if (userService.isGlobalAdmin(u.getUsername())
+                    && userAclService.hasUserAclPermission(u.getUsername(), AclPermission.DATA_QUERY)) {
+                managedUserResponse.setHasQueryPermission(true);
+            }
+            if (managedUserResponse.isHasQueryPermission() && CollectionUtils.isNotEmpty(superAdminUsers)) {
+                managedUserResponse.setSuperAdmin(superAdminUsers.stream()
+                        .anyMatch(adminUser -> StringUtils.equalsIgnoreCase(adminUser, u.getUsername())));
+            }
+            userList.add(managedUserResponse);
+        }
+        val userSize = usersByFuzzyMatching == null ? 0 : usersByFuzzyMatching.size();
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
-                DataResult.get(subList, usersByFuzzyMatching, pageOffset, pageSize), "");
+                new DataResult<>(userList, userSize, pageOffset, pageSize), "");
+    }
+
+    @ApiOperation(value = "listSuperAdmin", tags = { "MID" })
+    @GetMapping(value = "/super_admin")
+    @ResponseBody
+    @SneakyThrows
+    public EnvelopeResponse<List<String>> listSuperAdmin() {
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, userService.listSuperAdminUsers(), "");
     }
 
     @ApiOperation(value = "changePassword", tags = { "MID" })
@@ -585,9 +623,9 @@ public class NUserController extends NBasicController {
         }
     }
 
-    private void checkUserGroupExists(List<SimpleGrantedAuthority> groups) throws IOException {
+    private void checkUserGroupExists(List<SimpleGrantedAuthority> groups, List<String> allGroups) {
         for (SimpleGrantedAuthority group : groups) {
-            if (!userGroupService.exists(group.getAuthority())) {
+            if (!allGroups.contains(group.getAuthority())) {
                 throw new KylinException(INVALID_PARAMETER,
                         String.format(Locale.ROOT, MsgPicker.getMsg().getOperationFailedByGroupNotExist(), group));
             }
@@ -601,5 +639,4 @@ public class NUserController extends NBasicController {
             throw new KylinException(INVALID_PARAMETER, "Values in authorities can't be duplicated.");
         }
     }
-
 }

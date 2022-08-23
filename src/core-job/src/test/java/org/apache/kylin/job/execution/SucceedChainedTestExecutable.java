@@ -29,7 +29,7 @@ import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 
 /**
  */
-public class SucceedChainedTestExecutable extends DefaultChainedExecutable {
+public class SucceedChainedTestExecutable extends DefaultExecutable {
 
     public SucceedChainedTestExecutable() {
         super();

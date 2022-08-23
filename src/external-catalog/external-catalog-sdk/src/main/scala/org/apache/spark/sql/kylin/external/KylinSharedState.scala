@@ -17,8 +17,8 @@
  */
 package org.apache.spark.sql.kylin.external
 
-import org.apache.kylin.externalCatalog.api.catalog.IExternalCatalog
 import org.apache.hadoop.conf.Configuration
+import org.apache.kylin.externalCatalog.api.catalog.IExternalCatalog
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
@@ -94,7 +94,7 @@ object KylinSharedState extends Logging {
       className match {
         case "" => false
         case _ =>
-          Utils.classForName(className)
+          classForName(className)
           true
       }
     } catch {
@@ -107,12 +107,18 @@ object KylinSharedState extends Logging {
       className: String,
       hadoopConfig: Configuration): IExternalCatalog = {
     try {
-      val clazz = Utils.classForName(className)
+      val clazz = classForName(className)
       val ctor = clazz.getConstructors.head
       ctor.newInstance(hadoopConfig).asInstanceOf[IExternalCatalog]
     } catch {
       case NonFatal(e) =>
         throw new IllegalArgumentException(s"Error while instantiating '$className':", e)
     }
+  }
+
+  // scalastyle:off classforname
+  private def classForName(className: String): Class[_] = {
+    Class.forName(className, true, Utils.getContextOrSparkClassLoader)
+    // scalastyle:on classforname
   }
 }

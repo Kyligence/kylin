@@ -26,6 +26,7 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.engine.spark.ExecutableUtils;
 import org.apache.kylin.junit.rule.TransactionExceptedException;
 import org.apache.kylin.metadata.datatype.DataType;
@@ -130,7 +131,7 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
 
         val config = getTestConfig();
         try {
-            val tableDescList = tableService.getTableDesc(PROJECT, true, "P_LINEORDER_STR", database, false);
+            val tableDescList = tableService.getTableDesc(PROJECT, true, "P_LINEORDER_STR", database, false, Pair.newPair(0, 10)).getFirst();
             Assert.assertEquals(1, tableDescList.size());
             val tableDesc = tableDescList.get(0);
             val tableExtDesc = tableService.getOrCreateTableExt(PROJECT, tableDesc);
@@ -148,7 +149,7 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
 
         val config = getTestConfig();
         try {
-            val tableDescList = tableService.getTableDesc(PROJECT, true, "", database, true);
+            val tableDescList = tableService.getTableDesc(PROJECT, true, "", database, true, Pair.newPair(0, 10)).getFirst();
             Assert.assertEquals(2, tableDescList.size());
             val tableDesc = tableDescList.get(0);
             val tableExtDesc = tableService.getOrCreateTableExt(PROJECT, tableDesc);

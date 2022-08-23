@@ -31,18 +31,19 @@ import java.util.Locale;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.rest.constant.Constant;
-import org.apache.kylin.rest.response.EnvelopeResponse;
-import org.apache.kylin.rest.service.AccessService;
-import org.apache.kylin.rest.service.IUserGroupService;
-import org.apache.kylin.rest.service.UserService;
-import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.junit.rule.ClearKEPropertiesRule;
 import org.apache.kylin.metadata.user.ManagedUser;
+import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.PasswordChangeRequest;
 import org.apache.kylin.rest.request.UserRequest;
+import org.apache.kylin.rest.response.EnvelopeResponse;
+import org.apache.kylin.rest.service.AccessService;
 import org.apache.kylin.rest.service.AclTCRService;
+import org.apache.kylin.rest.service.IUserGroupService;
+import org.apache.kylin.rest.service.UserAclService;
+import org.apache.kylin.rest.service.UserService;
+import org.apache.kylin.rest.util.AclEvaluate;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -88,6 +89,9 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
     private UserService userService;
 
     @Mock
+    UserAclService userAclService;
+
+    @Mock
     private AclEvaluate aclEvaluate;
 
     @Mock
@@ -125,6 +129,7 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
         Authentication authentication = new TestingAuthenticationToken(user, "ADMIN", Constant.ROLE_ADMIN);
         SecurityContextHolder.getContext().setAuthentication(authentication);
         ReflectionTestUtils.setField(nUserController, "userGroupService", userGroupService);
+        ReflectionTestUtils.setField(nUserController, "userAclService", userAclService);
     }
 
     @After
@@ -149,6 +154,11 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
         user.setGrantedAuthorities(groups);
         Mockito.doReturn(true).when(userGroupService).exists(Constant.GROUP_ALL_USERS);
         Mockito.doNothing().when(userService).createUser(Mockito.any(UserDetails.class));
+        Mockito.doReturn(new ArrayList<String>() {
+            {
+                add(Constant.GROUP_ALL_USERS);
+            }
+        }).when(userGroupService).getAllUserGroups();
         mockMvc.perform(MockMvcRequestBuilders.post("/api/user").contentType(MediaType.APPLICATION_JSON)
                 .content(JsonUtil.writeValueAsString(user))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
@@ -228,6 +238,11 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
         List<SimpleGrantedAuthority> groups = Lists.newArrayList(new SimpleGrantedAuthority(Constant.GROUP_ALL_USERS),
                 new SimpleGrantedAuthority(Constant.GROUP_ALL_USERS));
         Mockito.doReturn(true).when(userGroupService).exists(Constant.GROUP_ALL_USERS);
+        Mockito.doReturn(new ArrayList<String>() {
+            {
+                add(Constant.GROUP_ALL_USERS);
+            }
+        }).when(userGroupService).getAllUserGroups();
         user.setGrantedAuthorities(groups);
         thrown.expect(KylinException.class);
         thrown.expectMessage("Values in authorities can't be duplicated.");
@@ -476,6 +491,11 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
                 add(Constant.GROUP_ALL_USERS);
             }
         }).when(userGroupService).listUserGroups(user.getUsername());
+        Mockito.doReturn(new ArrayList<String>() {
+            {
+                add(Constant.GROUP_ALL_USERS);
+            }
+        }).when(userGroupService).getAllUserGroups();
         Mockito.doReturn(user).when(nUserController).getManagedUser("ADMIN");
         mockMvc.perform(MockMvcRequestBuilders.put("/api/user").contentType(MediaType.APPLICATION_JSON)
                 .content(JsonUtil.writeValueAsString(userRequest))
@@ -494,13 +514,19 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
         userRequest.setUsername(user.getUsername());
         userRequest.setPassword(user.getPassword());
         userGroupService.addGroup(Constant.GROUP_ALL_USERS);
-        List<String> groups = Lists.newArrayList(Constant.GROUP_ALL_USERS, Constant.GROUP_ALL_USERS);
+        List<String> groups = Lists.newArrayList(Constant.GROUP_ALL_USERS,
+                Constant.GROUP_ALL_USERS);
         Mockito.doReturn(user).when(nUserController).getManagedUser("ADMIN");
         Mockito.doReturn(new HashSet<String>() {
             {
                 add(Constant.GROUP_ALL_USERS);
             }
         }).when(userGroupService).listUserGroups(user.getUsername());
+        Mockito.doReturn(new ArrayList<String>() {
+            {
+                add(Constant.GROUP_ALL_USERS);
+            }
+        }).when(userGroupService).getAllUserGroups();
         Mockito.doReturn(true).when(userGroupService).exists(Constant.GROUP_ALL_USERS);
         userRequest.setAuthorities(groups);
         thrown.expect(KylinException.class);

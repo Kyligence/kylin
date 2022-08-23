@@ -31,20 +31,18 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.code.ErrorCodeServer;
+import org.apache.kylin.common.hystrix.NCircuitBreaker;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.Serializer;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.ClassUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
-import org.apache.kylin.common.hystrix.NCircuitBreaker;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.exception.ModelBrokenException;
-import org.apache.kylin.metadata.project.NProjectManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -325,18 +323,6 @@ public class NDataModelManager {
 
     }
 
-    /**
-     * @param resPath should be exactly like this: /{project_name}/model_desc/{model_name}.json
-     * @return {project_name}
-     */
-    private String getProjectFromPath(String resPath) {
-        Preconditions.checkNotNull(resPath);
-
-        String[] parts = resPath.split("/");
-        Preconditions.checkArgument(4 == parts.length);
-        return parts[1];
-    }
-
     public NDataModel copyForWrite(NDataModel nDataModel) {
         return crud.copyForWrite(nDataModel);
     }
@@ -353,10 +339,6 @@ public class NDataModelManager {
         return dataModelDesc == null ? "NotFoundModel(" + modelId + ")" : dataModelDesc.toString();
     }
 
-    public static boolean isModelAccessible(NDataModel model) {
-        return KylinConfig.getInstanceFromEnv().streamingEnabled() || !model.isStreaming();
-    }
-
     public static Map<String, TableDesc> getRelatedTables(NDataModel dataModel, String project) {
         Map<String, TableDesc> tableMapping = Maps.newHashMap();
         NTableMetadataManager tableManager = NTableMetadataManager.getInstance(dataModel.getConfig(), project);
@@ -371,8 +353,25 @@ public class NDataModelManager {
         return tableMapping;
     }
 
-    private NProjectManager getProjectManager() {
-        return NProjectManager.getInstance(config);
+    /**
+     * All columns used by table index should be dimension, therefore we need to
+     * change status of all columns used by the base TableIndex to dimensions.
+     * Typically, this method should be invoked with an EnhancementUnitOfWork.
+     */
+    public void changeBaseIndexColumnStatusOfModel(NDataModel model, LayoutEntity baseTableIndex) {
+        if (baseTableIndex == null) {
+            return;
+        }
+
+        Set<Integer> columnIdSet = Sets.newHashSet(baseTableIndex.getColOrder());
+        updateDataModel(model.getUuid(), copyForWrite -> {
+            List<NDataModel.NamedColumn> namedColumns = copyForWrite.getAllNamedColumns();
+            namedColumns.forEach(col -> {
+                if (columnIdSet.contains(col.getId()) && !col.isDimension()) {
+                    col.setStatus(NDataModel.ColumnStatus.DIMENSION);
+                }
+            });
+        });
     }
 
     public interface NDataModelUpdater {

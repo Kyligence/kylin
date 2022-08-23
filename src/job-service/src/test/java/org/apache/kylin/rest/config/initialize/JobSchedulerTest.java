@@ -25,6 +25,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_REFRESH_CHECK_INDEX_FAIL;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -171,7 +172,7 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
 
         val indexManager = NIndexPlanManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
         UnitOfWork.doInTransactionWithRetry(() -> indexManager.updateIndexPlan(MODEL_ID, copyForWrite -> {
-            copyForWrite.markWhiteIndexToBeDelete(MODEL_ID, Sets.newHashSet(20000000001L));
+            copyForWrite.markWhiteIndexToBeDelete(MODEL_ID, Sets.newHashSet(20000000001L), Collections.emptyMap());
         }), MODEL_ID);
 
         jobManager.addIndexJob(new JobParam(MODEL_ID, "ADMIN"));
@@ -217,7 +218,7 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
         var df = dfm.getDataflow(MODEL_ID);
         val indexManager = NIndexPlanManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
         UnitOfWork.doInTransactionWithRetry(() -> indexManager.updateIndexPlan(MODEL_ID, copyForWrite -> {
-            copyForWrite.markWhiteIndexToBeDelete(MODEL_ID, Sets.newHashSet(20000000001L));
+            copyForWrite.markWhiteIndexToBeDelete(MODEL_ID, Sets.newHashSet(20000000001L), Collections.emptyMap());
         }), MODEL_ID);
         jobManager.refreshSegmentJob(new JobParam(df.getSegments().get(0), MODEL_ID, "ADMIN"));
         List<AbstractExecutable> executables = getRunningExecutables(DEFAULT_PROJECT, MODEL_ID);
@@ -236,7 +237,7 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
             Set<Long> layouts = copyForWrite.getAllLayoutIds(false);
             layouts.remove(20000000001L);
             copyForWrite.removeLayouts(layouts, true, true);
-            copyForWrite.markWhiteIndexToBeDelete(MODEL_ID, Sets.newHashSet(20000000001L));
+            copyForWrite.markWhiteIndexToBeDelete(MODEL_ID, Sets.newHashSet(20000000001L), Collections.emptyMap());
         }), MODEL_ID);
         thrown.expect(KylinException.class);
         thrown.expectMessage(JOB_REFRESH_CHECK_INDEX_FAIL.getMsg());
@@ -444,7 +445,7 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
             Set<Long> layouts = copyForWrite.getAllLayoutIds(false);
             layouts.remove(20000000001L);
             copyForWrite.removeLayouts(layouts, true, true);
-            copyForWrite.markWhiteIndexToBeDelete(MODEL_ID, Sets.newHashSet(20000000001L));
+            copyForWrite.markWhiteIndexToBeDelete(MODEL_ID, Sets.newHashSet(20000000001L), Collections.emptyMap());
         }), MODEL_ID);
 
         val seg1 = dfm.appendSegment(df, new SegmentRange.TimePartitionedSegmentRange(

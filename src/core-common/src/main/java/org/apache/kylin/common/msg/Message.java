@@ -16,24 +16,6 @@
  * limitations under the License.
  */
 
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.kylin.common.msg;
 
 import java.util.List;
@@ -48,15 +30,26 @@ public class Message {
     private static final String SECOND_STORAGE_MODEL_ENABLED = "The model %s does not have tiered storage enabled.";
     private static final String SECOND_STORAGE_SEGMENT_WITHOUT_BASE_INDEX = "The base table index is missing in the segments, please add and try again.";
     private static final String SECOND_STORAGE_DELETE_NODE_FAILED = "Node %s has data, size is %d bytes";
-    private static final String FORCED_TO_TIERED_STORAGE_AND_FORCE_TO_INDEX = "When force_to_index=ture, the query cannot pushdown when using tiered storage fails, forcedToTieredStorage=1 or conf=1 is invalid, please modify and try again";
-    private static final String FORCED_TO_TIERED_STORAGE_RETURN_ERROR = "Query failed. Tiered storage is unavailable, please fix and try again.";
-    private static final String FORCED_TO_TIERED_STORAGE_INVALID_PARAMETER = "invalid parameters, please fix and try again.";
+    private static final String FORCED_TO_TIEREDSTORAGE_AND_FORCETO_INDEX = "When force_to_index=ture, the query cannot pushdown when using tiered storage fails, forcedToTieredStorage=1 or conf=1 is invalid, please modify and try again";
+    private static final String FORCED_TO_TIEREDSTORAGE_RETURN_ERROR = "Query failed. Tiered storage is unavailable, please fix and try again.";
+    private static final String FORCED_TO_TIEREDSTORAGE_INVALID_PRARAMETER = "invalid parameters, please fix and try again.";
     private static final String PARAMETER_IS_REQUIRED = "'%s' is required.";
-    private static final String DISABLE_PUSH_DOWN_PROMPT = "You should turn on pushdown button if you want to pushdown.";
+    private static final String DISABLE_PUSHDOWN_PROMPT = "You should turn on pushdown button if you want to pushdown.";
     private static final String QUERY_NODE_INVALID = "Can’t execute this request on Query node. Please check and try again.";
-    private static final String NON_EXISTED_MODEL = "Model %s doesn't exist. Please confirm and try again later.";
+    private static final String NON_EXISTEN_MODEL = "Model %s doesn't exist. Please confirm and try again later.";
     private static final String LACK_PROJECT = "Please fill in the project parameters.";
     private static final String NON_EXIST_PROJECT = "Project %s doesn't exist. Please confirm and try again later.";
+    private static final String DUP_MODCOL_MEASURE_NAME = "There are duplicated names among model column %s and measure name %s. Cannot export a valid TDS file. Please correct the duplicated names and try again.";
+    private static final String DUP_DIM_MEASURE_NAME = "There are duplicated names among dimension name %s and measure name %s. Cannot export a valid TDS file. Please correct the duplicated names and try again.";
+    private static final String DUP_DIMCOL_MEASURE_NAME = "There are duplicated names among dimension column %s and measure name %s. Cannot export a valid TDS file. Please correct the duplicated names and try again.";
+    private static final String MODIFY_PERMISSION_OF_SUPER_ADMIN = "Super Admin’s permission can’t be modified.";
+    private static final String ILLEGAL_AUTHORIZING_USER = "Unable to modify. Only Super Admin or System Admin with query permission can modify query permission.";
+    private static final String GRANT_TO_NON_SYSTEM_ADMIN = "Unable to modify. You can only modify the permission of the System Admin.";
+    private static final String MODIFY_OWN_PERMISSION_FAILED = "Can’t modify your own permission.";
+
+    private static final String PROFILING_NOT_ENABLED = "Async profiling is not enabled. check parameter '%s'";
+    private static final String PROFILING_STATUS_ERROR = "Async profiler status error, ";
+    private static final String PROFILING_COLLECT_TIMEOUT = "Async profiler timeout";
 
     protected Message() {
 
@@ -799,7 +792,7 @@ public class Message {
         return "You cannot add,modify or remove the system administrator’s rights";
     }
 
-    public String getChangeDegaultadmin() {
+    public String getChangeDefaultadmin() {
         return "Can’t modify the permission of user “ADMIN”, as this user is a built-in admin by default.";
     }
 
@@ -876,6 +869,22 @@ public class Message {
 
     public String getOperationFailedByGroupNotExist() {
         return "Operation failed, group:[%s] not exists, please add it first";
+    }
+
+    public String getModifyPermissionOfSuperAdminFailed() {
+        return MODIFY_PERMISSION_OF_SUPER_ADMIN;
+    }
+
+    public String getGrantPermissionFailedByIllegalAuthorizingUser() {
+        return ILLEGAL_AUTHORIZING_USER;
+    }
+
+    public String getGrantPermissionFailedByNonSystemAdmin() {
+        return GRANT_TO_NON_SYSTEM_ADMIN;
+    }
+
+    public String getModifyOwnPermissionFailed() {
+        return MODIFY_OWN_PERMISSION_FAILED;
     }
 
     public String getColumuIsNotDimension() {
@@ -1718,15 +1727,15 @@ public class Message {
     }
 
     public String getForcedToTieredstorageAndForceToIndex() {
-        return FORCED_TO_TIERED_STORAGE_AND_FORCE_TO_INDEX;
+        return FORCED_TO_TIEREDSTORAGE_AND_FORCETO_INDEX;
     }
 
     public String getForcedToTieredstorageReturnError() {
-        return FORCED_TO_TIERED_STORAGE_RETURN_ERROR;
+        return FORCED_TO_TIEREDSTORAGE_RETURN_ERROR;
     }
 
     public String getForcedToTieredstorageInvalidParameter() {
-        return FORCED_TO_TIERED_STORAGE_INVALID_PARAMETER;
+        return FORCED_TO_TIEREDSTORAGE_INVALID_PRARAMETER;
     }
 
     public String getSecondStorageNodeNotAvailable() {
@@ -1783,7 +1792,7 @@ public class Message {
     }
 
     public String getParamTooLarge() {
-        return "The parameter '%s' is too large, maximum %s byte.";
+        return "The parameter '%s' is too large, maximum %s KB.";
     }
 
     // KAP query sql blacklist
@@ -1848,11 +1857,11 @@ public class Message {
     }
 
     public String getDisablePushDownPrompt() {
-        return DISABLE_PUSH_DOWN_PROMPT;
+        return DISABLE_PUSHDOWN_PROMPT;
     }
 
     public String getNonExistedModel() {
-        return NON_EXISTED_MODEL;
+        return NON_EXISTEN_MODEL;
     }
 
     public String getLackProject() {
@@ -1861,5 +1870,50 @@ public class Message {
 
     public String getNonExistProject() {
         return NON_EXIST_PROJECT;
+    }
+
+    public String getInvalidMergeSegmentWithoutDFS() {
+        return "The indexes included in the selected segments are not loaded to HDFS storage/object storage. Please ensure the indexes are loaded into HDFS storage and try merging again.";
+    }
+
+    public String getDuplicateModelColumnAndMeasureName() {
+        return DUP_MODCOL_MEASURE_NAME;
+    }
+
+    public String getDuplicateDimensionNameAndMeasureName() {
+        return DUP_DIM_MEASURE_NAME;
+    }
+
+    public String getDuplicateDimensionColAndMeasureName() {
+        return DUP_DIMCOL_MEASURE_NAME;
+    }
+
+    public String getProfilingNotEnabled() {
+        return PROFILING_NOT_ENABLED;
+    }
+
+    public String getProfilingNotStartError() {
+        return PROFILING_STATUS_ERROR + "profiler is not start yet.";
+    }
+
+    public String getProfilingStartedError() {
+        return PROFILING_STATUS_ERROR + "profiler is started already.";
+    }
+
+    public String getProfilingJobNotStartError() {
+        return PROFILING_STATUS_ERROR + "job does not start yet.";
+    }
+
+    public String getProfilingJobFinishedError() {
+        return PROFILING_STATUS_ERROR + "job is finished already.";
+    }
+
+    public String getProfilingCollectTimeout() {
+        return PROFILING_COLLECT_TIMEOUT;
+    }
+
+    public String getTargetSegmentNotFoundError(String missingSegIds) {
+        return String.format(Locale.ROOT,
+                "Cannot find target segment, and missing segment id: %s", missingSegIds);
     }
 }

@@ -93,8 +93,7 @@ public class QueryHistoryTaskScheduler {
         }
         queryHistoryAccelerateRunner = new QueryHistoryAccelerateRunner(false);
         queryHistoryMetaUpdateRunner = new QueryHistoryMetaUpdateRunner();
-        if (querySmartSupporter == null && SpringContext.getApplicationContext() != null
-                && !KylinConfig.vendor().equals("asf")) {
+        if (querySmartSupporter == null && SpringContext.getApplicationContext() != null) {
             querySmartSupporter = SpringContext.getBean(QuerySmartSupporter.class);
         }
         log.debug("New QueryHistoryAccelerateScheduler created by project {}", project);

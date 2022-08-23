@@ -18,15 +18,17 @@
 
 package io.kyligence.kap.secondstorage.management;
 
-import com.google.common.collect.Lists;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import org.apache.kylin.rest.response.NModelDescResponse;
-import org.apache.kylin.rest.service.ModelService;
-import io.kyligence.kap.secondstorage.management.request.StorageRequest;
-import lombok.val;
+import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_NAME_NOT_EXIST;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_EMPTY_PARAMETER;
+
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.rest.constant.Constant;
+import org.apache.kylin.rest.response.NModelDescResponse;
+import org.apache.kylin.rest.service.ModelService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,8 +46,11 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_EMPTY_PARAMETER;
+import com.google.common.collect.Lists;
+
+import io.kyligence.kap.secondstorage.management.request.ModelEnableRequest;
+import io.kyligence.kap.secondstorage.management.request.StorageRequest;
+import lombok.val;
 
 public class OpenSecondStorageEndpointTest extends NLocalFileMetadataTestCase {
 
@@ -113,5 +118,29 @@ public class OpenSecondStorageEndpointTest extends NLocalFileMetadataTestCase {
             return;
         }
         Assert.fail();
+    }
+
+    @Test
+    public void testEnableStorageException() throws Exception{
+        val request = new ModelEnableRequest();
+        request.setProject("default");
+        request.setModelName("test");
+        request.setEnabled(true);
+        try {
+            openSecondStorageEndpoint.enableStorage(request);
+            Assert.fail();
+        } catch (KylinException e) {
+            Assert.assertEquals(MODEL_NAME_NOT_EXIST, e.getErrorCodeProducer());
+        }
+
+        val req = new ModelEnableRequest();
+        req.setProject("default");
+        req.setModelName("test");
+        try {
+            openSecondStorageEndpoint.enableStorage(req);
+            Assert.fail();
+        } catch (KylinException e) {
+            Assert.assertEquals(REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY, e.getErrorCodeProducer());
+        }
     }
 }

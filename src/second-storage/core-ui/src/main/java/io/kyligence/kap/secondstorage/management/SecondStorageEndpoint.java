@@ -133,7 +133,7 @@ public class SecondStorageEndpoint extends NBasicController {
         val model = modelManager.getDataModelDesc(modelEnableRequest.getModel());
         checkModel(modelEnableRequest.getProject(), model.getAlias());
         val jobInfo = secondStorageService.changeModelSecondStorageState(modelEnableRequest.getProject(),
-                modelEnableRequest.getModel(), modelEnableRequest.isEnabled());
+                modelEnableRequest.getModel(), modelEnableRequest.getEnabled());
         JobInfoResponse jobInfoResponse = new JobInfoResponse();
         jobInfoResponse.setJobs(Collections.singletonList(jobInfo.orElse(null)));
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, jobInfoResponse, "");
@@ -224,7 +224,7 @@ public class SecondStorageEndpoint extends NBasicController {
 
     @GetMapping(value = "/lock/list", produces = {HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON})
     @ResponseBody
-    public EnvelopeResponse<List<ProjectLock>> lockList(String project) {
+    public EnvelopeResponse<List<ProjectLock>> lockList(@RequestParam("project") String project) {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, secondStorageService.lockList(project), "");
     }
 

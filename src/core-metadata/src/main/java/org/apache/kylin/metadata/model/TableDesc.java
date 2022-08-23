@@ -16,24 +16,6 @@
  * limitations under the License.
  */
 
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.kylin.metadata.model;
 
 import java.io.Serializable;
@@ -260,6 +242,13 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
         setMvcc(other.getMvcc());
     }
 
+    /**
+     * Streaming table can't be accessed when streaming disabled
+     */
+    public boolean isAccessible(boolean turnOnStreaming) {
+        return turnOnStreaming || getSourceType() != ID_STREAMING;
+    }
+
     @Override
     public String resourceName() {
         return getIdentity();
@@ -337,6 +326,14 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
         return originIdentity.toUpperCase(Locale.ROOT);
     }
 
+    public String getBackTickIdentity() {
+        return getBackTickCaseSensitiveIdentity("");
+    }
+
+    public String getBackTickTransactionalTableIdentity(String suffix) {
+        return getBackTickCaseSensitiveIdentity(TRANSACTIONAL_TABLE_NAME_SUFFIX.toUpperCase(Locale.ROOT) + suffix);
+    }
+
     public String getCaseSensitiveIdentity() {
         if (identity == null) {
             if (this.getCaseSensitiveDatabase().equals("null")) {
@@ -347,6 +344,13 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
             }
         }
         return identity;
+    }
+
+    private String getBackTickCaseSensitiveIdentity(String suffix) {
+        return "null".equals(this.getCaseSensitiveDatabase())
+                ? String.format(Locale.ROOT, "`%s`", this.getCaseSensitiveName())
+                : String.format(Locale.ROOT, "`%s`.`%s`", this.getCaseSensitiveDatabase(),
+                        this.getCaseSensitiveName() + suffix);
     }
 
     public boolean isView() {

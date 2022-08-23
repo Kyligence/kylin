@@ -22,6 +22,10 @@ import static org.apache.kylin.common.exception.ServerErrorCode.BASE_TABLE_INDEX
 import static org.apache.kylin.common.exception.ServerErrorCode.PARTITION_COLUMN_NOT_AVAILABLE;
 import static org.apache.kylin.common.exception.ServerErrorCode.SECOND_STORAGE_DATA_NOT_EXIST;
 import static org.apache.kylin.common.exception.ServerErrorCode.SECOND_STORAGE_PROJECT_STATUS_ERROR;
+import static org.apache.kylin.job.constant.ExecutableConstants.STEP_NAME_BUILD_SPARK_CUBE;
+import static org.apache.kylin.job.constant.ExecutableConstants.STEP_NAME_CLEANUP;
+import static org.apache.kylin.job.constant.ExecutableConstants.STEP_NAME_MERGER_SPARK_SEGMENT;
+import static org.apache.kylin.job.constant.ExecutableConstants.STEP_UPDATE_METADATA;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,15 +43,21 @@ import org.apache.kylin.common.exception.JobErrorCode;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ChainedExecutable;
+import org.apache.kylin.job.execution.ChainedStageExecutable;
+import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.execution.JobSchedulerModeEnum;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.execution.StageBase;
 import org.apache.kylin.metadata.model.SegmentRange;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
@@ -79,6 +89,8 @@ public class SecondStorageUtil {
                     JobTypeEnum.INDEX_MERGE, JobTypeEnum.EXPORT_TO_SECOND_STORAGE));
     public static final Set<JobTypeEnum> BUILD_JOBS = Sets.newHashSet(JobTypeEnum.INDEX_BUILD,
             JobTypeEnum.INDEX_REFRESH, JobTypeEnum.INC_BUILD, JobTypeEnum.INDEX_MERGE);
+    public static final Set<String> EXPORT_STEPS = Sets.newHashSet(SecondStorageConstants.STEP_EXPORT_TO_SECOND_STORAGE,
+            SecondStorageConstants.STEP_REFRESH_SECOND_STORAGE, SecondStorageConstants.STEP_MERGE_SECOND_STORAGE);
 
     private SecondStorageUtil() {
     }
@@ -316,15 +328,15 @@ public class SecondStorageUtil {
             KylinConfig config = KylinConfig.getInstanceFromEnv();
             Optional<Manager<TableFlow>> tableFlowManager = SecondStorageUtil.tableFlowManager(config, project);
             tableFlowManager.ifPresent(manager -> manager.listAll().stream()
-                    .filter(tableFlow -> tableFlow.getId().equals(model)).forEach(tableFlow -> {
-                        tableFlow.update(copy -> {
-                            copy.getTableDataList().stream().filter(
-                                    tableData -> tableData.getDatabase().equals(NameUtil.getDatabase(config, project))
-                                            && tableData.getTable().startsWith(NameUtil.tablePrefix(model)))
-                                    .forEach(tableData -> tableData.removePartitions(
-                                            tablePartition -> segments.contains(tablePartition.getSegmentId())));
-                        });
-                    }));
+                    .filter(tableFlow -> tableFlow.getId().equals(model)).forEach(tableFlow ->
+                            tableFlow.update(copy ->
+                                    copy.getTableDataList().stream().filter(
+                                            tableData -> tableData.getDatabase().equals(NameUtil.getDatabase(config, project))
+                                                    && tableData.getTable().startsWith(NameUtil.tablePrefix(model)))
+                                            .forEach(tableData -> tableData.removePartitions(
+                                                    tablePartition -> segments.contains(tablePartition.getSegmentId())))
+                            )
+                    ));
             return null;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
     }
@@ -387,19 +399,19 @@ public class SecondStorageUtil {
     public static void checkJobRestart(String project, String jobId) {
         if (!isProjectEnable(project))
             return;
-        NExecutableManager executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
-                project);
+        NExecutableManager executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         AbstractExecutable abstractExecutable = executableManager.getJob(jobId);
         JobTypeEnum type = abstractExecutable.getJobType();
         boolean canRestart = type != JobTypeEnum.EXPORT_TO_SECOND_STORAGE;
-
-        ExecutablePO jobDetail = executableManager.getAllJobs().stream().filter(job -> job.getId().equals(jobId))
-                .findFirst().orElseThrow(() -> new IllegalStateException("Job not found"));
-        if (BUILD_JOBS.contains(jobDetail.getJobType())) {
-            long finishedCount = jobDetail.getTasks().stream()
-                    .filter(task -> "SUCCEED".equals(task.getOutput().getStatus())).count();
-            // build job can't restart when second storage step is running
-            canRestart = finishedCount < 3;
+        ExecutablePO jobDetail = NExecutableManager.toPO(abstractExecutable, project);
+        boolean hasSecondStorageLoadJob = jobDetail.getTasks().stream().anyMatch(task -> EXPORT_STEPS.contains(task.getName()));
+        if (BUILD_JOBS.contains(jobDetail.getJobType()) && hasSecondStorageLoadJob) {
+            if (abstractExecutable.getJobSchedulerMode() == JobSchedulerModeEnum.DAG) {
+                canRestart = !checkJobStatusByName(abstractExecutable, ExecutableConstants.STEP_NAME_DETECT_RESOURCE, ExecutableState.SUCCEED);
+            } else {
+                long finishedCount = jobDetail.getTasks().stream().filter(task -> "SUCCEED".equals(task.getOutput().getStatus())).count();
+                canRestart = finishedCount < 3;
+            }
         }
         if (!canRestart) {
             throw new KylinException(ServerErrorCode.JOB_RESTART_FAILED, MsgPicker.getMsg().getJobRestartFailed());
@@ -432,22 +444,126 @@ public class SecondStorageUtil {
         AbstractExecutable abstractExecutable = executableManager.getJob(jobId);
         JobTypeEnum type = abstractExecutable.getJobType();
         boolean secondStorageLoading = type == JobTypeEnum.EXPORT_TO_SECOND_STORAGE;
-        ExecutablePO jobDetail = executableManager.getAllJobs().stream().filter(job -> job.getId().equals(jobId))
-                .findFirst().orElseThrow(() -> new IllegalStateException("Job not found"));
-        if (BUILD_JOBS.contains(jobDetail.getJobType())) {
+        ExecutablePO jobDetail = NExecutableManager.toPO(abstractExecutable, project);
+        boolean hasSecondStorageLoadJob = jobDetail.getTasks().stream().anyMatch(task -> EXPORT_STEPS.contains(task.getName()));
+        if (BUILD_JOBS.contains(jobDetail.getJobType()) && hasSecondStorageLoadJob) {
             secondStorageLoading = true;
             long finishedCount = jobDetail.getTasks().stream()
                     .filter(task -> "SUCCEED".equals(task.getOutput().getStatus())).count();
-            // build job can't restart when second storage step is running
             if (finishedCount < 3) {
                 secondStorageLoading = false;
             }
         }
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        long runningJobsCount = scheduler.getContext().getRunningJobs().keySet().stream()
-                .filter(id -> id.startsWith(jobId)).count();
+
+        long runningJobsCount = ((DefaultExecutable) abstractExecutable).getTasks().stream()
+                .filter(task -> ExecutableState.RUNNING == task.getStatus()).count();
         if (secondStorageLoading && runningJobsCount > 0) {
             throw new KylinException(ServerErrorCode.JOB_RESUME_FAILED, MsgPicker.getMsg().getJobResumeFailed());
         }
+    }
+
+    public static boolean checkBuildFlatTableIsSuccess(AbstractExecutable executable) {
+        if (executable.getJobSchedulerMode() != JobSchedulerModeEnum.DAG) {
+            return true;
+        }
+        Optional<ChainedStageExecutable> buildSparkCubeTask = getChainedStageExecutableByName(STEP_NAME_BUILD_SPARK_CUBE, executable);
+        if (!buildSparkCubeTask.isPresent()) {
+            return true;
+        }
+        Map<String, List<StageBase>> stages = buildSparkCubeTask.get().getStagesMap();
+        return stages.entrySet().stream()
+                .map(segmentStages -> {
+                    String segmentId = segmentStages.getKey();
+                    return segmentStages.getValue().stream()
+                            .filter(segmentStage -> ExecutableConstants.STAGE_NAME_GENERATE_FLAT_TABLE.equals(segmentStage.getName()))
+                            .map(segmentStage -> segmentStage.getOutput(segmentId).getState() == ExecutableState.SUCCEED)
+                            .findFirst()
+                            .orElse(true);
+                }).reduce((b1, b2) -> b1 && b2)
+                .orElse(true);
+    }
+
+    private static Optional<ChainedStageExecutable> getChainedStageExecutableByName(String name, AbstractExecutable executable) {
+        List<? extends AbstractExecutable> tasks = ((ChainedExecutable) executable).getTasks();
+        return tasks.stream()
+                .filter(task -> name.equals(task.getName()))
+                .map(ChainedStageExecutable.class::cast)
+                .findFirst();
+    }
+
+    public static boolean checkJobStatusByName(AbstractExecutable executable, String taskName, ExecutableState status) {
+        Optional<ChainedStageExecutable> buildSparkCubeTask = getChainedStageExecutableByName(taskName, executable);
+        return buildSparkCubeTask.map(chainedStageExecutable -> chainedStageExecutable.getStatus() == status).orElse(false);
+    }
+
+    public static boolean checkMergeFlatTableIsSuccess(AbstractExecutable executable) {
+        if (executable.getJobSchedulerMode() != JobSchedulerModeEnum.DAG) {
+            return true;
+        }
+        Optional<ChainedStageExecutable> mergeSparkCubeTask = getChainedStageExecutableByName(STEP_NAME_MERGER_SPARK_SEGMENT, executable);
+        if (!mergeSparkCubeTask.isPresent()) {
+            return true;
+        }
+        Map<String, List<StageBase>> stages = mergeSparkCubeTask.get().getStagesMap();
+        return stages.entrySet().stream()
+                .map(segmentStages -> {
+                    String segmentId = segmentStages.getKey();
+                    return segmentStages.getValue().stream()
+                            .filter(segmentStage -> ExecutableConstants.STAGE_NAME_MERGE_FLAT_TABLE.equals(segmentStage.getName()))
+                            .map(segmentStage -> segmentStage.getOutput(segmentId).getState() == ExecutableState.SUCCEED)
+                            .findFirst()
+                            .orElse(true);
+                }).reduce((b1, b2) -> b1 && b2)
+                .orElse(true);
+    }
+
+    public static boolean checkBuildDfsIsSuccess(AbstractExecutable executable) {
+        if (executable.getJobSchedulerMode() != JobSchedulerModeEnum.DAG) {
+            return true;
+        }
+        List<? extends AbstractExecutable> tasks = ((ChainedExecutable) executable).getTasks();
+
+        return tasks.stream()
+                .filter(task -> STEP_UPDATE_METADATA.equals(task.getName()))
+                .map(task -> task.getStatus() == ExecutableState.SUCCEED)
+                .findFirst()
+                .orElse(true);
+    }
+
+    public static boolean checkMergeDfsIsSuccess(AbstractExecutable executable) {
+        if (executable.getJobSchedulerMode() != JobSchedulerModeEnum.DAG) {
+            return true;
+        }
+
+        List<? extends AbstractExecutable> tasks = ((ChainedExecutable) executable).getTasks();
+
+        return tasks.stream()
+                .filter(task -> STEP_NAME_CLEANUP.equals(task.getName()))
+                .map(task -> task.getStatus() == ExecutableState.SUCCEED)
+                .findFirst()
+                .orElse(true);
+    }
+
+    public static Set<Long> listEnableLayoutBySegment(String project, String modelId, String segmentId) {
+        if (!isModelEnable(project, modelId)) {
+            return ImmutableSet.of();
+        }
+
+        Optional<Manager<TableFlow>> tableFlowManager = tableFlowManager(KylinConfig.getInstanceFromEnv(), project);
+
+        if (!tableFlowManager.isPresent()) {
+            return ImmutableSet.of();
+        }
+
+        Optional<TableFlow> tableFlow = tableFlowManager.get().get(modelId);
+
+        if (!tableFlow.isPresent()) {
+            return ImmutableSet.of();
+        }
+        NDataflowManager dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        NDataflow dataflow = dataflowManager.getDataflow(modelId);
+        return tableFlow.get().getLayoutBySegment(segmentId).stream().filter(
+                layout -> dataflow.getIndexPlan() != null && dataflow.getIndexPlan().getLayoutEntity(layout) != null)
+                .collect(Collectors.toSet());
     }
 }

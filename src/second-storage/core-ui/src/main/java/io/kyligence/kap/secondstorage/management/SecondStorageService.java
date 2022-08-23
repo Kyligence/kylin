@@ -19,6 +19,7 @@
 package io.kyligence.kap.secondstorage.management;
 
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
+import static org.apache.kylin.common.exception.ServerErrorCode.PROJECT_NOT_ENABLE;
 import static org.apache.kylin.common.exception.ServerErrorCode.SECOND_STORAGE_NODE_NOT_AVAILABLE;
 import static org.apache.kylin.common.exception.ServerErrorCode.SECOND_STORAGE_PROJECT_LOCK_FAIL;
 import static org.apache.kylin.common.exception.ServerErrorCode.SECOND_STORAGE_PROJECT_STATUS_ERROR;
@@ -344,6 +345,10 @@ public class SecondStorageService extends BasicService implements SecondStorageU
     public Optional<JobInfoResponse.JobInfo> changeModelSecondStorageState(String project, String modelId, boolean enabled) {
         if (!KylinConfig.getInstanceFromEnv().isUTEnv())
             aclEvaluate.checkProjectAdminPermission(project);
+        if (!SecondStorageUtil.isProjectEnable(project)) {
+            throw new KylinException(PROJECT_NOT_ENABLE,
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getSecondStorageProjectEnabled(), project));
+        }
         JobInfoResponse.JobInfo jobInfo = null;
         if (enabled) {
             EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {

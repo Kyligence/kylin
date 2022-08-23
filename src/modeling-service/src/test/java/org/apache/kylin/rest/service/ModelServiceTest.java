@@ -18,8 +18,13 @@
 
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARTITION_COLUMN;
+import static org.apache.kylin.common.exception.ServerErrorCode.PERMISSION_DENIED;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.DATETIME_FORMAT_EMPTY;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.DATETIME_FORMAT_PARSE_ERROR;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_ID_NOT_EXIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_NAME_DUPLICATE;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.PARAMETER_INVALID_SUPPORT_LIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_LOCKED;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_NOT_EXIST_ID;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_NOT_EXIST_NAME;
@@ -63,6 +68,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -86,6 +92,7 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.TimeUtil;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.utils.ComputedColumnEvalUtil;
+import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
@@ -126,9 +133,11 @@ import org.apache.kylin.metadata.model.NDataModel.NamedColumn;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.NonEquiJoinCondition;
+import org.apache.kylin.metadata.model.ParameterDesc;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.RetentionRange;
 import org.apache.kylin.metadata.model.SegmentRange;
+import org.apache.kylin.metadata.model.SegmentSecondStorageStatusEnum;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.model.SegmentStatusEnumToDisplay;
 import org.apache.kylin.metadata.model.Segments;
@@ -571,7 +580,7 @@ public class ModelServiceTest extends SourceTestCase {
         dataflowUpdate.setToRemoveLayouts(dataflow.getSegments().get(0).getSegDetails().getLayouts().get(0));
         dataflowManager.updateDataflow(dataflowUpdate);
         List<NDataSegmentResponse> segments = modelService.getSegmentsResponse("89af4ee2-2cdb-4b07-b39e-4c29856309aa",
-                "default", "0", "" + Long.MAX_VALUE, "ONLINE", null, null, true, "start_time", false);
+                "default", "0", "" + Long.MAX_VALUE, "ONLINE", null, null, true, "start_time", false, null, null);
         Assert.assertThat(segments.size(), is(0));
     }
 
@@ -685,6 +694,7 @@ public class ModelServiceTest extends SourceTestCase {
         Assert.assertEquals(seg2.isFlatTableReady(), seg2Resp.isFlatTableReady());
         Assert.assertEquals(seg2.isFactViewReady(), seg2Resp.isFactViewReady());
     }
+
     @Test
     public void testGetSegmentsResponseCore() {
         val modelId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
@@ -746,6 +756,32 @@ public class ModelServiceTest extends SourceTestCase {
         Assert.assertEquals(rowCount, response.getRowCount());
         Assert.assertEquals(sourceByteSize, response.getSourceBytesSize());
         Assert.assertEquals(status, response.getStatusToDisplay());
+    }
+
+    @Test
+    public void testGetSegmentsResponseByJob() {
+        val modelId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
+        val project = "default";
+        val segments = modelService.getSegmentsResponse(modelId, project, "0", "" + Long.MAX_VALUE, "ONLINE",
+                "start_time", false);
+        Assert.assertEquals(1, segments.size());
+        Assert.assertEquals(3380224, segments.get(0).getBytesSize());
+        Assert.assertEquals("16", segments.get(0).getAdditionalInfo().get("file_count"));
+        Assert.assertEquals("ONLINE", segments.get(0).getStatusToDisplay().toString());
+
+        val job = Mockito.mock(AbstractExecutable.class);
+        Mockito.when(job.getSegmentIds()).thenReturn(Sets.newHashSet());
+        var segmentsResponseByJob = modelService.getSegmentsResponseByJob(modelId, project, job);
+        Assert.assertEquals(0, segmentsResponseByJob.size());
+
+        val segmentIds = segments.stream().map(segment -> segment.getId()).collect(Collectors.toSet());
+        Mockito.when(job.getSegmentIds()).thenReturn(Sets.newHashSet(segmentIds));
+        Mockito.when(job.getStatus()).thenReturn(ExecutableState.SUCCEED);
+        segmentsResponseByJob = modelService.getSegmentsResponseByJob(modelId, project, job);
+        Assert.assertEquals(1, segmentsResponseByJob.size());
+        Assert.assertEquals(3380224, segments.get(0).getBytesSize());
+        Assert.assertEquals("16", segments.get(0).getAdditionalInfo().get("file_count"));
+        Assert.assertEquals("ONLINE", segments.get(0).getStatusToDisplay().toString());
     }
 
     @Test
@@ -1682,8 +1718,8 @@ public class ModelServiceTest extends SourceTestCase {
         update2.setToAddOrUpdateLayouts(layouts.toArray(new NDataLayout[0]));
         dfManager.updateDataflow(update2);
         // mark a layout tobedelete
-        indexManager.updateIndexPlan(modelId,
-                copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId, Sets.newHashSet(tobeDeleteLayoutId)));
+        indexManager.updateIndexPlan(modelId, copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId,
+                Sets.newHashSet(tobeDeleteLayoutId), Collections.emptyMap()));
         Assert.assertFalse(
                 NDataflowManager.getInstance(getTestConfig(), project).getDataflow(modelId).getSegments().isEmpty());
         modelService.purgeModel(modelId, project);
@@ -1725,8 +1761,8 @@ public class ModelServiceTest extends SourceTestCase {
         long tobeDeleteLayoutId = 20000000001L;
 
         // mark a layout tobedelete
-        indexManager.updateIndexPlan(modelId,
-                copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId, Sets.newHashSet(tobeDeleteLayoutId)));
+        indexManager.updateIndexPlan(modelId, copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId,
+                Sets.newHashSet(tobeDeleteLayoutId), Collections.emptyMap()));
         Assert.assertFalse(indexManager.getIndexPlan(modelId).getToBeDeletedIndexes().isEmpty());
 
         //remove tobedelete layout from seg1
@@ -3237,7 +3273,7 @@ public class ModelServiceTest extends SourceTestCase {
     }
 
     @Test
-    public void testCreateModelWithFilterCondition() throws Exception {
+    public void testCreateModelWithFilterCondition() {
         NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
         NDataModel model = modelManager.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
         model.setManagementType(ManagementType.MODEL_BASED);
@@ -3251,7 +3287,33 @@ public class ModelServiceTest extends SourceTestCase {
         modelRequest.getPartitionDesc().setPartitionDateFormat("yyyy-MM-dd");
 
         String filterCond = "trans_id = 0 and TEST_KYLIN_FACT.order_id < 100 and DEAL_AMOUNT > 123";
-        String expectedFilterCond = "(((TEST_KYLIN_FACT.TRANS_ID = 0) AND (TEST_KYLIN_FACT.ORDER_ID < 100)) AND ((TEST_KYLIN_FACT.PRICE * TEST_KYLIN_FACT.ITEM_COUNT) > 123))";
+        String expectedFilterCond = "(((`TEST_KYLIN_FACT`.`TRANS_ID` = 0) AND (`TEST_KYLIN_FACT`.`ORDER_ID` <"
+                + " 100)) AND ((`TEST_KYLIN_FACT`.`PRICE` * `TEST_KYLIN_FACT`.`ITEM_COUNT`) > 123))";
+        modelRequest.setFilterCondition(filterCond);
+
+        val newModel = modelService.createModel(modelRequest.getProject(), modelRequest);
+
+        Assert.assertEquals(expectedFilterCond, newModel.getFilterCondition());
+        modelManager.dropModel(newModel);
+    }
+
+    @Test
+    public void testCreateModelWithFilterConditionWithSpecialCharInColumn() {
+        NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                "special_character_in_column");
+        NDataModel model = modelManager.getDataModelDesc("8c08822f-296a-b097-c910-e38d8934b6f9");
+        model.setManagementType(ManagementType.MODEL_BASED);
+        ModelRequest modelRequest = new ModelRequest(model);
+        modelRequest.setProject("special_character_in_column");
+        modelRequest.setAlias("test_model");
+        modelRequest.setLastModified(0L);
+        modelRequest.setStart("0");
+        modelRequest.setEnd("100");
+        modelRequest.setUuid(null);
+
+        String filterCond = "\"day\" = 0 and \"123TABLE\".\"day#\" = 1 and \"中文列\" = 1";
+        String expectedFilterCond = "(((`123TABLE`.`DAY` = 0) AND (`123TABLE`.`day#` = 1)) AND (`123TABLE`"
+                + ".`中文列` = 1))";
         modelRequest.setFilterCondition(filterCond);
 
         val newModel = modelService.createModel(modelRequest.getProject(), modelRequest);
@@ -3465,8 +3527,43 @@ public class ModelServiceTest extends SourceTestCase {
         model.setFilterCondition(originSql);
         modelService.massageModelFilterCondition(model);
         Assert.assertEquals(
-                "(((TEST_KYLIN_FACT.TRANS_ID = 0) AND (TEST_KYLIN_FACT.ORDER_ID < 100)) AND ((TEST_KYLIN_FACT.PRICE * TEST_KYLIN_FACT.ITEM_COUNT) > 123))",
+                "(((`TEST_KYLIN_FACT`.`TRANS_ID` = 0) AND " + "(`TEST_KYLIN_FACT`.`ORDER_ID` < 100)) AND "
+                        + "((`TEST_KYLIN_FACT`.`PRICE` * `TEST_KYLIN_FACT`.`ITEM_COUNT`) > 123))",
                 model.getFilterCondition());
+    }
+
+    @Test
+    public void checkFilterCondition() {
+        NTableMetadataManager tableMetadataManager = NTableMetadataManager.getInstance(getTestConfig(), getProject());
+        TableDesc tableDesc = tableMetadataManager.getTableDesc("DEFAULT.TEST_KYLIN_FACT");
+        ColumnDesc[] columns = tableDesc.getColumns();
+        List<ColumnDesc> colList = Lists.newArrayList(columns);
+        ColumnDesc newCol = new ColumnDesc();
+        newCol.setDatatype("date");
+        newCol.setName("current_date");
+        newCol.setId(String.valueOf(columns.length + 1));
+        newCol.setTable(tableDesc);
+        colList.add(newCol);
+        tableDesc.setColumns(colList.toArray(new ColumnDesc[0]));
+        tableMetadataManager.updateTableDesc(tableDesc);
+
+        NDataModelManager modelManager = NDataModelManager.getInstance(getTestConfig(), getProject());
+        final String modelId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
+        modelManager.updateDataModel(modelId, copyForWrite -> {
+            final List<NamedColumn> allNamedColumns = copyForWrite.getAllNamedColumns();
+            NamedColumn column = new NamedColumn();
+            column.setId(allNamedColumns.size());
+            column.setAliasDotColumn("TEST_KYLIN_FACT.CURRENT_DATE");
+            column.setName("CURRENT_DATE");
+            allNamedColumns.add(column);
+        });
+
+        final NDataModel model1 = modelManager.getDataModelDesc(modelId);
+        model1.setFilterCondition("TIMESTAMPDIFF(DAY, CURRENT_DATE, TEST_KYLIN_FACT.\"CURRENT_DATE\") >= 0");
+        modelService.massageModelFilterCondition(model1);
+        Assert.assertEquals("(TIMESTAMPDIFF(DAY, CURRENT_DATE(), `TEST_KYLIN_FACT`.`CURRENT_DATE`) >= 0)",
+                model1.getFilterCondition());
+
     }
 
     @Test
@@ -3481,7 +3578,8 @@ public class ModelServiceTest extends SourceTestCase {
         model.setFilterCondition(originSql);
         modelService.massageModelFilterCondition(model);
         Assert.assertEquals(
-                "(((TEST_KYLIN_FACT.TRANS_ID = 0) AND (TEST_ORDER.ORDER_ID < 100)) AND ((TEST_KYLIN_FACT.PRICE * TEST_KYLIN_FACT.ITEM_COUNT) > 123))",
+                "(((`TEST_KYLIN_FACT`.`TRANS_ID` = 0) " + "AND (`TEST_ORDER`.`ORDER_ID` < 100)) "
+                        + "AND ((`TEST_KYLIN_FACT`.`PRICE` * `TEST_KYLIN_FACT`.`ITEM_COUNT`) > 123))",
                 model.getFilterCondition());
     }
 
@@ -3519,10 +3617,10 @@ public class ModelServiceTest extends SourceTestCase {
         NDataModel model = modelManager.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
         String originSql = "trans_id = 0 and TEST_KYLIN_FACT.order_id < 100";
         String newSql = modelService.addTableNameIfNotExist(originSql, model);
-        Assert.assertEquals("((TEST_KYLIN_FACT.TRANS_ID = 0) AND (TEST_KYLIN_FACT.ORDER_ID < 100))", newSql);
+        Assert.assertEquals("((`TEST_KYLIN_FACT`.`TRANS_ID` = 0) AND (`TEST_KYLIN_FACT`.`ORDER_ID` < 100))", newSql);
         originSql = "trans_id between 1 and 10";
         newSql = modelService.addTableNameIfNotExist(originSql, model);
-        Assert.assertEquals("(TEST_KYLIN_FACT.TRANS_ID BETWEEN 1 AND 10)", newSql);
+        Assert.assertEquals("(`TEST_KYLIN_FACT`.`TRANS_ID` BETWEEN 1 AND 10)", newSql);
 
         modelManager.updateDataModel(model.getUuid(), copyForWrite -> {
             List<JoinTableDesc> joinTables = copyForWrite.getJoinTables();
@@ -3583,8 +3681,8 @@ public class ModelServiceTest extends SourceTestCase {
     public void testComputedColumnNameCheck_PreProcessBeforeModelSave_ExceptionWhenCCNameIsSameWithColumnInLookupTable() {
 
         expectedEx.expect(KylinException.class);
-        expectedEx.expectMessage(
-                "Cannot find column BUYER_ACCOUNT.TEST_KYLIN_FACT_0_DOT_0_NEST1, please check whether schema of related table has changed.");
+        expectedEx.expectMessage("Can’t validate the expression \"TEST_KYLIN_FACT.NEST2\" (computed column: "
+                + "TEST_KYLIN_FACT.NEST1 * 12). Please check the expression, or try again later.");
         String tableIdentity = "DEFAULT.TEST_KYLIN_FACT";
         String columnName = "SITE_ID";
         String expression = "nvl(TEST_SITES.SITE_ID)";
@@ -3627,8 +3725,8 @@ public class ModelServiceTest extends SourceTestCase {
     public void testComputedColumnNameCheck_CheckCC_ExceptionWhenCCNameIsSameWithColumnInLookupTable() {
 
         expectedEx.expect(KylinException.class);
-        expectedEx.expectMessage(
-                "Cannot find column BUYER_ACCOUNT.TEST_KYLIN_FACT_0_DOT_0_NEST1, please check whether schema of related table has changed.");
+        expectedEx.expectMessage("Can’t validate the expression \"TEST_KYLIN_FACT.NEST2\" (computed column: "
+                + "TEST_KYLIN_FACT.NEST1 * 12). Please check the expression, or try again later.");
         String tableIdentity = "DEFAULT.TEST_KYLIN_FACT";
         String columnName = "SITE_ID";
         String expression = "nvl(TEST_SITES.SITE_ID)";
@@ -4128,6 +4226,88 @@ public class ModelServiceTest extends SourceTestCase {
     }
 
     @Test
+    public void testAddSecondStorageDisplayStatus() throws IOException {
+        val model = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
+        val segmentId = "12124840-b3e3-43db-bcab-2b78da666d02";
+        val project = "table_index";
+        MockSecondStorage.mock(project, new ArrayList<>(), this);
+        val indexPlanManager = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            indexPlanManager.updateIndexPlan(model, indexPlan -> indexPlan.createAndAddBaseIndex(indexPlan.getModel()));
+            return null;
+        }, project);
+        Assert.assertTrue(indexPlanManager.getIndexPlan(model).containBaseTableLayout());
+        SecondStorageUtil.initModelMetaData(project, model);
+        Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+        {
+            List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(model, project, "0",
+                    "" + Long.MAX_VALUE, "", null, null, true, "start_time", false, null, null);
+            Assert.assertEquals(1, segments.size());
+            NDataSegmentResponse nDataSegmentResponse = segments.get(0);
+            Assert.assertEquals(SegmentStatusEnumToDisplay.ONLINE_HDFS, nDataSegmentResponse.getStatusToDisplay());
+            Assert.assertNull(nDataSegmentResponse.getStatusSecondStorageToDisplay());
+
+            nDataSegmentResponse.setStatusToDisplay(SegmentStatusEnumToDisplay.LOCKED);
+            List<NDataSegmentResponse> segmentResponseList = Lists.newArrayList(nDataSegmentResponse);
+            modelService.changeSegmentDisplayStatus(model, project, segmentResponseList);
+            Assert.assertEquals(1, segmentResponseList.size());
+            Assert.assertEquals(SegmentStatusEnumToDisplay.LOCKED, segmentResponseList.get(0).getStatusToDisplay());
+        }
+        {
+            List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(model, project, "0",
+                    "" + Long.MAX_VALUE, "", null, null, true, "start_time", false,
+                    Lists.newArrayList(SegmentStatusEnumToDisplay.ONLINE_HDFS.toString()), Lists.newArrayList());
+            Assert.assertEquals(1, segments.size());
+            Assert.assertEquals(SegmentStatusEnumToDisplay.ONLINE_HDFS, segments.get(0).getStatusToDisplay());
+            Assert.assertNull(segments.get(0).getStatusSecondStorageToDisplay());
+        }
+        {
+            List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(model, project, "0",
+                    "" + Long.MAX_VALUE, "", null, null, true, "start_time", false, Lists.newArrayList(),
+                    Lists.newArrayList());
+            Assert.assertEquals(1, segments.size());
+            Assert.assertEquals(SegmentStatusEnumToDisplay.ONLINE_HDFS, segments.get(0).getStatusToDisplay());
+            Assert.assertNull(segments.get(0).getStatusSecondStorageToDisplay());
+        }
+        {
+            List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(model, project, "0",
+                    "" + Long.MAX_VALUE, "", null, null, true, "start_time", false,
+                    Lists.newArrayList(SegmentStatusEnumToDisplay.ONLINE_TIERED_STORAGE.toString()),
+                    Lists.newArrayList(SegmentSecondStorageStatusEnum.LOADING.toString()));
+            Assert.assertEquals(0, segments.size());
+        }
+        {
+            List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(model, project, "0",
+                    "" + Long.MAX_VALUE, "", null, null, true, "start_time", false, Lists.newArrayList(),
+                    Lists.newArrayList(SegmentSecondStorageStatusEnum.LOADING.toString()));
+            Assert.assertEquals(0, segments.size());
+        }
+    }
+
+    @Test
+    public void testAddSecondStorageDisplayStatusWithCHDisable() throws IOException {
+        val model = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
+        val project = "table_index";
+        MockSecondStorage.mock(project, new ArrayList<>(), this);
+        val indexPlanManager = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            indexPlanManager.updateIndexPlan(model, indexPlan -> indexPlan.createAndAddBaseIndex(indexPlan.getModel()));
+            return null;
+        }, project);
+        Assert.assertTrue(indexPlanManager.getIndexPlan(model).containBaseTableLayout());
+        Assert.assertFalse(SecondStorageUtil.isModelEnable(project, model));
+        {
+            List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(model, project, "0",
+                    "" + Long.MAX_VALUE, "", null, null, true, "start_time", false,
+                    Lists.newArrayList(SegmentStatusEnumToDisplay.ONLINE.toString()),
+                    Lists.newArrayList(SegmentSecondStorageStatusEnum.LOADING.toString()));
+            Assert.assertEquals(1, segments.size());
+            Assert.assertEquals(SegmentStatusEnumToDisplay.ONLINE, segments.get(0).getStatusToDisplay());
+            Assert.assertNull(segments.get(0).getStatusSecondStorageToDisplay());
+        }
+    }
+
+    @Test
     public void testCheckModelDimensionNameAndMeasureName() {
         NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
         NDataModel model = modelManager.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
@@ -4613,6 +4793,57 @@ public class ModelServiceTest extends SourceTestCase {
         Assert.assertEquals("GMV_SUM", model.getMeasures().get(1).getName());
         Assert.assertNull(model.getMeasures().get(1).getColumn());
         Assert.assertNull(model.getMeasures().get(1).getComment());
+    }
+
+    @Test
+    public void testUpdateModelWithDirtyMeasures() {
+        String project = "gc_test";
+        String modelId = "e0e90065-e7c3-49a0-a801-20465ca64799";
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), project);
+            indexPlanManager.updateIndexPlan(modelId, copyForWrite -> {
+                log.info("remove index before update model by remove measure");
+                copyForWrite.getIndexes().removeIf(index -> index.getId() <= 80000);
+                copyForWrite.setRuleBasedIndex(new RuleBasedIndex());
+            });
+            return null;
+        }, project);
+
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NDataModelManager modelManager = NDataModelManager.getInstance(getTestConfig(), project);
+            NDataModel dirtyModel = modelManager.getDataModelDesc(modelId);
+            modelManager.updateDataModel(modelId, copyForWrite -> {
+                List<NDataModel.Measure> allMeasures = copyForWrite.getAllMeasures();
+                allMeasures.sort(Comparator.comparingInt(NDataModel.Measure::getId));
+                // sum(TEST_KYLIN_FACT.ITEM_COUNT) => sum(TEST_KYLIN_FACT.PRICE)
+                NDataModel.Measure measure = allMeasures.get(1);
+                NDataModel.Measure m0 = allMeasures.get(0);
+                measure.setType(m0.getType());
+                measure.getFunction().getParameters().clear();
+                List<ParameterDesc> parameters = m0.getFunction().getParameters();
+                measure.getFunction().getParameters().addAll(parameters);
+            });
+            return null;
+        }, project);
+
+        int targetMeasureId = 100001;
+        NDataModelManager modelManager = NDataModelManager.getInstance(getTestConfig(), project);
+        NDataModel dirtyModel = modelManager.getDataModelDesc(modelId);
+        List<SimplifiedMeasure> simplifiedMeasures = dirtyModel.getAllMeasures().stream()
+                .filter(measure -> measure.getId() != targetMeasureId).map(SimplifiedMeasure::fromMeasure)
+                .collect(Collectors.toList());
+        ModelRequest healthyRequest = new ModelRequest(dirtyModel);
+        healthyRequest.setAllMeasures(Lists.newArrayList());
+        healthyRequest.setSimplifiedMeasures(simplifiedMeasures);
+        healthyRequest.setProject(project);
+
+        semanticService.updateModelColumns(dirtyModel, healthyRequest);
+
+        NDataModel fixedModel = modelManager.getDataModelDesc(modelId);
+        Map<Integer, NDataModel.Measure> measureMap = fixedModel.getAllMeasures().stream()
+                .collect(Collectors.toMap(NDataModel.Measure::getId, Function.identity()));
+        Assert.assertTrue(measureMap.containsKey(targetMeasureId));
+        Assert.assertTrue(measureMap.get(targetMeasureId).isTomb());
     }
 
     @Test
@@ -5205,5 +5436,155 @@ public class ModelServiceTest extends SourceTestCase {
         Assert.assertThrows("The computed column name \"test\" has been used in the current model. Please rename it.\n",
                 KylinException.class, () -> ReflectionTestUtils.invokeMethod(modelService, "buildDuplicateCCException",
                         new HashSet<>(Arrays.asList("test"))));
+    }
+
+    @Test
+    public void testValidateDateTimeFormatPattern() {
+        Assert.assertThrows(DATETIME_FORMAT_EMPTY.getMsg(), KylinException.class,
+                () -> modelService.validateDateTimeFormatPattern(""));
+        Assert.assertThrows(DATETIME_FORMAT_PARSE_ERROR.getMsg("AABBSS"), KylinException.class,
+                () -> modelService.validateDateTimeFormatPattern("AABBSS"));
+    }
+
+    @Test
+    public void testValidatePartitionDesc() {
+        PartitionDesc partitionDesc = new PartitionDesc();
+        Assert.assertThrows(INVALID_PARTITION_COLUMN.name(), KylinException.class,
+                () -> modelService.validatePartitionDesc(partitionDesc));
+        partitionDesc.setPartitionDateColumn("cal_date");
+        partitionDesc.setPartitionDateFormat("abc");
+        Assert.assertThrows(DATETIME_FORMAT_PARSE_ERROR.name(), KylinException.class,
+                () -> modelService.validatePartitionDesc(partitionDesc));
+        partitionDesc.setPartitionDateFormat("yyyy-MM-dd");
+        modelService.validatePartitionDesc(partitionDesc);
+    }
+
+    @Test
+    public void testCheckSegmentSecondStorage() throws IOException {
+        val model = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
+        val project = "default";
+        MockSecondStorage.mock("default", new ArrayList<>(), this);
+        val indexPlanManager = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            indexPlanManager.updateIndexPlan(model, indexPlan -> {
+                indexPlan.createAndAddBaseIndex(indexPlan.getModel());
+            });
+            return null;
+        }, project);
+        SecondStorageUtil.initModelMetaData(project, model);
+        Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+
+        val mockModel = RandomUtil.randomUUIDStr();
+        Assert.assertFalse(SecondStorageUtil.isModelEnable(project, mockModel));
+
+        val segment = Mockito.mock(NDataSegment.class);
+        modelService.checkSegmentSecondStorage(mockModel, project, segment);
+        try {
+            Mockito.when(segment.getLayoutsMap()).thenReturn(Maps.newHashMap());
+            modelService.checkSegmentSecondStorage(model, project, segment);
+            Assert.fail();
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof KylinException);
+            Assert.assertEquals(PERMISSION_DENIED.toErrorCode().getCodeString(),
+                    ((KylinException) e).getErrorCode().getCodeString());
+            Assert.assertEquals(MsgPicker.getMsg().getInvalidMergeSegmentWithoutDFS(), e.getMessage());
+        }
+
+        val layoutsMap = Maps.<Long, NDataLayout> newHashMap();
+        val layout = Mockito.mock(NDataLayout.class);
+        layoutsMap.put(0L, layout);
+        Mockito.when(segment.getLayoutsMap()).thenReturn(layoutsMap);
+        modelService.checkSegmentSecondStorage(model, project, segment);
+    }
+
+    @Test
+    public void testCheckSegmentStatus() {
+        {
+            modelService.checkSegmentStatus(Lists.newArrayList());
+        }
+        {
+            modelService.checkSegmentStatus(Lists.newArrayList("ONLINE", "ONLINE(HDFS)"));
+        }
+        {
+            ArrayList<String> exceptionStatuses = Lists.newArrayList("ONLINE_EXCEPTION");
+            Assert.assertThrows(
+                    PARAMETER_INVALID_SUPPORT_LIST.getMsg("statuses",
+                            StringUtils.join(SegmentStatusEnumToDisplay.getNames(), ", ")),
+                    KylinException.class, () -> modelService.checkSegmentStatus(exceptionStatuses));
+        }
+    }
+
+    @Test
+    public void testCheckSegmentSecondStorageStatus() {
+        {
+            modelService.checkSegmentSecondStorageStatus(Lists.newArrayList());
+        }
+        {
+            modelService.checkSegmentSecondStorageStatus(Lists.newArrayList("LOADING", "LOADED"));
+        }
+        {
+            ArrayList<String> exceptionStatuses = Lists.newArrayList("LOADING_EXCEPTION");
+            Assert.assertThrows(
+                    PARAMETER_INVALID_SUPPORT_LIST.getMsg("statuses_second_storage",
+                            StringUtils.join(SegmentStatusEnumToDisplay.getNames(), ", ")),
+                    KylinException.class, () -> modelService.checkSegmentSecondStorageStatus(exceptionStatuses));
+        }
+    }
+
+    @Test
+    public void testExportTDSWithDupMeasureDimColumnNames() throws IOException {
+        String projectName = "default";
+        String modelId = "199ee99e-8419-3e7a-7cad-97059999ec0a";
+        val modelRequest = JsonUtil.readValue(
+                new File("src/test/resources/ut_meta/dup_name_test/model_desc/model_dup_mea_dimcol.json"),
+                ModelRequest.class);
+        modelRequest.setProject(projectName);
+        List<NamedColumn> simplifiedDims = modelRequest.getAllNamedColumns().stream().filter(NamedColumn::isDimension)
+                .collect(Collectors.toList());
+        modelRequest.setSimplifiedDimensions(simplifiedDims);
+        modelService.createModel(projectName, modelRequest);
+        NDataModelManager projectInstance = NDataModelManager.getInstance(getTestConfig(), projectName);
+        Assert.assertNotNull(projectInstance.getDataModelDescByAlias("model_dup_mea_dimcol"));
+        Assert.assertThrows(
+                "There are duplicated names among dimension column LO_LINENUMBER and measure name LO_LINENUMBER. Cannot export a valid TDS file. Please correct the duplicated names and try again.",
+                KylinException.class, () -> modelService.validateExport(projectName, modelId));
+    }
+
+    @Test
+    public void testExportTDSWithDupMeasureDimensionNames() throws IOException {
+        String projectName = "default";
+        String modelId = "6f8cd656-9beb-47f6-87f5-89a8c548d17c";
+        val modelRequest = JsonUtil.readValue(
+                new File("src/test/resources/ut_meta/dup_name_test/model_desc/model_dup_mea_dim.json"),
+                ModelRequest.class);
+        modelRequest.setProject(projectName);
+        List<NamedColumn> simplifiedDims = modelRequest.getAllNamedColumns().stream().filter(NamedColumn::isDimension)
+                .collect(Collectors.toList());
+        modelRequest.setSimplifiedDimensions(simplifiedDims);
+        modelService.createModel(projectName, modelRequest);
+        NDataModelManager projectInstance = NDataModelManager.getInstance(getTestConfig(), projectName);
+        Assert.assertNotNull(projectInstance.getDataModelDescByAlias("model_dup_mea_dim"));
+        Assert.assertThrows(
+                "There are duplicated names among dimension name LO_TEST and measure name LO_TEST. Cannot export a valid TDS file. Please correct the duplicated names and try again.",
+                KylinException.class, () -> modelService.validateExport(projectName, modelId));
+    }
+
+    @Test
+    public void testExportTDSWithDupMeasureColumnNames() throws IOException {
+        String projectName = "default";
+        String modelId = "2ed3bf12-ad40-e8a0-73da-8dc3b4c798bb";
+        val modelRequest = JsonUtil.readValue(
+                new File("src/test/resources/ut_meta/dup_name_test/model_desc/model_dup_mea_col.json"),
+                ModelRequest.class);
+        modelRequest.setProject(projectName);
+        List<NamedColumn> simplifiedDims = modelRequest.getAllNamedColumns().stream().filter(NamedColumn::isDimension)
+                .collect(Collectors.toList());
+        modelRequest.setSimplifiedDimensions(simplifiedDims);
+        modelService.createModel(projectName, modelRequest);
+        NDataModelManager projectInstance = NDataModelManager.getInstance(getTestConfig(), projectName);
+        Assert.assertNotNull(projectInstance.getDataModelDescByAlias("model_dup_mea_col"));
+        Assert.assertThrows(
+                "There are duplicated names among model column LO_LINENUMBER and measure name LO_LINENUMBER. Cannot export a valid TDS file. Please correct the duplicated names and try again.",
+                KylinException.class, () -> modelService.validateExport(projectName, modelId));
     }
 }

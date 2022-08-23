@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ExecutableApplication;
+import org.apache.kylin.common.util.ShellException;
 
 public class InMemoryJobRunner extends JobRunnerFactory.AbstractJobRunner {
 
@@ -30,7 +31,7 @@ public class InMemoryJobRunner extends JobRunnerFactory.AbstractJobRunner {
     }
 
     @Override
-    public void doExecute(ExecutableApplication app, Map<String, String> args) throws Exception {
+    public void doExecute(ExecutableApplication app, Map<String, String> args) throws ShellException {
         app.execute(formatArgs(args).split(" "));
     }
 }

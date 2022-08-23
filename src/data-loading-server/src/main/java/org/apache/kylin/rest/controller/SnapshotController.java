@@ -18,11 +18,11 @@
 
 package org.apache.kylin.rest.controller;
 
+import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
+import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.SNAPSHOT_RELOAD_PARTITION_FAILED;
-import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
-import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 
 import java.util.List;
 import java.util.Locale;
@@ -30,14 +30,18 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.rest.response.DataResult;
-import org.apache.kylin.rest.response.EnvelopeResponse;
+import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.constant.SnapshotStatus;
 import org.apache.kylin.rest.request.SnapshotRequest;
 import org.apache.kylin.rest.request.SnapshotTableConfigRequest;
 import org.apache.kylin.rest.request.TablePartitionsRequest;
 import org.apache.kylin.rest.request.TableReloadPartitionColRequest;
+import org.apache.kylin.rest.response.DataResult;
+import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.JobInfoResponse;
 import org.apache.kylin.rest.response.NInitTablesResponse;
 import org.apache.kylin.rest.response.SnapshotCheckResponse;
@@ -140,7 +144,9 @@ public class SnapshotController extends BaseController {
     public EnvelopeResponse<JobInfoResponse> buildSnapshotsManually(@RequestBody SnapshotRequest snapshotsRequest) {
         checkProjectName(snapshotsRequest.getProject());
         validatePriority(snapshotsRequest.getPriority());
-        checkParamLength("tag", snapshotsRequest.getTag(), 1024);
+        ProjectInstance prjInstance = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
+                .getProject(snapshotsRequest.getProject());
+        checkParamLength("tag", snapshotsRequest.getTag(), prjInstance.getConfig().getJobTagMaxSize());
         if (snapshotsRequest.getTables().isEmpty() && snapshotsRequest.getDatabases().isEmpty()) {
             throw new KylinException(EMPTY_PARAMETER, "You should select at least one table or database to load!!");
         }
@@ -156,7 +162,9 @@ public class SnapshotController extends BaseController {
     public EnvelopeResponse<JobInfoResponse> refreshSnapshotsManually(@RequestBody SnapshotRequest snapshotsRequest)
             throws Exception {
         checkProjectName(snapshotsRequest.getProject());
-        checkParamLength("tag", snapshotsRequest.getTag(), 1024);
+        ProjectInstance prjInstance = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
+                .getProject(snapshotsRequest.getProject());
+        checkParamLength("tag", snapshotsRequest.getTag(), prjInstance.getConfig().getJobTagMaxSize());
         validatePriority(snapshotsRequest.getPriority());
         if (snapshotsRequest.getTables().isEmpty() && snapshotsRequest.getDatabases().isEmpty()) {
             throw new KylinException(EMPTY_PARAMETER, "You should select at least one table or database to load!!");
@@ -209,9 +217,10 @@ public class SnapshotController extends BaseController {
             logger.error(String.format(Locale.ROOT, "No field called '%s'.", sortBy), e);
             throw new KylinException(INVALID_PARAMETER, String.format(Locale.ROOT, "No field called '%s'.", sortBy));
         }
-        List<SnapshotInfoResponse> responses = snapshotService.getProjectSnapshots(project, table, statusFilter,
-                partitionFilter, sortBy, isReversed);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, DataResult.get(responses, offset, limit), "");
+        Pair<List<SnapshotInfoResponse>, Integer> snapshotsAndSize = snapshotService.getProjectSnapshots(project, table, statusFilter,
+                partitionFilter, sortBy, isReversed, Pair.newPair(offset, limit));
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, new DataResult<>(snapshotsAndSize.getFirst(),
+                snapshotsAndSize.getSecond(), offset, limit), "");
     }
 
     @ApiOperation(value = "getTables", tags = { "AI" }, notes = "get all tables with or without snapshot")

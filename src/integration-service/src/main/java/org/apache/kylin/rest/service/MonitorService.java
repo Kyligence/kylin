@@ -39,7 +39,7 @@ import org.apache.kylin.common.state.StateSwitchConstant;
 import org.apache.kylin.common.util.ClusterConstant;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.DefaultChainedExecutable;
+import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -326,7 +326,7 @@ public class MonitorService extends BasicService {
     }
 
     private boolean pendingOnYarn(Set<String> runningOnYarnJobs, AbstractExecutable executable) {
-        val parent = (DefaultChainedExecutable) executable;
+        val parent = (DefaultExecutable) executable;
         val runningJob = parent.getTasks().stream().filter(e -> e.getStatus() == ExecutableState.RUNNING).findFirst()
                 .orElse(null);
         if (runningJob == null) {

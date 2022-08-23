@@ -23,6 +23,7 @@ import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLI
 import static org.hamcrest.CoreMatchers.containsString;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -290,4 +291,21 @@ public class NAccessControllerTest extends NLocalFileMetadataTestCase {
                 .andExpect(MockMvcResultMatchers.status().isInternalServerError());
         Mockito.verify(nAccessController).batchGrant(type, uuid, true, requests);
     }
+
+    @Test
+    public void testupdateExtensionAcl() throws Exception {
+        AccessRequest accessRequest = new AccessRequest();
+        accessRequest.setSid(sid);
+        accessRequest.setPrincipal(true);
+        accessRequest.setExtPermissions(Collections.singletonList("DATA_QUERY"));
+
+        Mockito.doReturn(true).when(userService).userExists(sid);
+        Mockito.doNothing().when(aclTCRService).updateAclTCR(uuid, null);
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/access/extension/{type}/{uuid}", type, uuid)
+                .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(accessRequest))
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        Mockito.verify(nAccessController).updateExtensionAcl(type, uuid, accessRequest);
+    }
+
 }

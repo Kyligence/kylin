@@ -49,6 +49,7 @@ import org.apache.kylin.rest.config.initialize.ProcessStatusListener;
 import org.apache.kylin.rest.config.initialize.QueryMetricsListener;
 import org.apache.kylin.rest.config.initialize.SparderStartEvent;
 import org.apache.kylin.rest.config.initialize.TableSchemaChangeListener;
+import org.apache.kylin.rest.config.initialize.UserAclListener;
 import org.apache.kylin.rest.service.CommonQueryCacheSupporter;
 import org.apache.kylin.rest.util.JStackDumpTask;
 import org.apache.kylin.streaming.jobs.StreamingJobListener;
@@ -146,6 +147,7 @@ public class AppInitializer {
         EventListenerRegistry.getInstance(kylinConfig).register(new CacheCleanListener(), "cacheInManager");
 
         EventBusFactory.getInstance().register(new QueryMetricsListener(), false);
+        EventBusFactory.getInstance().register(new UserAclListener(), true);
 
         postInit();
     }

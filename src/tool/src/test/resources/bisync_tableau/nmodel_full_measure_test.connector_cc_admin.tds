@@ -229,6 +229,8 @@
       <map key="[ORDER_ID (TEST_KYLIN_FACT)]" value="[TEST_KYLIN_FACT].[ORDER_ID]"/>
       <map key="[CAL_DT_CRE_DATE]" value="[TEST_CAL_DT].[CAL_DT_CRE_DATE]"/>
       <map key="[MOVE_TO]" value="[TEST_CATEGORY_GROUPINGS].[MOVE_TO]"/>
+      <map key="[LEFTJOIN_SELLER_ID_AND_COUNTRY_NAME]" value="[TEST_KYLIN_FACT].[LEFTJOIN_SELLER_ID_AND_COUNTRY_NAME]"/>
+      <map key="[NEST5]" value="[TEST_KYLIN_FACT].[NEST5]"/>
       <map key="[NEST2]" value="[TEST_KYLIN_FACT].[NEST2]"/>
       <map key="[NEST1]" value="[TEST_KYLIN_FACT].[NEST1]"/>
       <map key="[NEST4]" value="[TEST_KYLIN_FACT].[NEST4]"/>
@@ -261,6 +263,7 @@
       <map key="[RETAIL_YEAR]" value="[TEST_CAL_DT].[RETAIL_YEAR]"/>
       <map key="[BUYER_ID]" value="[TEST_ORDER].[BUYER_ID]"/>
       <map key="[DOMAIN_ID]" value="[TEST_CATEGORY_GROUPINGS].[DOMAIN_ID]"/>
+      <map key="[LEFTJOIN_SELLER_COUNTRY_ABBR]" value="[TEST_KYLIN_FACT].[LEFTJOIN_SELLER_COUNTRY_ABBR]"/>
       <map key="[TEST_TIME_ENC]" value="[TEST_ORDER].[TEST_TIME_ENC]"/>
       <map key="[CURR_CAL_DT_MNS_2MONTH_YN_ID]" value="[TEST_CAL_DT].[CURR_CAL_DT_MNS_2MONTH_YN_ID]"/>
       <map key="[ACCOUNT_SELLER_LEVEL (SELLER_ACCOUNT)]" value="[SELLER_ACCOUNT].[ACCOUNT_SELLER_LEVEL]"/>
@@ -270,7 +273,9 @@
       <map key="[CAL_DT_CRE_USER]" value="[TEST_CAL_DT].[CAL_DT_CRE_USER]"/>
       <map key="[DIM_CRE_DATE]" value="[TEST_SELLER_TYPE_DIM].[DIM_CRE_DATE]"/>
       <map key="[DAY_OF_WEEK_ID]" value="[TEST_CAL_DT].[DAY_OF_WEEK_ID]"/>
+      <map key="[LEFTJOIN_BUYER_ID_AND_COUNTRY_NAME]" value="[TEST_KYLIN_FACT].[LEFTJOIN_BUYER_ID_AND_COUNTRY_NAME]"/>
       <map key="[CATEG_LVL4_ID]" value="[TEST_CATEGORY_GROUPINGS].[CATEG_LVL4_ID]"/>
+      <map key="[LEFTJOIN_BUYER_COUNTRY_ABBR]" value="[TEST_KYLIN_FACT].[LEFTJOIN_BUYER_COUNTRY_ABBR]"/>
       <map key="[YTQ_YN_ID]" value="[TEST_CAL_DT].[YTQ_YN_ID]"/>
       <map key="[YTD_YN_ID]" value="[TEST_CAL_DT].[YTD_YN_ID]"/>
       <map key="[SITE_ID (TEST_CATEGORY_GROUPINGS)]" value="[TEST_CATEGORY_GROUPINGS].[SITE_ID]"/>
@@ -428,6 +433,8 @@
   <column caption="ORDER_ID" datatype="integer" name="[ORDER_ID (TEST_KYLIN_FACT)]" role="dimension" type="ordinal"/>
   <column caption="CAL_DT_CRE_DATE" datatype="string" name="[CAL_DT_CRE_DATE]" role="dimension" type="nominal" hidden="true"/>
   <column caption="MOVE_TO" datatype="real" name="[MOVE_TO]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="LEFTJOIN_SELLER_ID_AND_COUNTRY_NAME" datatype="string" name="[LEFTJOIN_SELLER_ID_AND_COUNTRY_NAME]" role="dimension" type="nominal" hidden="true"/>
+  <column caption="NEST5" datatype="real" name="[NEST5]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="NEST2" datatype="real" name="[NEST2]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="NEST1" datatype="real" name="[NEST1]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="NEST4" datatype="real" name="[NEST4]" role="dimension" type="ordinal" hidden="true"/>
@@ -460,6 +467,7 @@
   <column caption="RETAIL_YEAR" datatype="string" name="[RETAIL_YEAR]" role="dimension" type="nominal" hidden="true"/>
   <column caption="BUYER_ID" datatype="integer" name="[BUYER_ID]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="DOMAIN_ID" datatype="real" name="[DOMAIN_ID]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="LEFTJOIN_SELLER_COUNTRY_ABBR" datatype="string" name="[LEFTJOIN_SELLER_COUNTRY_ABBR]" role="dimension" type="nominal" hidden="true"/>
   <column caption="TEST_TIME_ENC" datatype="datetime" name="[TEST_TIME_ENC]" role="dimension" type="nominal"/>
   <column caption="CURR_CAL_DT_MNS_2MONTH_YN_ID" datatype="integer" name="[CURR_CAL_DT_MNS_2MONTH_YN_ID]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="SELLER_SELLER_LEVEL" datatype="integer" name="[ACCOUNT_SELLER_LEVEL (SELLER_ACCOUNT)]" role="dimension" type="ordinal" hidden="true"/>
@@ -469,7 +477,9 @@
   <column caption="CAL_DT_CRE_USER" datatype="string" name="[CAL_DT_CRE_USER]" role="dimension" type="nominal" hidden="true"/>
   <column caption="DIM_CRE_DATE" datatype="string" name="[DIM_CRE_DATE]" role="dimension" type="nominal" hidden="true"/>
   <column caption="DAY_OF_WEEK_ID" datatype="integer" name="[DAY_OF_WEEK_ID]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="LEFTJOIN_BUYER_ID_AND_COUNTRY_NAME" datatype="string" name="[LEFTJOIN_BUYER_ID_AND_COUNTRY_NAME]" role="dimension" type="nominal" hidden="true"/>
   <column caption="CATEG_LVL4_ID" datatype="real" name="[CATEG_LVL4_ID]" role="dimension" type="ordinal" hidden="true"/>
+  <column caption="LEFTJOIN_BUYER_COUNTRY_ABBR" datatype="string" name="[LEFTJOIN_BUYER_COUNTRY_ABBR]" role="dimension" type="nominal" hidden="true"/>
   <column caption="YTQ_YN_ID" datatype="integer" name="[YTQ_YN_ID]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="YTD_YN_ID" datatype="integer" name="[YTD_YN_ID]" role="dimension" type="ordinal" hidden="true"/>
   <column caption="SITE_ID" datatype="integer" name="[SITE_ID (TEST_CATEGORY_GROUPINGS)]" role="dimension" type="ordinal" hidden="true"/>

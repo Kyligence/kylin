@@ -24,6 +24,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_SAMPLIN
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +33,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.AWSTableLoadRequest;
@@ -147,8 +149,8 @@ public class NTableControllerTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testGetTableDesc() throws Exception {
-        Mockito.when(tableService.getTableDesc("default", false, "", "DEFAULT", true)) //
-                .thenReturn(mockTables());
+        Mockito.when(tableService.getTableDescByType("default", false, "", "DEFAULT", true, 9, new Pair<>(0, 10)))
+                .thenReturn(Pair.newPair(mockTables(), 2));
         mockMvc.perform(MockMvcRequestBuilders.get("/api/tables") //
                 .contentType(MediaType.APPLICATION_JSON) //
                 .param("ext", "false") //
@@ -179,8 +181,10 @@ public class NTableControllerTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testGetTableDescWithName() throws Exception {
-        Mockito.when(tableService.getTableDesc("default", true, "TEST_KYLIN_FACT", "DEFAULT", false))
-                .thenReturn(mockTables());
+        TableDesc tableDesc = new TableDesc();
+        tableDesc.setName("TEST_KYLIN_FACT");
+        Mockito.when(tableService.getTableDescByType("default", false, "TEST_KYLIN_FACT", "DEFAULT", false, 9, new Pair<>(0, 10)))
+                .thenReturn(Pair.newPair(Collections.singletonList(tableDesc), 1));
         mockMvc.perform(MockMvcRequestBuilders.get("/api/tables") //
                 .contentType(MediaType.APPLICATION_JSON) //
                 .param("withExt", "false") //

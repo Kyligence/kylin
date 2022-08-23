@@ -25,10 +25,10 @@ import java.util.Set;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.job.execution.DefaultChainedExecutableOnTable;
+import org.apache.kylin.job.execution.DefaultExecutableOnTable;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.model.TableDesc;
 import org.sparkproject.guava.base.Preconditions;
 
 import lombok.SneakyThrows;
@@ -36,7 +36,7 @@ import lombok.SneakyThrows;
 /**
  *
  */
-public class NSparkSnapshotJob extends DefaultChainedExecutableOnTable {
+public class NSparkSnapshotJob extends DefaultExecutableOnTable {
     public NSparkSnapshotJob() {
         super();
     }
@@ -85,7 +85,7 @@ public class NSparkSnapshotJob extends DefaultChainedExecutableOnTable {
 
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         JobStepType.BUILD_SNAPSHOT.createStep(job, config);
-        if (isNeedCleanUpTransactionalTableJob(tableDesc.isTransactional(), tableDesc.isRangePartition(),
+        if(isNeedCleanUpTransactionalTableJob(tableDesc.isTransactional(), tableDesc.isRangePartition(),
                 config.isReadTransactionalTableEnabled())) {
             JobStepType.CLEAN_UP_TRANSACTIONAL_TABLE.createStep(job, config);
         }

@@ -290,20 +290,8 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
                     .forEach(column -> column.setStatus(ColumnStatus.TOMB));
             request.getSimplifiedDimensions()
                     .removeIf(column -> column.getAliasDotColumn().equalsIgnoreCase(ccColName));
-            try {
-                modelService.updateDataModelSemantic(request.getProject(), request);
-                Assert.fail();
-            } catch (Exception e) {
-                Assert.assertTrue(e instanceof KylinException);
-                Assert.assertEquals(
-                        "Can’t initialize metadata at the moment. Please try restarting first. If the problem still exist, please contact technical support.",
-                        e.getMessage());
-            }
 
-            // remove broken measure
-            request.getSimplifiedMeasures().removeIf(m -> m.getName().equals("TEST_MEASURE_WITH_CC"));
             modelService.updateDataModelSemantic(request.getProject(), request);
-
             NDataModel model = getTestModel();
             Assert.assertFalse(model.getAllNamedColumns().stream().filter(c -> c.getId() == colIdOfCC).findFirst().get()
                     .isExist());
@@ -441,7 +429,7 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         Assert.assertThat(
                 model.getAllMeasures().stream().filter(m -> !m.isTomb()).sorted(Comparator.comparing(Measure::getId))
                         .map(MeasureDesc::getName).collect(Collectors.toList()),
-                CoreMatchers.is(Lists.newArrayList("MAX1", "COUNT_ALL")));
+                CoreMatchers.is(Lists.newArrayList("COUNT_ALL", "MAX1")));
 
         // make sure update again is ok
         val updateRequest2 = JsonUtil.readValue(
@@ -452,11 +440,13 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         modelService.updateDataModelSemantic(getProject(), updateRequest2);
         model = modelService.getManager(NDataModelManager.class, getProject())
                 .getDataModelDesc(updateRequest.getUuid());
+        List<Measure> allMeasures = model.getAllMeasures();
         Assert.assertThat(
-                model.getAllMeasures().stream().filter(m -> !m.isTomb()).sorted(Comparator.comparing(Measure::getId))
+                allMeasures.stream().filter(m -> !m.isTomb()).sorted(Comparator.comparing(Measure::getId))
                         .map(MeasureDesc::getName).collect(Collectors.toList()),
-                CoreMatchers.is(Lists.newArrayList("MAX1", "COUNT_ALL")));
-        Assert.assertEquals(2, model.getAllMeasures().size());
+                CoreMatchers.is(Lists.newArrayList("COUNT_ALL", "MAX1")));
+        Assert.assertEquals(4, allMeasures.size());
+        Assert.assertEquals(2, allMeasures.stream().filter(measure -> !measure.isTomb()).count());
     }
 
     @Test

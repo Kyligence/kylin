@@ -111,9 +111,9 @@ public class QueryNodeFilter implements Filter {
         notRoutePostApiSet.add("/kylin/api/system/maintenance_mode");
         notRouteDeleteApiSet.add("/kylin/api/query");
 
-        notRoutePostApiSet.add("/kylin/api/health/instance_info");
-        notRoutePostApiSet.add("/kylin/api/health/instance_service/query_up_grade");
-        notRoutePostApiSet.add("/kylin/api/health/instance_service/query_down_grade");
+        notRoutePostApiSet.add("/kylin/api/kg/health/instance_info");
+        notRoutePostApiSet.add("/kylin/api/kg/health/instance_service/query_up_grade");
+        notRoutePostApiSet.add("/kylin/api/kg/health/instance_service/query_down_grade");
 
         // license
         notRoutePostApiSet.add("/kylin/api/system/license/content");

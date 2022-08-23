@@ -18,24 +18,26 @@
 
 package org.apache.spark.sql.execution.datasource
 
-import org.apache.kylin.engine.spark.utils.{LogEx, LogUtils}
-import org.apache.kylin.metadata.cube.model.{DimensionRangeInfo, LayoutEntity, NDataflow, NDataflowManager}
-import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.hadoop.fs.{FileStatus, Path}
+import org.apache.kylin.common.exception.TargetSegmentNotFoundException
 import org.apache.kylin.common.util.{DateFormat, HadoopUtil}
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
+import org.apache.kylin.engine.spark.utils.{LogEx, LogUtils}
+import org.apache.kylin.metadata.cube.model.{DimensionRangeInfo, LayoutEntity, NDataflow, NDataflowManager}
 import org.apache.kylin.metadata.model.{PartitionDesc, TblColRef}
+import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.analysis.Resolver
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet, EmptyRow, Expression, GetStructField, Literal}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet, EmptyRow, Expression, Literal}
 import org.apache.spark.sql.catalyst.{InternalRow, expressions}
 import org.apache.spark.sql.execution.datasources._
-import org.apache.spark.sql.sources.{Filter, _}
+import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.util.collection.BitSet
 
 import java.sql.{Date, Timestamp}
+import java.util
 import scala.collection.JavaConverters._
 
 case class SegmentDirectory(segmentID: String, partitions: List[Long], files: Seq[FileStatus])
@@ -78,7 +80,9 @@ class FilePruner(val session: SparkSession,
     val dataflowId = options.getOrElse("dataflowId", sys.error("dataflowId option is required"))
     val prj = options.getOrElse("project", sys.error("project option is required"))
     val dfMgr = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, prj)
-    dfMgr.getDataflow(dataflowId)
+    val dataflow = dfMgr.getDataflow(dataflowId)
+    FilePruner.checkSegmentStatus(prunedSegmentDirs, dataflow)
+    dataflow
   }
 
   private val layout: LayoutEntity = {
@@ -518,6 +522,22 @@ object FilePruner {
       s"{$summary,$detail}"
     } else {
       s"{$summary}"
+    }
+  }
+
+  def checkSegmentStatus(segDirs: Seq[SegmentDirectory], dataflow: NDataflow): Unit = {
+    // check whether each segment id corresponds to the segment in NDataflow
+    val candidateSegIds = new util.HashSet[String]
+    segDirs.foreach(seg => candidateSegIds.add(seg.segmentID))
+    val filterSegmentIds = dataflow.getSegments(candidateSegIds).asScala.map(e => e.getId).toSet
+    if(candidateSegIds.size != filterSegmentIds.size) {
+      val missSegId = new StringBuilder
+      candidateSegIds.asScala.foreach(e => {
+        if (!filterSegmentIds.contains(e)) {
+          missSegId.append(e).append(";")
+        }
+      })
+      throw new TargetSegmentNotFoundException(missSegId.toString)
     }
   }
 }

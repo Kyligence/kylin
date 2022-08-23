@@ -89,11 +89,7 @@ public class SegmentBuildJob extends SegmentJob {
         buildContext = new BuildContext(getSparkSession().sparkContext(), config);
         buildContext.appStatusTracker().startMonitorBuildResourceState();
 
-        try {
-            build();
-        } finally {
-            buildContext.stop();
-        }
+        build();
 
         updateSegmentSourceBytesSize();
     }

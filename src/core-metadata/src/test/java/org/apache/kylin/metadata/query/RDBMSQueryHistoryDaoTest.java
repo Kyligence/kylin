@@ -22,9 +22,9 @@ import static org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO.fillZeroForQu
 
 import java.util.List;
 
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.TimeUtil;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.junit.TimeZoneTestRunner;
 import org.junit.After;
 import org.junit.Assert;

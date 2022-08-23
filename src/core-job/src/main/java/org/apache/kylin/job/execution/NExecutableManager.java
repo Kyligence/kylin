@@ -64,6 +64,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.common.scheduler.JobAddedNotifier;
+import org.apache.kylin.common.scheduler.JobReadyNotifier;
+import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.Array;
 import org.apache.kylin.common.util.ClassUtil;
 import org.apache.kylin.common.util.CliCommandExecutor;
@@ -74,11 +79,7 @@ import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.dao.NExecutableDao;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.common.scheduler.EventBusFactory;
-import org.apache.kylin.common.scheduler.JobAddedNotifier;
-import org.apache.kylin.common.scheduler.JobReadyNotifier;
-import org.apache.kylin.common.util.AddressUtil;
+import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.slf4j.Logger;
@@ -102,10 +103,7 @@ public class NExecutableManager {
     private static final Object DUMMY_OBJECT = new Object();
     private static final String PARSE_ERROR_MSG = "Error parsing the executablePO: ";
 
-    private static final int CMD_EXEC_TIMEOUT_SEC = 60;
     private static final int LOG_DEFAULT_DISPLAY_HEAD_AND_TAIL_SIZE = 100;
-
-    private static final String KILL_PROCESS_TREE = "kill-process-tree.sh";
 
     private static final Set<String> REMOVE_INFO = Sets.newHashSet(ExecutableConstants.YARN_APP_ID,
             ExecutableConstants.YARN_APP_URL, ExecutableConstants.YARN_JOB_WAIT_TIME,
@@ -154,6 +152,9 @@ public class NExecutableManager {
         result.getOutput().setResumable(executable.isResumable());
         result.setPriority(executable.getPriority());
         result.setTag(executable.getTag());
+        result.setJobSchedulerMode(executable.getJobSchedulerMode());
+        result.setPreviousStep(executable.getPreviousStep());
+        result.setNextSteps(executable.getNextSteps());
         Map<String, Object> runTimeInfo = executable.getRunTimeInfo();
         if (runTimeInfo != null && runTimeInfo.size() > 0) {
             Set<NDataSegment> segments = (HashSet<NDataSegment>) runTimeInfo.get(RUNTIME_INFO);
@@ -167,8 +168,8 @@ public class NExecutableManager {
                 tasks.add(toPO(task, project));
             }
             result.setTasks(tasks);
-            if (executable instanceof DefaultChainedExecutableOnModel) {
-                val handler = ((DefaultChainedExecutableOnModel) executable).getHandler();
+            if (executable instanceof DefaultExecutableOnModel) {
+                val handler = ((DefaultExecutableOnModel) executable).getHandler();
                 if (handler != null) {
                     result.setHandlerType(handler.getClass().getName());
                 }
@@ -472,6 +473,7 @@ public class NExecutableManager {
         result.setEndTime(jobOutput.getEndTime());
         result.setWaitTime(jobOutput.getWaitTime());
         result.setDuration(jobOutput.getDuration());
+        result.setLastRunningStartTime(jobOutput.getLastRunningStartTime());
         result.setCreateTime(jobOutput.getCreateTime());
         result.setByteSize(jobOutput.getByteSize());
         result.setShortErrMsg(jobOutput.getFailedMsg());
@@ -691,6 +693,14 @@ public class NExecutableManager {
                 logger.warn("Failed to resume running job {}", executablePO.getUuid(), e);
             }
             killRemoteProcess(executablePO, exe);
+            cancelRemoteJob(executablePO);
+        }
+    }
+
+    public void cancelRemoteJob(ExecutablePO executablePO) {
+        if (executablePO.getOutput().getStatus().equalsIgnoreCase(ExecutableState.RUNNING.toString())) {
+            // when start or restart KE, will resumeAllRunningJobs, don't need to interrupt job thread, so job id is null
+            cancelJob(executablePO, null);
         }
     }
 
@@ -712,7 +722,8 @@ public class NExecutableManager {
             }
             try {
                 logger.info("will kill job pid is {}", pid);
-                exe.execute("kill -9 " + pid, null);
+                exe.execute("ps -ef | grep " + executablePO.getId() + " |grep " + pid //
+                        + " |grep -v grep |awk '{print $2}'|xargs kill -9", null);
             } catch (ShellException e) {
                 logger.warn("failed to kill remote driver {} on {}", nodeInfo, pid, e);
             }
@@ -755,8 +766,8 @@ public class NExecutableManager {
             throw new KylinException(JOB_UPDATE_STATUS_FAILED, "RESUME", jobId, job.getStatus());
         }
 
-        if (job instanceof DefaultChainedExecutable) {
-            List<? extends AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+        if (job instanceof DefaultExecutable) {
+            List<? extends AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
             tasks.stream()
                     .filter(task -> task.getStatus().isNotProgressing() || task.getStatus() == ExecutableState.RUNNING)
                     .forEach(task -> updateJobOutput(task.getId(), ExecutableState.READY));
@@ -839,8 +850,8 @@ public class NExecutableManager {
         if (job == null) {
             return;
         }
-        if (job instanceof DefaultChainedExecutable) {
-            List<? extends AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+        if (job instanceof DefaultExecutable) {
+            List<? extends AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
             tasks.stream().filter(task -> task.getStatus() != ExecutableState.READY)
                     .forEach(task -> updateJobOutput(task.getId(), ExecutableState.READY));
             tasks.forEach(task -> {
@@ -879,8 +890,8 @@ public class NExecutableManager {
         }
         job.cancelJob();
 
-        if (job instanceof DefaultChainedExecutable) {
-            List<? extends AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+        if (job instanceof DefaultExecutable) {
+            List<? extends AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
             tasks.stream().filter(task -> task.getStatus() != ExecutableState.SUICIDAL)
                     .filter(task -> task.getStatus() != ExecutableState.SUCCEED)
                     .forEach(task -> updateJobOutput(task.getId(), ExecutableState.SUICIDAL));
@@ -910,8 +921,8 @@ public class NExecutableManager {
             return;
         }
         job.cancelJob();
-        if (job instanceof DefaultChainedExecutable) {
-            List<? extends AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+        if (job instanceof DefaultExecutable) {
+            List<? extends AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
             tasks.forEach(task -> {
                 if (task instanceof ChainedStageExecutable) {
                     final Map<String, List<StageBase>> tasksMap = ((ChainedStageExecutable) task).getStagesMap();
@@ -934,8 +945,8 @@ public class NExecutableManager {
             return;
         }
 
-        if (job instanceof DefaultChainedExecutable) {
-            List<? extends AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+        if (job instanceof DefaultExecutable) {
+            List<? extends AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
             tasks.stream().filter(task -> task.getStatus() != ExecutableState.ERROR)
                     .filter(task -> task.getStatus() != ExecutableState.SUCCEED)
                     .forEach(task -> updateJobOutput(task.getId(), ExecutableState.ERROR));
@@ -976,8 +987,8 @@ public class NExecutableManager {
     }
 
     public void updateStagePaused(AbstractExecutable job) {
-        if (job instanceof DefaultChainedExecutable) {
-            List<? extends AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+        if (job instanceof DefaultExecutable) {
+            List<? extends AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
             tasks.forEach(task -> {
                 if (task instanceof ChainedStageExecutable) {
                     final Map<String, List<StageBase>> tasksMap = ((ChainedStageExecutable) task).getStagesMap();
@@ -1000,11 +1011,11 @@ public class NExecutableManager {
         try {
             val oldInfo = Optional.ofNullable(job.getOutput().getExtra()).orElse(Maps.newHashMap());
             Map<String, String> info = Maps.newHashMap(oldInfo);
-            if (job instanceof DefaultChainedExecutable) {
+            if (job instanceof DefaultExecutable) {
                 Map<String, String> waiteTime = JsonUtil
                         .readValueAsMap(info.getOrDefault(NBatchConstants.P_WAITE_TIME, "{}"));
 
-                final List<AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+                final List<AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
                 for (AbstractExecutable task : tasks) {
                     val waitTime = task.getWaitTime();
                     val oldWaitTime = Long.parseLong(waiteTime.getOrDefault(task.getId(), "0"));
@@ -1121,6 +1132,12 @@ public class NExecutableManager {
 
         executableDao.updateJob(jobId, job -> {
             ExecutableOutputPO jobOutput = job.getOutput();
+            val errorTaskAndNotFailedStepIdTaskCount = job.getTasks().stream()
+                    .filter(task -> ExecutableState.valueOf(task.getOutput().getStatus()).equals(ExecutableState.ERROR))
+                    .filter(task -> !StringUtils.startsWith(failedStepId, task.getId())).count();
+            if (errorTaskAndNotFailedStepIdTaskCount != 0) {
+                return false;
+            }
             if (jobOutput.getFailedReason() == null || failedReason == null) {
                 jobOutput.setFailedStepId(failedStepId);
                 jobOutput.setFailedSegmentId(failedSegmentId);
@@ -1222,8 +1239,8 @@ public class NExecutableManager {
         if (job == null) {
             return;
         }
-        if (job instanceof DefaultChainedExecutable) {
-            List<? extends AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+        if (job instanceof DefaultExecutable) {
+            List<? extends AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
             tasks.forEach(task -> {
                 if (task instanceof ChainedStageExecutable && StringUtils.equals(taskOrJobId, task.getId())) {
                     final Map<String, List<StageBase>> tasksMap = ((ChainedStageExecutable) task).getStagesMap();
@@ -1247,8 +1264,8 @@ public class NExecutableManager {
         if (job == null) {
             return;
         }
-        if (job instanceof DefaultChainedExecutable) {
-            List<? extends AbstractExecutable> tasks = ((DefaultChainedExecutable) job).getTasks();
+        if (job instanceof DefaultExecutable) {
+            List<? extends AbstractExecutable> tasks = ((DefaultExecutable) job).getTasks();
             tasks.forEach(task -> {
                 if (task instanceof ChainedStageExecutable && StringUtils.equals(taskOrJobId, task.getId())) {
                     final Map<String, List<StageBase>> tasksMap = ((ChainedStageExecutable) task).getStagesMap();
@@ -1321,9 +1338,43 @@ public class NExecutableManager {
                 // kill spark-submit process
                 val context = UnitOfWork.get();
                 context.doAfterUnit(() -> destroyProcess(taskOrJobId));
+                cancelJob(job, taskOrJobId);
             }
             return true;
         });
+    }
+
+    public void cancelJob(ExecutablePO executablePO, String taskOrJobId) {
+        if (!config.isUTEnv()) {
+            cancelJobSubTasks(executablePO);
+            if (StringUtils.equals(executablePO.getId(), taskOrJobId)) {
+                interruptJob(fromPO(executablePO));
+            }
+        }
+    }
+
+    public void cancelJobSubTasks(ExecutablePO executablePO) {
+        if (CollectionUtils.isNotEmpty(executablePO.getTasks())) {
+            executablePO.getTasks().stream().map(this::fromPO).forEach(task -> {
+                logger.info("Cancel subtask [{}]", task.getDisplayName());
+                task.cancelJob();
+            });
+        }
+    }
+
+    private void interruptJob(AbstractExecutable executable) {
+        val scheduler = NDefaultScheduler.getInstance(project);
+        if (scheduler.getContext() == null) {
+            logger.info("ExecutableContext is null when Interrupt Job [{}] thread", executable.getDisplayName());
+            return;
+        }
+        val thread = scheduler.getContext().getRunningJobThread(executable);
+        if (thread != null) {
+            logger.info("Interrupt Job [{}] thread and remove in ExecutableContext",
+                    executable.getDisplayName());
+            thread.interrupt();
+            scheduler.getContext().removeRunningJob(executable);
+        }
     }
 
     private void updateJobStatus(ExecutableOutputPO jobOutput, ExecutableState oldStatus, ExecutableState newStatus) {
@@ -1387,6 +1438,9 @@ public class NExecutableManager {
             result.setTargetPartitions(executablePO.getTargetPartitions());
             result.setPriority(executablePO.getPriority());
             result.setTag(executablePO.getTag());
+            result.setJobSchedulerMode(executablePO.getJobSchedulerMode());
+            result.setPreviousStep(executablePO.getPreviousStep());
+            result.setNextSteps(executablePO.getNextSteps());
             List<ExecutablePO> tasks = executablePO.getTasks();
             if (tasks != null && !tasks.isEmpty()) {
                 Preconditions.checkArgument(result instanceof ChainedExecutable);
@@ -1405,7 +1459,7 @@ public class NExecutableManager {
                     }
                     ((ChainedExecutable) result).addTask(abstractExecutable);
                 }
-                if (result instanceof DefaultChainedExecutableOnModel) {
+                if (result instanceof DefaultExecutableOnModel) {
                     val handlerType = executablePO.getHandlerType();
                     if (handlerType != null) {
                         Class<? extends ExecutableHandler> hClazz = ClassUtil.forName(handlerType,
@@ -1417,7 +1471,7 @@ public class NExecutableManager {
                                 : null;
                         ExecutableHandler executableHandler = hConstructor.newInstance(project,
                                 result.getTargetSubject(), result.getSubmitter(), segmentId, result.getId());
-                        ((DefaultChainedExecutableOnModel) result).setHandler(executableHandler);
+                        ((DefaultExecutableOnModel) result).setHandler(executableHandler);
                     }
                 }
             }

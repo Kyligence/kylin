@@ -169,7 +169,7 @@ public class JobRunnerFactory {
                         return;
                     }
                     // dump metadata
-                    ResourceStore.dumpResourceMaps(kylinConfig, tmpDir, dumpMap, props);
+                    ResourceStore.dumpResourceMaps(tmpDir, dumpMap, props);
                 }
 
                 // copy metadata to target metaUrl

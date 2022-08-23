@@ -117,10 +117,11 @@ public class ComputedColumnDesc implements Serializable {
         if ("true".equals(System.getProperty("needCheckCC"))) {
             try {
                 simpleParserCheck(expression, aliasSet);
+                expression = CalciteParser.normalize(expression);
             } catch (Exception e) {
                 String legacyHandled = handleLegacyCC(expression, rootFactTableName, aliasSet);
                 if (legacyHandled != null) {
-                    expression = legacyHandled;
+                    expression = CalciteParser.normalize(legacyHandled);
                 } else {
                     throw e;
                 }
@@ -145,7 +146,6 @@ public class ComputedColumnDesc implements Serializable {
 
     private String handleLegacyCC(String expr, String rootFact, Set<String> aliasSet) {
         try {
-            CalciteParser.ensureNoAliasInExpr(expr);
             String ret = CalciteParser.insertAliasInExpr(expr, rootFact);
             simpleParserCheck(ret, aliasSet);
             return ret;

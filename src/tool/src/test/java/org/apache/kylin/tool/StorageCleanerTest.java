@@ -28,12 +28,15 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.kylin.common.KapConfig;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.job.common.ShellExecutable;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.DefaultChainedExecutable;
+import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
@@ -131,7 +134,7 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
         val beforeProtectionTime = System.currentTimeMillis() - config.getStorageResourceSurvivalTimeThreshold();
         val keys = cleaner.getTrashRecord().keySet().stream().collect(Collectors.toSet());
 
-        keys.stream().forEach(k -> {
+        keys.forEach(k -> {
             cleaner.getTrashRecord().remove(k);
             // default/dict/global_dict/DEFAULT.TEST_KYLIN_FACT -> 1584689333538
             if (k.equals("default/dict/global_dict/DEFAULT.TEST_KYLIN_FACT/invalid")) {
@@ -154,7 +157,7 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
     @Test
     public void testCleanup_WithRunningJobs() throws Exception {
         val jobMgr = NExecutableManager.getInstance(getTestConfig(), "default");
-        val job1 = new DefaultChainedExecutable();
+        val job1 = new DefaultExecutable();
         job1.setProject("default");
         val task1 = new ShellExecutable();
         job1.addTask(task1);
@@ -243,6 +246,50 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
         Assert.assertTrue(duration > expectTime);
     }
 
+    @Test
+    public void testStorageItem() {
+        val storageItem1 = new StorageCleaner.StorageItem(
+                StorageCleaner.FileSystemDecorator.getInstance(HadoopUtil.getWorkingFileSystem()),
+                getTestConfig().getHdfsWorkingDirectory());
+        val storageItem2 = new StorageCleaner.StorageItem(
+                StorageCleaner.FileSystemDecorator.getInstance(HadoopUtil.getWorkingFileSystem()),
+                getTestConfig().getHdfsWorkingDirectory());
+
+        {
+            boolean equals = storageItem1.equals(storageItem2);
+            Assert.assertTrue(equals);
+        }
+        {
+            boolean equals = storageItem1.equals(storageItem1);
+            Assert.assertTrue(equals);
+        }
+        {
+            boolean equals = storageItem1.equals(null);
+            Assert.assertFalse(equals);
+        }
+        {
+            boolean equals = storageItem1.equals("UT");
+            Assert.assertFalse(equals);
+        }
+        Assert.assertEquals(storageItem1.hashCode(), storageItem2.hashCode());
+    }
+
+    @Test
+    public void testCollectDropTemporaryTransactionTable() throws Exception {
+        KylinConfig config = getTestConfig();
+        String dir = config.getJobTmpTransactionalTableDir("default", "invalid");
+        Path path = new Path(dir);
+        FileSystem fileSystem = HadoopUtil.getWorkingFileSystem();
+        if (!fileSystem.exists(path)) {
+            fileSystem.mkdirs(path);
+            fileSystem.setPermission(path, new FsPermission((short) 00777));
+            path = new Path(dir + "/SSB.CUSTOMER_HIVE_TX_INTERMEDIATE5c5851ef8544");
+            fileSystem.createNewFile(path);
+        }
+        new StorageCleaner(true, Collections.singletonList("default")).execute();
+        new StorageCleaner(true, Collections.singletonList("default")).execute();
+    }
+
     private void prepare() throws IOException {
         val config = getTestConfig();
         config.setProperty("kylin.garbage.storage.cuboid-layout-survival-time-threshold", "0s");
@@ -264,10 +311,10 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
         val dfMgr = NDataflowManager.getInstance(config, "default");
         val df = dfMgr.getDataflowByModelAlias("nmodel_basic_inner");
         val execMgr = NExecutableManager.getInstance(config, "default");
-        val job1 = new DefaultChainedExecutable();
+        val job1 = new DefaultExecutable();
         job1.setId("job1");
         execMgr.addJob(job1);
-        val job2 = new DefaultChainedExecutable();
+        val job2 = new DefaultExecutable();
         job2.setId("job2");
         execMgr.addJob(job2);
     }

@@ -15,24 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.apache.kylin.rest.util;
 
 import java.io.IOException;
@@ -42,17 +24,18 @@ import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.metadata.model.SegmentStatusEnum;
-import org.apache.kylin.metadata.model.TableDesc;
-import org.apache.kylin.metadata.model.TableRef;
-import org.apache.kylin.rest.response.SQLResponse;
-import org.apache.kylin.rest.service.CacheSignatureQuerySupporter;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.SegmentStatusEnum;
+import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.query.NativeQueryRealization;
+import org.apache.kylin.metadata.query.QueryMetricsContext;
+import org.apache.kylin.rest.response.SQLResponse;
+import org.apache.kylin.rest.service.CacheSignatureQuerySupporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -177,24 +160,27 @@ public class QueryCacheSignatureUtil {
             }
             List<Long> allLayoutTimes = Lists.newLinkedList();
             List<Long> allSnapshotTimes = Lists.newLinkedList();
-            if (layoutId == -1) {
-                NTableMetadataManager tableMetadataManager = NTableMetadataManager.getInstance(kylinConfig, project);
-                for (String snapshot : realization.getSnapshots()) {
-                    long snapshotModificationTime = tableMetadataManager.getTableDesc(snapshot).getLastModified();
-                    if (snapshotModificationTime == 0) {
-                        return "";
-                    } else {
-                        allSnapshotTimes.add(snapshotModificationTime);
-                    }
+            List<Long> allSegmentTimes = Lists.newLinkedList();
+            NTableMetadataManager tableMetadataManager = NTableMetadataManager.getInstance(kylinConfig, project);
+            for (String snapshot : realization.getSnapshots()) {
+                long snapshotModificationTime = tableMetadataManager.getTableDesc(snapshot).getLastModified();
+                if (snapshotModificationTime == 0) {
+                    return "";
+                } else {
+                    allSnapshotTimes.add(snapshotModificationTime);
                 }
-            } else {
+            }
+            if (!QueryMetricsContext.TABLE_SNAPSHOT.equals(realization.getIndexType())) {
                 for (NDataSegment seg : dataflow.getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING)) {
                     long now = System.currentTimeMillis();
                     long latestTime = seg.getSegDetails().getLastModified();
                     if (latestTime <= now && latestTime >= (now - sqlDuration)) {
                         return "";
                     }
-                    allLayoutTimes.add(seg.getLayout(layoutId).getCreateTime());
+                    allSegmentTimes.add(latestTime);
+                    if (seg.getLayoutIds().contains(layoutId)) {
+                        allLayoutTimes.add(seg.getLayout(layoutId).getCreateTime());
+                    }
                 }
             }
             Set<TableRef> allTableRefs = dataflow.getModel().getAllTableRefs();
@@ -205,7 +191,8 @@ public class QueryCacheSignatureUtil {
             String allLayoutTimesSignature = Joiner.on("_").join(allLayoutTimes);
             String allTableTimesSignature = Joiner.on("_").join(allTableTimes);
             String allSnapshotTimesSignature = Joiner.on("_").join(allSnapshotTimes);
-            return Joiner.on(";").join(allLayoutTimesSignature, allTableTimesSignature, allSnapshotTimesSignature);
+            String allSegmentTimesSignature = Joiner.on("_").join(allSegmentTimes);
+            return Joiner.on(";").join(allLayoutTimesSignature, allTableTimesSignature, allSnapshotTimesSignature, allSegmentTimesSignature);
         } catch (NullPointerException e) {
             logger.warn("NPE occurred because metadata changed during query.", e);
             return "";

@@ -42,13 +42,13 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.KylinConfigBase;
 import org.apache.kylin.common.KylinConfigExt;
 import org.apache.kylin.common.persistence.MissingRootPersistentEntity;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.metadata.MetadataConstants;
-import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.IEngineAware;
 import org.apache.kylin.metadata.model.JoinTableDesc;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
@@ -158,9 +158,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     private transient BiMap<Integer, TblColRef> effectiveDimCols; // BiMap impl (com.google.common.collect.Maps$FilteredEntryBiMap) is not serializable
     private transient BiMap<Integer, NDataModel.Measure> effectiveMeasures; // BiMap impl (com.google.common.collect.Maps$FilteredEntryBiMap) is not serializable
 
-    //TODO: should move allColumns and allColumnDescs to model? no need to exist in cubeplan
     private final LinkedHashSet<TblColRef> allColumns = Sets.newLinkedHashSet();
-    private final LinkedHashSet<ColumnDesc> allColumnDescs = Sets.newLinkedHashSet();
 
     private List<LayoutEntity> ruleBasedLayouts = Lists.newArrayList();
     @Setter
@@ -235,6 +233,9 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
             return;
         }
         ruleBasedIndex.init();
+        if (ruleBasedIndex.getBaseLayoutEnabled() == null) {
+            ruleBasedIndex.setBaseLayoutEnabled(getConfig().isBaseCuboidAlwaysValid());
+        }
         ruleBasedLayouts.addAll(ruleBasedIndex.genCuboidLayouts());
         if (config.base().isSystemConfig() && isCachedAndShared) {
             ruleBasedIndex.getCuboidScheduler().validateOrder();
@@ -266,7 +267,6 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
     private void initAllColumns() {
         allColumns.clear();
-        allColumnDescs.clear();
 
         allColumns.addAll(effectiveDimCols.values());
         for (NDataModel.Measure measure : effectiveMeasures.values()) {
@@ -276,10 +276,6 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
             CollectionUtils.addAll(allColumns, join.getJoin().getForeignKeyColumns());
             //all lookup tables are automatically derived
             allColumns.addAll(join.getTableRef().getColumns());
-        }
-
-        for (TblColRef colRef : allColumns) {
-            allColumnDescs.add(colRef.getColumnDesc());
         }
     }
 
@@ -313,7 +309,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     public KylinConfig getConfig() {
-        if(config == null){
+        if (config == null) {
             // when the indexplan is not inited
             return null;
         }
@@ -368,10 +364,6 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         return effectiveMeasures;
     }
 
-    public Set<ColumnDesc> listAllColumnDescs() {
-        return allColumnDescs;
-    }
-
     public Set<TblColRef> listAllTblColRefs() {
         return allColumns;
     }
@@ -408,8 +400,8 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         return getAllIndexes(true);
     }
 
-    /*
-        Get a copy of all IndexEntity List, which is a time cost operation
+    /**
+     * Get a copy of all IndexEntity List, which is a time cost operation
      */
     public List<IndexEntity> getAllIndexes(boolean withToBeDeletedIndexes) {
         Map<Long, Integer> retSubscriptMap = Maps.newHashMap();
@@ -637,8 +629,8 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         return getIndexesMap(toBeDeletedIndexes);
     }
 
-    @VisibleForTesting
-    public void markIndexesToBeDeleted(String indexPlanId, final Set<LayoutEntity> toBeDeletedSet) {
+    public void markIndexesToBeDeleted(String indexPlanId, final Set<LayoutEntity> toBeDeletedSet,
+            Map<Long, Boolean> secondStorageLayoutStatus) {
         Preconditions.checkNotNull(indexPlanId);
         Preconditions.checkNotNull(toBeDeletedSet);
         checkIsNotCachedAndShared();
@@ -656,7 +648,8 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
         val toBeDeletedMap = getToBeDeletedIndexesMap();
         for (LayoutEntity layoutEntity : toBeDeletedSet) {
-            if (null == lastReadySegment.getLayout(layoutEntity.getId())) {
+            if (null == lastReadySegment.getLayout(layoutEntity.getId())
+                    && !secondStorageLayoutStatus.getOrDefault(layoutEntity.getId(), false)) {
                 continue;
             }
 
@@ -672,10 +665,15 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
                 toBeDeletedMap.get(identifier).getLayouts().add(layout);
             }
         }
-
     }
 
-    public void markWhiteIndexToBeDelete(String indexPlanId, final Set<Long> layoutIds) {
+    @VisibleForTesting
+    public void markIndexesToBeDeleted(String indexPlanId, final Set<LayoutEntity> toBeDeletedSet) {
+        markIndexesToBeDeleted(indexPlanId, toBeDeletedSet, Collections.emptyMap());
+    }
+
+    public void markWhiteIndexToBeDelete(String indexPlanId, final Set<Long> layoutIds,
+            Map<Long, Boolean> secondStorageLayoutStatus) {
         Preconditions.checkNotNull(indexPlanId);
         Preconditions.checkNotNull(layoutIds);
         checkIsNotCachedAndShared();
@@ -689,7 +687,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
             }
         }
 
-        markIndexesToBeDeleted(indexPlanId, toBeDeletedLayouts);
+        markIndexesToBeDeleted(indexPlanId, toBeDeletedLayouts, secondStorageLayoutStatus);
 
         for (LayoutEntity layoutEntity : toBeDeletedLayouts) {
             // delete layouts from indexes.
@@ -737,6 +735,12 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         val allIndexes = getAllIndexes();
         nextAggregationIndexId = Math.max(allIndexes.stream().filter(c -> !c.isTableIndex())
                 .mapToLong(IndexEntity::getId).max().orElse(-INDEX_ID_STEP) + INDEX_ID_STEP, nextAggregationIndexId);
+        if (ruleBasedIndex != null) {
+            nextAggregationIndexId = Math.max(ruleBasedIndex.getLayoutIdMapping().stream().mapToLong(id -> id).max()//
+                    .orElse(-INDEX_ID_STEP) + INDEX_ID_STEP, nextAggregationIndexId);
+            nextAggregationIndexId = nextAggregationIndexId - nextAggregationIndexId % INDEX_ID_STEP;
+        }
+
         nextTableIndexId = Math.max(allIndexes.stream().filter(IndexEntity::isTableIndex).mapToLong(IndexEntity::getId)
                 .max().orElse(IndexEntity.TABLE_INDEX_START_ID - INDEX_ID_STEP) + INDEX_ID_STEP, nextTableIndexId);
         val indexNextIdMap = allIndexes.stream().collect(Collectors.toMap(IndexEntity::getId,
@@ -765,7 +769,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         return isCachedAndShared ? Maps.newLinkedHashMap(overrideProps) : overrideProps;
     }
 
-    public void setOverrideProps(LinkedHashMap<String, String> overrideProps) {
+    public void setOverrideProps(Map<String, String> overrideProps) {
         checkIsNotCachedAndShared();
         this.overrideProps = KylinConfig.trimKVFromMap(overrideProps);
         initConfig4IndexPlan(this.config);
@@ -951,9 +955,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     public Optional<LayoutEntity> removeLayoutSameWith(LayoutEntity layout) {
         Optional<LayoutEntity> oldLayout = getIdMapping().allLayoutMapping.values().stream()
                 .filter(l -> l.equals(layout)).findFirst();
-        if (oldLayout.isPresent()) {
-            removeLayouts(Sets.newHashSet(oldLayout.get().getId()), true, true);
-        }
+        oldLayout.ifPresent(layoutEntity -> removeLayouts(Sets.newHashSet(layoutEntity.getId()), true, true));
         return oldLayout;
     }
 
@@ -994,16 +996,13 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
             //if layout exist in indexes, use its id
             Optional<LayoutEntity> oldLayout = removeLayoutSameWith(baseLayout);
-            if (oldLayout.isPresent()) {
-                baseLayout.setId(oldLayout.get().getId());
-            }
+            oldLayout.ifPresent(layoutEntity -> baseLayout.setId(layoutEntity.getId()));
 
             val newIndex = IndexEntity.from(baseLayout);
             IndexEntity indexInAll = allIndexMapping.get(newIndex.createIndexIdentifier());
             if (indexInAll == null) {
                 addIndex(newIndex, baseLayout.notAssignId());
             } else {
-
                 IndexEntity indexInWhiteList = getWhiteListIndexesMap().get(newIndex.createIndexIdentifier());
                 if (indexInWhiteList != null) {
                     IndexEntity realIndex = getIndexes().get(getIndexes().indexOf(indexInWhiteList));
@@ -1016,8 +1015,11 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
                 }
             }
 
+            if (baseLayout.getIndex().isTableIndex()) {
+                NDataModelManager modelMgr = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+                modelMgr.changeBaseIndexColumnStatusOfModel(modelMgr.getDataModelDesc(uuid), baseLayout);
+            }
         }
-
     }
 
     public Long getBaseAggLayoutId() {
@@ -1049,7 +1051,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         int approvedAdditionalRecs;
         int approvedRemovalRecs;
         @Getter
-        private Set<Long> addedLayouts = Sets.newHashSet();
+        private final Set<Long> addedLayouts = Sets.newHashSet();
 
         private IndexPlanUpdateHandler() {
             indexPlan = IndexPlan.this.isCachedAndShared ? JsonUtil.deepCopyQuietly(IndexPlan.this, IndexPlan.class)
@@ -1167,7 +1169,8 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     public boolean isOfflineManually() {
-        return getOverrideProps().getOrDefault(KylinConfig.MODEL_OFFLINE_FLAG, "false").trim().equals(KylinConfig.TRUE);
+        return getOverrideProps().getOrDefault(KylinConfig.MODEL_OFFLINE_FLAG, "false").trim()
+                .equals(KylinConfigBase.TRUE);
     }
 
     private IdMapping initIdMapping() {
@@ -1185,8 +1188,8 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     private class IdMapping implements Serializable {
-        private Map<Long, IndexEntity> allIndexMapping;
-        private Map<Long, LayoutEntity> allLayoutMapping;
+        private final Map<Long, IndexEntity> allIndexMapping;
+        private final Map<Long, LayoutEntity> allLayoutMapping;
 
         IdMapping() {
             allIndexMapping = getAllIndexes().stream()

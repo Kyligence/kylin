@@ -134,6 +134,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import lombok.SneakyThrows;
 import lombok.val;
 
 @Component("projectService")
@@ -329,8 +330,8 @@ public class ProjectService extends BasicService {
         return response;
     }
 
-    public void garbageCleanup() {
-
+    @SneakyThrows
+    public void garbageCleanup(long remainingTime) {
         try (SetThreadName ignored = new SetThreadName("GarbageCleanupWorker")) {
             // clean up acl
             cleanupAcl();
@@ -338,15 +339,16 @@ public class ProjectService extends BasicService {
             val projectManager = NProjectManager.getInstance(config);
             val epochMgr = EpochManager.getInstance();
             for (ProjectInstance project : projectManager.listAllProjects()) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new InterruptedException("Thread is interrupted: " + Thread.currentThread().getName());
+                }
                 if (!config.isUTEnv() && !epochMgr.checkEpochOwner(project.getName()))
                     continue;
-                logger.info("Start to cleanup garbage  for project<{}>", project.getName());
+                logger.info("Start to cleanup garbage for project<{}>", project.getName());
                 try {
-                    projectSmartService.cleanupGarbage(project.getName());
+                    projectSmartService.cleanupGarbage(project.getName(), remainingTime);
                     GarbageCleaner.cleanMetadata(project.getName());
                     EventBusFactory.getInstance().callService(new ProjectCleanOldQueryResultEvent(project.getName()));
-                    //                    asyncQueryService.cleanOldQueryResult(project.getName(),
-                    //                            KylinConfig.getInstanceFromEnv().getAsyncQueryResultRetainDays());
                 } catch (Exception e) {
                     logger.warn("clean project<" + project.getName() + "> failed", e);
                 }
@@ -383,7 +385,7 @@ public class ProjectService extends BasicService {
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")
     public void cleanupGarbage(String project) throws Exception {
-        projectSmartService.cleanupGarbage(project);
+        projectSmartService.cleanupGarbage(project, 0);
         GarbageCleaner.cleanMetadata(project);
         asyncTaskService.cleanupStorage();
     }
@@ -797,7 +799,8 @@ public class ProjectService extends BasicService {
 
         val prjManager = getManager(NProjectManager.class);
         val tableManager = getManager(NTableMetadataManager.class, project);
-        if (ProjectInstance.DEFAULT_DATABASE.equals(uppderDB) || tableManager.listDatabases().contains(uppderDB)) {
+        if (ProjectInstance.DEFAULT_DATABASE.equals(uppderDB)
+                || tableManager.dbToTablesMap(getConfig().streamingEnabled()).containsKey(uppderDB)) {
             final ProjectInstance projectInstance = prjManager.getProject(project);
             if (uppderDB.equals(projectInstance.getDefaultDatabase())) {
                 return;
@@ -811,7 +814,7 @@ public class ProjectService extends BasicService {
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")
-    public String backupProject(String project) throws Exception {
+    public String backupProject(String project) throws IOException {
         return metadataBackupService.backupProject(project);
     }
 

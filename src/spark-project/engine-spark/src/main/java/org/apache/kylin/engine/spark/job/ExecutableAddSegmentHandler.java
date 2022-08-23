@@ -20,7 +20,7 @@ package org.apache.kylin.engine.spark.job;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.job.common.SegmentUtil;
-import org.apache.kylin.job.execution.DefaultChainedExecutableOnModel;
+import org.apache.kylin.job.execution.DefaultExecutableOnModel;
 import org.apache.kylin.job.execution.ExecutableHandler;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
@@ -62,7 +62,7 @@ public class ExecutableAddSegmentHandler extends ExecutableHandler {
 
     @Override
     public void handleDiscardOrSuicidal() {
-        if (((DefaultChainedExecutableOnModel) getExecutable()).checkAnyLayoutExists()) {
+        if (((DefaultExecutableOnModel) getExecutable()).checkAnyLayoutExists()) {
             return;
         }
         makeSegmentReady();

@@ -21,9 +21,11 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
@@ -141,6 +143,18 @@ public class TableFlow extends RootPersistentEntity
 
         checkIsNotCachedAndShared();
         this.tableDataList.forEach(tableData -> tableData.removeNodes(nodeNames));
+    }
+
+    public Set<Long> getLayoutBySegment(String segmentId) {
+        return getTableDataList().stream()
+                .filter(tableData -> tableData.containSegments(Collections.singleton(segmentId)))
+                .map(TableData::getLayoutID)
+                .collect(Collectors.toSet());
+    }
+
+    public boolean containsLayout(long layoutId) {
+        return getTableDataList().stream()
+                .anyMatch(tableData -> tableData.getLayoutID() == layoutId);
     }
 
     @Override

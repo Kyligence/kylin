@@ -88,7 +88,7 @@ public class SecondStorageScheduleService {
 
             // get all temp table in database
             List<String> tempTables = operator.listTables(database).stream()
-                    .filter(NameUtil::isTempTable).collect(Collectors.toList());
+                    .filter(NameUtil::isTempTable).map(table -> table.replace("-", "_")).collect(Collectors.toList());
 
             val execManager = NExecutableManager.getInstance(config, project);
             val allJobs = execManager.getAllJobs();
@@ -96,11 +96,13 @@ public class SecondStorageScheduleService {
                     .filter(job -> job.getOutput().getStatus().equals(ExecutableState.DISCARDED.name()))
                     .map(RootPersistentEntity::getId)
                     .map(jobId -> jobId.length() > JOB_ID_LENGTH ? jobId.substring(0, JOB_ID_LENGTH) : jobId)
+                    .map(jobId -> jobId.replace("-", "_"))
                     .collect(Collectors.toList());
 
             List<String> allJobIds = allJobs.stream()
                     .map(RootPersistentEntity::getId)
                     .map(jobId -> jobId.length() > JOB_ID_LENGTH ? jobId.substring(0, JOB_ID_LENGTH) : jobId)
+                    .map(jobId -> jobId.replace("-", "_"))
                     .collect(Collectors.toList());
 
             // temp table is start with job id

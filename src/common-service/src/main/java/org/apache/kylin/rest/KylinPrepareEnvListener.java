@@ -22,10 +22,10 @@ import java.io.File;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ClassUtil;
-import org.apache.kylin.common.util.TimeZoneUtils;
 import org.apache.kylin.common.util.TempMetadataBuilder;
+import org.apache.kylin.common.util.TimeZoneUtils;
 import org.apache.kylin.common.util.Unsafe;
-import org.apache.kylin.tool.kerberos.KerberosLoginTask;
+import org.apache.kylin.tool.kerberos.DelegationTokenManager;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -79,8 +79,8 @@ public class KylinPrepareEnvListener implements EnvironmentPostProcessor, Ordere
         }
 
         TimeZoneUtils.setDefaultTimeZone(config);
-        KerberosLoginTask kerberosLoginTask = new KerberosLoginTask();
-        kerberosLoginTask.execute();
+        DelegationTokenManager delegationTokenManager = new DelegationTokenManager();
+        delegationTokenManager.start();
         env.addActiveProfile(config.getSecurityProfile());
 
         if (config.isMetadataKeyCaseInSensitiveEnabled()) {

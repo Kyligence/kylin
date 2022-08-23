@@ -182,11 +182,10 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
         val model = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
         val project = "default";
         MockSecondStorage.mock("default", new ArrayList<>(), this);
-        val indexPlanManager = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            indexPlanManager.updateIndexPlan(model, indexPlan -> {
-                indexPlan.createAndAddBaseIndex(indexPlan.getModel());
-            });
+            NIndexPlanManager indexMgr = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            indexMgr.updateIndexPlan(model, indexPlan -> indexPlan.createAndAddBaseIndex(indexPlan.getModel()));
             return null;
         }, project);
         SecondStorageUtil.initModelMetaData(project, model);

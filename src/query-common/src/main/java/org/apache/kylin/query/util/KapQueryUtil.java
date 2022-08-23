@@ -160,8 +160,8 @@ public class KapQueryUtil {
                 if (i > 0) {
                     sql.append(" AND ");
                 }
-                sql.append(String.format(Locale.ROOT, "%s = %s", fk[i].getExpressionInSourceDBWithDoubleQuote(),
-                        pk[i].getExpressionInSourceDBWithDoubleQuote()));
+                sql.append(String.format(Locale.ROOT, "%s = %s", fk[i].getDoubleQuoteExpressionInSourceDB(),
+                        pk[i].getDoubleQuoteExpressionInSourceDB()));
             }
             sql.append(sep);
 
@@ -334,7 +334,7 @@ public class KapQueryUtil {
             sql = sql.substring(0, sql.length() - 1);
 
         //Split keywords and variables from sql by punctuation and whitespace character
-        List<String> sqlElements = Lists.newArrayList(sql.toLowerCase(Locale.ROOT).split("(?![\\._])\\p{P}|\\s+"));
+        List<String> sqlElements = Lists.newArrayList(sql.toLowerCase(Locale.ROOT).split("(?![\\._\'\"`])\\p{P}|\\s+"));
 
         Integer maxRows = kylinConfig.getMaxResultRows();
         if (maxRows != null && maxRows > 0 && (maxRows < limit || limit <= 0)) {
