@@ -254,7 +254,7 @@ public class QueryHistoryTaskScheduler {
                 }
                 val snapshotsInRealization = queryHistory.getQueryHistoryInfo().getQuerySnapshots();
                 for (val snapshots : snapshotsInRealization) {
-                    snapshots.stream().forEach(tableIdentify -> {
+                    snapshots.forEach(tableIdentify -> {
                         results.merge(tableManager.getOrCreateTableExt(tableIdentify), 1, Integer::sum);
                     });
                 }
@@ -305,6 +305,9 @@ public class QueryHistoryTaskScheduler {
             for (Map.Entry<String, Long> entry : modelsLastQueryTime.entrySet()) {
                 String dataflowId = entry.getKey();
                 Long lastQueryTime = entry.getValue();
+                if (dfManager.getDataflow(dataflowId) == null) {
+                    continue;
+                }
                 dfManager.updateDataflow(dataflowId, copyForWrite -> copyForWrite.setLastQueryTime(lastQueryTime));
             }
         }

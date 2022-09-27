@@ -18,31 +18,28 @@
 
 package org.apache.kylin.rest.service.task;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
-
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.util.TimeUtil;
-import org.apache.kylin.metadata.model.TableExtDesc;
-import org.apache.kylin.rest.service.IUserGroupService;
-import org.apache.kylin.rest.util.SpringContext;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.common.util.TimeUtil;
 import org.apache.kylin.junit.TimeZoneTestRunner;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
-import io.kyligence.kap.metadata.favorite.AccelerateRuleUtil;
-import io.kyligence.kap.metadata.favorite.AsyncAccelerationTask;
-import io.kyligence.kap.metadata.favorite.AsyncTaskManager;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
+import org.apache.kylin.rest.service.IUserGroupService;
 import org.apache.kylin.rest.service.NUserGroupService;
+import org.apache.kylin.rest.service.task.QueryHistoryTaskScheduler.QueryHistoryMetaUpdateRunner;
+import org.apache.kylin.rest.util.SpringContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,8 +57,16 @@ import org.springframework.security.acls.domain.PermissionFactory;
 import org.springframework.security.acls.model.PermissionGrantingStrategy;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import io.kyligence.kap.metadata.favorite.AccelerateRuleUtil;
+import io.kyligence.kap.metadata.favorite.AsyncAccelerationTask;
+import io.kyligence.kap.metadata.favorite.AsyncTaskManager;
+import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset;
+import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
+import lombok.val;
 
 @RunWith(PowerMockRunner.class)
 @PowerMockRunnerDelegate(TimeZoneTestRunner.class)
@@ -73,10 +78,11 @@ public class QueryHistoryTaskSchedulerTest extends NLocalFileMetadataTestCase {
     private static final String LAYOUT1 = "20000000001";
     private static final String LAYOUT2 = "1000001";
     private static final Long QUERY_TIME = 1586760398338L;
+
+    private QueryHistoryTaskScheduler qhAccelerateScheduler;
+
     @Mock
     private final IUserGroupService userGroupService = Mockito.spy(NUserGroupService.class);
-    int startOffset = 0;
-    private QueryHistoryTaskScheduler qhAccelerateScheduler;
 
     @Before
     public void setUp() throws Exception {
@@ -215,11 +221,37 @@ public class QueryHistoryTaskSchedulerTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    public void testUpdateLastQueryTime()
+            throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+
+        // before update dataflow usage, layout usage and last query time
+        NDataflow dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT)
+                .getDataflow(DATAFLOW);
+        Assert.assertEquals(3, dataflow.getQueryHitCount());
+        Assert.assertNull(dataflow.getLayoutHitCount().get(20000000001L));
+        Assert.assertNull(dataflow.getLayoutHitCount().get(1000001L));
+        Assert.assertEquals(0L, dataflow.getLastQueryTime());
+
+        val queryHistoryAccelerateRunner = qhAccelerateScheduler.new QueryHistoryMetaUpdateRunner();
+        Class<? extends QueryHistoryMetaUpdateRunner> clazz = queryHistoryAccelerateRunner.getClass();
+        Method method = clazz.getDeclaredMethod("updateLastQueryTime", Map.class, String.class);
+        method.setAccessible(true);
+        method.invoke(queryHistoryAccelerateRunner, ImmutableMap.of("aaa", 100L), PROJECT);
+        method.invoke(queryHistoryAccelerateRunner, ImmutableMap.of(DATAFLOW, 100L), PROJECT);
+        method.setAccessible(false);
+
+        NDataflow dataflow1 = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT)
+                .getDataflow(DATAFLOW);
+        long lastQueryTime = dataflow1.getLastQueryTime();
+        Assert.assertEquals(100L, lastQueryTime);
+    }
+
+    @Test
     public void testUpdateMetadataWithStringRealization() {
         qhAccelerateScheduler.queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
         qhAccelerateScheduler.accelerateRuleUtil = Mockito.mock(AccelerateRuleUtil.class);
         Mockito.when(qhAccelerateScheduler.queryHistoryDAO.queryQueryHistoriesByIdOffset(Mockito.anyLong(),
-                Mockito.anyInt(), Mockito.anyString())).thenReturn(queryHistoriesWithStringRealization())
+                        Mockito.anyInt(), Mockito.anyString())).thenReturn(queryHistoriesWithStringRealization())
                 .thenReturn(null);
 
         // before update dataflow usage, layout usage and last query time
@@ -484,5 +516,7 @@ public class QueryHistoryTaskSchedulerTest extends NLocalFileMetadataTestCase {
 
         return histories;
     }
+
+    int startOffset = 0;
 
 }

@@ -38,6 +38,7 @@ import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.SpringContext;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -120,6 +121,7 @@ public class UserAclServiceTest extends ServiceTestBase {
         userAclService.grantUserAclPermission("admin", "DATA_QUERY");
     }
 
+    @Ignore("very unstable")
     @Test
     public void testGetAllUsersHasGlobalPermission() {
         KylinUserService kylinUserService = new KylinUserService() {
