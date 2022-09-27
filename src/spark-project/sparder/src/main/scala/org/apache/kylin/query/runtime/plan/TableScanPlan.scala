@@ -71,7 +71,8 @@ object TableScanPlan extends LogEx {
     val realizations = olapContext.realization.getRealizations.asScala.toList
     realizations.map(_.asInstanceOf[NDataflow])
       .filter(dataflow => (!dataflow.isStreaming && !context.isBatchCandidateEmpty) ||
-        (dataflow.isStreaming && !context.isStreamCandidateEmpty))
+        (dataflow.isStreaming && !context.isStreamCandidateEmpty) ||
+        isSegmentsEmpty(prunedSegments, prunedStreamingSegments))
       .map(dataflow => {
         if (dataflow.isStreaming) {
           tableScan(rel, dataflow, olapContext, session, prunedStreamingSegments, context.getStreamingCandidate)
@@ -81,13 +82,31 @@ object TableScanPlan extends LogEx {
       }).reduce(_.union(_))
   }
 
+  // prunedSegments is null
+  def tableScanEmptySegment(rel: KapRel): DataFrame = {
+    logInfo("prunedSegments is null")
+    val df = SparkOperation.createEmptyDataFrame(
+        StructType(
+          rel.getColumnRowType.getAllColumns.asScala
+            .map(column =>
+              StructField(column.toString.replaceAll("\\.", "_"), SparderTypeUtil.toSparkType(column.getType)))))
+    val cols = df.schema.map(structField => {col(structField.name)})
+    df.select(cols: _*)
+  }
+
+  def isSegmentsEmpty(prunedSegments: util.List[NDataSegment], prunedStreamingSegments: util.List[NDataSegment]): Boolean = {
+    val isPrunedSegmentsEmpty = prunedSegments == null || prunedSegments.size() == 0
+    val isPrunedStreamingSegmentsEmpty = prunedStreamingSegments == null || prunedStreamingSegments.size() == 0
+    isPrunedSegmentsEmpty && isPrunedStreamingSegmentsEmpty
+  }
+
   def tableScan(rel: KapRel, dataflow: NDataflow, olapContext: OLAPContext,
                 session: SparkSession, prunedSegments: util.List[NDataSegment], candidate: NLayoutCandidate): DataFrame = {
     val prunedPartitionMap = olapContext.storageContext.getPrunedPartitions
     olapContext.resetSQLDigest()
     //TODO: refactor
     val cuboidLayout = candidate.getLayoutEntity
-    if (cuboidLayout.getIndex.isTableIndex) {
+    if (cuboidLayout.getIndex != null && cuboidLayout.getIndex.isTableIndex) {
       QueryContext.current().getQueryTagInfo.setTableIndex(true)
     }
     val tableName = olapContext.firstTableScan.getBackupAlias
@@ -97,6 +116,9 @@ object TableScanPlan extends LogEx {
     /////////////////////////////////////////////
     val kapConfig = KapConfig.wrap(dataflow.getConfig)
     val basePath = kapConfig.getReadParquetStoragePath(dataflow.getProject)
+    if (prunedSegments == null || prunedSegments.size() == 0) {
+      return tableScanEmptySegment(rel: KapRel)
+    }
     val fileList = prunedSegments.asScala.map(
       seg => toLayoutPath(dataflow, cuboidLayout.getId, basePath, seg, prunedPartitionMap)
     )

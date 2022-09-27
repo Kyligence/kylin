@@ -117,6 +117,7 @@ object SparderTypeUtil extends Logging {
       case tp if tp.startsWith("extendedcolumn") => BinaryType
       case tp if tp.startsWith("percentile") => BinaryType
       case tp if tp.startsWith("raw") => BinaryType
+      case "any" => StringType
       case _ => throw new IllegalArgumentException(dataTp.toString)
     }
   }

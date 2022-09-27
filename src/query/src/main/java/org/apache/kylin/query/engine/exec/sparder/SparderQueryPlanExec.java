@@ -77,7 +77,7 @@ public class SparderQueryPlanExec implements QueryPlanExec {
                 || KapConfig.wrap(((SimpleDataContext) dataContext).getKylinConfig()).runConstantQueryLocally()) {
             val contexts = ContextUtil.listContexts();
             for (OLAPContext context : contexts) {
-                if (context.olapSchema != null && context.storageContext.isEmptyLayout()) {
+                if (context.olapSchema != null && context.storageContext.isEmptyLayout() && !context.isHasAgg()) {
                     QueryContext.fillEmptyResultSetMetrics();
                     return new ExecuteResult(Lists.newArrayList(), 0);
                 }
