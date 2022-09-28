@@ -121,11 +121,11 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
     @Test
     public void testListAll() throws Exception {
         Mockito.doReturn(
-                new EnvelopeResponse<>(KylinException.CODE_SUCCESS, DataResult.get(Lists.newArrayList(), 0, 10), ""))
+                        new EnvelopeResponse<>(KylinException.CODE_SUCCESS, DataResult.get(Lists.newArrayList(), 0, 10), ""))
                 .when(userController).listAllUsers("ADMIN", false, 0, 10);
 
         mockMvc.perform(MockMvcRequestBuilders.get("/api/user").contentType(MediaType.APPLICATION_JSON)
-                .param("name", "ADMIN").accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        .param("name", "ADMIN").accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         Mockito.verify(openUserController).listAllUsers("ADMIN", false, 0, 10);
@@ -139,8 +139,8 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
         user.setDisabled(false);
         Mockito.doNothing().when(userService).createUser(Mockito.any(UserDetails.class));
         mockMvc.perform(MockMvcRequestBuilders.post("/api/user").contentType(MediaType.APPLICATION_JSON)
-                .content(JsonUtil.writeValueAsString(user))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        .content(JsonUtil.writeValueAsString(user))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         Mockito.verify(openUserController).createUser(Mockito.any(UserRequest.class));
@@ -154,8 +154,8 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
         userRequest.setDisabled(false);
         Mockito.doReturn(user).when(userController).getManagedUser("ADMIN");
         mockMvc.perform(MockMvcRequestBuilders.put("/api/user").contentType(MediaType.APPLICATION_JSON)
-                .content(JsonUtil.writeValueAsString(userRequest))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        .content(JsonUtil.writeValueAsString(userRequest))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         Mockito.verify(openUserController).updateUser(Mockito.any(UserRequest.class));
@@ -166,8 +166,8 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
         Mockito.doNothing().when(userService).deleteUser(Mockito.anyString());
         Mockito.doNothing().when(accessService).revokeProjectPermission(Mockito.anyString(), Mockito.anyString());
         mockMvc.perform(
-                MockMvcRequestBuilders.delete("/api/user/{username:.+}", "u1").contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        MockMvcRequestBuilders.delete("/api/user/{username:.+}", "u1").contentType(MediaType.APPLICATION_JSON)
+                                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         Mockito.verify(openUserController).delete("u1");
@@ -180,8 +180,8 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
         ManagedUser request = new ManagedUser();
         request.setUsername("u1");
         mockMvc.perform(MockMvcRequestBuilders.delete("/api/user", "u1").contentType(MediaType.APPLICATION_JSON)
-                .content(JsonUtil.writeValueAsString(request))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        .content(JsonUtil.writeValueAsString(request))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         Mockito.verify(openUserController).deleteUser(request);
@@ -197,8 +197,8 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
 
         Mockito.doReturn(user).when(userController).getManagedUser("ADMIN");
         mockMvc.perform(MockMvcRequestBuilders.put("/api/user/password").contentType(MediaType.APPLICATION_JSON)
-                .content(JsonUtil.writeValueAsString(request))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        .content(JsonUtil.writeValueAsString(request))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         Mockito.verify(openUserController).updateUserPassword(Mockito.any(PasswordChangeRequest.class));
@@ -223,8 +223,8 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
             user.setUsername("u3");
         }
         mockMvc.perform(MockMvcRequestBuilders.post("/api/user/batch").contentType(MediaType.APPLICATION_JSON)
-                .content(JsonUtil.writeValueAsString(users))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        .content(JsonUtil.writeValueAsString(users))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(openUserController).batchCreate(users);
     }
@@ -233,8 +233,8 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
     public void testBatchDelUsers() throws Exception {
         List<String> users = Arrays.asList("u1", "u2", "u3");
         mockMvc.perform(MockMvcRequestBuilders.delete("/api/user/batch").contentType(MediaType.APPLICATION_JSON)
-                .content(JsonUtil.writeValueAsString(users))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        .content(JsonUtil.writeValueAsString(users))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(openUserController).batchDelete(users);
     }
@@ -245,8 +245,8 @@ public class OpenUserControllerTest extends NLocalFileMetadataTestCase {
         request.setOperationType("USER_DELETE");
         request.setUsernameList(Arrays.asList("oliver"));
         mockMvc.perform(MockMvcRequestBuilders.put("/api/user/refresh").contentType(MediaType.APPLICATION_JSON)
-                .content(JsonUtil.writeValueAsString(request))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                        .content(JsonUtil.writeValueAsString(request))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(openUserController).refreshUser(Mockito.any(CachedUserUpdateRequest.class));
     }
