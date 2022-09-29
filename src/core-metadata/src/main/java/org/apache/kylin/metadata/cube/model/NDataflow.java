@@ -585,4 +585,13 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
     public boolean hasReadySegments() {
         return isReady() && CollectionUtils.isNotEmpty(getQueryableSegments());
     }
+
+    public void initAllSegLayoutInfo() {
+        getSegments().forEach(NDataSegment::getLayoutInfo);
+    }
+
+    public void initSegLayoutInfoById(Set<String> segmentIdList) {
+        getSegments(segmentIdList).forEach(NDataSegment::getLayoutInfo);
+    }
+
 }

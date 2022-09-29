@@ -303,7 +303,7 @@ public class NDataSegment implements ISegment, Serializable {
         return getLayoutInfo().isAlreadyBuilt(layoutId);
     }
 
-    private LayoutInfo getLayoutInfo() {
+    public LayoutInfo getLayoutInfo() {
         if (layoutInfo == null) {
             synchronized (this) {
                 if (layoutInfo == null) {
