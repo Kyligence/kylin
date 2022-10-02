@@ -35,7 +35,9 @@ public class SecondStorageLockUtils {
     private static final Map<Pair<String, SegmentRange<Long>>, Lock> JOB_LOCKS = new ConcurrentHashMap<>();
     private static final Object guard = new Object();
 
-
+    public static boolean containsKey(String modelId) {
+        return JOB_LOCKS.keySet().stream().anyMatch(item -> item.getFirst().equals(modelId));
+    }
     public static boolean containsKey(String modelId, SegmentRange<Long> range) {
         return JOB_LOCKS.keySet().stream().anyMatch(item -> item.getFirst().equals(modelId) && item.getSecond().overlaps(range));
     }

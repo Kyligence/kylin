@@ -51,13 +51,14 @@ import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.MissingRootPersistentEntity;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
+import org.apache.kylin.common.scheduler.SchedulerEventNotifier;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.StringUtil;
 import org.apache.kylin.metadata.MetadataConstants;
-import org.apache.kylin.metadata.project.ProjectInstance;
-import org.apache.kylin.common.scheduler.SchedulerEventNotifier;
+import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -596,9 +597,8 @@ public class NDataModel extends RootPersistentEntity {
         TableRef tableRef = findTable(table);
         TblColRef result = tableRef.getColumn(column.toUpperCase(Locale.ROOT));
         if (result == null)
-            throw new KylinException(COLUMN_NOT_EXIST,
-                    String.format(Locale.ROOT, MsgPicker.getMsg().getBadSqlColumnNotFoundReason(),
-                            String.format(Locale.ROOT, "%s.%s", table, column)));
+            throw new KylinException(COLUMN_NOT_EXIST, String.format(Locale.ROOT,
+                    MsgPicker.getMsg().getBadSqlColumnNotFoundReason(), table + "." + column));
         return result;
     }
 
@@ -620,8 +620,11 @@ public class NDataModel extends RootPersistentEntity {
             }
         }
 
-        Preconditions.checkArgument(result != null,
-                String.format(Locale.ROOT, MsgPicker.getMsg().getBadSqlColumnNotFoundReason(), input));
+        // warning: cannot use Preconditions.checkArgument, at most case we don't need init the msg.
+        if (result == null) {
+            String msg = String.format(Locale.ROOT, MsgPicker.getMsg().getBadSqlColumnNotFoundReason(), input);
+            throw new IllegalArgumentException(msg);
+        }
         return result;
     }
 
@@ -1175,7 +1178,7 @@ public class NDataModel extends RootPersistentEntity {
         }
 
         for (ComputedColumnDesc newCC : this.computedColumnDescs) {
-            Set<String> usedAliasSet = ComputedColumnUtil.getUsedAliasSet(newCC.getExpression());
+            Set<String> usedAliasSet = CalciteParser.getUsedAliasSet(newCC.getExpression());
 
             if (!this.isSeekingCCAdvice() //if is seeking for advice, expr will be null
                     && !usedAliasSet.contains(newCC.getTableAlias())
@@ -1461,6 +1464,10 @@ public class NDataModel extends RootPersistentEntity {
 
     public boolean isStreaming() {
         return getModelType() == ModelType.STREAMING || getModelType() == ModelType.HYBRID;
+    }
+
+    public boolean isAccessible(boolean turnOnStreaming) {
+        return turnOnStreaming || !isStreaming();
     }
 
     public Set<Integer> getEffectiveInternalMeasureIds() {

@@ -195,7 +195,7 @@ function checkExactlyAndCopyFile() {
     fi
 }
 
-# FI hive-site.xml is lack of some configuration
+# KE-9142 FI hive-site.xml is lack of some configuration
 function checkAndCopyFIHiveSite() {
 
     checkAndCopyFile $FI_ENV_PLATFORM/Hive/config/hive-site.xml

@@ -1,0 +1,2 @@
+Spark 3.2.0-kylin-4.x-r56 (git revision 5b1b782) built for Hadoop 2.7.4
+Build flags: -Phadoop-2.7 -Phive -Phive-thriftserver -Pmesos -Pyarn -Pkubernetes

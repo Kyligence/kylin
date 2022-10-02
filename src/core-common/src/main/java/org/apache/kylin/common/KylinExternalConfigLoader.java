@@ -28,7 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +37,7 @@ import java.util.Properties;
 
 import javax.annotation.Nonnull;
 
+import com.google.common.collect.Maps;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.OrderedProperties;
 import org.slf4j.Logger;
@@ -57,7 +57,7 @@ public class KylinExternalConfigLoader implements IExternalConfigLoader {
 
     private final File propFile;
 
-    private final Properties properties;
+    private final Map<String, String> properties;
 
     public KylinExternalConfigLoader(Map<String, String> map) {
         this(map.get("config-dir") == null ? getSitePropertiesFile() : new File(map.get("config-dir")));
@@ -68,13 +68,12 @@ public class KylinExternalConfigLoader implements IExternalConfigLoader {
         this.properties = loadProperties();
     }
 
-    private Properties loadProperties() {
-        Properties siteProperties = new Properties();
+    private Map<String, String> loadProperties() {
+        Map<String, String> siteProperties = Maps.newConcurrentMap();
         OrderedProperties orderedProperties = buildSiteOrderedProps();
         for (Map.Entry<String, String> each : orderedProperties.entrySet()) {
-            siteProperties.put(each.getKey(), each.getValue());
+            siteProperties.put(String.valueOf(each.getKey()), String.valueOf(each.getValue()));
         }
-
         return siteProperties;
     }
 
@@ -152,17 +151,21 @@ public class KylinExternalConfigLoader implements IExternalConfigLoader {
     @Override
     public String getConfig() {
         StringWriter writer = new StringWriter();
-        properties.list(new PrintWriter(writer));
+        for (Map.Entry<String, String> entry: properties.entrySet()) {
+            writer.append(entry.getKey() + "=" + entry.getValue()).append("\n");
+        }
         return writer.toString();
     }
 
     @Override
     public String getProperty(String key) {
-        return properties.getProperty(key);
+        return properties.get(key);
     }
 
     @Override
     public Properties getProperties() {
-        return this.properties;
+        Properties newProperties = new Properties();
+        newProperties.putAll(properties);
+        return newProperties;
     }
 }

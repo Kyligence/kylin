@@ -108,7 +108,7 @@ class CreateStreamingFlatTable(flatTable: IJoinedFlatTableDesc,
       if (!StringUtils.isEmpty(watermark)) {
         import org.apache.spark.sql.functions._
         val cols = model.getRootFactTable.getColumns.asScala.map(item => {
-          col(NSparkCubingUtil.convertFromDot(item.getAliasDotName))
+          col(NSparkCubingUtil.convertFromDot(item.getBackTickIdentity))
         }).toList
         rootFactTable.withWatermark(partitionColumn, watermark).groupBy(cols: _*).count()
       } else {

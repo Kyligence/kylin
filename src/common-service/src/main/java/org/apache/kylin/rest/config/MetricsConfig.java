@@ -57,6 +57,10 @@ public class MetricsConfig {
 
     @EventListener(ApplicationReadyEvent.class)
     public void registerMetrics() {
+        if (!KapConfig.getInstanceFromEnv().isMonitorEnabled()) {
+            return;
+        }
+
         String host = clusterManager.getLocalServer();
 
         log.info("Register global metrics...");

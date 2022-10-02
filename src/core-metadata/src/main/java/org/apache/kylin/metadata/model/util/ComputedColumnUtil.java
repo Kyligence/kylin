@@ -27,12 +27,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
-import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.kylin.common.KylinConfig;
@@ -60,6 +60,8 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import lombok.val;
 
 public class ComputedColumnUtil {
     private static final Logger logger = LoggerFactory.getLogger(ComputedColumnUtil.class);
@@ -312,31 +314,11 @@ public class ComputedColumnUtil {
     // model X contains table f,a,b,c, and model Y contains table f,a,b,d
     // if two cc involve table a,b, they might still be treated equal regardless of the model difference on c,d
     private static JoinsGraph getCCExprRelatedSubgraph(ComputedColumnDesc cc, NDataModel model) {
-        Set<String> aliasSets = getUsedAliasSet(cc.getExpression());
+        Set<String> aliasSets = CalciteParser.getUsedAliasSet(cc.getExpression());
         if (cc.getTableAlias() != null) {
             aliasSets.add(cc.getTableAlias());
         }
         return model.getJoinsGraph().getSubgraphByAlias(aliasSets);
-    }
-
-    public static Set<String> getUsedAliasSet(String expr) {
-        if (expr == null) {
-            return Sets.newHashSet();
-        }
-        SqlNode sqlNode = CalciteParser.getReadonlyExpNode(expr);
-
-        final Set<String> s = Sets.newHashSet();
-        SqlVisitor sqlVisitor = new SqlBasicVisitor() {
-            @Override
-            public Object visit(SqlIdentifier id) {
-                Preconditions.checkState(id.names.size() == 2);
-                s.add(id.names.get(0));
-                return null;
-            }
-        };
-
-        sqlNode.accept(sqlVisitor);
-        return s;
     }
 
     public static boolean isSameName(ComputedColumnDesc col1, ComputedColumnDesc col2) {
@@ -574,5 +556,53 @@ public class ComputedColumnUtil {
             }
         }
         return existingCCs;
+    }
+
+    public static List<ComputedColumnDesc> getAuthorizedCC(List<NDataModel> modelList,
+            Predicate<Set<String>> isColumnAuthorizedFunc) {
+        val authorizedCC = Lists.<ComputedColumnDesc> newArrayList();
+        val checkedCC = Sets.<ComputedColumnDesc> newHashSet();
+        val checkedCCUsedSourceCols = Sets.<String> newHashSet();
+        for (NDataModel model : modelList) {
+            val ccUsedColsMap = Maps.<String, Set<String>> newHashMap();
+            for (ComputedColumnDesc cc : model.getComputedColumnDescs()) {
+                if (checkedCC.contains(cc)) {
+                    continue;
+                }
+                ccUsedColsMap.put(cc.getColumnName(), ComputedColumnUtil.getCCUsedColsWithModel(model, cc));
+            }
+
+            // parse inner expression might cause error, for example timestampdiff
+            // so have to do parsing cc expression recursively
+            for (ComputedColumnDesc cc : model.getComputedColumnDescs()) {
+                if (checkedCC.contains(cc)) {
+                    continue;
+                }
+                val ccUsedSourceCols = Sets.<String> newHashSet();
+                collectCCUsedSourceCols(cc.getColumnName(), ccUsedColsMap, ccUsedSourceCols);
+                ccUsedSourceCols.removeIf(checkedCCUsedSourceCols::contains);
+                if (ccUsedSourceCols.isEmpty() || isColumnAuthorizedFunc.test(ccUsedSourceCols)) {
+                    authorizedCC.add(cc);
+                    checkedCCUsedSourceCols.addAll(ccUsedSourceCols);
+                }
+                checkedCC.add(cc);
+            }
+        }
+        return authorizedCC;
+    }
+
+    public static void collectCCUsedSourceCols(String ccColName, Map<String, Set<String>> ccUsedColsMap,
+            Set<String> ccUsedSourceCols) {
+        String ccColNameWithoutDot = ccColName.contains(".") ? ccColName.substring(ccColName.lastIndexOf(".") + 1)
+                : ccColName;
+
+        if (!ccUsedColsMap.containsKey(ccColNameWithoutDot)) {
+            ccUsedSourceCols.add(ccColName);
+            return;
+        }
+
+        for (String usedColumn : ccUsedColsMap.get(ccColNameWithoutDot)) {
+            collectCCUsedSourceCols(usedColumn, ccUsedColsMap, ccUsedSourceCols);
+        }
     }
 }
