@@ -208,13 +208,13 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
 
     @Override
     public CapabilityResult isCapable(SQLDigest digest, List<NDataSegment> prunedSegments,
-            Map<String, Set<Long>> secondStorageSegmentLayoutMap) {
+                                      Map<String, Set<Long>> secondStorageSegmentLayoutMap) {
         return NDataflowCapabilityChecker.check(this, prunedSegments, digest, secondStorageSegmentLayoutMap);
     }
 
     @Override
     public CapabilityResult isCapable(SQLDigest digest, List<NDataSegment> prunedSegments,
-            List<NDataSegment> prunedStreamingSegments, Map<String, Set<Long>> secondStorageSegmentLayoutMap) {
+                                      List<NDataSegment> prunedStreamingSegments, Map<String, Set<Long>> secondStorageSegmentLayoutMap) {
         if (isStreaming()) {
             return isCapable(digest, prunedStreamingSegments, secondStorageSegmentLayoutMap);
         } else {
@@ -245,6 +245,10 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
     @Override
     public Set<TblColRef> getAllColumns() {
         return getIndexPlan().listAllTblColRefs();
+    }
+
+    public Set<Integer> getAllColumnsIndex() {
+        return getIndexPlan().listAllTblColRefsIndex();
     }
 
     @Override

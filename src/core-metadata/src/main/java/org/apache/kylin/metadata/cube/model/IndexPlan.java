@@ -29,6 +29,7 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableBiMap;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.kylin.common.KylinConfig;
@@ -159,6 +161,8 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
     private final LinkedHashSet<TblColRef> allColumns = Sets.newLinkedHashSet();
 
+    private Set<Integer> allColumnsIndex = new HashSet<>();
+
     private List<LayoutEntity> ruleBasedLayouts = Lists.newArrayList();
     @Setter
     @Getter
@@ -276,6 +280,14 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
             //all lookup tables are automatically derived
             allColumns.addAll(join.getTableRef().getColumns());
         }
+        initAllColumnsIndex();
+    }
+
+    private void initAllColumnsIndex() {
+        Map<TblColRef, Integer> tblColMap = Maps.newHashMap();
+        ImmutableBiMap<Integer, TblColRef> effectiveCols = getModel().getEffectiveCols();
+        effectiveCols.forEach((key, value) -> tblColMap.put(value, key));
+        allColumnsIndex = allColumns.stream().map(tblColMap::get).collect(Collectors.toSet());
     }
 
     private void initDictionaryDesc() {
@@ -365,6 +377,10 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
     public Set<TblColRef> listAllTblColRefs() {
         return allColumns;
+    }
+
+    public Set<Integer> listAllTblColRefsIndex() {
+        return allColumnsIndex;
     }
 
     private void addLayout2TargetIndex(LayoutEntity sourceLayout, IndexEntity targetIndex) {
@@ -473,12 +489,12 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         }
         return resultMap.values().stream()//
                 .flatMap(layoutMap -> //
-                layoutMap.entrySet().stream().map(p -> ImmutablePair.of(p.getKey(), p.getValue())))
+                        layoutMap.entrySet().stream().map(p -> ImmutablePair.of(p.getKey(), p.getValue())))
                 .collect(Collectors.toList());
     }
 
     private void classifyByIndexId(LayoutEntity layout, Map<Long, Map<LayoutEntity, Boolean>> resultMap,
-            boolean toBeDeleted) {
+                                   boolean toBeDeleted) {
         resultMap.compute(layout.getIndexId(), (indexId, layoutMap) -> {
             layoutMap = layoutMap == null ? Maps.newHashMap() : layoutMap;
             layoutMap.put(layout, toBeDeleted);
@@ -555,7 +571,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     public void setRuleBasedIndex(RuleBasedIndex ruleBasedIndex, Set<LayoutEntity> reloadLayouts, boolean reuseStartId,
-            boolean markToBeDeleted, boolean restoreDeletedIndex) {
+                                  boolean markToBeDeleted, boolean restoreDeletedIndex) {
         checkIsNotCachedAndShared();
         ruleBasedIndex.adjustMeasures();
         if (CollectionUtils.isEmpty(ruleBasedIndex.getMeasures())) {
@@ -629,7 +645,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     public void markIndexesToBeDeleted(String indexPlanId, final Set<LayoutEntity> toBeDeletedSet,
-            Map<Long, Boolean> secondStorageLayoutStatus) {
+                                       Map<Long, Boolean> secondStorageLayoutStatus) {
         Preconditions.checkNotNull(indexPlanId);
         Preconditions.checkNotNull(toBeDeletedSet);
         checkIsNotCachedAndShared();
@@ -672,7 +688,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     public void markWhiteIndexToBeDelete(String indexPlanId, final Set<Long> layoutIds,
-            Map<Long, Boolean> secondStorageLayoutStatus) {
+                                         Map<Long, Boolean> secondStorageLayoutStatus) {
         Preconditions.checkNotNull(indexPlanId);
         Preconditions.checkNotNull(layoutIds);
         checkIsNotCachedAndShared();
@@ -848,7 +864,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     private void removeLayouts(Collection<IndexEntity> indexes, Set<Long> layoutIds, boolean deleteAuto,
-            boolean deleteManual) {
+                               boolean deleteManual) {
         checkIsNotCachedAndShared();
         val indexIt = indexes.iterator();
         while (indexIt.hasNext()) {
@@ -1164,7 +1180,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
                         if (layoutInIndexPlan.isAuto()) {
                             indexEntity.getLayouts().remove(layoutInIndexPlan);
                             whiteIndexesMap.values().stream().filter(
-                                    indexEntityInIndexPlan -> indexEntityInIndexPlan.getId() == indexEntity.getId())
+                                            indexEntityInIndexPlan -> indexEntityInIndexPlan.getId() == indexEntity.getId())
                                     .findFirst().ifPresent(indexEntityInIndexPlan -> indexEntityInIndexPlan.getLayouts()
                                             .remove(layoutInIndexPlan));
                         }

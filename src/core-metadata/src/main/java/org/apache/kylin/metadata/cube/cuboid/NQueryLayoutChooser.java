@@ -108,6 +108,9 @@ public class NQueryLayoutChooser {
         if (!aggIndexMatcher.valid() && !tableIndexMatcher.valid()) {
             return null;
         }
+        val projectInstance = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
+                .getProject(dataflow.getProject());
+        double influenceFactor = 1.0;
         for (NDataLayout dataLayout : commonLayouts) {
             log.trace("Matching layout {}", dataLayout);
             CapabilityResult tempResult = new CapabilityResult();
@@ -119,6 +122,8 @@ public class NQueryLayoutChooser {
             var matchResult = tableIndexMatcher.match(layout);
             if (!matchResult.isMatched()) {
                 matchResult = aggIndexMatcher.match(layout);
+            } else if (projectInstance.getConfig().useTableIndexAnswerSelectStarEnabled()) {
+                influenceFactor += influenceFactor + tableIndexMatcher.getLayoutUnmatchedColsSize();
             }
             if (!matchResult.isMatched()) {
                 log.trace("Matching failed");
@@ -127,7 +132,7 @@ public class NQueryLayoutChooser {
 
             NLayoutCandidate candidate = new NLayoutCandidate(layout);
             tempResult.influences = matchResult.getInfluences();
-            candidate.setCost(dataLayout.getRows() * (tempResult.influences.size() + 1.0));
+            candidate.setCost(dataLayout.getRows() * (tempResult.influences.size() + influenceFactor));
             if (!matchResult.getNeedDerive().isEmpty()) {
                 candidate.setDerivedToHostMap(matchResult.getNeedDerive());
                 candidate.setDerivedTableSnapshots(candidate.getDerivedToHostMap().keySet().stream()
