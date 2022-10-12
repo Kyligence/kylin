@@ -349,6 +349,8 @@ public class SecondStorageLockTest implements JobWaiter {
         ReflectionTestUtils.setField(modelBuildService, "modelService", modelService);
         ReflectionTestUtils.setField(modelBuildService, "segmentHelper", segmentHelper);
         ReflectionTestUtils.setField(modelBuildService, "aclEvaluate", aclEvaluate);
+        ReflectionTestUtils.setField(modelBuildService, "accessService", accessService);
+        ReflectionTestUtils.setField(modelBuildService, "userGroupService", userGroupService);
 
         ReflectionTestUtils.setField(nModelController, "modelService", modelService);
         ReflectionTestUtils.setField(nModelController, "fusionModelService", fusionModelService);

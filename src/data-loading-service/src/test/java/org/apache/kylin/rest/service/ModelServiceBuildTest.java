@@ -18,14 +18,31 @@
 
 package org.apache.kylin.rest.service;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import io.kyligence.kap.engine.spark.job.ExecutableAddCuboidHandler;
-import io.kyligence.kap.engine.spark.job.ExecutableAddSegmentHandler;
-import io.kyligence.kap.engine.spark.job.ExecutableMergeOrRefreshHandler;
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import lombok.val;
-import lombok.var;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CONCURRENT_SUBMIT_LIMIT;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_FAIL;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_MULTI_PARTITION_ABANDON;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_MULTI_PARTITION_DUPLICATE;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_LOCKED;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_MERGE_CHECK_INDEX_ILLEGAL;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_MERGE_CHECK_PARTITION_ILLEGAL;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_NOT_EXIST_ID;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_REFRESH_SELECT_RANGE_EMPTY;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_STATUS;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.stream.Collectors;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
@@ -71,8 +88,6 @@ import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.query.QueryTimesResponse;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.query.util.KapQueryUtil;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.exception.BadRequestException;
@@ -103,30 +118,17 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.TimeZone;
-import java.util.stream.Collectors;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CONCURRENT_SUBMIT_LIMIT;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_FAIL;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_MULTI_PARTITION_ABANDON;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_MULTI_PARTITION_DUPLICATE;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_LOCKED;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_MERGE_CHECK_INDEX_ILLEGAL;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_MERGE_CHECK_PARTITION_ILLEGAL;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_NOT_EXIST_ID;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_REFRESH_SELECT_RANGE_EMPTY;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_STATUS;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import io.kyligence.kap.engine.spark.job.ExecutableAddCuboidHandler;
+import io.kyligence.kap.engine.spark.job.ExecutableAddSegmentHandler;
+import io.kyligence.kap.engine.spark.job.ExecutableMergeOrRefreshHandler;
+import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
+import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
+import io.kyligence.kap.query.util.KapQueryUtil;
+import lombok.val;
+import lombok.var;
 
 public class ModelServiceBuildTest extends SourceTestCase {
     @InjectMocks
@@ -146,9 +148,6 @@ public class ModelServiceBuildTest extends SourceTestCase {
 
     @InjectMocks
     private final TableService tableService = Mockito.spy(new TableService());
-
-    @InjectMocks
-    private final TableExtService tableExtService = Mockito.spy(new TableExtService());
 
     @InjectMocks
     private final IndexPlanService indexPlanService = Mockito.spy(new IndexPlanService());
@@ -196,6 +195,7 @@ public class ModelServiceBuildTest extends SourceTestCase {
         ReflectionTestUtils.setField(modelService, "accessService", accessService);
         ReflectionTestUtils.setField(modelService, "userGroupService", userGroupService);
         ReflectionTestUtils.setField(semanticService, "userGroupService", userGroupService);
+        ReflectionTestUtils.setField(modelBuildService, "userGroupService", userGroupService);
         ReflectionTestUtils.setField(semanticService, "expandableMeasureUtil",
                 new ExpandableMeasureUtil((model, ccDesc) -> {
                     String ccExpression = KapQueryUtil.massageComputedColumn(model, model.getProject(), ccDesc,
