@@ -31,6 +31,11 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+
+import lombok.val;
+
 class PropertiesDelegateTest {
 
     private PropertiesDelegate delegate;
@@ -82,6 +87,19 @@ class PropertiesDelegateTest {
 
         delegate.put("key_in_external", "update_v2");
         Assertions.assertEquals("update_v2", delegate.getProperty("key_in_external"));
+    }
+
+    @Test
+    void testPutAll() {
+        val originSize = delegate.size();
+        val map1 = Maps.<String, String> newHashMap();
+        map1.put("k1", "v1");
+        map1.put("k2", "v2");
+        map1.put("k3", "v3");
+        delegate.putAll(map1);
+        Assertions.assertEquals(originSize + map1.size(), delegate.size());
+
+        Assertions.assertEquals("v1", delegate.getProperty("k1"));
     }
 
     @Test
@@ -146,5 +164,91 @@ class PropertiesDelegateTest {
         properties.put("1", "v1");
         sets.add(properties);
         Assertions.assertEquals(4, sets.size());
+    }
+
+    @Test
+    void testContainsKey() {
+        Assertions.assertTrue(delegate.containsKey("key_in_prop"));
+        Assertions.assertTrue(delegate.containsKey("key_override_external"));
+        Assertions.assertTrue(delegate.containsKey("key_in_external"));
+
+        Assertions.assertFalse(delegate.containsKey("not_key"));
+    }
+
+    @Test
+    void testContainsValue() {
+        Assertions.assertTrue(delegate.containsValue("v0"));
+        Assertions.assertTrue(delegate.containsValue("v11"));
+        Assertions.assertTrue(delegate.containsValue("v2"));
+
+        Assertions.assertFalse(delegate.containsValue("not_value"));
+    }
+
+    @Test
+    void testIsEmpty() {
+        Assertions.assertFalse(delegate.isEmpty());
+
+        val emptyDelegate = new PropertiesDelegate(new Properties(), null);
+        Assertions.assertTrue(emptyDelegate.isEmpty());
+    }
+
+    @Test
+    void testClear() {
+        Assertions.assertEquals(3, delegate.size());
+        delegate.clear();
+        Assertions.assertEquals(2, delegate.size());
+    }
+
+    @Test
+    void testConstruct() {
+        Properties properties = new Properties();
+        properties.put("key_in_prop", "v0");
+        {
+            val p = new PropertiesDelegate(properties, null);
+            Assertions.assertEquals(1, p.size());
+        }
+
+        {
+            TestExternalConfigLoader testExternalConfigLoader = new TestExternalConfigLoader(properties);
+            val p = new PropertiesDelegate(new Properties(), testExternalConfigLoader);
+            Assertions.assertEquals(1, p.size());
+        }
+
+        {
+            ICachedExternalConfigLoader iCachedExternalConfigLoader = new ICachedExternalConfigLoader() {
+                @Override
+                public ImmutableMap<Object, Object> getPropertyEntries() {
+                    return ImmutableMap.of("key_in_prop", "v0");
+                }
+
+                @Override
+                public String getConfig() {
+                    return null;
+                }
+
+                @Override
+                public String getProperty(String s) {
+                    return null;
+                }
+            };
+            val p = new PropertiesDelegate(new Properties(), iCachedExternalConfigLoader);
+            Assertions.assertEquals(1, p.size());
+        }
+
+    }
+
+    @Test
+    void testNotSupport() {
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> delegate.remove("a", "b"));
+        Assertions.assertThrows(UnsupportedOperationException.class, delegate::toString);
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> delegate.forEach((k, v) -> {
+        }));
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> delegate.replace("a", "b"));
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> delegate.replace("a", "b", "b2"));
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> delegate.computeIfAbsent("a", (k) -> ""));
+        Assertions.assertThrows(UnsupportedOperationException.class,
+                () -> delegate.computeIfPresent("a", (k, v) -> ""));
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> delegate.compute("a", (k, v) -> ""));
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> delegate.merge("a", "b", (k, v) -> ""));
     }
 }

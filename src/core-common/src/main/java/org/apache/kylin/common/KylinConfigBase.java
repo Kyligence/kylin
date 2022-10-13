@@ -63,6 +63,7 @@ import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.ClassUtil;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.ClusterConstant;
+import org.apache.kylin.common.util.CompositeMapView;
 import org.apache.kylin.common.util.EncryptUtil;
 import org.apache.kylin.common.util.FileUtils;
 import org.apache.kylin.common.util.HadoopUtil;
@@ -178,7 +179,8 @@ public abstract class KylinConfigBase implements Serializable {
     /**
      * only reload properties
      */
-    volatile PropertiesDelegate properties;
+    final PropertiesDelegate properties;
+    final transient StrSubstitutor substitutor;
 
     protected KylinConfigBase(IExternalConfigLoader configLoader) {
         this(new Properties(), configLoader);
@@ -188,6 +190,7 @@ public abstract class KylinConfigBase implements Serializable {
         this(props, false, configLoader);
     }
 
+    @SuppressWarnings("rawtypes")
     protected KylinConfigBase(Properties props, boolean force, IExternalConfigLoader configLoader) {
         if (props instanceof PropertiesDelegate) {
             this.properties = (PropertiesDelegate) props;
@@ -195,6 +198,8 @@ public abstract class KylinConfigBase implements Serializable {
             this.properties = force ? new PropertiesDelegate(props, configLoader)
                     : new PropertiesDelegate(BCC.check(props), configLoader);
         }
+        // env > properties
+        this.substitutor = new StrSubstitutor(new CompositeMapView(this.properties, STATIC_SYSTEM_ENV));
     }
 
     protected final String getOptional(String prop) {
@@ -216,12 +221,12 @@ public abstract class KylinConfigBase implements Serializable {
      * @return
      */
     protected Properties getProperties(Collection<String> propertyKeys) {
-        final StrSubstitutor substitutor = getSubstitutor();
+        val subStitutorTmp = getSubstitutor();
 
         Properties result = new Properties();
         for (Entry<Object, Object> entry : this.properties.entrySet()) {
             if (propertyKeys == null || propertyKeys.contains(entry.getKey())) {
-                result.put(entry.getKey(), substitutor.replace((String) entry.getValue()));
+                result.put(entry.getKey(), subStitutorTmp.replace((String) entry.getValue()));
             }
         }
 
@@ -229,12 +234,7 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     protected StrSubstitutor getSubstitutor() {
-        // env > properties
-        final Map<String, Object> all = Maps.newHashMap();
-        all.putAll((Map) properties);
-        all.putAll(STATIC_SYSTEM_ENV);
-
-        return new StrSubstitutor(all);
+        return substitutor;
     }
 
     protected Properties getRawAllProperties() {

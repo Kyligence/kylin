@@ -33,21 +33,21 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.Maps;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.OrderedProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
-import io.kyligence.config.core.loader.IExternalConfigLoader;
-
-public class KylinExternalConfigLoader implements IExternalConfigLoader {
+public class KylinExternalConfigLoader implements ICachedExternalConfigLoader {
 
     private static final long serialVersionUID = 1694879531312203159L;
 
@@ -59,6 +59,8 @@ public class KylinExternalConfigLoader implements IExternalConfigLoader {
 
     private final Map<String, String> properties;
 
+    private final ImmutableMap<Object, Object> propertyEntries;
+
     public KylinExternalConfigLoader(Map<String, String> map) {
         this(map.get("config-dir") == null ? getSitePropertiesFile() : new File(map.get("config-dir")));
     }
@@ -66,6 +68,7 @@ public class KylinExternalConfigLoader implements IExternalConfigLoader {
     public KylinExternalConfigLoader(File file) {
         this.propFile = file;
         this.properties = loadProperties();
+        this.propertyEntries = ImmutableMap.copyOf(properties);
     }
 
     private Map<String, String> loadProperties() {
@@ -151,7 +154,7 @@ public class KylinExternalConfigLoader implements IExternalConfigLoader {
     @Override
     public String getConfig() {
         StringWriter writer = new StringWriter();
-        for (Map.Entry<String, String> entry: properties.entrySet()) {
+        for (Map.Entry<String, String> entry : properties.entrySet()) {
             writer.append(entry.getKey() + "=" + entry.getValue()).append("\n");
         }
         return writer.toString();
@@ -159,13 +162,22 @@ public class KylinExternalConfigLoader implements IExternalConfigLoader {
 
     @Override
     public String getProperty(String key) {
-        return properties.get(key);
+        return Objects.toString(properties.get(key), null);
     }
 
+    /**
+     * @see #getPropertyEntries
+     */
     @Override
+    @Deprecated
     public Properties getProperties() {
         Properties newProperties = new Properties();
         newProperties.putAll(properties);
         return newProperties;
+    }
+
+    @Override
+    public ImmutableMap<Object, Object> getPropertyEntries() {
+        return propertyEntries;
     }
 }
