@@ -408,7 +408,7 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testUpdatePassword_InvalidPasswordPattern() throws Exception {
-        val user = new ManagedUser();
+        val user = new ManagedUser("ADMIN", pwdEncoder.encode("KYLIN"), false);
         val request = new PasswordChangeRequest();
 
         request.setUsername("ADMIN");
@@ -427,7 +427,7 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testUpdatePassword_InvalidPasswordLength() throws Exception {
-        val user = new ManagedUser();
+        val user = new ManagedUser("ADMIN", pwdEncoder.encode("KYLIN"), false);
         val request = new PasswordChangeRequest();
 
         request.setUsername("ADMIN");
