@@ -67,9 +67,11 @@ public class TableEntity implements Serializable, WithLayout {
             table.layoutID = layoutEntity.getId();
             if (primaryIndexColumns != null) {
                 table.primaryIndexColumns = primaryIndexColumns;
+                table.primaryIndexLastModified = System.currentTimeMillis();
             }
             if (secondaryIndexColumns != null) {
                 table.secondaryIndexColumns = secondaryIndexColumns;
+                table.secondaryIndexLastModified = System.currentTimeMillis();
             }
             return table;
         }

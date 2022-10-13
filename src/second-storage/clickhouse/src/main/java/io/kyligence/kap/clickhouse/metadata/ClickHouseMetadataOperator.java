@@ -224,7 +224,8 @@ public class ClickHouseMetadataOperator implements MetadataOperator {
                                     .setSegmentId(tablePartition.getSegmentId())
                                     .setShardNodes(shardNodes)
                                     .setSizeInNode(sizeInNode)
-                                    .setNodeFileMap(nodeFileMap);
+                                    .setNodeFileMap(nodeFileMap)
+                                    .setSecondaryIndexColumns(tablePartition.getSecondaryIndexColumns());
                             newTablePartitions.add(builder.build());
                         }
                         newTablePartitions.forEach(tableData::addPartition);
