@@ -2739,6 +2739,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Long.parseLong(getOptional("kylin.server.leader-race.heart-beat-interval", "30"));
     }
 
+    public double getEpochRenewTimeoutRate() {
+        return Double.parseDouble(getOptional("kylin.server.leader-race.heart-beat-timeout-rate", "0.8"));
+    }
+
     public long getDiscoveryClientTimeoutThreshold() {
         return TimeUtil.timeStringAs(getOptional("kylin.server.discovery-client-timeout-threshold", "3s"),
                 TimeUnit.SECONDS);

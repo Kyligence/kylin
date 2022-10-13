@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.kylin.common.persistence.metadata.epochstore;
+package org.apache.kylin.common.persistence.metadata;
 
 import org.junit.jupiter.api.BeforeEach;
 
-public final class FileEpochStoreTest extends AbstractEpochStoreTest {
+final class FileEpochStoreTest extends AbstractEpochStoreTest {
 
     @BeforeEach
     public void setup() {
         epochStore = getEpochStore();
     }
-
 }

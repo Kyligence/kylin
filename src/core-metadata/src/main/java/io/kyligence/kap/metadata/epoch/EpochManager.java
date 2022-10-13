@@ -19,7 +19,6 @@
 package io.kyligence.kap.metadata.epoch;
 
 import static org.apache.kylin.common.util.AddressUtil.MAINTAIN_MODE_MOCK_PORT;
-import static org.apache.kylin.metadata.epoch.EpochUpdateLockManager.executeEpochWithLock;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,11 +45,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.Singletons;
-import org.apache.kylin.common.util.NamedThreadFactory;
-import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.metadata.epoch.EpochOrchestrator;
-import org.apache.kylin.metadata.epoch.EpochUpdateLockManager;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.common.persistence.metadata.Epoch;
 import org.apache.kylin.common.persistence.metadata.EpochStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
@@ -60,7 +54,12 @@ import org.apache.kylin.common.scheduler.ProjectControlledNotifier;
 import org.apache.kylin.common.scheduler.ProjectEscapedNotifier;
 import org.apache.kylin.common.scheduler.SourceUsageVerifyNotifier;
 import org.apache.kylin.common.util.AddressUtil;
+import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.metadata.epoch.EpochOrchestrator;
+import org.apache.kylin.metadata.epoch.EpochUpdateLockManager;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,6 +98,7 @@ public class EpochManager {
     private final String serverMode;
     private final boolean epochCheckEnabled;
     private final long epochExpiredTime;
+    private final int epochRenewTimeout;
 
     @Getter
     private final EpochUpdateManager epochUpdateManager;
@@ -115,8 +115,13 @@ public class EpochManager {
         this.serverMode = config.getServerMode();
         this.epochCheckEnabled = config.getEpochCheckerEnabled();
         this.epochExpiredTime = config.getEpochExpireTimeSecond();
+        this.epochRenewTimeout = getEpochRenewTimeout();
         this.epochUpdateManager = new EpochUpdateManager();
+    }
 
+    private int getEpochRenewTimeout() {
+        double timeoutRate = config.getEpochRenewTimeoutRate() <= 0 ? 1 : config.getEpochRenewTimeoutRate();
+        return (int) (epochExpiredTime * timeoutRate);
     }
 
     public class EpochUpdateManager {
@@ -262,7 +267,7 @@ public class EpochManager {
             });
 
             try {
-                if (!countDownLatch.await(epochExpiredTime, TimeUnit.SECONDS)) {
+                if (!countDownLatch.await(epochRenewTimeout, TimeUnit.SECONDS)) {
                     logger.error("renew not finished,{}/{}...", newRenewEpochSets.size(), oriEpochs.size());
                 }
             } catch (InterruptedException e) {
@@ -451,7 +456,7 @@ public class EpochManager {
                 epochStore.updateBatch(needUpdateEpochList);
             }
             return null;
-        });
+        }, epochRenewTimeout);
     }
 
     /**
