@@ -35,8 +35,6 @@ import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_JDBC_SOU
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.PERMISSION_DENIED;
 import static org.apache.kylin.common.exception.ServerErrorCode.PROJECT_DROP_FAILED;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.CONFIG_NOT_SUPPORT_EDIT;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.PARAMETER_INVALID_SUPPORT_LIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.PROJECT_NOT_EXIST;
 
 import java.io.File;
@@ -48,7 +46,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
@@ -119,7 +116,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.support.CronExpression;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -145,11 +141,6 @@ import lombok.val;
 @Component("projectService")
 public class ProjectService extends BasicService {
     private static final Logger logger = LoggerFactory.getLogger(ProjectService.class);
-    private static final String SNAPSHOT_AUTO_REFRESH_TIME_MODE = "snapshot_automatic_refresh_time_mode";
-    private static final String SNAPSHOT_AUTO_REFRESH_TIME_MODE_DAY = "DAY";
-    private static final String SNAPSHOT_AUTO_REFRESH_TIME_MODE_HOURS = "HOURS";
-    private static final String SNAPSHOT_AUTO_REFRESH_TIME_MODE_MINUTE = "MINUTE";
-    private static final String SNAPSHOT_AUTO_REFRESH_TIME_MODES = "DAY, HOURS, MINUTE";
     private static final String KYLIN_QUERY_PUSHDOWN_RUNNER_CLASS_NAME = "kylin.query.pushdown.runner-class-name";
 
     @Autowired
@@ -578,8 +569,6 @@ public class ProjectService extends BasicService {
         response.setScd2Enabled(config.isQueryNonEquiJoinModelEnabled());
 
         response.setSnapshotManualManagementEnabled(config.isSnapshotManualManagementEnabled());
-        response.setSnapshotAutoRefreshEnabled(config.isSnapshotAutoRefreshEnabled());
-        setSnapshotAutoRefreshParams(response, config.getSnapshotAutoRefreshCron());
 
         response.setMultiPartitionEnabled(config.isMultiPartitionEnabled());
 
@@ -600,34 +589,6 @@ public class ProjectService extends BasicService {
         }
 
         return response;
-    }
-
-    public void setSnapshotAutoRefreshParams(ProjectConfigResponse response, String cron) {
-        if (!response.isSnapshotAutoRefreshEnabled()) {
-            return;
-        }
-        val fields = org.springframework.util.StringUtils.tokenizeToStringArray(cron, " ");
-        if (fields.length != 6) {
-            throw new IllegalArgumentException(String
-                    .format("Cron expression must consist of 6 fields (found %d in \"%s\")", fields.length, cron));
-        }
-        if (StringUtils.contains(fields[1], "*/")) {
-            response.setSnapshotAutoRefreshTimeMode(SNAPSHOT_AUTO_REFRESH_TIME_MODE_MINUTE);
-            response.setSnapshotAutoRefreshTimeInterval(StringUtils.substring(fields[1], 2));
-            return;
-        }
-        if (StringUtils.contains(fields[2], "*/")) {
-            response.setSnapshotAutoRefreshTimeMode(SNAPSHOT_AUTO_REFRESH_TIME_MODE_HOURS);
-            response.setSnapshotAutoRefreshTimeInterval(StringUtils.substring(fields[2], 2));
-            return;
-        }
-        if (StringUtils.contains(fields[3], "*/")) {
-            response.setSnapshotAutoRefreshTimeMode(SNAPSHOT_AUTO_REFRESH_TIME_MODE_DAY);
-            response.setSnapshotAutoRefreshTimeInterval(StringUtils.substring(fields[3], 2));
-            response.setSnapshotAutoRefreshTriggerSecond(fields[0]);
-            response.setSnapshotAutoRefreshTriggerMinute(fields[1]);
-            response.setSnapshotAutoRefreshTriggerHours(fields[2]);
-        }
     }
 
     public ProjectConfigResponse getProjectConfig(String project) {
@@ -674,95 +635,9 @@ public class ProjectService extends BasicService {
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")
     @Transaction(project = 0)
     public void updateSnapshotConfig(String project, SnapshotConfigRequest snapshotConfigRequest) {
-        checkSnapshotAutoRefreshConfig(snapshotConfigRequest);
-        val projectManager = getManager(NProjectManager.class);
-        projectManager.updateProject(project, copyForWrite -> {
-            copyForWrite.putOverrideKylinProps("kylin.snapshot.manual-management-enabled",
-                    snapshotConfigRequest.getSnapshotManualManagementEnabled().toString());
-            if (Boolean.TRUE.equals(snapshotConfigRequest.getSnapshotManualManagementEnabled())) {
-                copyForWrite.putOverrideKylinProps("kylin.snapshot.auto-refresh-enabled",
-                        snapshotConfigRequest.getSnapshotAutoRefreshEnabled().toString());
-                Optional.ofNullable(createSnapshotAutoRefreshCron(snapshotConfigRequest)).ifPresent(
-                        cron -> copyForWrite.putOverrideKylinProps("kylin.snapshot.auto-refresh-cron", cron));
-            }
-        });
-    }
-
-    public String createSnapshotAutoRefreshCron(SnapshotConfigRequest snapshotConfigRequest) {
-        if (Boolean.FALSE.equals(snapshotConfigRequest.getSnapshotAutoRefreshEnabled())) {
-            return null;
-        }
-        String cron;
-        switch (snapshotConfigRequest.getSnapshotAutoRefreshTimeMode()) {
-        case SNAPSHOT_AUTO_REFRESH_TIME_MODE_DAY:
-            cron = String.format(Locale.ROOT, "%s %s %s */%s * ?",
-                    snapshotConfigRequest.getSnapshotAutoRefreshTriggerSecond(),
-                    snapshotConfigRequest.getSnapshotAutoRefreshTriggerMinute(),
-                    snapshotConfigRequest.getSnapshotAutoRefreshTriggerHours(),
-                    snapshotConfigRequest.getSnapshotAutoRefreshTimeInterval());
-            break;
-        case SNAPSHOT_AUTO_REFRESH_TIME_MODE_HOURS:
-            cron = String.format(Locale.ROOT, "0 0 */%s * * ?",
-                    snapshotConfigRequest.getSnapshotAutoRefreshTimeInterval());
-            break;
-        case SNAPSHOT_AUTO_REFRESH_TIME_MODE_MINUTE:
-            cron = String.format(Locale.ROOT, "0 */%s * * * ?",
-                    snapshotConfigRequest.getSnapshotAutoRefreshTimeInterval());
-            break;
-        default:
-            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, SNAPSHOT_AUTO_REFRESH_TIME_MODE,
-                    SNAPSHOT_AUTO_REFRESH_TIME_MODES);
-        }
-        if (!CronExpression.isValidExpression(cron)) {
-            throw new KylinException(CONFIG_NOT_SUPPORT_EDIT, "kylin.snapshot.automatic_refresh_cron");
-        }
-        return cron;
-    }
-
-    public void checkSnapshotAutoRefreshConfig(SnapshotConfigRequest snapshotConfigRequest) {
-        if (Boolean.FALSE.equals(snapshotConfigRequest.getSnapshotManualManagementEnabled())
-                || Boolean.FALSE.equals(snapshotConfigRequest.getSnapshotAutoRefreshEnabled())) {
-            return;
-        }
-        if (StringUtils.isBlank(snapshotConfigRequest.getSnapshotAutoRefreshTimeMode())) {
-            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, SNAPSHOT_AUTO_REFRESH_TIME_MODE,
-                    SNAPSHOT_AUTO_REFRESH_TIME_MODES);
-        }
-        val autoRefreshTimeInterval = "snapshot_automatic_refresh_time_interval";
-        val autoRefreshTimeIntervalValue = snapshotConfigRequest.getSnapshotAutoRefreshTimeInterval();
-        switch (snapshotConfigRequest.getSnapshotAutoRefreshTimeMode()) {
-        case SNAPSHOT_AUTO_REFRESH_TIME_MODE_DAY:
-            checkSnapshotAutoParam(autoRefreshTimeInterval, autoRefreshTimeIntervalValue, 1, null, "> 1");
-            checkSnapshotAutoTriggerTime(snapshotConfigRequest);
-            break;
-        case SNAPSHOT_AUTO_REFRESH_TIME_MODE_HOURS:
-            checkSnapshotAutoParam(autoRefreshTimeInterval, autoRefreshTimeIntervalValue, 1, 23, "1 ~ 23");
-            break;
-        case SNAPSHOT_AUTO_REFRESH_TIME_MODE_MINUTE:
-            checkSnapshotAutoParam(autoRefreshTimeInterval, autoRefreshTimeIntervalValue, 1, 59, "1 ~ 59");
-            break;
-        default:
-            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, SNAPSHOT_AUTO_REFRESH_TIME_MODE,
-                    SNAPSHOT_AUTO_REFRESH_TIME_MODES);
-        }
-    }
-
-    public void checkSnapshotAutoParam(String name, String value, Integer minValue, Integer maxValue, String message) {
-        if (StringUtils.isBlank(value) || !StringUtils.isNumeric(value) || Integer.parseInt(value) < minValue) {
-            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, name, message);
-        }
-        if (null != maxValue && Integer.parseInt(value) > maxValue) {
-            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, name, message);
-        }
-    }
-
-    public void checkSnapshotAutoTriggerTime(SnapshotConfigRequest snapshotConfigRequest) {
-        checkSnapshotAutoParam("snapshot_automatic_refresh_trigger_hours",
-                snapshotConfigRequest.getSnapshotAutoRefreshTriggerHours(), 0, 23, "0 ~ 23");
-        checkSnapshotAutoParam("snapshot_automatic_refresh_trigger_minute",
-                snapshotConfigRequest.getSnapshotAutoRefreshTriggerMinute(), 0, 59, "0 ~ 59");
-        checkSnapshotAutoParam("snapshot_automatic_refresh_trigger_second",
-                snapshotConfigRequest.getSnapshotAutoRefreshTriggerSecond(), 0, 59, "0 ~ 59");
+        getManager(NProjectManager.class).updateProject(project,
+                copyForWrite -> copyForWrite.putOverrideKylinProps("kylin.snapshot.manual-management-enabled",
+                        snapshotConfigRequest.getSnapshotManualManagementEnabled().toString()));
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")

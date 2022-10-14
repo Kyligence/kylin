@@ -99,25 +99,22 @@ import static org.apache.kylin.rest.constant.SnapshotStatus.BROKEN;
 public class SnapshotService extends BasicService implements SnapshotSupporter {
 
     private static final Logger logger = LoggerFactory.getLogger(SnapshotService.class);
-    public static final String IS_REFRESH = "isRefresh";
-    public static final String PRIORITY = "priority";
-    public static final String YARN_QUEUE = "yarnQueue";
-    public static final String TAG = "tag";
 
     @Autowired
     private AclEvaluate aclEvaluate;
     @Autowired
     private TableService tableService;
 
-    public JobInfoResponse buildSnapshots(SnapshotRequest snapshotsRequest, boolean isRefresh) {
-        if (snapshotsRequest.getDatabases().isEmpty()) {
-            return buildSnapshots(snapshotsRequest, isRefresh, snapshotsRequest.getTables());
+    public JobInfoResponse buildSnapshots(String project, Set<String> buildDatabases,
+            Set<String> needBuildSnapshotTables, Map<String, SnapshotRequest.TableOption> options, boolean isRefresh,
+            int priority, String yarnQueue, Object tag) {
+        if (buildDatabases.isEmpty()) {
+            return buildSnapshots(project, needBuildSnapshotTables, options, isRefresh, priority, yarnQueue, tag);
         }
 
-        Set<String> dbs = snapshotsRequest.getDatabases().stream().map(db -> db.toUpperCase(Locale.ROOT))
-                .collect(Collectors.toSet());
-        Map<String, List<TableDesc>> dbToTablesMap = getManager(NTableMetadataManager.class,
-                snapshotsRequest.getProject()).dbToTablesMap(getConfig().streamingEnabled());
+        Set<String> dbs = buildDatabases.stream().map(db -> db.toUpperCase(Locale.ROOT)).collect(Collectors.toSet());
+        Map<String, List<TableDesc>> dbToTablesMap = getManager(NTableMetadataManager.class, project)
+                .dbToTablesMap(getConfig().streamingEnabled());
 
         // check db
         Set<String> nonExisted = dbs.stream().filter(db -> !dbToTablesMap.containsKey(db)).collect(Collectors.toSet());
@@ -127,8 +124,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
         }
 
         // filter tables need loading
-        List<AbstractExecutable> executables = NExecutableManager
-                .getInstance(getConfig(), snapshotsRequest.getProject())
+        List<AbstractExecutable> executables = NExecutableManager.getInstance(getConfig(), project)
                 .listExecByJobTypeAndStatus(ExecutableState::isRunning, SNAPSHOT_BUILD, SNAPSHOT_REFRESH);
         Set<String> tables = dbToTablesMap.entrySet().stream() //
                 .filter(entry -> dbs.contains(entry.getKey())) //
@@ -136,32 +132,34 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
                 .filter(table -> !hasLoadedSnapshot(table, executables)) //
                 .filter(this::isAuthorizedTableAndColumn) //
                 .map(TableDesc::getIdentity).collect(Collectors.toSet());
-        snapshotsRequest.getTables().addAll(tables);
-        return buildSnapshots(snapshotsRequest, isRefresh, snapshotsRequest.getTables());
+        needBuildSnapshotTables.addAll(tables);
+        return buildSnapshots(project, needBuildSnapshotTables, options, isRefresh, priority, yarnQueue, tag);
     }
 
-    /**
-     * Only use to automatic refresh snapshot
-     */
-    public JobInfoResponse autoRefreshSnapshots(SnapshotRequest snapshotsRequest, boolean isRefresh) {
-        val project = snapshotsRequest.getProject();
-        val needBuildSnapshotTables = snapshotsRequest.getTables();
+    public JobInfoResponse buildSnapshots(String project, Set<String> needBuildSnapshotTables,
+            Map<String, SnapshotRequest.TableOption> options, boolean isRefresh, int priority, String yarnQueue,
+            Object tag) {
         checkSnapshotManualManagement(project);
+        aclEvaluate.checkProjectOperationPermission(project);
         Set<TableDesc> tables = checkAndGetTable(project, needBuildSnapshotTables);
+        checkTablePermission(tables);
         if (isRefresh) {
             checkTableSnapshotExist(project, checkAndGetTable(project, needBuildSnapshotTables));
         }
-        checkOptions(tables, snapshotsRequest.getOptions());
-        return buildSnapshotsInner(snapshotsRequest, isRefresh, needBuildSnapshotTables, tables);
-    }
+        checkOptions(tables, options);
 
-    public JobInfoResponse buildSnapshotsInner(SnapshotRequest snapshotsRequest, boolean isRefresh,
-                                               Set<String> needBuildSnapshotTables, Set<TableDesc> tables) {
-        val project = snapshotsRequest.getProject();
-        val options = snapshotsRequest.getOptions();
         List<String> invalidSnapshotsToBuild = new ArrayList<>();
 
-        invalidSnapshotsToBuild(options, invalidSnapshotsToBuild);
+        for (Map.Entry<String, SnapshotRequest.TableOption> entry : options.entrySet()) {
+            Set<String> partitionToBuild = entry.getValue().getPartitionsToBuild();
+            if (partitionToBuild != null && partitionToBuild.isEmpty()) {
+                invalidSnapshotsToBuild.add(entry.getKey());
+            }
+        }
+        if (!invalidSnapshotsToBuild.isEmpty()) {
+            throw new KylinException(INVALID_PARAMETER,
+                    MsgPicker.getMsg().getPartitionsToBuildCannotBeEmpty(invalidSnapshotsToBuild));
+        }
 
         Map<String, SnapshotRequest.TableOption> finalOptions = Maps.newHashMap();
 
@@ -191,9 +189,9 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
 
                     NSparkSnapshotJob job = NSparkSnapshotJob.create(tableDesc, BasicService.getUsername(),
                             option.getPartitionCol(), option.isIncrementalBuild(), option.getPartitionsToBuild(),
-                            isRefresh, snapshotsRequest.getYarnQueue(), snapshotsRequest.getTag());
+                            isRefresh, yarnQueue, tag);
                     ExecutablePO po = NExecutableManager.toPO(job, project);
-                    po.setPriority(snapshotsRequest.getPriority());
+                    po.setPriority(priority);
                     execMgr.addJob(po);
 
                     jobIds.add(job.getId());
@@ -201,57 +199,24 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
                 return null;
             });
 
-            updateTableDesc(project, tables, finalOptions);
+            NTableMetadataManager tableManager = getManager(NTableMetadataManager.class, project);
+            for (TableDesc tableDesc : tables) {
+                SnapshotRequest.TableOption option = finalOptions.get(tableDesc.getIdentity());
+                if (tableDesc.isSnapshotHasBroken()
+                        || !StringUtil.equals(option.getPartitionCol(), tableDesc.getSelectedSnapshotPartitionCol())) {
+                    TableDesc newTable = tableManager.copyForWrite(tableDesc);
+                    newTable.setSnapshotHasBroken(false);
+                    if (!StringUtil.equals(option.getPartitionCol(), tableDesc.getSelectedSnapshotPartitionCol())) {
+                        newTable.setSelectedSnapshotPartitionCol(option.getPartitionCol());
+                    }
+                    tableManager.updateTableDesc(newTable);
+                }
+            }
             return null;
         }, project);
 
         String jobName = isRefresh ? SNAPSHOT_REFRESH.toString() : SNAPSHOT_BUILD.toString();
         return JobInfoResponse.of(jobIds, jobName);
-    }
-
-    private void updateTableDesc(String project, Set<TableDesc> tables,
-                                 Map<String, SnapshotRequest.TableOption> finalOptions) {
-        NTableMetadataManager tableManager = getManager(NTableMetadataManager.class, project);
-        for (TableDesc tableDesc : tables) {
-            SnapshotRequest.TableOption option = finalOptions.get(tableDesc.getIdentity());
-            if (tableDesc.isSnapshotHasBroken()
-                    || !StringUtil.equals(option.getPartitionCol(), tableDesc.getSelectedSnapshotPartitionCol())) {
-                TableDesc newTable = tableManager.copyForWrite(tableDesc);
-                newTable.setSnapshotHasBroken(false);
-                if (!StringUtil.equals(option.getPartitionCol(), tableDesc.getSelectedSnapshotPartitionCol())) {
-                    newTable.setSelectedSnapshotPartitionCol(option.getPartitionCol());
-                }
-                tableManager.updateTableDesc(newTable);
-            }
-        }
-    }
-
-    private static void invalidSnapshotsToBuild(Map<String, SnapshotRequest.TableOption> options,
-                                                List<String> invalidSnapshotsToBuild) {
-        for (Map.Entry<String, SnapshotRequest.TableOption> entry : options.entrySet()) {
-            Set<String> partitionToBuild = entry.getValue().getPartitionsToBuild();
-            if (partitionToBuild != null && partitionToBuild.isEmpty()) {
-                invalidSnapshotsToBuild.add(entry.getKey());
-            }
-        }
-        if (!invalidSnapshotsToBuild.isEmpty()) {
-            throw new KylinException(INVALID_PARAMETER,
-                    MsgPicker.getMsg().getPartitionsToBuildCannotBeEmpty(invalidSnapshotsToBuild));
-        }
-    }
-
-    public JobInfoResponse buildSnapshots(SnapshotRequest snapshotsRequest, boolean isRefresh,
-                                          Set<String> needBuildSnapshotTables) {
-        val project = snapshotsRequest.getProject();
-        checkSnapshotManualManagement(project);
-        Set<TableDesc> tables = checkAndGetTable(project, needBuildSnapshotTables);
-        aclEvaluate.checkProjectOperationPermission(project);
-        checkTablePermission(tables);
-        if (isRefresh) {
-            checkTableSnapshotExist(project, checkAndGetTable(project, needBuildSnapshotTables));
-        }
-        checkOptions(tables, snapshotsRequest.getOptions());
-        return buildSnapshotsInner(snapshotsRequest, isRefresh, needBuildSnapshotTables, tables);
     }
 
     private void checkOptions(Set<TableDesc> tables, Map<String, SnapshotRequest.TableOption> options) {
