@@ -59,12 +59,12 @@ import lombok.val;
 import lombok.var;
 
 @MetadataInfo
-class BuildSnapshotThreadTest {
+class BuildSnapshotRunnableTest {
     private final RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
 
     @Test
     void buildSnapshot() throws JsonProcessingException {
-        val thread = new BuildSnapshotThread();
+        val thread = new BuildSnapshotRunnable();
         thread.setProject("project");
         thread.setConfig(KylinConfig.readSystemKylinConfig());
         thread.setRestTemplate(restTemplate);
@@ -112,7 +112,7 @@ class BuildSnapshotThreadTest {
 
     @Test
     void buildSnapshotFailed() throws JsonProcessingException {
-        val thread = new BuildSnapshotThread();
+        val thread = new BuildSnapshotRunnable();
         thread.setProject("project");
         thread.setConfig(KylinConfig.readSystemKylinConfig());
         thread.setRestTemplate(restTemplate);
@@ -149,7 +149,7 @@ class BuildSnapshotThreadTest {
 
     @Test
     void checkSnapshotJobFile() {
-        val thread = new BuildSnapshotThread();
+        val thread = new BuildSnapshotRunnable();
         thread.setConfig(KylinConfig.getInstanceFromEnv());
         thread.setTableIdentity("default.table_" + RandomUtil.randomUUIDStr().replace("-", "_"));
         val jobId = RandomUtil.randomUUIDStr();
@@ -182,7 +182,7 @@ class BuildSnapshotThreadTest {
     @Test
     void checkAutoRefreshJobSuccessOrRunning() {
         val jobId = RandomUtil.randomUUIDStr();
-        val thread = new BuildSnapshotThread();
+        val thread = new BuildSnapshotRunnable();
         thread.setConfig(KylinConfig.getInstanceFromEnv());
         assertFalse(thread.checkAutoRefreshJobSuccessOrRunning(jobId));
 
@@ -205,7 +205,7 @@ class BuildSnapshotThreadTest {
 
     @Test
     void snapshotJobFile() {
-        val thread = new BuildSnapshotThread();
+        val thread = new BuildSnapshotRunnable();
         thread.setConfig(KylinConfig.getInstanceFromEnv());
         thread.setTableIdentity("default.table_" + RandomUtil.randomUUIDStr().replace("-", "_"));
         val jobId = RandomUtil.randomUUIDStr();
@@ -219,7 +219,7 @@ class BuildSnapshotThreadTest {
 
     @Test
     void snapshotJobFileNotExists() {
-        val thread = new BuildSnapshotThread();
+        val thread = new BuildSnapshotRunnable();
         thread.setConfig(KylinConfig.getInstanceFromEnv());
         thread.setTableIdentity("default.table_" + RandomUtil.randomUUIDStr().replace("-", "_"));
         val snapshotJob = thread.readSnapshotJobFile();
@@ -228,7 +228,7 @@ class BuildSnapshotThreadTest {
 
     @Test
     void checkNeedBuildPartitionAndSetTableOption() throws JsonProcessingException {
-        val thread = new BuildSnapshotThread();
+        val thread = new BuildSnapshotRunnable();
         thread.setTableIdentity("default.table");
         val req = Maps.newHashMap();
         val runningJobs = Lists.<NSparkSnapshotJob> newArrayList();
@@ -279,7 +279,7 @@ class BuildSnapshotThreadTest {
             Mockito.when(executableManager.listExecByJobTypeAndStatus(ExecutableState::isRunning, SNAPSHOT_BUILD,
                     SNAPSHOT_REFRESH)).thenReturn(runningJobs);
 
-            val thread = new BuildSnapshotThread();
+            val thread = new BuildSnapshotRunnable();
             thread.setTableIdentity("default.table");
             thread.setProject("default");
             try {

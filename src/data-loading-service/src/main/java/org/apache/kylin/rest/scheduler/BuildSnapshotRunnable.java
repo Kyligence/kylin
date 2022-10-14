@@ -64,7 +64,7 @@ import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class BuildSnapshotThread extends AbstractSchedulerRunnable {
+public class BuildSnapshotRunnable extends AbstractSchedulerRunnable {
     private static final String BUILD_SNAPSHOT_ERROR_MESSAGE = "Project[%s] Snapshot[%s] buildSnapshot failed";
 
     @Override
