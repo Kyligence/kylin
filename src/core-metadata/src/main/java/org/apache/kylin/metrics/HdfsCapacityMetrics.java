@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 /**
  * 1. Unify the entry point for all calculation calls to obtain the capacity of the WorkingDir through scheduled threads
  * 2. Expose two configurations externally:
- * - function enable switch: kylin.metrics.hdfs-periodic-calculation-enabled  - default false
+ * - function enable switch: kylin.metrics.hdfs-periodic-calculation-enabled  - default true
  * - polling time parameter: kylin.metrics.hdfs-periodic-calculation-interval - default 5min
  */
 @Slf4j
