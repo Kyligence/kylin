@@ -58,7 +58,7 @@ public class KylinConfigChecksumCLI {
             val kylinConfigChecksum = DigestUtils.sha256Hex(propContent);
             if (!kylinConfigChecksum.equalsIgnoreCase(expectedChecksum)) {
                 log.error(
-                        "Kylin config checksum [{}] is not equal to expected checksum [{}], expected checksum is from file detached_by_km!",
+                        "Kylin config checksum [{}] is not equal to expected checksum [{}], expected checksum is from file managed_by_km!",
                         kylinConfigChecksum, expectedChecksum);
                 return 1;
             }
