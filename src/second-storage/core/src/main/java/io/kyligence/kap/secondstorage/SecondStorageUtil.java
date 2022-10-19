@@ -558,16 +558,18 @@ public class SecondStorageUtil {
             return true;
         }
         Map<String, List<StageBase>> stages = mergeSparkCubeTask.get().getStagesMap();
-        return stages.entrySet().stream()
-                .map(segmentStages -> {
-                    String segmentId = segmentStages.getKey();
-                    return segmentStages.getValue().stream()
-                            .filter(segmentStage -> ExecutableConstants.STAGE_NAME_MERGE_FLAT_TABLE.equals(segmentStage.getName()))
-                            .map(segmentStage -> segmentStage.getOutput(segmentId).getState() == ExecutableState.SUCCEED)
-                            .findFirst()
-                            .orElse(true);
-                }).reduce((b1, b2) -> b1 && b2)
-                .orElse(true);
+        return stages.entrySet().stream().map(segmentStages -> {
+            String segmentId = segmentStages.getKey();
+            return segmentStages.getValue().stream()
+                    .filter(segmentStage -> ExecutableConstants.STAGE_NAME_MERGE_FLAT_TABLE
+                            .equals(segmentStage.getName()))
+                    .map(segmentStage -> isStepEnd(segmentStage.getOutput(segmentId).getState())).findFirst()
+                    .orElse(true);
+        }).reduce((b1, b2) -> b1 && b2).orElse(true);
+    }
+
+    public static boolean isStepEnd(ExecutableState flatState) {
+        return flatState == ExecutableState.SUCCEED || flatState == ExecutableState.SKIP;
     }
 
     public static boolean checkBuildDfsIsSuccess(AbstractExecutable executable) {

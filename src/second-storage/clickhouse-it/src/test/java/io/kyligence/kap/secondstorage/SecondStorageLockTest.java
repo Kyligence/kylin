@@ -2075,6 +2075,13 @@ public class SecondStorageLockTest implements JobWaiter {
         String jobId = chJob.getJobId();
         assertThrows(KylinException.class, () -> SecondStorageUtil.checkJobRestart(project, jobId));
     }
+    
+    @Test
+    public void testStepStatus() {
+        assertTrue(SecondStorageUtil.isStepEnd(ExecutableState.SUCCEED));
+        assertTrue(SecondStorageUtil.isStepEnd(ExecutableState.SKIP));
+        assertFalse(SecondStorageUtil.isStepEnd(ExecutableState.READY));
+    }
 
     private void checkSegmentDisplay(int replica, int shardCnt) {
         List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(modelId, getProject(), "0",
