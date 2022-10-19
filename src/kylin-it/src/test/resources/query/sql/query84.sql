@@ -1,39 +1,34 @@
 --
--- Copyright (C) 2020 Kyligence Inc. All rights reserved.
+-- Licensed to the Apache Software Foundation (ASF) under one
+-- or more contributor license agreements.  See the NOTICE file
+-- distributed with this work for additional information
+-- regarding copyright ownership.  The ASF licenses this file
+-- to you under the Apache License, Version 2.0 (the
+-- "License"); you may not use this file except in compliance
+-- with the License.  You may obtain a copy of the License at
 --
--- http://kyligence.io
+--     http://www.apache.org/licenses/LICENSE-2.0
 --
--- This software is the confidential and proprietary information of
--- Kyligence Inc. ("Confidential Information"). You shall not disclose
--- such Confidential Information and shall use it only in accordance
--- with the terms of the license agreement you entered into with
--- Kyligence Inc.
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
 --
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
--- "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
--- LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
--- A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
--- OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
--- SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
--- LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
--- DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
--- THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
--- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
--- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
---
- select test_cal_dt.week_beg_dt,sum(test_kylin_fact.price) as GMV 
+
+ select test_cal_dt.week_beg_dt,sum(test_kylin_fact.price) as GMV
  , count(1) as TRANS_CNT
- from test_kylin_fact 
- left JOIN edw.test_cal_dt as test_cal_dt 
- ON test_kylin_fact.cal_dt = test_cal_dt.cal_dt 
- left JOIN test_category_groupings 
- on test_kylin_fact.leaf_categ_id = test_category_groupings.leaf_categ_id and 
- test_kylin_fact.lstg_site_id = test_category_groupings.site_id 
- left JOIN edw.test_sites as test_sites 
- on test_kylin_fact.lstg_site_id = test_sites.site_id 
- left JOIN edw.test_seller_type_dim as test_seller_type_dim 
- on test_kylin_fact.slr_segment_cd = test_seller_type_dim.seller_type_cd 
- where test_kylin_fact.lstg_format_name='FP-GTC' 
- and test_cal_dt.week_beg_dt between DATE '2013-05-01' and DATE '2013-08-01' 
- and test_cal_dt.cal_dt between DATE '2013-06-01' and DATE '2013-09-01' 
+ from test_kylin_fact
+ left JOIN edw.test_cal_dt as test_cal_dt
+ ON test_kylin_fact.cal_dt = test_cal_dt.cal_dt
+ left JOIN test_category_groupings
+ on test_kylin_fact.leaf_categ_id = test_category_groupings.leaf_categ_id and
+ test_kylin_fact.lstg_site_id = test_category_groupings.site_id
+ left JOIN edw.test_sites as test_sites
+ on test_kylin_fact.lstg_site_id = test_sites.site_id
+ left JOIN edw.test_seller_type_dim as test_seller_type_dim
+ on test_kylin_fact.slr_segment_cd = test_seller_type_dim.seller_type_cd
+ where test_kylin_fact.lstg_format_name='FP-GTC'
+ and test_cal_dt.week_beg_dt between DATE '2013-05-01' and DATE '2013-08-01'
+ and test_cal_dt.cal_dt between DATE '2013-06-01' and DATE '2013-09-01'
  group by test_cal_dt.week_beg_dt

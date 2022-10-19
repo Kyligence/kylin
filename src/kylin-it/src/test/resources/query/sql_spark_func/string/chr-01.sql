@@ -1,1 +1,0 @@
-select chr(98) from TEST_KYLIN_FACT

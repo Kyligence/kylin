@@ -1,1 +1,0 @@
-select ascii('a') from TEST_KYLIN_FACT

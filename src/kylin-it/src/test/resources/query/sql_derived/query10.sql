@@ -1,37 +1,32 @@
 --
--- Copyright (C) 2020 Kyligence Inc. All rights reserved.
+-- Licensed to the Apache Software Foundation (ASF) under one
+-- or more contributor license agreements.  See the NOTICE file
+-- distributed with this work for additional information
+-- regarding copyright ownership.  The ASF licenses this file
+-- to you under the Apache License, Version 2.0 (the
+-- "License"); you may not use this file except in compliance
+-- with the License.  You may obtain a copy of the License at
 --
--- http://kyligence.io
+--     http://www.apache.org/licenses/LICENSE-2.0
 --
--- This software is the confidential and proprietary information of
--- Kyligence Inc. ("Confidential Information"). You shall not disclose
--- such Confidential Information and shall use it only in accordance
--- with the terms of the license agreement you entered into with
--- Kyligence Inc.
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
 --
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
--- "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
--- LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
--- A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
--- OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
--- SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
--- LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
--- DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
--- THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
--- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
--- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
---
-SELECT 
- test_cal_dt.week_beg_dt 
- ,test_category_groupings.meta_categ_name 
- ,test_category_groupings.upd_user 
- ,test_category_groupings.upd_date 
- ,test_kylin_fact.leaf_categ_id 
+
+SELECT
+ test_cal_dt.week_beg_dt
+ ,test_category_groupings.meta_categ_name
+ ,test_category_groupings.upd_user
+ ,test_category_groupings.upd_date
+ ,test_kylin_fact.leaf_categ_id
  ,test_category_groupings.leaf_categ_id as leaf_categ_id2
- ,test_kylin_fact.lstg_site_id 
+ ,test_kylin_fact.lstg_site_id
  ,test_category_groupings.site_id as site_id2
- ,sum(price) as GMV, count(*) as TRANS_CNT 
- FROM test_kylin_fact 
+ ,sum(price) as GMV, count(*) as TRANS_CNT
+ FROM test_kylin_fact
   inner JOIN edw.test_cal_dt as test_cal_dt
  ON test_kylin_fact.cal_dt = test_cal_dt.cal_dt
  inner JOIN test_category_groupings
@@ -46,13 +41,13 @@ inner join test_account
 on TEST_KYLIN_FACT.seller_id = test_account.account_id
 inner join test_country
 on test_account.account_country = test_country.country
- where 
- test_category_groupings.upd_date='2012-09-11 20:26:04' 
- group by test_cal_dt.week_beg_dt 
- ,test_category_groupings.meta_categ_name 
- ,test_category_groupings.upd_user 
- ,test_category_groupings.upd_date 
- ,test_kylin_fact.leaf_categ_id 
- ,test_category_groupings.leaf_categ_id 
- ,test_kylin_fact.lstg_site_id 
- ,test_category_groupings.site_id 
+ where
+ test_category_groupings.upd_date='2012-09-11 20:26:04'
+ group by test_cal_dt.week_beg_dt
+ ,test_category_groupings.meta_categ_name
+ ,test_category_groupings.upd_user
+ ,test_category_groupings.upd_date
+ ,test_kylin_fact.leaf_categ_id
+ ,test_category_groupings.leaf_categ_id
+ ,test_kylin_fact.lstg_site_id
+ ,test_category_groupings.site_id
