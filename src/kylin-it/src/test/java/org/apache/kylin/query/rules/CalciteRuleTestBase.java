@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.query.rules;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -47,6 +46,7 @@ import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.engine.QueryOptimizer;
 import org.apache.kylin.query.util.HepUtils;
 import org.apache.kylin.query.util.QueryParams;
+import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.util.ExecAndComp;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -54,8 +54,6 @@ import org.slf4j.LoggerFactory;
 
 import com.clearspring.analytics.util.Lists;
 import com.google.common.base.Strings;
-
-import io.kyligence.kap.query.util.KapQueryUtil;
 
 public class CalciteRuleTestBase extends NLocalFileMetadataTestCase {
     private static final Logger logger = LoggerFactory.getLogger(CalciteRuleTestBase.class);
@@ -113,7 +111,7 @@ public class CalciteRuleTestBase extends NLocalFileMetadataTestCase {
                 return e.getFirst().contains(file);
         }).map(e -> {
             QueryParams queryParams = new QueryParams(config, e.getSecond(), project, 0, 0, "DEFAULT", false);
-            String sql = KapQueryUtil.massageSql(queryParams).replaceAll(emptyLinePattern, ""); // remove empty line
+            String sql = QueryUtil.massageSql(queryParams).replaceAll(emptyLinePattern, ""); // remove empty line
             return new Pair<>(FilenameUtils.getBaseName(e.getFirst()), sql);
         }).collect(Collectors.toList());
         Assert.assertEquals(1, queries.size());
@@ -125,7 +123,7 @@ public class CalciteRuleTestBase extends NLocalFileMetadataTestCase {
         final String queryFolder = IT_SQL_KYLIN_DIR + folder;
         return ExecAndComp.fetchQueries(queryFolder).stream().map(e -> {
             QueryParams queryParams = new QueryParams(config, e.getSecond(), project, 0, 0, "DEFAULT", false);
-            String sql = KapQueryUtil.massageSql(queryParams).replaceAll(emptyLinePattern, ""); // remove empty line
+            String sql = QueryUtil.massageSql(queryParams).replaceAll(emptyLinePattern, ""); // remove empty line
             return new Pair<>(FilenameUtils.getBaseName(e.getFirst()), sql);
         }).collect(Collectors.toList());
     }
@@ -149,7 +147,8 @@ public class CalciteRuleTestBase extends NLocalFileMetadataTestCase {
         checkDiff(relBefore, relAfter, prefix);
     }
 
-    protected void checkSQLPostOptimize(String project, String sql, String prefix, StringOutput StrOut, Collection<RelOptRule> rules) {
+    protected void checkSQLPostOptimize(String project, String sql, String prefix, StringOutput StrOut,
+            Collection<RelOptRule> rules) {
         RelNode relBefore = toCalcitePlan(project, sql, KylinConfig.getInstanceFromEnv());
         Assert.assertThat(relBefore, notNullValue());
         RelNode relAfter = HepUtils.runRuleCollection(relBefore, rules);

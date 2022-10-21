@@ -32,11 +32,13 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.job.engine.JobEngineConfig;
 import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.SlowQueryDetector;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.pushdown.SparkSqlClient;
 import org.apache.kylin.query.runtime.plan.ResultPlan;
 import org.apache.kylin.query.util.QueryParams;
+import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.sql.SparderEnv;
 import org.junit.After;
@@ -50,7 +52,6 @@ import org.mockito.internal.stubbing.answers.Returns;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.kyligence.kap.query.util.KapQueryUtil;
 import lombok.val;
 
 public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
@@ -101,9 +102,7 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
     public void testSparderTimeoutCancelJob() throws Exception {
         val df = SparderEnv.getSparkSession().emptyDataFrame();
         val mockDf = Mockito.spy(df);
-        Mockito.doAnswer(
-            new AnswersWithDelay(TIMEOUT_MS * 3, new Returns(null))
-        ).when(mockDf).toIterator();
+        Mockito.doAnswer(new AnswersWithDelay(TIMEOUT_MS * 3, new Returns(null))).when(mockDf).toIterator();
         slowQueryDetector.queryStart("");
         try {
             SparderEnv.cleanCompute();
@@ -118,7 +117,7 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
             Assert.assertTrue(QueryContext.current().getQueryTagInfo().isTimeout());
             Assert.assertTrue(e instanceof KylinTimeoutException);
             Assert.assertEquals(
-                    "The query exceeds the set time limit of 300s. Current step: Collecting dataset for sparder. ",
+                    "The query exceeds the set time limit of 300s. Current step: Collecting dataset for sparder.",
                     e.getMessage());
             // reset query thread's interrupt state.
             Thread.interrupted();
@@ -130,9 +129,7 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
     public void testPushdownTimeoutCancelJob() {
         val df = SparderEnv.getSparkSession().emptyDataFrame();
         val mockDf = Mockito.spy(df);
-        Mockito.doAnswer(
-            new AnswersWithDelay(TIMEOUT_MS * 3, new Returns(null))
-        ).when(mockDf).toIterator();
+        Mockito.doAnswer(new AnswersWithDelay(TIMEOUT_MS * 3, new Returns(null))).when(mockDf).toIterator();
         slowQueryDetector.queryStart("");
         try {
             String sql = "select sum(price) from TEST_KYLIN_FACT group by LSTG_FORMAT_NAME";
@@ -143,9 +140,8 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
             Assert.assertTrue(QueryContext.current().getQueryTagInfo().isTimeout());
             Assert.assertTrue(e instanceof KylinTimeoutException);
             Assert.assertEquals(
-                    "The query exceeds the set time limit of 300s. Current step: Collecting dataset for push-down. ",
-                    e.getMessage()
-            );
+                    "The query exceeds the set time limit of 300s. Current step: Collecting dataset of push-down.",
+                    e.getMessage());
             // reset query thread's interrupt state.
             Thread.interrupted();
         }
@@ -161,9 +157,9 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
             long t = System.currentTimeMillis();
             String sql = FileUtils
                     .readFileToString(new File("src/test/resources/query/sql_timeout/query03.sql"), "UTF-8").trim();
-            QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(getProject()), sql, getProject(), 0, 0,
-                    "DEFAULT", true);
-            KapQueryUtil.massageSql(queryParams);
+            QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(getProject()), sql, getProject(),
+                    0, 0, "DEFAULT", true);
+            QueryUtil.massageSql(queryParams);
             String error = "TestSQLMassageTimeoutCancelJob fail, query cost:" + (System.currentTimeMillis() - t)
                     + " ms, need compute:" + SparderEnv.needCompute();
             logger.error(error);
