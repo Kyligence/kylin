@@ -108,6 +108,7 @@ import org.apache.kylin.query.engine.data.QueryResult;
 import org.apache.kylin.query.relnode.OLAPContext;
 import org.apache.kylin.query.util.DateNumberFilterTransformer;
 import org.apache.kylin.query.util.QueryParams;
+import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.query.util.RawSqlParser;
 import org.apache.kylin.rest.cluster.ClusterManager;
 import org.apache.kylin.rest.cluster.DefaultClusterManager;
@@ -156,7 +157,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.query.util.KapQueryUtil;
 import lombok.val;
 
 /**
@@ -268,10 +268,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlRequest.setProject(project);
         sqlRequest.setForcedToPushDown(true);
 
-        QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(sqlRequest.getProject()),
+        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
                 queryExec.getDefaultSchemaName(), true);
-        String correctedSql = KapQueryUtil.massageSql(queryParams);
+        String correctedSql = QueryUtil.massageSql(queryParams);
 
         Mockito.when(queryExec.executeQuery(correctedSql))
                 .thenThrow(new RuntimeException("shouldn't execute executeQuery"));
@@ -303,10 +303,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlRequest.setForcedToPushDown(false);
         sqlRequest.setForcedToTieredStorage(1);
 
-        QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(sqlRequest.getProject()),
+        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
                 queryExec.getDefaultSchemaName(), true);
-        String correctedSql = KapQueryUtil.massageSql(queryParams);
+        QueryUtil.massageSql(queryParams);
 
         overwriteSystemProp("kylin.query.pushdown-enabled", "false");
         Mockito.doThrow(new SQLException(new SQLException(QueryContext.ROUTE_USE_FORCEDTOTIEREDSTORAGE)))
@@ -326,10 +326,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlRequest.setProject(project);
         sqlRequest.setForcedToTieredStorage(1);
 
-        QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(sqlRequest.getProject()),
+        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
                 queryExec.getDefaultSchemaName(), true);
-        String correctedSql = KapQueryUtil.massageSql(queryParams);
+        String correctedSql = QueryUtil.massageSql(queryParams);
 
         overwriteSystemProp("kylin.query.pushdown-enabled", "false");
         Mockito.doThrow(new SQLException(new SQLException("No model found for OLAPContex")))
@@ -349,10 +349,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlRequest.setProject(project);
         sqlRequest.setForcedToIndex(true);
 
-        QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(sqlRequest.getProject()),
+        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
                 queryExec.getDefaultSchemaName(), true);
-        String correctedSql = KapQueryUtil.massageSql(queryParams);
+        String correctedSql = QueryUtil.massageSql(queryParams);
 
         Mockito.when(queryExec.executeQuery(correctedSql))
                 .thenThrow(new RuntimeException("shouldnt execute queryexec"));
@@ -2356,11 +2356,11 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlRequest.setProject(project);
         sqlRequest.setForcedToTieredStorage(0);
 
-        QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(sqlRequest.getProject()),
+        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
                 queryExec.getDefaultSchemaName(), true);
         queryParams.setForcedToTieredStorage(ForceToTieredStorage.CH_FAIL_TO_DFS);
-        String correctedSql = KapQueryUtil.massageSql(queryParams);
+        String correctedSql = QueryUtil.massageSql(queryParams);
 
         Mockito.when(queryExec.executeQuery(correctedSql)).thenReturn(new QueryResult());
         Mockito.doReturn(new QueryResult()).when(queryService.queryRoutingEngine).execute(Mockito.any(), Mockito.any());
@@ -2379,10 +2379,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlRequest.setProject(project);
         sqlRequest.setForcedToTieredStorage(1);
 
-        QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(sqlRequest.getProject()),
+        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
                 queryExec.getDefaultSchemaName(), true);
-        String correctedSql = KapQueryUtil.massageSql(queryParams);
+        String correctedSql = QueryUtil.massageSql(queryParams);
 
         Throwable cause = new SQLException(QueryContext.ROUTE_USE_FORCEDTOTIEREDSTORAGE);
         Mockito.doThrow(
@@ -2408,10 +2408,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlRequest.setForcedToIndex(true);
         sqlRequest.setForcedToPushDown(false);
 
-        QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(sqlRequest.getProject()),
+        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
                 queryExec.getDefaultSchemaName(), true);
-        String correctedSql = KapQueryUtil.massageSql(queryParams);
+        String correctedSql = QueryUtil.massageSql(queryParams);
 
         Throwable cause = new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_AND_FORCE_TO_INDEX,
                 MsgPicker.getMsg().getForcedToTieredstorageAndForceToIndex());
@@ -2436,10 +2436,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlRequest.setProject(project);
         sqlRequest.setForcedToTieredStorage(2);
 
-        QueryParams queryParams = new QueryParams(KapQueryUtil.getKylinConfig(sqlRequest.getProject()),
+        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
                 "queryExec.getDefaultSchemaName()", true);
-        String correctedSql = KapQueryUtil.massageSql(queryParams);
+        String correctedSql = QueryUtil.massageSql(queryParams);
 
         Throwable cause = new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_RETURN_ERROR,
                 MsgPicker.getMsg().getForcedToTieredstorageReturnError());

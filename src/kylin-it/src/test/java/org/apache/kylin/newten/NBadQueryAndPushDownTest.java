@@ -38,6 +38,7 @@ import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.query.util.QueryParams;
+import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.SparderEnv;
@@ -47,7 +48,6 @@ import org.junit.Test;
 
 import com.google.common.base.Throwables;
 
-import io.kyligence.kap.query.util.KapQueryUtil;
 import lombok.val;
 
 public class NBadQueryAndPushDownTest extends NLocalWithSparkSessionTest {
@@ -116,8 +116,7 @@ public class NBadQueryAndPushDownTest extends NLocalWithSparkSessionTest {
                     new SQLException(new NoRealizationFoundException("testPushDownToNonExistentDB")), true);
         } catch (Exception e) {
             Assert.assertTrue(ExceptionUtils.getRootCause(e) instanceof AnalysisException);
-            Assert.assertTrue(ExceptionUtils.getRootCauseMessage(e)
-                    .contains("Table or view not found: LINEITEM"));
+            Assert.assertTrue(ExceptionUtils.getRootCauseMessage(e).contains("Table or view not found: LINEITEM"));
         }
     }
 
@@ -254,7 +253,7 @@ public class NBadQueryAndPushDownTest extends NLocalWithSparkSessionTest {
             int offset, SQLException sqlException, boolean isForced) throws Exception {
         populateSSWithCSVData(KylinConfig.getInstanceFromEnv(), prjName, SparderEnv.getSparkSession());
         String pushdownSql = ExecAndComp.removeDataBaseInSql(sql);
-        String massagedSql = KapQueryUtil.normalMassageSql(KylinConfig.getInstanceFromEnv(), pushdownSql, limit, offset);
+        String massagedSql = QueryUtil.normalMassageSql(KylinConfig.getInstanceFromEnv(), pushdownSql, limit, offset);
         QueryParams queryParams = new QueryParams(prjName, massagedSql, "DEFAULT", BackdoorToggles.getPrepareOnly(),
                 sqlException, isForced);
         queryParams.setSelect(true);

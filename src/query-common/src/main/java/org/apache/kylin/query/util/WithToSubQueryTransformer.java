@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import io.kyligence.kap.query.util.KapQueryUtil;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -43,10 +42,10 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.query.IQueryTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.metadata.project.NProjectManager;
 
 /**
  * Transform "WITH AS ... SELECT" SQL to SQL with subquery
@@ -63,7 +62,7 @@ import org.apache.kylin.metadata.project.NProjectManager;
  * So the preparedStatement parameters should also be transformed
  *
  */
-public class WithToSubQueryTransformer implements KapQueryUtil.IQueryTransformer {
+public class WithToSubQueryTransformer implements IQueryTransformer {
     private static final Logger logger = LoggerFactory.getLogger(WithToSubQueryTransformer.class);
 
     @Override

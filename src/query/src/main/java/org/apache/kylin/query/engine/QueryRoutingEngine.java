@@ -52,7 +52,6 @@ import org.apache.kylin.metadata.realization.NoStreamingRealizationFoundExceptio
 import org.apache.kylin.query.engine.data.QueryResult;
 import org.apache.kylin.query.mask.QueryResultMasks;
 import org.apache.kylin.query.relnode.OLAPContext;
-import io.kyligence.kap.query.util.KapQueryUtil;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.query.util.QueryParams;
 import org.apache.kylin.query.util.QueryUtil;
@@ -88,12 +87,11 @@ public class QueryRoutingEngine {
         try {
             return doTransactionEnabled(() -> {
 
-                if (projectKylinConfig.enableReplaceDynamicParams()
-                        && queryParams.isPrepareStatementWithParams()) {
+                if (projectKylinConfig.enableReplaceDynamicParams() && queryParams.isPrepareStatementWithParams()) {
                     queryParams.setSql(queryParams.getPrepareSql());
                 }
 
-                String correctedSql = KapQueryUtil.massageSql(queryParams);
+                String correctedSql = QueryUtil.massageSql(queryParams);
 
                 //CAUTION: should not change sqlRequest content!
                 QueryContext.current().getMetrics().setCorrectedSql(correctedSql);
@@ -128,7 +126,7 @@ public class QueryRoutingEngine {
         } catch (TransactionException e) {
             Throwable cause = e.getCause();
             if (cause instanceof SQLException && cause.getCause() instanceof KylinException) {
-                throw (SQLException)cause;
+                throw (SQLException) cause;
             }
             if (shouldPushdown(cause, queryParams)) {
                 return pushDownQuery((SQLException) cause, queryParams);
@@ -137,7 +135,7 @@ public class QueryRoutingEngine {
             }
         } catch (SQLException e) {
             if (e.getCause() instanceof KylinException) {
-                if(checkIfRetryQuery(e.getCause())) {
+                if (checkIfRetryQuery(e.getCause())) {
                     NProjectLoader.removeCache();
                     return queryWithSqlMassage(queryParams);
                 } else {
@@ -157,7 +155,7 @@ public class QueryRoutingEngine {
             QueryResultMasks.remove();
         }
     }
-    
+
     public boolean checkIfRetryQuery(Throwable cause) {
         if (TargetSegmentNotFoundException.causedBySegmentNotFound(cause)
                 && QueryContext.current().getMetrics().getRetryTimes() == 0) {
@@ -217,7 +215,7 @@ public class QueryRoutingEngine {
     private boolean checkBigQueryPushDown(QueryParams queryParams) {
         KylinConfig kylinConfig = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
                 .getProject(queryParams.getProject()).getConfig();
-        boolean isPush = KapQueryUtil.checkBigQueryPushDown(kylinConfig);
+        boolean isPush = QueryUtil.checkBigQueryPushDown(kylinConfig);
         if (isPush) {
             logger.info("Big query route to pushdown.");
         }
@@ -258,7 +256,7 @@ public class QueryRoutingEngine {
             sqlString = QueryUtil.addLimit(sqlString);
         }
 
-        String massagedSql = KapQueryUtil.normalMassageSql(KylinConfig.getInstanceFromEnv(), sqlString,
+        String massagedSql = QueryUtil.normalMassageSql(KylinConfig.getInstanceFromEnv(), sqlString,
                 queryParams.getLimit(), queryParams.getOffset());
         if (isPrepareStatementWithParams(queryParams)) {
             QueryContext.current().getMetrics().setCorrectedSql(massagedSql);

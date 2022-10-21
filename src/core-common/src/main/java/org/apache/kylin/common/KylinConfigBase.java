@@ -2877,7 +2877,7 @@ public abstract class KylinConfigBase implements Serializable {
         return TimeUtil.timeStringAs(this.getOptional("kylin.query.async.result-retain-days", "7d"), TimeUnit.DAYS);
     }
 
-    public Boolean isUniqueAsyncQueryYarnQueue() {
+    public boolean isUniqueAsyncQueryYarnQueue() {
         return Boolean.parseBoolean(this.getOptional("kylin.query.unique-async-query-yarn-queue-enabled", FALSE));
     }
 
@@ -3679,7 +3679,7 @@ public abstract class KylinConfigBase implements Serializable {
         return Integer.parseInt(getOptional("kylin.second-storage.wait-lock-timeout", "180"));
     }
 
-    public boolean getDDLEnabled(){
+    public boolean getDDLEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.source.ddl.enabled", FALSE));
     }
 }

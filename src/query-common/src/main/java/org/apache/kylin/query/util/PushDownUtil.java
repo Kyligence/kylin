@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.BadRequestException;
 
-import io.kyligence.kap.query.util.KapQueryUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -53,13 +52,13 @@ import org.apache.kylin.metadata.model.ISourceAware;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.apache.kylin.metadata.realization.RoutingIndicatorException;
+import org.apache.kylin.query.exception.NoAuthorizedColsError;
 import org.apache.kylin.query.security.AccessDeniedException;
 import org.apache.kylin.source.adhocquery.IPushDownRunner;
 import org.apache.kylin.source.adhocquery.PushdownResult;
-import org.apache.kylin.metadata.project.NProjectManager;
-import org.apache.kylin.query.exception.NoAuthorizedColsError;
 import org.codehaus.commons.compiler.CompileException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,7 +125,7 @@ public class PushDownUtil {
         queryParams.setKylinConfig(kylinConfig);
         queryParams.setSql(sql);
         try {
-            sql = KapQueryUtil.massagePushDownSql(queryParams);
+            sql = QueryUtil.massagePushDownSql(queryParams);
         } catch (NoAuthorizedColsError e) {
             // on no authorized cols found, return empty result
             return PushdownResult.emptyResult();

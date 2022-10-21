@@ -21,13 +21,13 @@ package org.apache.kylin.query.util;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.kyligence.kap.query.util.KapQueryUtil;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.query.IQueryTransformer;
 
 /**
  * DefaultQueryTransformer only used for query from IndexPlan.
  */
-public class DefaultQueryTransformer implements KapQueryUtil.IQueryTransformer {
+public class DefaultQueryTransformer implements IQueryTransformer {
 
     private static final String S0 = "\\s*";
     private static final String SM = "\\s+";

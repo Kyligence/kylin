@@ -18,11 +18,11 @@
 
 package org.apache.kylin.query.util;
 
-import io.kyligence.kap.query.util.KapQueryUtil;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.query.IQueryTransformer;
 import org.apache.kylin.source.adhocquery.IPushDownConverter;
 
-public class KeywordDefaultDirtyHack implements KapQueryUtil.IQueryTransformer, IPushDownConverter {
+public class KeywordDefaultDirtyHack implements IQueryTransformer, IPushDownConverter {
 
     public static String transform(String sql) {
         // KYLIN-2108, DEFAULT is hive default database, but a sql keyword too,

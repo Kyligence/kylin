@@ -46,13 +46,12 @@ import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.query.util.QueryParams;
+import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.util.ExecAndComp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Files;
-
-import io.kyligence.kap.query.util.KapQueryUtil;
 
 /**
  */
@@ -135,7 +134,7 @@ public class KylinTestBase extends NLocalFileMetadataTestCase {
 
     public Pair<List<List<String>>, List<SelectedColumnMeta>> tryPushDownSelectQuery(String project, String sql,
             String defaultSchema, SQLException sqlException, boolean isPrepare, boolean isForced) throws Exception {
-        String massagedSql = KapQueryUtil.normalMassageSql(KylinConfig.getInstanceFromEnv(), sql, 0, 0);
+        String massagedSql = QueryUtil.normalMassageSql(KylinConfig.getInstanceFromEnv(), sql, 0, 0);
         QueryParams queryParams = new QueryParams(project, massagedSql, defaultSchema, isPrepare, sqlException,
                 isForced);
         queryParams.setSelect(true);

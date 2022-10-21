@@ -344,6 +344,10 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
         return getBackTickCaseSensitiveIdentity("");
     }
 
+    public String getDoubleQuoteIdentity() {
+        return getDoubleQuoteCaseSensitiveIdentity("");
+    }
+
     public String getBackTickTransactionalTableIdentity(String suffix) {
         return getBackTickCaseSensitiveIdentity(TRANSACTIONAL_TABLE_NAME_SUFFIX.toUpperCase(Locale.ROOT) + suffix);
     }
@@ -364,6 +368,13 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
         return "null".equals(this.getCaseSensitiveDatabase())
                 ? String.format(Locale.ROOT, "`%s`", this.getCaseSensitiveName())
                 : String.format(Locale.ROOT, "`%s`.`%s`", this.getCaseSensitiveDatabase(),
+                        this.getCaseSensitiveName() + suffix);
+    }
+
+    private String getDoubleQuoteCaseSensitiveIdentity(String suffix) {
+        return "null".equals(this.getCaseSensitiveDatabase())
+                ? String.format(Locale.ROOT, "\"%s\"", this.getCaseSensitiveName())
+                : String.format(Locale.ROOT, "\"%s\".\"%s\"", this.getCaseSensitiveDatabase(),
                         this.getCaseSensitiveName() + suffix);
     }
 
