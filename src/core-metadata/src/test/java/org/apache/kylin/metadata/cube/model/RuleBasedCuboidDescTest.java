@@ -17,17 +17,16 @@
  */
 package org.apache.kylin.metadata.cube.model;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import lombok.var;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.cube.model.SelectRule;
 import org.apache.kylin.metadata.cube.CubeTestUtils;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.hamcrest.CoreMatchers;
@@ -35,13 +34,14 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-
-import lombok.val;
-import lombok.var;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class RuleBasedCuboidDescTest extends NLocalFileMetadataTestCase {
@@ -906,6 +906,28 @@ public class RuleBasedCuboidDescTest extends NLocalFileMetadataTestCase {
                 log.error("Something wrong happened when update this IndexPlan.", e);
             }
         });
+    }
+
+    @Test
+    public void testCalculateDimSortedList() throws Exception {
+
+        NAggregationGroup aggregationGroup1 = new NAggregationGroup();
+        aggregationGroup1.setIncludes(new Integer[] { 5, 18 });
+        aggregationGroup1.setMeasures(new Integer[] { 10000 });
+        SelectRule selectRule1 = new SelectRule();
+        selectRule1.setMandatoryDims(new Integer[] {});
+        aggregationGroup1.setSelectRule(selectRule1);
+
+        NAggregationGroup aggregationGroup2 = new NAggregationGroup();
+        aggregationGroup2.setIncludes(new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 14, 15, 16, 17, 18 });
+        aggregationGroup2.setMeasures(new Integer[] { 10000 });
+        SelectRule selectRule2 = new SelectRule();
+        selectRule2.setMandatoryDims(new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 14, 15, 16, 17, 18 });
+        aggregationGroup2.setSelectRule(selectRule2);
+
+        RuleBasedIndex ruleBasedIndex = new RuleBasedIndex();
+        List<Integer> lists = ReflectionTestUtils.invokeMethod(ruleBasedIndex,"recomputeSortedDimensions", Lists.newArrayList(aggregationGroup1, aggregationGroup2));
+        Assert.assertEquals("[1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 14, 15, 16, 17, 18]", lists.toString());
     }
 
     private NIndexPlanManager getIndexPlanManager() {
