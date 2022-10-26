@@ -127,7 +127,7 @@ function upgrade() {
     # copy kylin conf
     # exclude 'profile*' directory
     logging "Copy Kylin Conf"
-    for conf_file in $(ls $OLD_KYLIN_HOME/conf); do
+    for conf_file in $(ls -I "*.template" $OLD_KYLIN_HOME/conf); do
         if prompt "'${OLD_KYLIN_HOME}/conf/${conf_file}' -> '${NEW_KYLIN_HOME}/conf/'"; then
             if [[ -d ${OLD_KYLIN_HOME}/conf/${conf_file} ]]; then
                 # silent copy directory
