@@ -71,7 +71,10 @@ class BuildAsyncProfilerDriverPlugin extends DriverPlugin with Logging {
       val profile = new Runnable {
         override def run(): Unit = checkAction()
       }
-      log.debug(s"AsyncProfiler status: ${AsyncProfilerTool.status()}")
+      val deployMode = sc.getConf.get("spark.submit.deployMode", "")
+      log.info("Current spark.submit.deployMode: {}", deployMode)
+      AsyncProfilerTool.loadAsyncProfilerLib(deployMode.equals("client"))
+      log.info(s"AsyncProfiler status: ${AsyncProfilerTool.status()}")
       scheduledExecutorService.scheduleWithFixedDelay(
         profile, 0, checkingInterval, TimeUnit.MILLISECONDS)
 
