@@ -31,6 +31,8 @@ class GenerateFlatTable(jobContext: SegmentJob, dataSegment: NDataSegment, build
     buildParam.setFlatTable(flatTable)
     val flatTablePart: Dataset[Row] = generateFlatTablePart()
     buildParam.setFlatTablePart(flatTablePart)
+    val flatTableWithoutFilter = generateOriginalFlatTable()
+    buildParam.setFlatTableWithoutFilter(flatTableWithoutFilter)
 
     buildParam.setBuildFlatTable(this)
 

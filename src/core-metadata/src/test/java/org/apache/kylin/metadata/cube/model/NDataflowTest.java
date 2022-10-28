@@ -20,6 +20,7 @@ package org.apache.kylin.metadata.cube.model;
 
 import java.io.IOException;
 
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.metadata.model.Segments;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
@@ -200,5 +201,16 @@ public class NDataflowTest extends NLocalFileMetadataTestCase {
             Assert.assertNotNull(layoutInfo);
         }
     }
+
+    @Test
+    public void testGetAdaptiveStorageSize() {
+        KylinConfig testConfig = getTestConfig();
+        NDataflowManager dsMgr = NDataflowManager.getInstance(testConfig, projectDefault);
+        Assert.assertEquals(0, dsMgr.getAdaptiveDataflowSourceSize("89af4ee2-2cdb-4b07-b39e-4c29856309aa"));
+
+        NDataflow df = dsMgr.getDataflowByModelAlias("nmodel_basic");
+        Assert.assertEquals(0, df.getAdaptiveSourceBytesSize());
+    }
+
 
 }

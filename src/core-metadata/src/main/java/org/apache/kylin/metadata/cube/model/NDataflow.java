@@ -556,6 +556,14 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
         return bytesSize;
     }
 
+    public long getAdaptiveSourceBytesSize() {
+        long bytesSize = 0L;
+        for (val segment : getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING)) {
+            bytesSize += segment.getAdaptiveSourceBytesSize();
+        }
+        return bytesSize;
+    }
+
     public long getSourceBytesSize() {
         long bytesSize = 0L;
         for (val segment : getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING)) {

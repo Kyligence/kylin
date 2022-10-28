@@ -31,7 +31,7 @@ import org.apache.kylin.engine.spark.job.stage.{BuildParam, InferiorGroup, Stage
 import org.apache.kylin.metadata.cube.cuboid.AdaptiveSpanningTree.TreeNode
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager.NIndexPlanUpdater
 import org.apache.kylin.metadata.cube.model._
-import org.apache.kylin.metadata.model.TblColRef
+import org.apache.kylin.metadata.model.{ISourceAware, TblColRef}
 import org.apache.spark.sql.datasource.storage.StorageStoreUtils
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{Dataset, Row}
@@ -77,6 +77,7 @@ abstract class BuildStage(private val jobContext: SegmentJob,
 
   private lazy val flatTableDS: Dataset[Row] = buildParam.getFlatTable
   private lazy val flatTableStats: Statistics = buildParam.getFlatTableStatistics
+  private lazy val flatTableWithoutFilterRowCount = buildParam.getFlatTableWithoutFilterRowCount
 
   private lazy val sanityResultQueue = Queues.newLinkedBlockingQueue[SanityResult]()
 
@@ -157,6 +158,12 @@ abstract class BuildStage(private val jobContext: SegmentJob,
 
   protected def buildStatistics(): Statistics = {
     flatTable.gatherStatistics()
+  }
+
+  def getFlatTableWithoutFilterRowCount: Long = {
+    val isJdbc = dataModel.getRootFactTableRef.getTableDesc.getSourceType == ISourceAware.ID_JDBC
+    val isSkip = dataModel.isSamePartition || config.isSkipFlatTableCount || isJdbc
+    flatTable.getOriginalFlatTableCount(isSkip)
   }
 
   protected def buildSanityCache(): Unit = {
@@ -338,6 +345,7 @@ abstract class BuildStage(private val jobContext: SegmentJob,
     }
     logInfo(s"Segment $segmentId refresh column bytes.")
     val stats = flatTableStats
+    val flatTableCount = flatTableWithoutFilterRowCount
     UnitOfWork.doInTransactionWithRetry(new Callback[Unit] {
       override def process(): Unit = {
         val dataflowManager = NDataflowManager.getInstance(config, project)
@@ -345,6 +353,7 @@ abstract class BuildStage(private val jobContext: SegmentJob,
         val copiedSegment = copiedDataflow.getSegment(segmentId)
         val dataflowUpdate = new NDataflowUpdate(dataflowId)
         copiedSegment.setSourceCount(stats.totalCount)
+        copiedSegment.setOriginalFlatTableCount(flatTableCount)
         // Cal segment dimension range
         if (!jobContext.isPartialBuild) {
           copiedSegment.setDimensionRangeInfoMap(

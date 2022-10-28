@@ -1499,4 +1499,14 @@ public class NDataModel extends RootPersistentEntity {
         return getEffectiveMeasures().values().stream().filter(m -> m.getType() == NDataModel.MeasureType.INTERNAL)
                 .map(NDataModel.Measure::getId).collect(Collectors.toSet());
     }
+
+    public boolean isSamePartition() {
+        PartitionDesc modelPartitionDesc = getPartitionDesc();
+        if (modelPartitionDesc == null || !modelPartitionDesc.isPartitioned()) {
+            return true;
+        }
+        String modelPartition = modelPartitionDesc.getPartitionDateColumnRef().getColumnDesc().getOriginalName();
+        String tablePartition = modelPartitionDesc.getPartitionDateColumnRef().getTableRef().getTableDesc().getPartitionColumn();
+        return modelPartition.equals(tablePartition);
+    }
 }

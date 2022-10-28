@@ -67,6 +67,10 @@ class BuildParam {
   // [layout, [partition, sanity]]
   private var cachedLayoutPartitionSanity: Option[mutable.HashMap[Long, mutable.HashMap[Long, Long]]] = None
 
+  private var flatTableWithoutFilter: Dataset[Row] = _
+
+  private var flatTableWithoutFilterRowCount: Long = _
+
   def isSkipMaterializedFactTableView: Boolean = skipMaterializedFactTableView
 
   def setSkipMaterializedFactTableView(skipMaterializedFactTableView: Boolean): Unit = {
@@ -107,6 +111,18 @@ class BuildParam {
 
   def setTableDesc(tableDesc: PartitionFlatTableDesc): Unit = {
     this.tableDesc = tableDesc
+  }
+
+  def getFlatTableWithoutFilter: Dataset[Row] = flatTableWithoutFilter
+
+  def setFlatTableWithoutFilter(flatTableWithoutFilter: Dataset[Row]): Unit = {
+    this.flatTableWithoutFilter = flatTableWithoutFilter
+  }
+
+  def getFlatTableWithoutFilterRowCount: Long = flatTableWithoutFilterRowCount
+
+  def setFlatTableWithoutFilterRowCount(flatTableWithoutFilterRowCount : Long): Unit = {
+    this.flatTableWithoutFilterRowCount = flatTableWithoutFilterRowCount
   }
 
   def getFlatTableStatistics: Statistics = flatTableStatistics

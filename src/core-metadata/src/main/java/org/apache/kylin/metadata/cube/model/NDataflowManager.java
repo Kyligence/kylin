@@ -658,6 +658,10 @@ public class NDataflowManager implements IRealizationProvider {
         return getDataflow(modelId).getSourceBytesSize();
     }
 
+    public long getAdaptiveDataflowSourceSize(String dataflowId) {
+        return getDataflow(dataflowId).getAdaptiveSourceBytesSize();
+    }
+
     public long getDataflowLastBuildTime(String modelId) {
         return getDataflow(modelId).getLastBuildTime();
     }

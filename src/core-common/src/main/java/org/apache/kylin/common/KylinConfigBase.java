@@ -3670,7 +3670,7 @@ public abstract class KylinConfigBase implements Serializable {
         return Integer.parseInt(getOptional("kylin.second-storage.wait-lock-timeout", "180"));
     }
 
-    public boolean getDDLEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.source.ddl.enabled", FALSE));
+    public boolean isSkipFlatTableCount() {
+        return Boolean.parseBoolean(getOptional("kylin.build.skip-flattable-count", FALSE));
     }
 }
