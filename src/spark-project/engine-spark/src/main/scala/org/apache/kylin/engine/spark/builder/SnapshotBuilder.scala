@@ -384,7 +384,8 @@ class SnapshotBuilder(var jobId: String) extends Logging with Serializable {
     val resourcePath = baseDir + "/" + snapshotTablePath
     val (repartitionNum, sizeMB) = try {
       val sizeInMB = ResourceDetectUtils.getPaths(sourceData.queryExecution.sparkPlan)
-        .map(path => HadoopUtil.getContentSummary(path.getFileSystem(SparderEnv.getHadoopConfiguration()), path).getLength)
+        .map(path => HadoopUtil.getContentSummary(
+          path.getFileSystem(ss.sparkContext.hadoopConfiguration), path).getLength)
         .sum * 1.0 / MB
       val num = Math.ceil(sizeInMB / KylinBuildEnv.get().kylinConfig.getSnapshotShardSizeMB).intValue()
       (num, sizeInMB)
