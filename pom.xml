@@ -41,7 +41,7 @@
         <maven-model.version>3.3.9</maven-model.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <kylin.module.version>5.0.0-SNAPSHOT</kylin.module.version>
+<!--        <kylin.module.version>5.0.0-SNAPSHOT</kylin.module.version>-->
         <arthas.version>3.6.3-kyarthas-r2</arthas.version>
 
         <!-- Keep same order with dependencyManagement -->
@@ -3288,24 +3288,6 @@
 
     <profiles>
         <profile>
-            <id>kyoffice</id>
-
-            <repositories>
-                <repository>
-                    <id>kyoffice</id>
-                    <name>Central Repository</name>
-                    <url>http://mvn.ops.kylincorp.com/repository/maven-public/</url>
-                    <layout>default</layout>
-                    <releases>
-                        <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>true</enabled>
-                    </snapshots>
-                </repository>
-            </repositories>
-        </profile>
-        <profile>
             <id>sandbox</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
@@ -3381,71 +3363,6 @@
                 <clickhouse.group>com.github.housepower</clickhouse.group>
                 <clickhouse.artifact>clickhouse-native-jdbc</clickhouse.artifact>
             </properties>
-        </profile>
-        <profile>
-            <id>nexus</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <repositories>
-                <repository>
-                    <id>central</id>
-                    <name>Central Repository</name>
-                    <url>https://repo.maven.apache.org/maven2</url>
-                    <layout>default</layout>
-                    <snapshots>
-                        <enabled>false</enabled>
-                    </snapshots>
-                </repository>
-
-                <repository>
-                    <id>nexus</id>
-                    <name>Kyligence Repository</name>
-                    <url>https://repository.kyligence.io/repository/maven-public/
-                    </url>
-                    <releases>
-                        <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>true</enabled>
-                    </snapshots>
-                </repository>
-
-                <repository>
-                    <id>cloudera</id>
-                    <url>https://repository.cloudera.com/artifactory/cloudera-repos/
-                    </url>
-                </repository>
-                <repository>
-                    <id>Sonatype</id>
-                    <url>https://repo1.maven.org/maven2/org/scalastyle/scalastyle-maven-plugin/
-                    </url>
-                </repository>
-                <repository>
-                    <id>jcenter-snapshots</id>
-                    <name>jcenter</name>
-                    <url>https://jcenter.bintray.com/</url>
-                </repository>
-                <repository>
-                    <id>spring-release</id>
-                    <url>https://repo.spring.io/libs-release</url>
-                    <snapshots>
-                        <enabled>false</enabled>
-                    </snapshots>
-                </repository>
-
-                <repository>
-                    <id>shibboleth</id>
-                    <name>shibboleth repository</name>
-                    <url>https://build.shibboleth.net/nexus/content/repositories/releases/</url>
-                    <releases>
-                        <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>false</enabled>
-                    </snapshots>
-                </repository>
-            </repositories>
         </profile>
     </profiles>
 </project>
