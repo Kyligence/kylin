@@ -285,10 +285,7 @@ public enum ServerErrorCode implements ErrorCodeSupplier {
     INVALID_JDBC_SOURCE_CONFIG("KE-010039001"), //
 
     // 10040XXX cache
-    REDIS_CLEAR_ERROR("KE-010040001"), //
-
-    // 10050XXX SQL DDL
-    DDL_CHECK_ERROR("KE-010050001");
+    REDIS_CLEAR_ERROR("KE-010040001"); //
 
     private final ErrorCode errorCode;
 

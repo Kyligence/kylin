@@ -3624,8 +3624,4 @@ public abstract class KylinConfigBase implements Serializable {
     public int getSecondStorageWaitLockTimeout() {
         return Integer.parseInt(getOptional("kylin.second-storage.wait-lock-timeout", "180"));
     }
-
-    public boolean getDDLEnabled(){
-        return Boolean.parseBoolean(getOptional("kylin.source.ddl.enabled", FALSE));
-    }
 }

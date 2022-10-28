@@ -28,10 +28,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
@@ -40,11 +38,11 @@ import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.ISourceAware;
-import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.source.ISampleDataDeployer;
 import org.apache.kylin.source.ISourceMetadataExplorer;
+import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -165,41 +163,6 @@ public class NSparkMetadataExplorer implements ISourceMetadataExplorer, ISampleD
             }
         }
         return isAccess;
-    }
-
-    public boolean checkDatabaseHadoopAccessFast(String database) throws Exception {
-        boolean isAccess = true;
-        val spark = SparderEnv.getSparkSession();
-        try {
-            String databaseLocation = spark.catalog().getDatabase(database).locationUri();
-            RemoteIterator<FileStatus> tablesIterator = getFilesIterator(databaseLocation);
-            if (tablesIterator.hasNext()) {
-                Path tablePath = tablesIterator.next().getPath();
-                getFilesIterator(tablePath.toString());
-            }
-        } catch (Exception e) {
-            isAccess = false;
-            try {
-                logger.error("Read hive database {} error:{}, ugi name: {}.", database, e.getMessage(),
-                    UserGroupInformation.getCurrentUser().getUserName());
-            } catch (IOException ex) {
-                logger.error("fetch user curr ugi info error.", e);
-            }
-        }
-        return isAccess;
-    }
-
-    private RemoteIterator<FileStatus> getFilesIterator(String location) throws IOException {
-        String hiveSpecFsLocation = SparderEnv.getSparkSession().sessionState().conf()
-            .getConf(SQLConf.HIVE_SPECIFIC_FS_LOCATION());
-        FileSystem fs = null == hiveSpecFsLocation ? HadoopUtil.getWorkingFileSystem()
-            : HadoopUtil.getFileSystem(hiveSpecFsLocation);
-        if (location.startsWith(fs.getScheme()) || location.startsWith("/")) {
-            fs.listStatus(new Path(location));
-            return fs.listStatusIterator(new Path(location));
-        } else {
-            return HadoopUtil.getFileSystem(location).listStatusIterator(new Path(location));
-        }
     }
 
     @Override
