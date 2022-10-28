@@ -280,6 +280,10 @@ public class NExecutableManager {
         }
     }
 
+    public void saveUpdatedJob() {
+        executableDao.saveUpdatedJob();
+    }
+
     public Set<String> getYarnApplicationJobs(String id) {
         ExecutablePO executablePO = executableDao.getJobByUuid(id);
         String appIds = executablePO.getOutput().getInfo().getOrDefault(YARN_APP_IDS, "");
@@ -784,6 +788,7 @@ public class NExecutableManager {
                                     .forEach(stage -> //
                             updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.READY, null, null));
                         }
+                        saveUpdatedJob();
                     }
                 }
             });
@@ -865,6 +870,7 @@ public class NExecutableManager {
                                     .forEach(stage -> // when restart, reset stage
                             updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.READY, null, null, true));
                         }
+                        saveUpdatedJob();
                     }
                 }
 
@@ -907,6 +913,7 @@ public class NExecutableManager {
                                     .forEach(stage -> //
                             updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.SUICIDAL, null, null));
                         }
+                        saveUpdatedJob();
                     }
                 }
             });
@@ -932,6 +939,7 @@ public class NExecutableManager {
                                     .forEach(stage -> //
                             updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.DISCARDED, null, null));
                         }
+                        saveUpdatedJob();
                     }
                 }
             });
@@ -962,6 +970,7 @@ public class NExecutableManager {
                                     .forEach(stage -> //
                             updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.ERROR, null, null));
                         }
+                        saveUpdatedJob();
                     }
                 }
             });
@@ -1001,6 +1010,7 @@ public class NExecutableManager {
                                     .forEach(stage -> //
                             updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.PAUSED, null, null));
                         }
+                        saveUpdatedJob();
                     }
                 }
             });
@@ -1157,7 +1167,7 @@ public class NExecutableManager {
     public void updateStageStatus(String taskOrJobId, String segmentId, ExecutableState newStatus,
             Map<String, String> updateInfo, String failedMsg, Boolean isRestart) {
         val jobId = extractJobId(taskOrJobId);
-        executableDao.updateJob(jobId, job -> {
+        executableDao.updateJobWithoutSave(jobId, job -> {
             final List<Map<String, List<ExecutablePO>>> collect = job.getTasks().stream()//
                     .map(ExecutablePO::getStagesMap)//
                     .filter(MapUtils::isNotEmpty)//
@@ -1252,6 +1262,7 @@ public class NExecutableManager {
                                     .forEach(stage -> //
                             updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.SUCCEED, null, null));
                         }
+                        saveUpdatedJob();
                     }
                 }
             });
@@ -1277,6 +1288,7 @@ public class NExecutableManager {
                                     .forEach(stage -> //
                             updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.ERROR, null, null));
                         }
+                        saveUpdatedJob();
                     }
                 }
             });
@@ -1370,8 +1382,7 @@ public class NExecutableManager {
         }
         val thread = scheduler.getContext().getRunningJobThread(executable);
         if (thread != null) {
-            logger.info("Interrupt Job [{}] thread and remove in ExecutableContext",
-                    executable.getDisplayName());
+            logger.info("Interrupt Job [{}] thread and remove in ExecutableContext", executable.getDisplayName());
             thread.interrupt();
             scheduler.getContext().removeRunningJob(executable);
         }
