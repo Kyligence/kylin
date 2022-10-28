@@ -193,7 +193,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
       init(tableName, table.database) {
         val tableIdentity = table.qualifiedName.toLowerCase(Locale.ROOT)
         val locationPath = table.location.getPath
-        val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath)
+        val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath, config)
         val snapshotTablesLocationsJson = snapshotSourceTableStatsService.createSnapshotSourceTableStats(locationPath, config,
           locationFilesStatus)
         snapshotSourceTableStatsService.writeSourceTableStats(DEFAULT_PROJECT, tableIdentity, snapshotTablesLocationsJson)
@@ -211,6 +211,38 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
         val locationFilesStatus2: util.List[FileStatus] = Lists.newArrayList()
         val needCheck = snapshotSourceTableStatsService.checkLocation(locationPath, locationFilesStatus2, fromJson, config)
         assertFalse(needCheck)
+      }
+    })
+  }
+
+  test("getSnapshotSourceTables - hive table with writing_cluster_file_system") {
+    val tableName = "hive_table_types" + RandomUtil.randomUUIDStr().replace("-", "_")
+    hiveTable(tableName, (config, catalog, table) => {
+      init(tableName, table.database) {
+        config.setProperty("kylin.env.write-hdfs-working-dir", config.getHdfsWorkingDirectory)
+        try {
+          val tableIdentity = table.qualifiedName.toLowerCase(Locale.ROOT)
+          val locationPath = table.location.getPath
+          val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath, config)
+          val snapshotTablesLocationsJson = snapshotSourceTableStatsService.createSnapshotSourceTableStats(locationPath, config,
+            locationFilesStatus)
+          snapshotSourceTableStatsService.writeSourceTableStats(DEFAULT_PROJECT, tableIdentity, snapshotTablesLocationsJson)
+
+          val fromJson = snapshotSourceTableStatsService.getSnapshotSourceTableStatsJsonFromHDFS(DEFAULT_PROJECT, tableIdentity).getSecond
+          assertEquals(snapshotTablesLocationsJson.size(), fromJson.size())
+          fromJson.forEach((key, actual) => {
+            val expected = snapshotTablesLocationsJson.get(key)
+            assertEquals(expected.getFilesSize, actual.getFilesSize)
+            assertEquals(expected.getCreateTime, actual.getCreateTime)
+            assertEquals(expected.getFilesModificationTime, actual.getFilesModificationTime)
+            assertEquals(expected.getFilesCount, actual.getFilesCount)
+          })
+
+          val locationFilesStatus2: util.List[FileStatus] = Lists.newArrayList()
+          val needCheck = snapshotSourceTableStatsService.checkLocation(locationPath, locationFilesStatus2, fromJson, config)
+          assertFalse(needCheck)
+        } finally
+          config.setProperty("kylin.env.write-hdfs-working-dir", "")
       }
     })
   }
@@ -265,7 +297,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
         val needCheckPartitions = partitions.asScala.sortBy(partition => partition.createTime).reverse
           .slice(0, config.getSnapshotAutoRefreshFetchPartitionsCount).asJava
 
-        snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus)
+        snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus, config)
         for (partition <- partitions.asScala) {
           snapshotSourceTableStatsService.createPartitionSnapshotSourceTableStats(partition, needSavePartitionsFilesStatus,
             snapshotTablesLocationsJson, config)
@@ -297,6 +329,59 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
             assertEquals(expected.get(i).getModificationTime, actual.get(i).getModificationTime)
           }
         })
+      }
+    })
+  }
+
+  test("getSnapshotSourceTables - hive partition table with writing_cluster_file_system") {
+    val tableName = "hive_multi_partition_table" + RandomUtil.randomUUIDStr().replace("-", "_")
+    hivePartitionTable(tableName, (config, catalog, table) => {
+      init(tableName, table.database) {
+        config.setProperty("kylin.env.write-hdfs-working-dir", config.getHdfsWorkingDirectory)
+        try {
+          val tableIdentity = table.qualifiedName.toLowerCase(Locale.ROOT)
+
+          val snapshotTablesLocationsJson = Maps.newHashMap[String, SnapshotSourceTableStats]()
+          val needSavePartitionsFilesStatus = Maps.newHashMap[String, util.List[FileStatus]]()
+          val partitions = catalog.listPartitions(table.identifier, Option.empty).asJava
+          val needCheckPartitions = partitions.asScala.sortBy(partition => partition.createTime).reverse
+            .slice(0, config.getSnapshotAutoRefreshFetchPartitionsCount).asJava
+
+          snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus, config)
+          for (partition <- partitions.asScala) {
+            snapshotSourceTableStatsService.createPartitionSnapshotSourceTableStats(partition, needSavePartitionsFilesStatus,
+              snapshotTablesLocationsJson, config)
+          }
+          snapshotSourceTableStatsService.writeSourceTableStats(DEFAULT_PROJECT, tableIdentity, snapshotTablesLocationsJson)
+
+          val fromJson = snapshotSourceTableStatsService.getSnapshotSourceTableStatsJsonFromHDFS(DEFAULT_PROJECT, tableIdentity).getSecond
+          assertEquals(snapshotTablesLocationsJson.size(), fromJson.size())
+          fromJson.forEach((key, actual) => {
+            val expected = snapshotTablesLocationsJson.get(key)
+            assertEquals(expected.getFilesSize, actual.getFilesSize)
+            assertEquals(expected.getCreateTime, actual.getCreateTime)
+            assertEquals(expected.getFilesModificationTime, actual.getFilesModificationTime)
+            assertEquals(expected.getFilesCount, actual.getFilesCount)
+          })
+
+          val needRefreshPartitions: util.List[CatalogTablePartition] = Lists.newArrayList()
+          val needSavePartitionsFilesStatus2 = Maps.newHashMap[String, util.List[FileStatus]]()
+          val needCheck = snapshotSourceTableStatsService.checkPartitionsLocation(partitions, fromJson, needRefreshPartitions,
+            needSavePartitionsFilesStatus2, config)
+          assertFalse(needCheck)
+          assertTrue(CollectionUtils.isEmpty(needRefreshPartitions))
+          assertTrue(MapUtils.isNotEmpty(needSavePartitionsFilesStatus2))
+          needSavePartitionsFilesStatus2.forEach((key, actual) => {
+            val expected = needSavePartitionsFilesStatus.get(key)
+            assertEquals(expected.size(), actual.size())
+            for (i <- 0 until actual.size()) {
+              assertEquals(expected.get(i).getLen, actual.get(i).getLen)
+              assertEquals(expected.get(i).getModificationTime, actual.get(i).getModificationTime)
+            }
+          })
+        } finally
+          config.setProperty("kylin.env.write-hdfs-working-dir", "")
+
       }
     })
   }

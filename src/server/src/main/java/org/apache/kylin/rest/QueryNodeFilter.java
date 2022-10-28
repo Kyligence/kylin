@@ -148,6 +148,10 @@ public class QueryNodeFilter implements Filter {
         notRoutePostApiSet.add("/kylin/api/storage/config/refresh");
         notRoutePostApiSet.add("/kylin/api/storage/node/status");
 
+        // snapshot source table
+        notRoutePostApiSet.add("/kylin/api/snapshots/source_table_stats");
+        notRoutePostApiSet.add("/kylin/api/snapshots/view_mapping");
+
         //user refresh
         notRoutePutApiSet.add("/kylin/api/user/refresh");
     }

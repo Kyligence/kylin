@@ -16,31 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.kylin.tool.constant;
+package org.apache.kylin.rest.scheduler;
 
-public enum DiagSubTaskEnum {
-    METADATA, //
-    REC_CANDIDATE, //
-    AUDIT_LOG, //
-    CLIENT, //
-    JSTACK, //
-    CONF, //
-    HADOOP_CONF, //
-    BIN, //
-    HADOOP_ENV, //
-    CATALOG_INFO, //
-    SYSTEM_METRICS, //
-    MONITOR_METRICS, //
-    SPARK_LOGS, //
-    SPARDER_HISTORY, //
-    KG_LOGS, //
-    LOG, //
-    JOB_TMP, //
-    JOB_EVENTLOGS, //
-    YARN, //
-    TIERED_STORAGE_LOGS,
-    SPARK_STREAMING_LOGS,
-    CANDIDATE_LOG,
-    SYSTEM_USAGE,
-    SOURCE_TABLE_STATS
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.apache.logging.log4j.ThreadContext;
+import org.junit.jupiter.api.Test;
+
+import lombok.val;
+
+class AbstractSchedulerRunnableTest {
+
+    @Test
+    void run() {
+        val abstractSchedulerRunnable = new AbstractSchedulerRunnable() {
+            @Override
+            protected void execute() {
+                val logCategory = ThreadContext.get("logCategory");
+                assertEquals("schedule", logCategory);
+            }
+        };
+        abstractSchedulerRunnable.run();
+    }
 }

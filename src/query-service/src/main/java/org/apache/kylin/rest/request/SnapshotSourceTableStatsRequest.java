@@ -19,23 +19,18 @@
 package org.apache.kylin.rest.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+
 @Data
-public class SnapshotConfigRequest {
-    @JsonProperty("snapshot_manual_management_enabled")
-    private Boolean snapshotManualManagementEnabled = false;
-    @JsonProperty("snapshot_automatic_refresh_enabled")
-    private Boolean snapshotAutoRefreshEnabled = false;
-    @JsonProperty("snapshot_automatic_refresh_time_mode")
-    private String snapshotAutoRefreshTimeMode;
-    @JsonProperty("snapshot_automatic_refresh_time_interval")
-    private String snapshotAutoRefreshTimeInterval;
-    @JsonProperty("snapshot_automatic_refresh_trigger_hours")
-    private String snapshotAutoRefreshTriggerHours;
-    @JsonProperty("snapshot_automatic_refresh_trigger_minute")
-    private String snapshotAutoRefreshTriggerMinute;
-    @JsonProperty("snapshot_automatic_refresh_trigger_second")
-    private String snapshotAutoRefreshTriggerSecond;
+public class SnapshotSourceTableStatsRequest {
+    @NotNull
+    private String project;
+    @NotNull
+    private String table;
+    @NotNull
+    private String database;
+    @JsonProperty("snapshot_partition_col")
+    private String snapshotPartitionCol;
 }

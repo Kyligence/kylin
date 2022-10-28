@@ -88,6 +88,15 @@ public class AppConfig implements WebMvcConfigurer {
         return scheduler;
     }
 
+    @Bean("projectScheduler")
+    public TaskScheduler projectScheduler() {
+        val autoRefreshSnapshotScheduler = new ThreadPoolTaskScheduler();
+        autoRefreshSnapshotScheduler.setPoolSize(20);
+        autoRefreshSnapshotScheduler.setAwaitTerminationSeconds(60);
+        autoRefreshSnapshotScheduler.setThreadNamePrefix("ProjectScheduler-");
+        return autoRefreshSnapshotScheduler;
+    }
+
     @Bean
     public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();

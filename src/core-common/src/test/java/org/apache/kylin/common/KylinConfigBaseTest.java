@@ -40,6 +40,7 @@ import static org.apache.kylin.common.KylinConfigBase.PATH_DELIMITER;
 import static org.apache.kylin.common.KylinConfigBase.WRITING_CLUSTER_WORKING_DIR;
 import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_SOURCE_ENABLE_KEY;
 import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_SOURCE_NAME_KEY;
+import static org.apache.kylin.common.constant.Constants.SNAPSHOT_AUTO_REFRESH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -980,9 +981,9 @@ class KylinConfigBaseTest {
     @Test
     void testGetNonCustomProjectConfigs() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        assertEquals(17, config.getNonCustomProjectConfigs().size());
+        assertEquals(19, config.getNonCustomProjectConfigs().size());
         config.setProperty("kylin.server.non-custom-project-configs", "kylin.job.retry");
-        assertEquals(18, config.getNonCustomProjectConfigs().size());
+        assertEquals(20, config.getNonCustomProjectConfigs().size());
     }
 
     @Test
@@ -1241,6 +1242,21 @@ class KylinConfigBaseTest {
     }
 
     @Test
+    void testSnapshotAutoRefresh() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        assertFalse(config.isSnapshotAutoRefreshEnabled());
+        assertEquals("0 0 0 */1 * ?", config.getSnapshotAutoRefreshCron());
+        assertEquals(1, config.getSnapshotAutoRefreshFetchFilesCount());
+        assertEquals(1, config.getSnapshotAutoRefreshFetchPartitionsCount());
+        assertEquals(20, config.getSnapshotAutoRefreshMaxConcurrentJobLimit());
+        assertEquals(config.getHdfsWorkingDirectory("test") + SNAPSHOT_AUTO_REFRESH + "/",
+                config.getSnapshotAutoRefreshDir("test"));
+        assertEquals(30 * 60 * 1000, config.getSnapshotAutoRefreshTaskTimeout());
+        assertFalse(config.isSnapshotFirstAutoRefreshEnabled());
+        assertFalse(config.isSnapshotNullLocationAutoRefreshEnabled());
+    }
+
+    @Test
     void testIsHdfsMetricsPeriodicCalculationEnabled() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         config.setProperty("kylin.metrics.hdfs-periodic-calculation-enabled", "false");
@@ -1313,6 +1329,16 @@ class KylinConfigBaseTest {
     }
 
     @Test
+    void testGetWriteClusterWorkingDir() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        assertTrue(config.getWriteClusterWorkingDir().isEmpty());
+        config.setProperty("kylin.env.write-hdfs-working-dir", "hdfs://writecluster/kylin");
+        assertEquals("hdfs://writecluster/kylin", config.getWriteClusterWorkingDir());
+        // Reset to prevent impacting other tests
+        config.setProperty("kylin.env.write-hdfs-working-dir", "");
+    }
+
+    @Test
     void testGetWritingClusterWorkingDirWithSuffix() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         // path empty
@@ -1321,8 +1347,7 @@ class KylinConfigBaseTest {
         // path not absolute
         config.setProperty(WRITING_CLUSTER_WORKING_DIR, "../kylin");
         Assert.assertThrows("kylin.env.hdfs-write-working-dir must be absolute, but got ../kylin",
-                IllegalArgumentException.class,
-                () -> config.getWritingClusterWorkingDir(""));
+                IllegalArgumentException.class, () -> config.getWritingClusterWorkingDir(""));
         // with suffix
         config.setProperty(WRITING_CLUSTER_WORKING_DIR, "/kylin/");
         assertTrue(config.getWritingClusterWorkingDir("project/flat_table").contains("/kylin"));

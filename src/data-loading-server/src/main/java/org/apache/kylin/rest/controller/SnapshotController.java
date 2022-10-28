@@ -148,9 +148,7 @@ public class SnapshotController extends BaseController {
         if (snapshotsRequest.getTables().isEmpty() && snapshotsRequest.getDatabases().isEmpty()) {
             throw new KylinException(EMPTY_PARAMETER, "You should select at least one table or database to load!!");
         }
-        JobInfoResponse response = snapshotService.buildSnapshots(snapshotsRequest.getProject(),
-                snapshotsRequest.getDatabases(), snapshotsRequest.getTables(), snapshotsRequest.getOptions(), false,
-                snapshotsRequest.getPriority(), snapshotsRequest.getYarnQueue(), snapshotsRequest.getTag());
+        JobInfoResponse response = snapshotService.buildSnapshots(snapshotsRequest, false);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
     }
 
@@ -167,9 +165,17 @@ public class SnapshotController extends BaseController {
         if (snapshotsRequest.getTables().isEmpty() && snapshotsRequest.getDatabases().isEmpty()) {
             throw new KylinException(EMPTY_PARAMETER, "You should select at least one table or database to load!!");
         }
-        JobInfoResponse response = snapshotService.buildSnapshots(snapshotsRequest.getProject(),
-                snapshotsRequest.getDatabases(), snapshotsRequest.getTables(), snapshotsRequest.getOptions(), true,
-                snapshotsRequest.getPriority(), snapshotsRequest.getYarnQueue(), snapshotsRequest.getTag());
+        JobInfoResponse response = snapshotService.buildSnapshots(snapshotsRequest, true);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
+    }
+
+    @ApiOperation(value = "refreshSnapshotsManually", tags = { "AI" }, notes = "refresh snapshots")
+    @PutMapping(value = "auto_refresh")
+    @ResponseBody
+    public EnvelopeResponse<JobInfoResponse> autoRefreshSnapshots(@RequestBody SnapshotRequest snapshotsRequest) {
+        logger.info("refreshSnapshotsAutomatic request: {}", snapshotsRequest);
+        checkProjectName(snapshotsRequest.getProject());
+        JobInfoResponse response = snapshotService.autoRefreshSnapshots(snapshotsRequest, true);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
     }
 

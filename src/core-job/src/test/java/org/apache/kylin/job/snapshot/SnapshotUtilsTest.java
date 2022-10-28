@@ -16,31 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.kylin.tool.constant;
+package org.apache.kylin.job.snapshot;
 
-public enum DiagSubTaskEnum {
-    METADATA, //
-    REC_CANDIDATE, //
-    AUDIT_LOG, //
-    CLIENT, //
-    JSTACK, //
-    CONF, //
-    HADOOP_CONF, //
-    BIN, //
-    HADOOP_ENV, //
-    CATALOG_INFO, //
-    SYSTEM_METRICS, //
-    MONITOR_METRICS, //
-    SPARK_LOGS, //
-    SPARDER_HISTORY, //
-    KG_LOGS, //
-    LOG, //
-    JOB_TMP, //
-    JOB_EVENTLOGS, //
-    YARN, //
-    TIERED_STORAGE_LOGS,
-    SPARK_STREAMING_LOGS,
-    CANDIDATE_LOG,
-    SYSTEM_USAGE,
-    SOURCE_TABLE_STATS
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.junit.annotation.MetadataInfo;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import lombok.val;
+
+@MetadataInfo
+class SnapshotUtilsTest {
+    @Test
+    void getSnapshotTables() {
+        val result = SnapshotJobUtils.getSnapshotTables(KylinConfig.readSystemKylinConfig(), "default");
+        Assertions.assertEquals(1, result.size());
+        val tableDesc = result.get(0);
+        Assertions.assertEquals("DEFAULT.TEST_SNAPSHOT_TABLE", tableDesc.getIdentity());
+    }
 }

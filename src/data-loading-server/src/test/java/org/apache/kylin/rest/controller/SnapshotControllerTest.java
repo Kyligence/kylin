@@ -93,8 +93,7 @@ public class SnapshotControllerTest extends NLocalFileMetadataTestCase {
         request.setProject(project);
         request.setTables(needBuildSnapshotTables);
 
-        Mockito.doAnswer(x -> null).when(snapshotService).buildSnapshots(project, needBuildSnapshotTables,
-                Maps.newHashMap(), false, 3, null, null);
+        Mockito.doAnswer(x -> null).when(snapshotService).buildSnapshots(request, false);
         mockMvc.perform(MockMvcRequestBuilders.post("/api/snapshots").contentType(MediaType.APPLICATION_JSON)
                 .content(JsonUtil.writeValueAsString(request))
                 .accept(MediaType.parseMediaType(APPLICATION_PUBLIC_JSON)))
@@ -109,8 +108,7 @@ public class SnapshotControllerTest extends NLocalFileMetadataTestCase {
         SnapshotRequest request = new SnapshotRequest();
         request.setProject(project);
         request.setTables(needBuildSnapshotTables);
-        Mockito.doAnswer(x -> null).when(snapshotService).buildSnapshots(project, needBuildSnapshotTables,
-                Maps.newHashMap(), false, 3, null, null);
+        Mockito.doAnswer(x -> null).when(snapshotService).buildSnapshots(request, false);
         final MvcResult mvcResult = mockMvc
                 .perform(MockMvcRequestBuilders.post("/api/snapshots").contentType(MediaType.APPLICATION_JSON)
                         .content(JsonUtil.writeValueAsString(request))
@@ -146,8 +144,7 @@ public class SnapshotControllerTest extends NLocalFileMetadataTestCase {
         request.setProject(project);
         request.setTables(needBuildSnapshotTables);
 
-        Mockito.doAnswer(x -> null).when(snapshotService).buildSnapshots(project, needBuildSnapshotTables,
-                Maps.newHashMap(), false, 3, null, null);
+        Mockito.doAnswer(x -> null).when(snapshotService).buildSnapshots(request, false);
         mockMvc.perform(MockMvcRequestBuilders.put("/api/snapshots").contentType(MediaType.APPLICATION_JSON)
                 .content(JsonUtil.writeValueAsString(request))
                 .accept(MediaType.parseMediaType(APPLICATION_PUBLIC_JSON)))
@@ -162,8 +159,7 @@ public class SnapshotControllerTest extends NLocalFileMetadataTestCase {
         SnapshotRequest request = new SnapshotRequest();
         request.setProject(project);
         request.setTables(needBuildSnapshotTables);
-        Mockito.doAnswer(x -> null).when(snapshotService).buildSnapshots(project, needBuildSnapshotTables,
-                Maps.newHashMap(), false, 3, null, null);
+        Mockito.doAnswer(x -> null).when(snapshotService).buildSnapshots(request, false);
         final MvcResult mvcResult = mockMvc
                 .perform(MockMvcRequestBuilders.put("/api/snapshots").contentType(MediaType.APPLICATION_JSON)
                         .content(JsonUtil.writeValueAsString(request))
@@ -173,6 +169,22 @@ public class SnapshotControllerTest extends NLocalFileMetadataTestCase {
         Mockito.verify(snapshotController).refreshSnapshotsManually(Mockito.any(SnapshotRequest.class));
         String errorMsg = "KE-010000005(Empty Parameter):You should select at least one table or database to load!!";
         Assert.assertEquals(errorMsg, jsonNode.get("exception").textValue());
+    }
+
+    @Test
+    public void testRefreshSnapshotsAutomatic() throws Exception {
+        String project = "default";
+        Set<String> needBuildSnapshotTables = Sets.newHashSet("TEST_ACCOUNT");
+        SnapshotRequest request = new SnapshotRequest();
+        request.setProject(project);
+        request.setTables(needBuildSnapshotTables);
+
+        Mockito.doAnswer(x -> null).when(snapshotService).autoRefreshSnapshots(request, false);
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/snapshots/auto_refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(JsonUtil.writeValueAsString(request))
+                        .accept(MediaType.parseMediaType(APPLICATION_PUBLIC_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        Mockito.verify(snapshotController).autoRefreshSnapshots(Mockito.any(SnapshotRequest.class));
     }
 
     @Test

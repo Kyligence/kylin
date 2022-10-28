@@ -27,6 +27,7 @@ import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_PASS_
 import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_SOURCE_ENABLE_KEY;
 import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_SOURCE_NAME_KEY;
 import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_USER_KEY;
+import static org.apache.kylin.common.constant.Constants.SNAPSHOT_AUTO_REFRESH;
 
 import java.io.File;
 import java.io.IOException;
@@ -799,6 +800,43 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.snapshot.manual-management-enabled", FALSE));
     }
 
+    public boolean isSnapshotAutoRefreshEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.snapshot.auto-refresh-enabled", FALSE));
+    }
+
+    public String getSnapshotAutoRefreshCron() {
+        return getOptional("kylin.snapshot.auto-refresh-cron", "0 0 0 */1 * ?");
+    }
+
+    public int getSnapshotAutoRefreshFetchFilesCount() {
+        return Integer.parseInt(getOptional("kylin.snapshot.auto-refresh-fetch-files-count", "1"));
+    }
+
+    public int getSnapshotAutoRefreshFetchPartitionsCount() {
+        return Integer.parseInt(getOptional("kylin.snapshot.auto-refresh-fetch-partitions-count", "1"));
+    }
+
+    public int getSnapshotAutoRefreshMaxConcurrentJobLimit() {
+        return Integer.parseInt(getOptional("kylin.snapshot.auto-refresh-max-concurrent-jobs", "20"));
+    }
+
+    public long getSnapshotAutoRefreshTaskTimeout() {
+        return TimeUtil.timeStringAs(getOptional("kylin.snapshot.auto-refresh-task-timeout", "30min"),
+                TimeUnit.MILLISECONDS);
+    }
+
+    public String getSnapshotAutoRefreshDir(String project) {
+        return getHdfsWorkingDirectory(project) + SNAPSHOT_AUTO_REFRESH + "/";
+    }
+
+    public boolean isSnapshotFirstAutoRefreshEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.snapshot.first-auto-refresh-enabled", FALSE));
+    }
+
+    public boolean isSnapshotNullLocationAutoRefreshEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.snapshot.null-location-auto-refresh-enabled", FALSE));
+    }
+
     public int getGlobalDictV2MinHashPartitions() {
         return Integer.parseInt(getOptional("kylin.dictionary.globalV2-min-hash-partitions", "1"));
     }
@@ -921,6 +959,10 @@ public abstract class KylinConfigBase implements Serializable {
 
     public boolean isBuildFilesSeparationEnabled() {
         return !getBuildConf().isEmpty() && !getWritingClusterWorkingDir().isEmpty();
+    }
+
+    public String getWriteClusterWorkingDir() {
+        return getOptional("kylin.env.write-hdfs-working-dir", "");
     }
 
     public String getWritingClusterWorkingDir() {

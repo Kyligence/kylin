@@ -16,26 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.kylin.rest.request;
+package org.apache.kylin.rest.model;
 
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Data;
 
 @Data
-public class SnapshotConfigRequest {
-    @JsonProperty("snapshot_manual_management_enabled")
-    private Boolean snapshotManualManagementEnabled = false;
-    @JsonProperty("snapshot_automatic_refresh_enabled")
-    private Boolean snapshotAutoRefreshEnabled = false;
-    @JsonProperty("snapshot_automatic_refresh_time_mode")
-    private String snapshotAutoRefreshTimeMode;
-    @JsonProperty("snapshot_automatic_refresh_time_interval")
-    private String snapshotAutoRefreshTimeInterval;
-    @JsonProperty("snapshot_automatic_refresh_trigger_hours")
-    private String snapshotAutoRefreshTriggerHours;
-    @JsonProperty("snapshot_automatic_refresh_trigger_minute")
-    private String snapshotAutoRefreshTriggerMinute;
-    @JsonProperty("snapshot_automatic_refresh_trigger_second")
-    private String snapshotAutoRefreshTriggerSecond;
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+public class SnapshotSourceTableStats {
+    @JsonProperty("create_time")
+    private Long createTime;
+    @JsonProperty("files_count")
+    private Integer filesCount;
+    @JsonProperty("files_size")
+    private List<Long> filesSize;
+    @JsonProperty("files_modification_time")
+    private List<Long> filesModificationTime;
 }

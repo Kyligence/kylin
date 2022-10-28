@@ -16,31 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.kylin.tool.constant;
+package org.apache.kylin.rest.scheduler;
 
-public enum DiagSubTaskEnum {
-    METADATA, //
-    REC_CANDIDATE, //
-    AUDIT_LOG, //
-    CLIENT, //
-    JSTACK, //
-    CONF, //
-    HADOOP_CONF, //
-    BIN, //
-    HADOOP_ENV, //
-    CATALOG_INFO, //
-    SYSTEM_METRICS, //
-    MONITOR_METRICS, //
-    SPARK_LOGS, //
-    SPARDER_HISTORY, //
-    KG_LOGS, //
-    LOG, //
-    JOB_TMP, //
-    JOB_EVENTLOGS, //
-    YARN, //
-    TIERED_STORAGE_LOGS,
-    SPARK_STREAMING_LOGS,
-    CANDIDATE_LOG,
-    SYSTEM_USAGE,
-    SOURCE_TABLE_STATS
+import java.util.Set;
+
+import io.kyligence.kap.guava20.shaded.common.collect.Sets;
+import lombok.Data;
+
+@Data
+public class CheckSourceTableResult {
+    private String tableIdentity;
+
+    private Boolean needRefresh = Boolean.FALSE;
+    private Set<String> needRefreshPartitionsValue = Sets.newHashSet();
 }

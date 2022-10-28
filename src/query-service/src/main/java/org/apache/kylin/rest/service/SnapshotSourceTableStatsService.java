@@ -248,7 +248,7 @@ public class SnapshotSourceTableStatsService extends BasicService {
     public boolean checkLocation(String location, List<FileStatus> filesStatus,
             Map<String, SnapshotSourceTableStats> snapshotSourceTableStatsJson, KylinConfig config) throws IOException {
         log.info("check table/partition location: {}", location);
-        filesStatus.addAll(getLocationFileStatus(location));
+        filesStatus.addAll(getLocationFileStatus(location, config));
         // check file count
         val sourceTableStats = snapshotSourceTableStatsJson.get(location);
         if (sourceTableStats == null) {
@@ -354,7 +354,7 @@ public class SnapshotSourceTableStatsService extends BasicService {
         val needCheckPartitions = partitions.stream()
                 .sorted((ctp1, ctp2) -> Long.compare(ctp2.createTime(), ctp1.createTime()))
                 .limit(config.getSnapshotAutoRefreshFetchPartitionsCount()).collect(Collectors.toList());
-        putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus);
+        putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus, config);
 
         // check partition count
         if (partitions.size() != snapshotSourceTableStatsJson.size()) {
@@ -389,15 +389,17 @@ public class SnapshotSourceTableStatsService extends BasicService {
     }
 
     public void putNeedSavePartitionsFilesStatus(List<CatalogTablePartition> partitions,
-            Map<String, List<FileStatus>> locationsFileStatusMap) throws IOException {
+            Map<String, List<FileStatus>> locationsFileStatusMap, KylinConfig config) throws IOException {
         for (CatalogTablePartition partition : partitions) {
-            val filesStatus = getLocationFileStatus(partition.location().getPath());
+            val filesStatus = getLocationFileStatus(partition.location().getPath(), config);
             locationsFileStatusMap.put(partition.location().getPath(), filesStatus);
         }
     }
 
-    public List<FileStatus> getLocationFileStatus(String location) throws IOException {
-        val fileSystem = HadoopUtil.getWorkingFileSystem();
+    public List<FileStatus> getLocationFileStatus(String location, KylinConfig config) throws IOException {
+        val fileSystem = StringUtils.isBlank(config.getWriteClusterWorkingDir()) ? HadoopUtil.getWorkingFileSystem()
+                : HadoopUtil.getWriteClusterFileSystem();
+
         val sourceTableStatsPath = new Path(location);
         if (!fileSystem.exists(sourceTableStatsPath)) {
             return Collections.emptyList();
