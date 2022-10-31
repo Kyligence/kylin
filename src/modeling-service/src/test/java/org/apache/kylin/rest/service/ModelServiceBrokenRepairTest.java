@@ -25,11 +25,10 @@ import java.util.LinkedList;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.junit.rule.TransactionExceptedException;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
 import org.apache.kylin.metadata.model.MultiPartitionDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
+import org.apache.kylin.metadata.model.UpdateImpact;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.request.ModelRequest;
 import org.apache.kylin.rest.util.AclEvaluate;
@@ -44,6 +43,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 
 public class ModelServiceBrokenRepairTest extends SourceTestCase {
 
@@ -167,5 +169,19 @@ public class ModelServiceBrokenRepairTest extends SourceTestCase {
         Assert.assertEquals(NDataModel.class, repairedDataModel.getClass());
         Assert.assertEquals("LINEORDER.LO_ORDERDATE",
                 repairedDataModel.getMultiPartitionDesc().getColumns().getFirst());
+    }
+
+    @Test
+    public void testSaveModelWithTimestampCC() throws IOException {
+        String modelId = "3580693c-d1fd-7697-8ee8-0474f81c413d";
+        NDataModelManager modelManager = NDataModelManager.getInstance(getTestConfig(), PROJECT_NAME);
+        Assert.assertNotNull(modelManager.getDataModelDesc(modelId));
+        NDataModel dataModel = modelManager.getDataModelDesc(modelId);
+        ModelRequest modelRequest = JsonUtil.readValue(new File(
+                "src/test/resources/ut_meta/broken_repair_test/model_request/model_request_with_timestamp_cc.json"),
+                ModelRequest.class);
+        modelRequest.setProject(PROJECT_NAME);
+        UpdateImpact updateImpact = semanticService.updateModelColumns(dataModel, modelRequest);
+        Assert.assertEquals(0, updateImpact.getRemovedOrUpdatedCCs().size());
     }
 }
