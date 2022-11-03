@@ -61,7 +61,7 @@ import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
-import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
+import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.metadata.streaming.KafkaConfigManager;
 import org.apache.kylin.metadata.streaming.StreamingJobRecord;
 import org.apache.kylin.metadata.streaming.StreamingJobRecordManager;
@@ -663,7 +663,7 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
         NDataflowManager mgr1 = NDataflowManager.getInstance(testConfig, PROJECT);
         NDataflow df1 = mgr1.getDataflow(dataflowId);
         val seg1 = df1.getSegment(segId);
-        Assert.assertEquals(18, seg1.getLayoutSize());
+        Assert.assertEquals(17, seg1.getLayoutSize());
     }
 
     @Test

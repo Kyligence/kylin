@@ -22,10 +22,10 @@ import java.io.File;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ClassUtil;
-import org.apache.kylin.common.util.TimeZoneUtils;
 import org.apache.kylin.common.util.TempMetadataBuilder;
+import org.apache.kylin.common.util.TimeZoneUtils;
 import org.apache.kylin.common.util.Unsafe;
-import org.apache.kylin.tool.kerberos.KerberosLoginTask;
+import org.apache.kylin.tool.kerberos.DelegationTokenManager;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -62,11 +62,7 @@ public class KylinPrepareEnvListener implements EnvironmentPostProcessor, Ordere
                 setSandboxEnvs("../examples/test_case_data/sandbox");
             }
         } else if (env.acceptsProfiles(Profiles.of("dev"))) {
-            if (env.acceptsProfiles(Profiles.of("reuse"))) {
-                setLocalEnvs(System.getProperty("kylin.test.metadata.reuse-dir"));
-            } else {
-                setLocalEnvs();
-            }
+            setLocalEnvs();
         }
         // enable CC check
         Unsafe.setProperty("needCheckCC", "true");
@@ -83,8 +79,8 @@ public class KylinPrepareEnvListener implements EnvironmentPostProcessor, Ordere
         }
 
         TimeZoneUtils.setDefaultTimeZone(config);
-        KerberosLoginTask kerberosLoginTask = new KerberosLoginTask();
-        kerberosLoginTask.execute();
+        DelegationTokenManager delegationTokenManager = new DelegationTokenManager();
+        delegationTokenManager.start();
         env.addActiveProfile(config.getSecurityProfile());
 
         if (config.isMetadataKeyCaseInSensitiveEnabled()) {
@@ -109,12 +105,9 @@ public class KylinPrepareEnvListener implements EnvironmentPostProcessor, Ordere
     }
 
     private static void setLocalEnvs() {
-        setLocalEnvs(TempMetadataBuilder.prepareLocalTempMetadata());
-    }
-
-    private static void setLocalEnvs(String metadataDir) {
-        KylinConfig.setKylinConfigForLocalTest(metadataDir);
-        File localMetadata = new File(metadataDir);
+        String tempMetadataDir = TempMetadataBuilder.prepareLocalTempMetadata();
+        KylinConfig.setKylinConfigForLocalTest(tempMetadataDir);
+        File localMetadata = new File(tempMetadataDir);
 
         // pass checkHadoopHome
         Unsafe.setProperty("hadoop.home.dir", localMetadata.getAbsolutePath() + "/working-dir");
