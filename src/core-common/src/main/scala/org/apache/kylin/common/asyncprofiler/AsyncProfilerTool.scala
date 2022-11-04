@@ -27,13 +27,7 @@ object AsyncProfilerTool {
 
   val log: Logger = LoggerFactory.getLogger(AsyncProfilerTool.getClass)
 
-  private var profiler: AsyncProfiler = _
-
-  def loadAsyncProfilerLib(loadLocalLib: Boolean): Unit = {
-    // Local  - load Sparder Driver or (Spark Driver which in client mode)
-    // Remote - load all Executors or (Spark Engine which in cluster mode)
-    profiler = AsyncProfiler.getInstance(loadLocalLib)
-  }
+  private val profiler = AsyncProfiler.getInstance()
 
   private var _running = false
 

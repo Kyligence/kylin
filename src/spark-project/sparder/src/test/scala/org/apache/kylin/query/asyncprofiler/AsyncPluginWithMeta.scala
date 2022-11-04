@@ -19,6 +19,7 @@
 package org.apache.kylin.query.asyncprofiler
 
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase
+import org.apache.spark.sql.{SparderEnv, SparkSession}
 import org.apache.spark.{SparkContext, SparkFunSuite}
 import org.scalatest.BeforeAndAfterAll
 
@@ -43,10 +44,11 @@ trait AsyncPluginWithMeta extends SparkFunSuite with BeforeAndAfterAll {
   }
 
   protected def clearSparkSession(): Unit = {
-    if (sc != null) {
-      sc.stop()
-      sc = null
+    if (SparderEnv.isSparkAvailable) {
+      SparderEnv.getSparkSession.stop()
     }
+    SparkSession.setActiveSession(null)
+    SparkSession.setDefaultSession(null)
   }
 
   override def beforeAll(): Unit = {

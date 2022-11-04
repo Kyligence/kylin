@@ -40,8 +40,7 @@ class AsyncProfilerExecutorPlugin extends ExecutorPlugin with Logging {
     val profile = new Runnable {
       override def run(): Unit = checkAndProfile()
     }
-    AsyncProfilerTool.loadAsyncProfilerLib(false)
-    log.info(s"AsyncProfiler status: ${AsyncProfilerTool.status()}")
+    log.debug(s"AsyncProfiler status: ${AsyncProfilerTool.status()}")
     scheduledExecutorService.scheduleWithFixedDelay(
       profile, 0, checkingInterval, TimeUnit.MILLISECONDS)
   }

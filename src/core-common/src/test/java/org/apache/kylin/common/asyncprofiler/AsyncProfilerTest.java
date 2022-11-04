@@ -26,13 +26,8 @@ import org.junit.Test;
 public class AsyncProfilerTest {
 
     @Test
-    public void testLocalLoaded() {
-        Assert.assertTrue(AsyncProfiler.getInstance(true).isLoaded());
-    }
-
-    @Test
-    public void testRemoteLoaded() {
-        Assert.assertTrue(AsyncProfiler.getInstance(false).isLoaded());
+    public void testLoaded() {
+        Assert.assertTrue(AsyncProfiler.getInstance().isLoaded());
     }
 
     // This may success in local Mac, but failed in CI
@@ -41,7 +36,7 @@ public class AsyncProfilerTest {
         System.setProperty("os.name", "Mac");
         String errorMsg = "";
         try {
-            AsyncProfiler.getInstance(true);
+            AsyncProfiler.getInstance();
         } catch (Throwable throwable) {
             errorMsg = throwable.getMessage();
         }
@@ -50,7 +45,7 @@ public class AsyncProfilerTest {
 
     @Test
     public void testExecute() throws IOException {
-        AsyncProfiler asyncProfiler = AsyncProfiler.getInstance(true);
+        AsyncProfiler asyncProfiler = AsyncProfiler.getInstance();
         try {
             asyncProfiler.execute("start,event=cpu");
             asyncProfiler.stop();
@@ -64,12 +59,12 @@ public class AsyncProfilerTest {
     @Test
     public void testStop() {
         Assert.assertThrows("Profiler is not active", IllegalStateException.class,
-                AsyncProfiler.getInstance(true)::stop);
+                AsyncProfiler.getInstance()::stop);
     }
 
     @Test
     public void testAsyncProfilerUtInstance() {
-        AsyncProfiler originInstance = AsyncProfiler.getInstance(true);
+        AsyncProfiler originInstance = AsyncProfiler.getInstance();
         AsyncProfiler utInstance = AsyncProfiler.utInstance();
         Assert.assertSame(originInstance, utInstance);
     }
