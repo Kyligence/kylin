@@ -81,7 +81,6 @@ import com.google.common.collect.Lists;
 
 import lombok.val;
 
-
 /**
  */
 public class OLAPTable extends AbstractQueryableTable implements TranslatableTable {
@@ -263,7 +262,8 @@ public class OLAPTable extends AbstractQueryableTable implements TranslatableTab
 
         ProjectInstance projectInstance = NProjectManager.getInstance(olapSchema.getConfig())
                 .getProject(sourceTable.getProject());
-        NDataflowManager dataflowManager = NDataflowManager.getInstance(olapSchema.getConfig(), sourceTable.getProject());
+        NDataflowManager dataflowManager = NDataflowManager.getInstance(olapSchema.getConfig(),
+                sourceTable.getProject());
         if (projectInstance.getConfig().useTableIndexAnswerSelectStarEnabled()) {
             Set<ColumnDesc> exposeColumnDescSet = new HashSet<>();
             String tableName = sourceTable.getIdentity();
@@ -289,7 +289,7 @@ public class OLAPTable extends AbstractQueryableTable implements TranslatableTab
             allColumns.addAll(Lists.newArrayList(ccAsColumnDesc));
         }
 
-        return allColumns;
+        return allColumns.stream().distinct().collect(Collectors.toList());
     }
 
     // since computed columns are either of different expr and different names,
