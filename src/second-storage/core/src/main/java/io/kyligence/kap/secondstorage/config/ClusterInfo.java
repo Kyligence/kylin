@@ -36,14 +36,12 @@ public class ClusterInfo {
     private Map<String, List<Node>> cluster;
     private String socketTimeout;
     private String keepAliveTimeout;
-    private String connectTimeout;
     private String installPath;
     private String logPath;
 
     //username of machine
     private String userName;
     private String password;
-    private String extConfig;
 
     @JsonIgnore
     public List<Node> getNodes() {
@@ -95,24 +93,6 @@ public class ClusterInfo {
         return keepAliveTimeout;
     }
 
-    public String getConnectTimeout() {
-        return connectTimeout;
-    }
-
-    public ClusterInfo setConnectTimeout(String connectTimeout) {
-        this.connectTimeout = connectTimeout;
-        return this;
-    }
-
-    public String getExtConfig() {
-        return extConfig;
-    }
-
-    public ClusterInfo setExtConfig(String extConfig) {
-        this.extConfig = extConfig;
-        return this;
-    }
-
     public ClusterInfo setKeepAliveTimeout(String keepAliveTimeout) {
         this.keepAliveTimeout = keepAliveTimeout;
         return this;
@@ -155,13 +135,11 @@ public class ClusterInfo {
     public ClusterInfo(ClusterInfo cluster) {
         this.cluster = Maps.newHashMap(cluster.getCluster());
         this.keepAliveTimeout = cluster.getKeepAliveTimeout();
-        this.socketTimeout = cluster.getSocketTimeout();
-        this.connectTimeout = cluster.getConnectTimeout();
+        this.socketTimeout = cluster.getKeepAliveTimeout();
         this.logPath = cluster.getLogPath();
         this.userName = cluster.getUserName();
         this.password = cluster.getPassword();
         this.installPath = cluster.getInstallPath();
-        this.extConfig = cluster.getExtConfig();
     }
 
     public boolean emptyCluster() {

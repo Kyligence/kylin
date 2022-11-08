@@ -49,7 +49,6 @@ public class MockSecondStorage {
         ClusterInfo cluster = new ClusterInfo();
         cluster.setKeepAliveTimeout("600000");
         cluster.setSocketTimeout("600000");
-        cluster.setConnectTimeout("3000");
         cluster.setCluster(Collections.emptyMap());
         File file = File.createTempFile("clickhouse", ".yaml");
         ClickHouseConfigLoader.getConfigYaml().dump(JsonUtil.readValue(JsonUtil.writeValueAsString(cluster),
@@ -63,7 +62,6 @@ public class MockSecondStorage {
         ClusterInfo cluster = new ClusterInfo();
         cluster.setKeepAliveTimeout("600000");
         cluster.setSocketTimeout("600000");
-        cluster.setConnectTimeout("3000");
         Map<String, List<Node>> clusterNodes = new HashMap<>();
         cluster.setCluster(clusterNodes);
         val it = nodes.listIterator();
