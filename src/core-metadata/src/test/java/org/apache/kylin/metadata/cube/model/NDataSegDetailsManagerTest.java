@@ -63,22 +63,4 @@ public class NDataSegDetailsManagerTest extends NLocalFileMetadataTestCase {
         mgr.removeForSegment(details.getDataflow(), details.getUuid());
         Assert.assertNull(mgr.getForSegment(segment));
     }
-
-    @Test
-    public void testAdaptiveSource() {
-        KylinConfig testConfig = getTestConfig();
-        NDataflowManager dsMgr = NDataflowManager.getInstance(testConfig, projectDefault);
-        NDataflow df = dsMgr.getDataflowByModelAlias("nmodel_basic");
-        NDataSegment segment = df.getSegment("ef5e0663-feba-4ed2-b71c-21958122bbff");
-        Assert.assertEquals(0, segment.getAdaptiveSourceBytesSize());
-
-        NDataSegment segmentWithFlatTableCount = new NDataSegment();
-        segmentWithFlatTableCount.setOriginalFlatTableCount(10000);
-        segmentWithFlatTableCount.setSourceCount(1000);
-        segmentWithFlatTableCount.setSourceBytesSize(2000);
-        Assert.assertEquals(200, segmentWithFlatTableCount.getAdaptiveSourceBytesSize());
-
-        segmentWithFlatTableCount.setSourceCount(0);
-        Assert.assertEquals(2000, segmentWithFlatTableCount.getAdaptiveSourceBytesSize());
-    }
 }

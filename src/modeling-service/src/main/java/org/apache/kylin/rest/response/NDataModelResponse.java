@@ -450,12 +450,7 @@ public class NDataModelResponse extends NDataModel {
         this.setStorage(dfManager.getDataflowStorageSize(modelDesc.getUuid()));
         this.setSource(dfManager.getDataflowSourceSize(modelDesc.getUuid()));
         this.setSegmentHoles(dfManager.calculateSegHoles(modelDesc.getUuid()));
-        if (isSamePartition()) {
-            this.setExpansionrate(ModelUtils.computeExpansionRate(this.getStorage(), this.getSource()));
-        } else {
-            long adaptiveSource = dfManager.getAdaptiveDataflowSourceSize(modelDesc.getUuid());
-            this.setExpansionrate(ModelUtils.computeExpansionRate(this.getStorage(), adaptiveSource));
-        }
+        this.setExpansionrate(ModelUtils.computeExpansionRate(this.getStorage(), this.getSource()));
         this.setUsage(dfManager.getDataflow(modelDesc.getUuid()).getQueryHitCount());
         if (!modelDesc.isBroken()) {
             IndexPlan indexPlan = indexPlanManager.getIndexPlan(modelDesc.getUuid());

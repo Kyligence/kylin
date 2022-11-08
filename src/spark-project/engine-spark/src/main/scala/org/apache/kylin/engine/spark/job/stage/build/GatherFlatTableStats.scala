@@ -35,8 +35,6 @@ class GatherFlatTableStats(jobContext: SegmentJob, dataSegment: NDataSegment, bu
       // Collect statistics for flat table.
       val statistics = buildStatistics()
       buildParam.setFlatTableStatistics(statistics)
-      val count = getFlatTableWithoutFilterRowCount
-      buildParam.setFlatTableWithoutFilterRowCount(count)
 
       // Build inferior flat table.
       if (config.isInferiorFlatTableEnabled) {

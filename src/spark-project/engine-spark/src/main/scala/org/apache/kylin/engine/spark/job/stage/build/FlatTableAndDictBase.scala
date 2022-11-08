@@ -97,8 +97,6 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
   protected lazy val factTableDS: Dataset[Row] = buildParam.getFactTableDS
   private lazy val fastFactTableDS = buildParam.getFastFactTableDS
 
-  private lazy val flatTableWithoutFilter: Dataset[Row] = buildParam.getFlatTableWithoutFilter
-
   // By design, COMPUTED-COLUMN could only be defined on fact table.
   protected lazy val factTableCCs: Set[TblColRef] = rootFactTable.getColumns.asScala
     .filter(_.getColumnDesc.isComputedColumn)
@@ -120,19 +118,6 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
     logInfo(s"Segment $segmentId collect flat table statistics $statistics.")
     sparkSession.sparkContext.setJobDescription(null)
     statistics
-  }
-
-  def getOriginalFlatTableCount(skip: Boolean): Long = {
-    if (skip) {
-      logInfo(s"skip get original flat table count")
-      return -1L
-    }
-    val startTime = System.currentTimeMillis()
-    logInfo(s"flat table without filter start time is $startTime")
-    val count = flatTableWithoutFilter.count()
-    val endTime = System.currentTimeMillis()
-    logInfo(s"flat table without filter end time is $endTime, count is $count")
-    count
   }
 
   protected def generateFlatTablePart(): Dataset[Row] = {
@@ -202,21 +187,6 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
     flatTable
   }
 
-  protected def generateOriginalFlatTable(): Dataset[Row] = {
-    val originalFactTableDS = newOriginalFactTableDS()
-    val flatTableDS = if (needJoin) {
-      val lookupTableDSMap = generateLookupTables()
-      if (inferFiltersEnabled) {
-        FiltersUtil.initFilters(tableDesc, lookupTableDSMap)
-      }
-      val jointDS = joinFactTableWithLookupTables(originalFactTableDS, lookupTableDSMap, dataModel, sparkSession)
-      concatCCs(jointDS, factTableCCs)
-    } else {
-      originalFactTableDS
-    }
-    flatTableDS
-  }
-
   protected def prepareForDict(): (Set[TblColRef], Set[TblColRef], Set[TblColRef], Set[TblColRef]) = {
     val dictCols = DictionaryBuilderHelper.extractTreeRelatedGlobalDictToBuild(dataSegment, spanningTree.getIndices).asScala.toSet
     val encodeCols = DictionaryBuilderHelper.extractTreeRelatedGlobalDicts(dataSegment, spanningTree.getIndices).asScala.toSet
@@ -228,11 +198,6 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
   protected def newFastFactTableDS(): Dataset[Row] = {
     val partDS = newPartitionedFTDS(needFast = true)
     fulfillDS(partDS, factTableCCs, rootFactTable)
-  }
-
-  private def newOriginalFactTableDS(): Dataset[Row] = {
-    val tableDS = newTableDS(rootFactTable)
-    fulfillDS(tableDS, factTableCCs, rootFactTable)
   }
 
   protected def newFactTableDS(): Dataset[Row] = {

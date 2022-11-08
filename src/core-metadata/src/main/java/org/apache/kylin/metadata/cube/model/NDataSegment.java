@@ -19,8 +19,6 @@
 package org.apache.kylin.metadata.cube.model;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -150,9 +148,6 @@ public class NDataSegment implements ISegment, Serializable {
 
     private transient volatile LayoutInfo layoutInfo;
 
-    @JsonProperty("original_flat_table_count")
-    private long originalFlatTableCount;
-
     // only for deserialization
     public NDataSegment() {
     }
@@ -184,7 +179,6 @@ public class NDataSegment implements ISegment, Serializable {
         this.isDictReady = other.isDictReady;
         this.isFlatTableReady = other.isFlatTableReady;
         this.isFactViewReady = other.isFactViewReady;
-        this.originalFlatTableCount = other.originalFlatTableCount;
         layoutInfo = new LayoutInfo(other.getSegDetails());
     }
 
@@ -571,21 +565,6 @@ public class NDataSegment implements ISegment, Serializable {
     public void setSourceBytesSize(long sourceBytesSize) {
         checkIsNotCachedAndShared();
         this.sourceBytesSize = sourceBytesSize;
-    }
-
-    public long getOriginalFlatTableCount() {
-        return originalFlatTableCount;
-    }
-
-    public void setOriginalFlatTableCount(long originalFlatTableCount) {
-        this.originalFlatTableCount = originalFlatTableCount;
-    }
-
-    public long getAdaptiveSourceBytesSize() {
-        if (getOriginalFlatTableCount() <= 0 || getSourceCount() == 0) {
-            return getSourceBytesSize();
-        }
-        return (new BigDecimal(getSourceCount()).divide(new BigDecimal(getOriginalFlatTableCount()), 4, RoundingMode.HALF_UP)).multiply(new BigDecimal(getSourceBytesSize())).longValue();
     }
 
     public Map<String, Long> getColumnSourceBytes() {

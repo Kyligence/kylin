@@ -940,8 +940,6 @@ class KylinConfigBaseTest {
                 new PropertiesEntity("kylin.metrics.hdfs-periodic-calculation-interval", "5m", 300000L));
         map.put("isSkipResourceCheck",
                 new PropertiesEntity("kylin.build.resource.skip-resource-check", "false", false));
-        map.put("isSkipFlatTableCount",
-                new PropertiesEntity("kylin.build.skip-flattable-count", "false", false));
     }
 
     @Test

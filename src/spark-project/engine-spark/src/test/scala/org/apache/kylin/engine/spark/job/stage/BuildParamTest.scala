@@ -61,10 +61,5 @@ class BuildParamTest extends AnyFunSuite {
     val ig = InferiorGroup.unapply(param.getCachedIndexInferior.get(1L)).get
     assert(Objects.isNull(ig._1))
     assert(Objects.isNull(ig._2))
-
-    param.setFlatTableWithoutFilterRowCount(1L)
-    assert(param.getFlatTableWithoutFilterRowCount.equals(1L))
-    param.setFlatTableWithoutFilter(param.getCachedLayoutDS.getOrElse(1L, null))
-    assert(Objects.isNull(param.getFlatTableWithoutFilter))
   }
 }

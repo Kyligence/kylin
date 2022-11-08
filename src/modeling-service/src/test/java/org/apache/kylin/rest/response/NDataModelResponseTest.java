@@ -103,26 +103,6 @@ public class NDataModelResponseTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(1, namedColumns.size());
     }
 
-    @Test
-    public void testGetAdaptiveExpansionRate() {
-        KylinConfig testConfig = getTestConfig();
-        NDataModelManager nDataModelManager = NDataModelManager.getInstance(testConfig, "default");
-        NDataModel nDataModel = nDataModelManager.getDataModelDescByAlias("nmodel_basic");
-        NDataModelResponse modelResponse = new NDataModelResponse(nDataModel);
-        modelResponse.computedDisplayInfo(nDataModel);
-        Assert.assertEquals("-1", modelResponse.getExpansionrate());
-    }
-
-    @Test
-    public void testGetOriginalExpansionRate() {
-        KylinConfig testConfig = getTestConfig();
-        NDataModelManager nDataModelManager = NDataModelManager.getInstance(testConfig, "default");
-        NDataModel nDataModel = nDataModelManager.getDataModelDescByAlias("nmodel_full_measure_test");
-        NDataModelResponse modelResponse = new NDataModelResponse(nDataModel);
-        modelResponse.computedDisplayInfo(nDataModel);
-        Assert.assertEquals("99.00", modelResponse.getExpansionrate());
-    }
-
     private NDataModel.Measure createMeasure() {
         NDataModel.Measure countOneMeasure = new NDataModel.Measure();
         countOneMeasure.setName("COUNT_ONE");

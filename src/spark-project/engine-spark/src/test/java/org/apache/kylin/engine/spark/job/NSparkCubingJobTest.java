@@ -907,50 +907,6 @@ public class NSparkCubingJobTest extends NLocalWithSparkSessionTest {
         ResourceStore.clearCache(metaOutConf);
     }
 
-    @Test
-    public void testCubingWithExtraConfig() throws Exception {
-        overwriteSystemProp("kylin.job.infer-filters-enabled", "TRUE");
-        overwriteSystemProp("kylin.build.skip-flattable-count", "TRUE");
-
-        String dfName = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
-        NDataflowManager dsMgr = NDataflowManager.getInstance(config, getProject());
-        NExecutableManager execMgr = NExecutableManager.getInstance(config, getProject());
-
-        Assert.assertTrue(config.getHdfsWorkingDirectory().startsWith("file:"));
-
-        cleanupSegments(dsMgr, dfName);
-        NDataflow df = dsMgr.getDataflow(dfName);
-
-        // ready dataflow, segment, cuboid layout
-        NDataSegment oneSeg = dsMgr.appendSegment(df, SegmentRange.TimePartitionedSegmentRange.createInfinite());
-        List<LayoutEntity> round1 = new ArrayList<>();
-        round1.add(df.getIndexPlan().getLayoutEntity(20_000_020_001L));
-
-        NSpanningTree nSpanningTree = NSpanningTreeFactory.fromLayouts(round1, df.getUuid());
-        for (IndexEntity rootCuboid : nSpanningTree.getRootIndexEntities()) {
-            LayoutEntity layout = NCuboidLayoutChooser.selectLayoutForBuild(oneSeg, rootCuboid);
-            Assert.assertNull(layout);
-        }
-
-        // Round1. Build new segment
-        NSparkCubingJob job = NSparkCubingJob.create(Sets.newHashSet(oneSeg), Sets.newLinkedHashSet(round1), "ADMIN",
-                null);
-        NSparkCubingStep sparkStep = job.getSparkCubingStep();
-        StorageURL distMetaUrl = StorageURL.valueOf(sparkStep.getDistMetaUrl());
-        Assert.assertEquals("hdfs", distMetaUrl.getScheme());
-        Assert.assertTrue(distMetaUrl.getParameter("path").startsWith(config.getHdfsWorkingDirectory()));
-
-        // launch the job
-        execMgr.addJob(job);
-
-        // wait job done
-        ExecutableState status = IndexDataConstructor.wait(job);
-        Assert.assertEquals(ExecutableState.SUCCEED, status);
-
-        restoreSystemProp("kylin.job.infer-filters-enabled");
-        restoreSystemProp("kylin.build.skip-flattable-count");
-    }
-
     private void cleanupSegments(NDataflowManager dsMgr, String dfName) {
         NDataflow df = dsMgr.getDataflow(dfName);
 
