@@ -158,7 +158,7 @@
         <spring-boot-admin.version>2.6.6</spring-boot-admin.version>
         <spring-session.version>2.6.1-kylin-r3</spring-session.version>
         <spring.framework.security.extensions.version>1.0.10.RELEASE</spring.framework.security.extensions.version>
-        <spring-security-web.version>5.6.4</spring-security-web.version>
+        <spring-security-web.version>5.6.9</spring-security-web.version>
         <opensaml.version>2.6.6</opensaml.version>
         <aspectj.version>1.8.9</aspectj.version>
         <unboundid-ldapsdk.version>3.1.1</unboundid-ldapsdk.version>
@@ -2309,6 +2309,10 @@
                     <exclusion>
                         <groupId>xalan</groupId>
                         <artifactId>xalan</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.springframework.security</groupId>
+                        <artifactId>spring-security-web</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
