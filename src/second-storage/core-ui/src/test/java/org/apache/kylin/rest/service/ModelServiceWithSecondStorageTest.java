@@ -37,7 +37,8 @@ import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.query.QueryTimesResponse;
-import org.apache.kylin.query.util.QueryUtil;
+import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
+import io.kyligence.kap.query.util.KapQueryUtil;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.ModelRequest;
@@ -69,7 +70,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import io.kyligence.kap.clickhouse.MockSecondStorage;
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import io.kyligence.kap.secondstorage.management.SecondStorageService;
@@ -141,7 +141,7 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
         ReflectionTestUtils.setField(semanticService, "userGroupService", userGroupService);
         ReflectionTestUtils.setField(semanticService, "expandableMeasureUtil",
                 new ExpandableMeasureUtil((model, ccDesc) -> {
-                    String ccExpression = QueryUtil.massageComputedColumn(model, model.getProject(), ccDesc,
+                    String ccExpression = KapQueryUtil.massageComputedColumn(model, model.getProject(), ccDesc,
                             AclPermissionUtil.prepareQueryContextACLInfo(model.getProject(),
                                     semanticService.getCurrentUserGroups()));
                     ccDesc.setInnerExpression(ccExpression);

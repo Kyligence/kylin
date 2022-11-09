@@ -39,7 +39,7 @@ import org.apache.kylin.query.relnode.KapAggregateRel;
 import org.apache.kylin.query.relnode.KapFilterRel;
 import org.apache.kylin.query.relnode.KapJoinRel;
 import org.apache.kylin.query.relnode.KapProjectRel;
-import org.apache.kylin.query.util.QueryUtil;
+import io.kyligence.kap.query.util.KapQueryUtil;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -77,7 +77,7 @@ public class KapAggProjectMergeRule extends RelOptRule {
         }
 
         //Only one agg child of join is accepted
-        if (!QueryUtil.isJoinOnlyOneAggChild(joinRel)) {
+        if (!KapQueryUtil.isJoinOnlyOneAggChild(joinRel)) {
             return false;
         }
 

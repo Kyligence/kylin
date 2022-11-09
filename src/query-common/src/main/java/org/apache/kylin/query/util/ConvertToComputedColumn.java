@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import io.kyligence.kap.query.util.KapQueryUtil;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlCall;
@@ -52,12 +53,11 @@ import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.ThreadUtil;
+import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.alias.ExpressionComparator;
-import org.apache.kylin.metadata.model.tool.CalciteParser;
-import org.apache.kylin.query.IQueryTransformer;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -72,7 +72,7 @@ import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ConvertToComputedColumn implements IQueryTransformer {
+public class ConvertToComputedColumn implements KapQueryUtil.IQueryTransformer {
 
     private static final String CONVERT_TO_CC_ERROR_MSG = "Something unexpected while ConvertToComputedColumn transforming the query, return original query.";
 
@@ -380,9 +380,9 @@ public class ConvertToComputedColumn implements IQueryTransformer {
         }
         try {
             SqlNode inputNodes = CalciteParser.parse(inputSql);
-            int cntNodesBefore = getInputTreeNodes(inputNodes).size();
+            int cntNodesBefore = getInputTreeNodes((SqlCall) inputNodes).size();
             SqlNode resultNodes = CalciteParser.parse(result);
-            int cntNodesAfter = getInputTreeNodes(resultNodes).size();
+            int cntNodesAfter = getInputTreeNodes((SqlCall) resultNodes).size();
             return Pair.newPair(result, cntNodesBefore - cntNodesAfter);
         } catch (SqlParseException e) {
             log.debug("Convert to computedColumn Fail, parse result sql fail: {}", result, e);
@@ -570,7 +570,7 @@ public class ConvertToComputedColumn implements IQueryTransformer {
         }
 
         public void replace(String sql, boolean replaceCcName) {
-            SqlSelect sqlSelect = QueryUtil.extractSqlSelect(selectOrOrderby);
+            SqlSelect sqlSelect = KapQueryUtil.extractSqlSelect(selectOrOrderby);
             if (sqlSelect == null) {
                 return;
             }
@@ -589,11 +589,14 @@ public class ConvertToComputedColumn implements IQueryTransformer {
 
                 if (replaceCcName && !sql.equals(ret.getFirst())) {
                     choiceForCurrentSubquery = ret;
-                } else if (ret.getSecond() != 0 //
-                        && (choiceForCurrentSubquery == null
-                                || ret.getSecond() > choiceForCurrentSubquery.getSecond())) {
-                    choiceForCurrentSubquery = ret;
-                    recursionCompleted = false;
+                } else {
+                    if (ret.getSecond() == 0) {
+                        continue;
+                    }
+                    if (choiceForCurrentSubquery == null || ret.getSecond() > choiceForCurrentSubquery.getSecond()) {
+                        choiceForCurrentSubquery = ret;
+                        recursionCompleted = false;
+                    }
                 }
             }
         }

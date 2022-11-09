@@ -18,8 +18,8 @@
 
 package org.apache.kylin.query.util;
 
-import java.sql.SQLException;
-
+import io.kyligence.kap.query.util.KapQueryUtil;
+import lombok.val;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -29,7 +29,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparderEnv;
 import org.apache.spark.sql.SparkSession;
 
-import lombok.val;
+import java.sql.SQLException;
+
 
 public class QueryHelper {
 
@@ -42,12 +43,11 @@ public class QueryHelper {
     public static Dataset<Row> singleQuery(String sql, String project) throws SQLException {
         val prevRunLocalConf = Unsafe.setProperty(RUN_CONSTANT_QUERY_LOCALLY, "FALSE");
         try {
-            val projectKylinConfig = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).getProject(project)
-                    .getConfig();
+            val projectKylinConfig = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).getProject(project).getConfig();
             val queryExec = new QueryExec(project, projectKylinConfig);
-            val queryParams = new QueryParams(NProjectManager.getProjectConfig(project), sql, project, 0, 0,
-                    queryExec.getDefaultSchemaName(), true);
-            val convertedSql = QueryUtil.massageSql(queryParams);
+            val queryParams = new QueryParams(KapQueryUtil.getKylinConfig(project),
+                    sql, project, 0, 0, queryExec.getDefaultSchemaName(), true);
+            val convertedSql = KapQueryUtil.massageSql(queryParams);
             queryExec.executeQuery(convertedSql);
         } finally {
             if (prevRunLocalConf == null) {

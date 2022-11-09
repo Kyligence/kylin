@@ -19,6 +19,7 @@
 package org.apache.kylin.engine.spark.job.stage.build
 
 import com.google.common.collect.Sets
+import io.kyligence.kap.query.util.KapQueryUtil
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.fs.Path
 import org.apache.kylin.common.util.HadoopUtil
@@ -35,7 +36,6 @@ import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.engine.spark.utils.SparkDataSource._
 import org.apache.kylin.metadata.cube.model.NDataSegment
 import org.apache.kylin.metadata.model._
-import org.apache.kylin.query.util.QueryUtil
 import org.apache.spark.sql.KapFunctions.dict_encode_v3
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{col, expr}
@@ -273,7 +273,7 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
       logInfo(s"No available FILTER-CONDITION segment $segmentId")
       return originDS
     }
-    val expression = QueryUtil.massageExpression(dataModel, project, //
+    val expression = KapQueryUtil.massageExpression(dataModel, project, //
       dataModel.getFilterCondition, null)
     val converted = replaceDot(expression, dataModel)
     val condition = s" (1=1) AND ($converted)"
@@ -503,7 +503,7 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
       buildDict(table, dictCols)
     }
 
-    if (config.isV3DictEnable) {
+    if(config.isV3DictEnable) {
       buildV3DictIfNeeded(table, encodeCols)
     } else {
       encodeColumn(table, encodeCols)
@@ -513,14 +513,14 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
   protected def buildV3DictIfNeeded(table: Dataset[Row], dictCols: Set[TblColRef]): Dataset[Row] = {
     logInfo("Build v3 dict if needed.")
     val matchedCols = selectColumnsInTable(table, dictCols)
-    val cols = matchedCols.map { dictColumn =>
+    val cols = matchedCols.map{ dictColumn =>
       val wrapDictCol = DictionaryBuilder.wrapCol(dictColumn)
       dict_encode_v3(col(wrapDictCol)).alias(wrapDictCol + "_KE_ENCODE")
     }.toSeq
     val dictPlan = table
       .select(table.schema.map(ty => col(ty.name)) ++ cols: _*)
-      .queryExecution
-      .analyzed
+        .queryExecution
+        .analyzed
     val encodePlan = DictionaryBuilder.buildGlobalDict(project, sparkSession, dictPlan)
     SparkInternalAgent.getDataFrame(sparkSession, encodePlan)
   }

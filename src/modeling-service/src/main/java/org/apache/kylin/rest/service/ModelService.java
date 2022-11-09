@@ -200,7 +200,6 @@ import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.query.util.QueryParams;
-import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.rest.aspect.Transaction;
 import org.apache.kylin.rest.constant.ModelAttributeEnum;
 import org.apache.kylin.rest.constant.ModelStatusToDisplayEnum;
@@ -276,6 +275,7 @@ import com.google.common.collect.Sets;
 
 import io.kyligence.kap.guava20.shaded.common.base.Supplier;
 import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import io.kyligence.kap.query.util.KapQueryUtil;
 import io.kyligence.kap.secondstorage.SecondStorage;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
@@ -1739,7 +1739,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
                 queryParams.setKylinConfig(projectInstance.getConfig());
                 queryParams.setAclInfo(
                         AclPermissionUtil.prepareQueryContextACLInfo(dataModel.getProject(), getCurrentUserGroups()));
-                String pushdownSql = QueryUtil.massagePushDownSql(queryParams);
+                String pushdownSql = KapQueryUtil.massagePushDownSql(queryParams);
                 ss.sql(pushdownSql);
             }
         } catch (Exception e) {
@@ -2601,7 +2601,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
 
         model.init(getConfig(), project, getManager(NDataModelManager.class, project).getCCRelatedModels(model));
         model.getComputedColumnDescs().forEach(cc -> {
-            String innerExp = QueryUtil.massageComputedColumn(model, project, cc, null);
+            String innerExp = KapQueryUtil.massageComputedColumn(model, project, cc, null);
             cc.setInnerExpression(innerExp);
         });
 
@@ -2628,7 +2628,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
                             MsgPicker.getMsg().getccOnAntiFlattenLookup(), antiFlattenLookup));
                 }
                 ComputedColumnDesc.simpleParserCheck(cc.getExpression(), model.getAliasMap().keySet());
-                String innerExpression = QueryUtil.massageComputedColumn(model, project, cc,
+                String innerExpression = KapQueryUtil.massageComputedColumn(model, project, cc,
                         AclPermissionUtil.prepareQueryContextACLInfo(project, getCurrentUserGroups()));
                 cc.setInnerExpression(innerExpression);
 
@@ -2730,7 +2730,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
 
         // Update CC expression from query transformers
         for (ComputedColumnDesc ccDesc : model.getComputedColumnDescs()) {
-            String ccExpression = QueryUtil.massageComputedColumn(model, project, ccDesc,
+            String ccExpression = KapQueryUtil.massageComputedColumn(model, project, ccDesc,
                     AclPermissionUtil.prepareQueryContextACLInfo(project, getCurrentUserGroups()));
             ccDesc.setInnerExpression(ccExpression);
             TblColRef tblColRef = model.findColumn(ccDesc.getTableAlias(), ccDesc.getColumnName());
@@ -3581,7 +3581,8 @@ public class ModelService extends AbstractModelService implements TableModelSupp
             return;
         }
 
-        String massagedFilterCond = QueryUtil.massageExpression(model, model.getProject(), model.getFilterCondition(),
+        String massagedFilterCond = KapQueryUtil.massageExpression(model, model.getProject(),
+                model.getFilterCondition(),
                 AclPermissionUtil.prepareQueryContextACLInfo(model.getProject(), getCurrentUserGroups()), false);
 
         String filterConditionWithTableName = addTableNameIfNotExist(massagedFilterCond, model);
@@ -4152,7 +4153,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
         for (ComputedColumnDesc cc : model.getComputedColumnDescs()) {
             String innerExp = cc.getInnerExpression();
             if (cc.getExpression().equalsIgnoreCase(innerExp)) {
-                innerExp = QueryUtil.massageComputedColumn(model, project, cc, null);
+                innerExp = KapQueryUtil.massageComputedColumn(model, project, cc, null);
             }
             cc.setInnerExpression(innerExp);
         }

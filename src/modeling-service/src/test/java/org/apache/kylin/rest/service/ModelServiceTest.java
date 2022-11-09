@@ -153,7 +153,6 @@ import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.query.QueryTimesResponse;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
-import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.constant.ModelStatusToDisplayEnum;
@@ -217,6 +216,7 @@ import io.kyligence.kap.metadata.favorite.FavoriteRule;
 import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import io.kyligence.kap.metadata.user.ManagedUser;
+import io.kyligence.kap.query.util.KapQueryUtil;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import io.kyligence.kap.secondstorage.config.Node;
@@ -285,7 +285,7 @@ public class ModelServiceTest extends SourceTestCase {
         ReflectionTestUtils.setField(semanticService, "userGroupService", userGroupService);
         ReflectionTestUtils.setField(semanticService, "expandableMeasureUtil",
                 new ExpandableMeasureUtil((model, ccDesc) -> {
-                    String ccExpression = QueryUtil.massageComputedColumn(model, model.getProject(), ccDesc,
+                    String ccExpression = KapQueryUtil.massageComputedColumn(model, model.getProject(), ccDesc,
                             AclPermissionUtil.prepareQueryContextACLInfo(model.getProject(),
                                     semanticService.getCurrentUserGroups()));
                     ccDesc.setInnerExpression(ccExpression);
