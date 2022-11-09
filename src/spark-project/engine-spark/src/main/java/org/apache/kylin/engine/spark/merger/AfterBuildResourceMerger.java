@@ -91,6 +91,7 @@ public class AfterBuildResourceMerger extends SparkJobMetadataMerger {
 
         val dfUpdate = new NDataflowUpdate(flowName);
         val theSeg = remoteDataflow.getSegment(segmentId);
+        val toRemoveSegments = remoteDataflowManager.getToRemoveSegs(remoteDataflow, theSeg);
 
         if (theSeg.getModel().isMultiPartitionModel()) {
             final long lastBuildTime = System.currentTimeMillis();
@@ -107,6 +108,7 @@ public class AfterBuildResourceMerger extends SparkJobMetadataMerger {
 
         theSeg.setStatus(SegmentStatusEnum.READY);
         dfUpdate.setToUpdateSegs(theSeg);
+        dfUpdate.setToRemoveSegs(toRemoveSegments.toArray(new NDataSegment[toRemoveSegments.size()]));
         dfUpdate.setToAddOrUpdateLayouts(theSeg.getSegDetails().getLayouts().toArray(new NDataLayout[0]));
 
         localDataflowManager.updateDataflow(dfUpdate);
