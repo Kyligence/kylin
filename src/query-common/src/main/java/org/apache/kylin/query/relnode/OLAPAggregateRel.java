@@ -501,7 +501,6 @@ public class OLAPAggregateRel extends Aggregate implements OLAPRel {
 
         // rebuild aggregate call
         return new AggregateCall(newAgg, false, newArgList, fieldType, callName);
-
     }
 
     /**

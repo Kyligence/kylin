@@ -18,9 +18,6 @@
 
 package org.apache.spark.sql.udf
 
-import java.nio.ByteBuffer
-import java.util
-
 import com.google.common.collect.Maps
 import org.apache.kylin.measure.MeasureAggregator
 import org.apache.kylin.measure.bitmap.BitmapCounter
@@ -34,6 +31,9 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.expressions.{MutableAggregationBuffer, UserDefinedAggregateFunction}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.SparderTypeUtil
+
+import java.nio.ByteBuffer
+import java.util
 
 class SparderAggFun(funcName: String, dataTp: KyDataType)
   extends UserDefinedAggregateFunction

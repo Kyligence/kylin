@@ -46,13 +46,13 @@ import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.measure.corr.CorrMeasureType;
-import org.apache.kylin.metadata.model.FunctionDesc;
-import org.apache.kylin.metadata.model.PartitionDesc;
-import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
 import org.apache.kylin.metadata.cube.model.NDataflow;
+import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.model.MultiPartitionDesc;
 import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.PartitionDesc;
+import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.query.util.ICutContextStrategy;
 
 import com.google.common.collect.ImmutableList;
@@ -65,7 +65,7 @@ import com.google.common.collect.Sets;
 public class KapAggregateRel extends OLAPAggregateRel implements KapRel {
 
     protected static final List<String> supportedFunction = Lists.newArrayList("SUM", "MIN", "MAX", "COUNT_DISTINCT",
-            "BITMAP_UUID", "PERCENTILE_APPROX", FunctionDesc.FUNC_BITMAP_BUILD);
+            "BITMAP_UUID", "PERCENTILE_APPROX", FunctionDesc.FUNC_BITMAP_BUILD, FunctionDesc.FUNC_SUM_LC);
     private ImmutableList<Integer> rewriteGroupKeys; // preserve the ordering of group keys after CC replacement
     private List<ImmutableBitSet> rewriteGroupSets; // group sets with cc replaced
     List<AggregateCall> aggregateCalls;
@@ -307,7 +307,6 @@ public class KapAggregateRel extends OLAPAggregateRel implements KapRel {
         // rebuild rowType & columnRowType
         this.rowType = this.deriveRowType();
         this.columnRowType = this.buildColumnRowType();
-
     }
 
     private Boolean isExactlyMatched() {

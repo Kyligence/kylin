@@ -597,14 +597,14 @@ public class AccessServiceTest extends NLocalFileMetadataTestCase {
     @Test
     public void testGetGrantedProjectsOfUser() throws IOException {
         List<String> result = accessService.getGrantedProjectsOfUser("ADMIN");
-        assertEquals(27, result.size());
+        assertEquals(28, result.size());
     }
 
     @Test
     public void testGetGrantedProjectsOfUserOrGroup() throws IOException {
         // admin user
         List<String> result = accessService.getGrantedProjectsOfUserOrGroup("ADMIN", true);
-        assertEquals(27, result.size());
+        assertEquals(28, result.size());
 
         // normal user
         result = accessService.getGrantedProjectsOfUserOrGroup("ANALYST", true);

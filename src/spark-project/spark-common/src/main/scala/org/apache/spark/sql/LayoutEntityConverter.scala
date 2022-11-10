@@ -161,6 +161,7 @@ object LayoutEntityConverter {
       case "COLLECT_SET" =>
         val parameter = function.getParameters.get(0)
         ArrayType(SparderTypeUtil.toSparkType(parameter.getColRef.getType))
+      case "SUM_LC" => BinaryType
       case _ => SparderTypeUtil.toSparkType(function.getReturnDataType)
     }
   }
