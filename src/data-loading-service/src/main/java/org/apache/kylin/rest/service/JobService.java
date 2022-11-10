@@ -1340,6 +1340,7 @@ public class JobService extends BasicService implements JobSupporter, ISmartAppl
     }
 
     public void setResponseLanguage(HttpServletRequest request) {
+        aclEvaluate.checkIsGlobalAdmin();
         String languageToHandle = request.getHeader(HttpHeaders.ACCEPT_LANGUAGE);
         if (languageToHandle == null) {
             ErrorCode.setMsg("cn");

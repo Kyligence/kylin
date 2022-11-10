@@ -883,6 +883,13 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         filePaths.add(kylinConf.getLogSparkAppMasterPropertiesFile());
         filePaths.add(kylinConf.getLogSparkDriverPropertiesFile());
         filePaths.add(kylinConf.getLogSparkExecutorPropertiesFile());
+        if (kylinConf.buildJobProfilingEnabled()) {
+            try {
+                filePaths.add(kylinConf.getAsyncProfilerFiles());
+            } catch (IOException e) {
+                logger.error("Add SparkPluginFile failed.", e);
+            }
+        }
         filePaths.add(sparkConf.get(SPARK_FILES_1));
         filePaths.add(sparkConf.get(SPARK_FILES_2));
 

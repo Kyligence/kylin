@@ -45,6 +45,10 @@ cp -rf samples ${package_name}/
 cp -rf influxdb ${package_name}/
 cp -rf grafana ${package_name}/
 cp -rf postgresql ${package_name}/
+# copy async profiler native files
+cp -rf async-profiler-lib/libasyncProfiler-mac.so "${package_name}"/lib/libasyncProfiler-mac.so
+cp -rf async-profiler-lib/libasyncProfiler-linux-x64.so "${package_name}"/lib/libasyncProfiler-linux-x64.so
+cp -rf async-profiler-lib/libasyncProfiler-linux-arm64.so "${package_name}"/lib/libasyncProfiler-linux-arm64.so
 
 # Add ssb data preparation files
 mkdir -p ${package_name}/tool/ssb
