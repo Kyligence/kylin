@@ -18,16 +18,19 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import io.kyligence.kap.guava20.shaded.common.annotations.VisibleForTesting;
-import io.kyligence.kap.secondstorage.SecondStorageConstants;
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
-import io.kyligence.kap.secondstorage.enums.LockTypeEnum;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.val;
+import static java.util.stream.Collectors.joining;
+import static org.apache.kylin.engine.spark.stats.utils.HiveTableRefChecker.isNeedCleanUpTransactionalTableJob;
+import static org.apache.kylin.job.factory.JobFactoryConstant.CUBE_JOB_FACTORY;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
@@ -48,24 +51,22 @@ import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.cube.model.PartitionStatusEnum;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
 import org.apache.kylin.metadata.job.JobBucket;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
-import static java.util.stream.Collectors.joining;
-import static org.apache.kylin.engine.spark.stats.utils.HiveTableRefChecker.isNeedCleanUpTransactionalTableJob;
-import static org.apache.kylin.job.factory.JobFactoryConstant.CUBE_JOB_FACTORY;
+import io.kyligence.kap.guava20.shaded.common.annotations.VisibleForTesting;
+import io.kyligence.kap.secondstorage.SecondStorageConstants;
+import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import io.kyligence.kap.secondstorage.enums.LockTypeEnum;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.val;
 
 public class NSparkCubingJob extends DefaultExecutableOnModel {
 
@@ -173,12 +174,6 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
         job.setParam(NBatchConstants.P_SEGMENT_IDS, String.join(",", job.getTargetSegments()));
         job.setParam(NBatchConstants.P_DATA_RANGE_START, String.valueOf(startTime));
         job.setParam(NBatchConstants.P_DATA_RANGE_END, String.valueOf(endTime));
-        FavoriteRuleManager ruleManager = FavoriteRuleManager.getInstance(kylinConfig, df.getProject());
-        Set<String> excludedTables = ruleManager.getExcludedTables();
-        // if excludedTables contains factTable, remove factTable in excludedTables
-        val rootFactTableName = df.getModel().getRootFactTableName();
-        excludedTables.remove(rootFactTableName);
-        job.setParam(NBatchConstants.P_EXCLUDED_TABLES, String.join(",", excludedTables));
         if (CollectionUtils.isNotEmpty(ignoredSnapshotTables)) {
             job.setParam(NBatchConstants.P_IGNORED_SNAPSHOT_TABLES, String.join(",", ignoredSnapshotTables));
         }

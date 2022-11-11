@@ -17,10 +17,15 @@
  */
 package org.apache.kylin.engine.spark;
 
-import com.google.common.base.Preconditions;
-import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+import java.io.File;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.util.Shell;
@@ -60,14 +65,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.sparkproject.guava.collect.Sets;
 
-import java.io.File;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Random;
-import java.util.Set;
+import com.google.common.base.Preconditions;
+
+import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
+import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class NLocalWithSparkSessionTest extends NLocalFileMetadataTestCase implements Serializable {
@@ -194,12 +196,6 @@ public class NLocalWithSparkSessionTest extends NLocalFileMetadataTestCase imple
             ret.createOrReplaceTempView(tableDesc.getName());
         }
 
-    }
-
-    protected void updateProjectConfig(String property, String value) {
-        NProjectManager projectManager = NProjectManager.getInstance(getTestConfig());
-        projectManager.updateProject(getProject(),
-                copyForWrite -> copyForWrite.getOverrideKylinProps().put(property, value));
     }
 
     private static DataType convertType(org.apache.kylin.metadata.datatype.DataType type) {

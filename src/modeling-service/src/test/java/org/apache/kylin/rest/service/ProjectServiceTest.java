@@ -25,7 +25,6 @@ import static org.apache.kylin.metadata.model.MaintainModelType.MANUAL_MAINTAIN;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -64,11 +63,13 @@ import org.apache.kylin.rest.request.JdbcSourceInfoRequest;
 import org.apache.kylin.rest.request.JobNotificationConfigRequest;
 import org.apache.kylin.rest.request.MultiPartitionConfigRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
+import org.apache.kylin.rest.request.ProjectExclusionRequest;
 import org.apache.kylin.rest.request.ProjectGeneralInfoRequest;
 import org.apache.kylin.rest.request.PushDownConfigRequest;
 import org.apache.kylin.rest.request.PushDownProjectConfigRequest;
 import org.apache.kylin.rest.request.SegmentConfigRequest;
 import org.apache.kylin.rest.request.ShardNumConfigRequest;
+import org.apache.kylin.rest.response.ProjectConfigResponse;
 import org.apache.kylin.rest.response.StorageVolumeInfoResponse;
 import org.apache.kylin.rest.response.UserProjectPermissionResponse;
 import org.apache.kylin.rest.security.AclPermissionEnum;
@@ -106,7 +107,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ProjectServiceTest extends NLocalFileMetadataTestCase {
     private static final String PROJECT = "default";
     private static final String PROJECT_JDBC = "jdbc";
-    private static final String PROJECT_ID = "a8f4da94-a8a4-464b-ab6f-b3012aba04d5";
     private static final String MODEL_ID = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
 
     @InjectMocks
@@ -359,6 +359,7 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertFalse(response.isAutoMergeEnabled());
         Assert.assertFalse(response.getRetentionRange().isRetentionRangeEnabled());
         Assert.assertFalse(response.isExposeComputedColumn());
+        Assert.assertFalse(response.isTableExclusionEnabled());
     }
 
     @Test
@@ -723,8 +724,9 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testClearManagerCache() throws Exception {
-        val config = getTestConfig();
-        val modelManager = NDataModelManager.getInstance(config, "default");
+        // this invoke is used for add project manager cache
+        NDataModelManager.getInstance(getTestConfig(), "default");
+
         ConcurrentHashMap<Class, Object> managersCache = getInstances();
         ConcurrentHashMap<Class, ConcurrentHashMap<String, Object>> managersByPrjCache = getInstanceByProject();
 
@@ -737,9 +739,8 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
         managersCache = getInstances();
         managersByPrjCache = getInstanceByProject();
         //cleared
-        Assert.assertTrue(!managersCache.containsKey(NProjectManager.class));
-        Assert.assertTrue(!managersByPrjCache.get(NDataModelManager.class).containsKey("default"));
-
+        Assert.assertFalse(managersCache.containsKey(NProjectManager.class));
+        Assert.assertFalse(managersByPrjCache.get(NDataModelManager.class).containsKey("default"));
     }
 
     @Test
@@ -765,7 +766,7 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
     private void updateProject() {
         val segmentConfigRequest = new SegmentConfigRequest();
         segmentConfigRequest.setAutoMergeEnabled(false);
-        segmentConfigRequest.setAutoMergeTimeRanges(Arrays.asList(AutoMergeTimeEnum.YEAR));
+        segmentConfigRequest.setAutoMergeTimeRanges(Collections.singletonList(AutoMergeTimeEnum.YEAR));
         projectService.updateSegmentConfig(PROJECT, segmentConfigRequest);
 
         val jobNotificationConfigRequest = new JobNotificationConfigRequest();
@@ -818,10 +819,13 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
 
         response = projectService.resetProjectConfig(PROJECT, "storage_quota_config");
         Assert.assertEquals(10995116277760L, response.getStorageQuotaSize());
+
+        response = projectService.resetProjectConfig(PROJECT, "table_exclusion_config");
+        Assert.assertFalse(response.isTableExclusionEnabled());
     }
 
     @Test
-    public void testUpdateYarnQueue() throws Exception {
+    public void testUpdateYarnQueue() {
         final String updateTo = "q.queue";
         Assert.assertEquals("default", projectService.getProjectConfig(PROJECT).getYarnQueue());
         projectService.updateYarnQueue(PROJECT, updateTo);
@@ -831,7 +835,7 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testCreateProjectComputedColumnConfig() throws Exception {
+    public void testCreateProjectComputedColumnConfig() {
         // auto
         {
             getTestConfig().setProperty("kylin.metadata.semi-automatic-mode", "true");
@@ -1004,5 +1008,18 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
     public void testHasProjectAdminPermission() {
         Assert.assertTrue(aclEvaluate.hasProjectAdminPermission(PROJECT));
         aclEvaluate.checkProjectQueryPermission(PROJECT);
+    }
+
+    @Test
+    public void testUpdateTableExclusionRule() {
+        Assert.assertFalse(NProjectManager.getProjectConfig(PROJECT).isTableExclusionEnabled());
+
+        // update & validate
+        ProjectExclusionRequest request = new ProjectExclusionRequest();
+        request.setTableExclusionEnabled(true);
+        projectService.updateTableExclusionRule(PROJECT, request);
+        Assert.assertTrue(NProjectManager.getProjectConfig(PROJECT).isTableExclusionEnabled());
+        ProjectConfigResponse projectConfig = projectService.getProjectConfig(PROJECT);
+        Assert.assertTrue(projectConfig.isTableExclusionEnabled());
     }
 }

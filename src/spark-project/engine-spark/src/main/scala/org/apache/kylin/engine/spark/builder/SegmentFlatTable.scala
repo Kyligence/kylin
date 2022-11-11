@@ -207,7 +207,7 @@ class SegmentFlatTable(private val sparkSession: SparkSession, //
 
   protected def generateLookupTables(): mutable.LinkedHashMap[JoinTableDesc, Dataset[Row]] = {
     val ret = mutable.LinkedHashMap[JoinTableDesc, Dataset[Row]]()
-    val normalizedTableSet = mutable.Set[String]()
+    val antiFlattenTableSet = mutable.Set[String]()
     dataModel.getJoinTables.asScala
       .filter(isTableToBuild)
       .foreach { joinDesc =>
@@ -216,12 +216,10 @@ class SegmentFlatTable(private val sparkSession: SparkSession, //
           throw new IllegalArgumentException("FK table cannot be null")
         }
         val fkTable = fkTableRef.getTableDesc.getIdentity
-        if (!joinDesc.isFlattenable || normalizedTableSet.contains(fkTable)) {
-          normalizedTableSet.add(joinDesc.getTable)
+        if (!joinDesc.isFlattenable || antiFlattenTableSet.contains(fkTable)) {
+          antiFlattenTableSet.add(joinDesc.getTable)
         }
-        if (joinDesc.isFlattenable && !dataSegment.getExcludedTables.contains(joinDesc.getTable)
-          && !dataSegment.getExcludedTables.contains(fkTable)
-          && !normalizedTableSet.contains(joinDesc.getTable)) {
+        if (joinDesc.isFlattenable && !antiFlattenTableSet.contains(joinDesc.getTable)) {
           val tableRef = joinDesc.getTableRef
           val tableDS = newTableDS(tableRef)
           ret.put(joinDesc, fulfillDS(tableDS, Set.empty, tableRef))

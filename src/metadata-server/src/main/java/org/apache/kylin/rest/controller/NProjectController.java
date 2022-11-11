@@ -58,6 +58,7 @@ import org.apache.kylin.rest.request.MultiPartitionConfigRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
 import org.apache.kylin.rest.request.ProjectConfigRequest;
 import org.apache.kylin.rest.request.ProjectConfigResetRequest;
+import org.apache.kylin.rest.request.ProjectExclusionRequest;
 import org.apache.kylin.rest.request.ProjectGeneralInfoRequest;
 import org.apache.kylin.rest.request.ProjectKerberosInfoRequest;
 import org.apache.kylin.rest.request.ProjectRequest;
@@ -493,6 +494,15 @@ public class NProjectController extends NBasicController {
             @RequestBody JdbcSourceInfoRequest request) {
         checkRequiredArg("jdbc_source_enabled", request.getJdbcSourceEnable());
         projectService.updateJdbcInfo(project, request);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    @ApiOperation(value = "updateProjectExclusionInfo", notes = "Add URL: {project}; ")
+    @PutMapping(value = "/{project:.+}/exclusion_enabled")
+    @ResponseBody
+    public EnvelopeResponse<String> updateTableExclusionConfig(@PathVariable("project") String project,
+            @RequestBody ProjectExclusionRequest request) {
+        projectService.updateTableExclusionRule(project, request);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
 }

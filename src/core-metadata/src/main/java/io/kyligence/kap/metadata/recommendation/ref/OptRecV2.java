@@ -30,25 +30,17 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.metadata.model.MeasureDesc;
-import org.apache.kylin.metadata.model.ParameterDesc;
-import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
-import io.kyligence.kap.metadata.favorite.FavoriteRule;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import org.apache.kylin.metadata.model.AntiFlatChecker;
+import org.apache.kylin.metadata.model.ColExcludedChecker;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
-import org.apache.kylin.metadata.model.ExcludedLookupChecker;
+import org.apache.kylin.metadata.model.MeasureDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
+import org.apache.kylin.metadata.model.ParameterDesc;
+import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecSelection;
-import io.kyligence.kap.metadata.recommendation.entity.CCRecItemV2;
-import io.kyligence.kap.metadata.recommendation.entity.DimensionRecItemV2;
-import io.kyligence.kap.metadata.recommendation.entity.MeasureRecItemV2;
-import io.kyligence.kap.metadata.recommendation.util.RawRecUtil;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
@@ -57,6 +49,15 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import io.kyligence.kap.metadata.favorite.FavoriteRule;
+import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
+import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
+import io.kyligence.kap.metadata.recommendation.candidate.RawRecSelection;
+import io.kyligence.kap.metadata.recommendation.entity.CCRecItemV2;
+import io.kyligence.kap.metadata.recommendation.entity.DimensionRecItemV2;
+import io.kyligence.kap.metadata.recommendation.entity.MeasureRecItemV2;
+import io.kyligence.kap.metadata.recommendation.util.RawRecUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -92,7 +93,8 @@ public class OptRecV2 {
     private final NDataModel model = initModel();
     @Getter(lazy = true)
     private final Map<String, ComputedColumnDesc> projectCCMap = initAllCCMap();
-    private final ExcludedLookupChecker checker;
+    private final AntiFlatChecker antiFlatChecker;
+    private final ColExcludedChecker excludedChecker;
     private final boolean needLog;
 
     public OptRecV2(String project, String uuid, boolean needLog) {
@@ -103,8 +105,8 @@ public class OptRecV2 {
 
         uniqueFlagToRecItemMap = RawRecManager.getInstance(project).queryNonLayoutRecItems(Sets.newHashSet(uuid));
         uniqueFlagToRecItemMap.forEach((k, recItem) -> uniqueFlagToId.put(k, recItem.getId()));
-        Set<String> excludedTables = FavoriteRuleManager.getInstance(config, project).getExcludedTables();
-        checker = new ExcludedLookupChecker(excludedTables, getModel().getJoinTables(), getModel());
+        antiFlatChecker = new AntiFlatChecker(getModel().getJoinTables(), getModel());
+        excludedChecker = new ColExcludedChecker(config, project, getModel());
         if (!getModel().isBroken()) {
             initModelColumnRefs(getModel());
             initModelMeasureRefs(getModel());
@@ -196,7 +198,7 @@ public class OptRecV2 {
             String content = ccNameToExpressionMap.getOrDefault(columnName, columnName);
             TblColRef tblColRef = model.getEffectiveCols().get(column.getId());
             RecommendationRef columnRef = new ModelColumnRef(column, tblColRef.getDatatype(), content);
-            if (checker.isColRefDependsLookupTable(tblColRef)) {
+            if (antiFlatChecker.isColOfAntiLookup(tblColRef) || excludedChecker.isExcludedCol(tblColRef)) {
                 columnRef.setExcluded(true);
             }
             columnRefs.put(id, columnRef);
@@ -218,7 +220,7 @@ public class OptRecV2 {
             MeasureRef measureRef = new MeasureRef(measure, measure.getId(), true);
             measure.getFunction().getParameters().stream().filter(ParameterDesc::isColumnType).forEach(p -> {
                 int id = model.getColumnIdByColumnName(p.getValue());
-                if (checker.isColRefDependsLookupTable(p.getColRef())) {
+                if (antiFlatChecker.isColOfAntiLookup(p.getColRef()) || excludedChecker.isExcludedCol(p.getColRef())) {
                     measureRef.setExcluded(true);
                 }
                 measureRef.getDependencies().add(columnRefs.get(id));

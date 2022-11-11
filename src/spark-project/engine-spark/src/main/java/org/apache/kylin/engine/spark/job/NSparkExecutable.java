@@ -18,13 +18,23 @@
 
 package org.apache.kylin.engine.spark.job;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import io.kyligence.kap.plugin.asyncprofiler.BuildAsyncProfilerSparkPlugin;
-import lombok.val;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -64,22 +74,14 @@ import org.apache.parquet.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
+import io.kyligence.kap.plugin.asyncprofiler.BuildAsyncProfilerSparkPlugin;
+import lombok.val;
 
 /**
  *
@@ -310,22 +312,10 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         if (Objects.isNull(dataFlow) || StringUtils.isBlank(originSegments)) {
             return copied;
         }
-        removeFactTableInExcludedTables(dataFlow, copied);
         String newSegments = Stream.of(StringUtils.split(originSegments, COMMA))
                 .filter(id -> Objects.nonNull(dataFlow.getSegment(id))).collect(Collectors.joining(COMMA));
         copied.put(NBatchConstants.P_SEGMENT_IDS, newSegments);
         return copied;
-    }
-
-    private void removeFactTableInExcludedTables(NDataflow dataFlow, final Map<String, String> originParams) {
-        val rootFactTableName = dataFlow.getModel().getRootFactTableName();
-        val excludedTablesString = originParams.getOrDefault(NBatchConstants.P_EXCLUDED_TABLES, "");
-        if (StringUtils.isBlank(excludedTablesString)) {
-            return;
-        }
-        val excludedTables = Sets.newHashSet(excludedTablesString.split(","));
-        excludedTables.remove(rootFactTableName);
-        originParams.put(NBatchConstants.P_EXCLUDED_TABLES, String.join(",", excludedTables));
     }
 
     /**

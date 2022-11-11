@@ -98,6 +98,7 @@ import org.apache.kylin.rest.request.JdbcSourceInfoRequest;
 import org.apache.kylin.rest.request.JobNotificationConfigRequest;
 import org.apache.kylin.rest.request.MultiPartitionConfigRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
+import org.apache.kylin.rest.request.ProjectExclusionRequest;
 import org.apache.kylin.rest.request.ProjectGeneralInfoRequest;
 import org.apache.kylin.rest.request.ProjectKerberosInfoRequest;
 import org.apache.kylin.rest.request.PushDownConfigRequest;
@@ -554,6 +555,7 @@ public class ProjectService extends BasicService {
         response.setDescription(projectInstance.getDescription());
         response.setDefaultDatabase(projectInstance.getDefaultDatabase());
         response.setSemiAutomaticMode(config.isSemiAutoMode());
+        response.setTableExclusionEnabled(config.isTableExclusionEnabled());
 
         response.setStorageQuotaSize(config.getStorageQuotaSize());
 
@@ -1009,6 +1011,9 @@ public class ProjectService extends BasicService {
         case "favorite_rule_config":
             resetProjectRecommendationConfig(project);
             break;
+        case "table_exclusion_config":
+            resetTableExclusionConfig(project);
+            break;
         default:
             throw new KylinException(INVALID_PARAMETER,
                     "No valid value for 'reset_item'. Please enter a project setting "
@@ -1047,14 +1052,14 @@ public class ProjectService extends BasicService {
         toBeRemovedProps.add("kylin.job.notification-on-empty-data-load");
         toBeRemovedProps.add("kylin.job.notification-on-job-error");
         toBeRemovedProps.add("kylin.job.notification-admin-emails");
-        removeProjectOveridedProps(project, toBeRemovedProps);
+        removeProjectOverrideProps(project, toBeRemovedProps);
     }
 
     private void resetQueryAccelerateThreshold(String project) {
         Set<String> toBeRemovedProps = Sets.newHashSet();
         toBeRemovedProps.add("kylin.favorite.query-accelerate-threshold");
         toBeRemovedProps.add("kylin.favorite.query-accelerate-tips-enable");
-        removeProjectOveridedProps(project, toBeRemovedProps);
+        removeProjectOverrideProps(project, toBeRemovedProps);
     }
 
     private void resetProjectRecommendationConfig(String project) {
@@ -1067,7 +1072,13 @@ public class ProjectService extends BasicService {
         Set<String> toBeRemovedProps = Sets.newHashSet();
         toBeRemovedProps.add("kylin.cube.low-frequency-threshold");
         toBeRemovedProps.add("kylin.cube.frequency-time-window");
-        removeProjectOveridedProps(project, toBeRemovedProps);
+        removeProjectOverrideProps(project, toBeRemovedProps);
+    }
+
+    private void resetTableExclusionConfig(String project) {
+        Set<String> toBeRemovedProps = Sets.newHashSet();
+        toBeRemovedProps.add("kylin.metadata.table-exclusion-enabled");
+        removeProjectOverrideProps(project, toBeRemovedProps);
     }
 
     private void resetSegmentConfig(String project) {
@@ -1082,7 +1093,7 @@ public class ProjectService extends BasicService {
         });
     }
 
-    private void removeProjectOveridedProps(String project, Set<String> toBeRemovedProps) {
+    private void removeProjectOverrideProps(String project, Set<String> toBeRemovedProps) {
         val projectManager = getManager(NProjectManager.class);
         val projectInstance = projectManager.getProject(project);
         if (projectInstance == null) {
@@ -1107,7 +1118,7 @@ public class ProjectService extends BasicService {
     private void resetProjectStorageQuotaConfig(String project) {
         Set<String> toBeRemovedProps = Sets.newHashSet();
         toBeRemovedProps.add("kylin.storage.quota-in-giga-bytes");
-        removeProjectOveridedProps(project, toBeRemovedProps);
+        removeProjectOverrideProps(project, toBeRemovedProps);
     }
 
     private List<ProjectInstance> getProjectsWithFilter(Predicate<ProjectInstance> filter) {
@@ -1177,5 +1188,15 @@ public class ProjectService extends BasicService {
         // Use JDBC Source
         overrideKylinProps.put("kylin.source.default", String.valueOf(ISourceAware.ID_JDBC));
         updateProjectOverrideKylinProps(project, overrideKylinProps);
+    }
+
+    @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")
+    @Transaction(project = 0)
+    public void updateTableExclusionRule(String project, ProjectExclusionRequest request) {
+        getManager(NProjectManager.class).updateProject(project, copyForWrite -> {
+            boolean exclusionEnabled = request.isTableExclusionEnabled();
+            copyForWrite.putOverrideKylinProps("kylin.metadata.table-exclusion-enabled",
+                    String.valueOf(exclusionEnabled));
+        });
     }
 }

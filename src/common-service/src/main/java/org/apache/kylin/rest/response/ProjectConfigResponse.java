@@ -43,7 +43,8 @@ public class ProjectConfigResponse {
     private String defaultDatabase;
     @JsonProperty("semi_automatic_mode")
     private boolean semiAutomaticMode;
-
+    @JsonProperty("table_exclusion_enabled")
+    private boolean tableExclusionEnabled;
     @JsonProperty("storage_quota_size")
     private long storageQuotaSize;
 

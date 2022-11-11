@@ -192,6 +192,7 @@ import org.apache.kylin.rest.util.SCD2SimplificationConvertUtil;
 import org.apache.kylin.streaming.jobs.StreamingJobListener;
 import org.apache.kylin.streaming.manager.StreamingJobManager;
 import org.apache.kylin.util.BrokenEntityProxy;
+import org.apache.kylin.util.MetadataTestUtils;
 import org.apache.kylin.util.PasswordEncodeFactory;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -217,8 +218,6 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 
 import io.kyligence.kap.clickhouse.MockSecondStorage;
-import io.kyligence.kap.metadata.favorite.FavoriteRule;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import io.kyligence.kap.metadata.user.ManagedUser;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
@@ -271,8 +270,6 @@ public class ModelServiceTest extends SourceTestCase {
 
     private final StreamingJobListener eventListener = new StreamingJobListener();
 
-    private FavoriteRuleManager favoriteRuleManager;
-
     protected String getProject() {
         return "default";
     }
@@ -305,7 +302,6 @@ public class ModelServiceTest extends SourceTestCase {
         val result1 = new QueryTimesResponse();
         result1.setModel("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
         result1.setQueryTimes(10);
-        favoriteRuleManager = FavoriteRuleManager.getInstance(getTestConfig(), getProject());
 
         try {
             new JdbcRawRecStore(getTestConfig());
@@ -3591,8 +3587,8 @@ public class ModelServiceTest extends SourceTestCase {
     @Test
     public void testMassageModelFilterConditionWithExcludedTable() {
         overwriteSystemProp("kylin.engine.build-excluded-table", "true");
-        mockExcludeTableRule("DEFAULT.TEST_ORDER");
         String project = "default";
+        MetadataTestUtils.mockExcludedTable(project, "DEFAULT.TEST_ORDER");
         NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         NDataModel model = modelManager
                 .copyForWrite(modelManager.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa"));
@@ -3607,8 +3603,8 @@ public class ModelServiceTest extends SourceTestCase {
 
     @Test
     public void testMassageModelFilterConditionWithExcludedTableException() {
-        mockExcludeTableRule("DEFAULT.TEST_ORDER");
         String project = "default";
+        MetadataTestUtils.mockExcludedTable(project, "DEFAULT.TEST_ORDER");
         NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         NDataModel model = modelManager
                 .copyForWrite(modelManager.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa"));
@@ -3621,15 +3617,6 @@ public class ModelServiceTest extends SourceTestCase {
                     + "as the join relationships of this table won’t be precomputed.";
             Assert.assertEquals(msg, e.getMessage());
         }
-    }
-
-    private void mockExcludeTableRule(String excludedTables) {
-        List<FavoriteRule.AbstractCondition> conditions = com.clearspring.analytics.util.Lists.newArrayList();
-        FavoriteRule.Condition condition = new FavoriteRule.Condition();
-        condition.setLeftThreshold(null);
-        condition.setRightThreshold(excludedTables);
-        conditions.add(condition);
-        favoriteRuleManager.updateRule(conditions, true, FavoriteRule.EXCLUDED_TABLES_RULE);
     }
 
     @Test

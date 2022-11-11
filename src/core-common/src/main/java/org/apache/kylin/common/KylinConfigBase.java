@@ -738,10 +738,23 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.metadata.semi-automatic-mode", FALSE));
     }
 
+    public boolean isTableExclusionEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.metadata.table-exclusion-enabled", FALSE));
+    }
+
+    /**
+     * When table exclusion is enabled, this setting ensures the accuracy of query result.
+     */
+    public boolean isSnapshotPreferred() {
+        return Boolean.parseBoolean(getOptional("kylin.query.snapshot-preferred-for-table-exclusion", TRUE));
+    }
+
+    public boolean onlyReuseUserDefinedCC() {
+        return Boolean.parseBoolean(getOptional("kylin.metadata.only-reuse-user-defined-computed-column", FALSE));
+    }
+
     /**
      * expose computed column in the table metadata and select * queries
-     *
-     * @return
      */
     public boolean exposeComputedColumn() {
         return Boolean.parseBoolean(getOptional("kylin.query.metadata.expose-computed-column", FALSE));
