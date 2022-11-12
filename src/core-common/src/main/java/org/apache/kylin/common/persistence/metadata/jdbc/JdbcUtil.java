@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Properties;
 
+import io.kyligence.kap.guava20.shaded.common.annotations.VisibleForTesting;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.hadoop.util.StringUtils;
@@ -36,7 +37,6 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.metadata.PersistException;
 import org.apache.kylin.common.util.EncryptUtil;
-import org.msgpack.core.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;

@@ -353,17 +353,18 @@ public class JobManagerTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testQuotaLimitReached() {
-        thrown.expect(KylinException.class);
         NDefaultScheduler defaultScheduler = NDefaultScheduler.getInstance(PROJECT);
-        defaultScheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
+        defaultScheduler.init(new JobEngineConfig(getTestConfig()));
         defaultScheduler.getContext().setReachQuotaLimit(true);
-        JobParam param = new JobParam(Sets.newHashSet(), null, null, "ADMIn", Sets.newHashSet(), null);
-        try {
-            jobManager.addJob(param);
-        } finally {
-            defaultScheduler.forceShutdown();
-            defaultScheduler.getContext().setReachQuotaLimit(false);
-        }
+        Assert.assertThrows(KylinException.class, () -> {
+            try {
+                JobManager.checkStorageQuota(PROJECT);
+            } finally {
+                defaultScheduler.forceShutdown();
+                defaultScheduler.getContext().setReachQuotaLimit(false);
+            }
+        });
+
     }
 
     @Test

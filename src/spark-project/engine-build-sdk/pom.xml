@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>kylin-engine-build-sdk</artifactId>
-
+    <name>Kylin - Build Engine Sdk</name>
 
     <dependencies>
         <dependency>

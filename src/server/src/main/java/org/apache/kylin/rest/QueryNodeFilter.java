@@ -53,7 +53,6 @@ import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupManager;
 import org.apache.kylin.rest.cluster.ClusterManager;
@@ -236,7 +235,7 @@ public class QueryNodeFilter implements Filter {
                 responseStatus = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
                 Message msg = MsgPicker.getMsg();
                 KylinException exception = getKylinException(project, msg);
-                ErrorResponse errorResponse = new ErrorResponse(Unsafe.getUrlFromHttpServletRequest(servletRequest),
+                ErrorResponse errorResponse = new ErrorResponse(servletRequest.getRequestURL().toString(),
                         exception);
                 responseBody = JsonUtil.writeValueAsBytes(errorResponse);
                 responseHeaders = new HttpHeaders();
@@ -358,7 +357,7 @@ public class QueryNodeFilter implements Filter {
 
     public void writeConnectionErrorResponse(HttpServletRequest servletRequest, HttpServletResponse servletResponse)
             throws IOException {
-        ErrorResponse errorResponse = new ErrorResponse(Unsafe.getUrlFromHttpServletRequest(servletRequest),
+        ErrorResponse errorResponse = new ErrorResponse(servletRequest.getRequestURL().toString(),
                 new KylinException(FAILED_CONNECT_CATALOG, MsgPicker.getMsg().getConnectDatabaseError(), false));
         byte[] responseBody = JsonUtil.writeValueAsBytes(errorResponse);
         HttpHeaders responseHeaders = new HttpHeaders();
