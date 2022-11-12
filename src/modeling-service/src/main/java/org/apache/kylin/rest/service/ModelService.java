@@ -2578,7 +2578,8 @@ public class ModelService extends AbstractModelService implements TableModelSupp
 
         for (NDataSegment existedSegment : segments) {
             if (buildSegmentOverlapEnable && NDataModel.ModelType.BATCH == model.getModelType()
-                    && !model.isMultiPartitionModel() && isBuildAllIndexes && isBuildAllIndexesFinally) {
+                    && !model.isMultiPartitionModel() && isBuildAllIndexes && isBuildAllIndexesFinally
+                    && !SecondStorageUtil.isModelEnable(project, model.getId())) {
                 isOverlap = existedSegment.getSegRange().overlaps(segmentRangeToBuild)
                         && !segmentRangeToBuild.contains(existedSegment.getSegRange());
             } else {
