@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.kylin.common.KylinConfig;
 
 import java.io.Closeable;
 import java.sql.Connection;
@@ -110,10 +111,24 @@ public class ClickHouse implements Closeable {
         if (!param.isEmpty()) {
             base.append('?');
             List<String> paramList = new ArrayList<>();
-            param.forEach((name, value) -> paramList.add(name + "=" + value));
+            param.forEach((name, value) -> {
+                if (ClickHouse.SOCKET_TIMEOUT.equals(name)) {
+                    value = getNoEmptyValue(KylinConfig.getInstanceFromEnv().getSecondStorageJDBCSocketTimeout(), value);
+                }
+                if (ClickHouse.KEEP_ALIVE_TIMEOUT.equals(name)) {
+                    value = getNoEmptyValue(KylinConfig.getInstanceFromEnv().getSecondStorageJDBCKeepAliveTimeout(), value);
+                }
+                paramList.add(name + "=" + value);
+            });
             base.append(String.join("&", paramList));
+            String extConfig = KylinConfig.getInstanceFromEnv().getSecondStorageJDBCExtConfig();
+            base.append("&").append(extConfig);
         }
         return base.toString();
+    }
+
+    private static String getNoEmptyValue(String value1, String value2) {
+        return StringUtils.isEmpty(value1) ? value2 : value1;
     }
 
     private void logSql(String sql) {
