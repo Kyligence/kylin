@@ -68,6 +68,15 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
     @Mock
     private AclEvaluate aclEvaluate = Mockito.spy(AclEvaluate.class);
 
+    @Mock
+    private UserService userService = Mockito.spy(UserService.class);
+
+    @Mock
+    private UserAclService userAclService = Mockito.spy(UserAclService.class);
+
+    @InjectMocks
+    private AccessService accessService = Mockito.spy(new AccessService());
+
     @InjectMocks
     private StreamingTableService streamingTableService = Mockito.spy(new StreamingTableService());
 
@@ -99,11 +108,18 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
         ReflectionTestUtils.setField(streamingTableService, "aclEvaluate", aclEvaluate);
         ReflectionTestUtils.setField(tableService, "aclEvaluate", aclEvaluate);
         ReflectionTestUtils.setField(tableService, "userGroupService", userGroupService);
+        ReflectionTestUtils.setField(tableService, "accessService", accessService);
+        ReflectionTestUtils.setField(userAclService, "userService", userService);
+        ReflectionTestUtils.setField(accessService, "userAclService", userAclService);
+        ReflectionTestUtils.setField(accessService, "userService", userService);
 
         val prjManager = NProjectManager.getInstance(getTestConfig());
         val prj = prjManager.getProject(PROJECT);
         val copy = prjManager.copyForWrite(prj);
         prjManager.updateProject(copy);
+        Mockito.when(userService.listSuperAdminUsers()).thenReturn(Arrays.asList("admin"));
+        Mockito.when(userAclService.hasUserAclPermissionInProject(Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(false);
 
         try {
             new JdbcRawRecStore(getTestConfig());
@@ -141,7 +157,6 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
     public void testReloadTable() {
         val database = "DEFAULT";
 
-        val config = getTestConfig();
         try {
             val tableDescList = tableService.getTableDesc(PROJECT, true, "", database, true);
             Assert.assertEquals(2, tableDescList.size());
