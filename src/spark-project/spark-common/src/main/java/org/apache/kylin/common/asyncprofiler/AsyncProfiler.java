@@ -27,16 +27,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Objects;
 
+import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_ARM64;
+import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_X64;
+import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_MAC;
+
 public class AsyncProfiler {
 
     private static final Logger logger = LoggerFactory.getLogger(AsyncProfiler.class);
 
-    // async profiler native files
-    public static final String ASYNC_PROFILER_LIB_MAC = "libasyncProfiler-mac.so";
-    public static final String ASYNC_PROFILER_LIB_LINUX_X64 = "libasyncProfiler-linux-x64.so";
-    public static final String ASYNC_PROFILER_LIB_LINUX_ARM64 = "libasyncProfiler-linux-arm64.so";
     private static final String LIB_PARENT = "/async-profiler-lib/";
-
     private static AsyncProfiler profiler;
     private boolean loaded = false;
 
@@ -47,7 +46,7 @@ public class AsyncProfiler {
         return profiler;
     }
 
-    private AsyncProfiler() {
+    private AsyncProfiler(boolean loadLocalLib) {
         try {
             boolean isTestingOnLocalMac = System.getProperty("os.name", "").contains("Mac")
                     || System.getProperty("os.name", "").contains("OS X");

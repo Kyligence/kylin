@@ -18,10 +18,10 @@
 
 package org.apache.kylin.common.asyncprofiler;
 
+import java.io.IOException;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.IOException;
 
 public class AsyncProfilerTest {
 
@@ -66,5 +66,4 @@ public class AsyncProfilerTest {
         Assert.assertThrows("Profiler is not active", IllegalStateException.class,
                 AsyncProfiler.getInstance(true)::stop);
     }
-
 }
