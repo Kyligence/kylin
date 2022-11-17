@@ -580,4 +580,11 @@ public class QueryUtilTest extends NLocalFileMetadataTestCase {
                 "select TRANS_ID as test_limit, ORDER_ID as test_offset from TEST_KYLIN_FACT group by TRANS_ID, ORDER_ID",
                 targetSQL);
     }
+
+    @Test
+    public void testReplaceDoubleQuoteToSingle() {
+        String sql = "select ab from table where aa = '' and bb = '''as''n'''";
+        String resSql = "select ab from table where aa = '' and bb = '\\'as\\'n\\''";
+        Assert.assertEquals(resSql, QueryUtil.replaceDoubleQuoteToSingle(sql));
+    }
 }
