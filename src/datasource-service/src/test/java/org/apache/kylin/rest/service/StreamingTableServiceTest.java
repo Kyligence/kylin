@@ -17,6 +17,8 @@
  */
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.streaming.constants.StreamingConstants.DEFAULT_PARSER_NAME;
+
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -66,9 +68,6 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
     @Mock
     private AclEvaluate aclEvaluate = Mockito.spy(AclEvaluate.class);
 
-    //    @Mock
-    //    private AclTCRService aclTCRService = Mockito.spy(AclTCRService.class);
-
     @InjectMocks
     private StreamingTableService streamingTableService = Mockito.spy(new StreamingTableService());
 
@@ -98,11 +97,7 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
 
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", aclUtil);
         ReflectionTestUtils.setField(streamingTableService, "aclEvaluate", aclEvaluate);
-        //ReflectionTestUtils.setField(streamingTableService, "aclTCRService", aclTCRService);
-        //ReflectionTestUtils.setField(streamingTableService, "userGroupService", userGroupService);
-        //ReflectionTestUtils.setField(streamingTableService,"tableSupporters", Arrays.asList(tableService));
         ReflectionTestUtils.setField(tableService, "aclEvaluate", aclEvaluate);
-        //ReflectionTestUtils.setField(tableService, "aclTCRService", aclTCRService);
         ReflectionTestUtils.setField(tableService, "userGroupService", userGroupService);
 
         val prjManager = NProjectManager.getInstance(getTestConfig());
@@ -166,6 +161,7 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
         kafkaConfig.setKafkaBootstrapServers("10.1.2.210:9092");
         kafkaConfig.setSubscribe("tpch_topic");
         kafkaConfig.setStartingOffsets("latest");
+        kafkaConfig.setParserName(DEFAULT_PARSER_NAME);
         streamingTableService.createKafkaConfig(PROJECT, kafkaConfig);
 
         val kafkaConf = KafkaConfigManager.getInstance(getTestConfig(), PROJECT).getKafkaConfig("DEFAULT.TPCH_TOPIC");
