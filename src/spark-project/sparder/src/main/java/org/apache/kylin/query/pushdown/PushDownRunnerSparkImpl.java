@@ -39,6 +39,11 @@ public class PushDownRunnerSparkImpl implements IPushDownRunner {
     }
 
     @Override
+    public void init(KylinConfig config, String project) {
+        init(config);
+    }
+
+    @Override
     public void executeQuery(String query, List<List<String>> results, List<SelectedColumnMeta> columnMetas,
             String project) {
         PushdownResult response = executeQueryToIterator(query, project);
