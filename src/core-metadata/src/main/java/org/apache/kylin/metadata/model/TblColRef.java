@@ -281,7 +281,7 @@ public class TblColRef implements Serializable {
     }
 
     public String getCanonicalName() {
-        return getTable() + "." + getName();
+        return column.getCanonicalName();
     }
 
     public String getDatatype() {
