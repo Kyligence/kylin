@@ -54,7 +54,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <finalName>${artifactId}-4.6.2.0</finalName>
+                            <finalName>${artifactId}</finalName>
                             <artifactSet>
                                 <excludes>
                                     <exclude>io.netty:*</exclude>
@@ -96,7 +96,6 @@
                                     <exclude>com.sun.mail:javax.mail:*</exclude>
                                     <exclude>javax.activation:activation:*</exclude>
                                     <exclude>org.apache.parquet:*</exclude>
-                                    <exclude>org.slf4j:*</exclude>
                                 </excludes>
                             </artifactSet>
 
