@@ -32,6 +32,7 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.cli.Option;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
@@ -59,6 +60,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import lombok.val;
 
 @RunWith(MockitoJUnitRunner.class)
+@NotThreadSafe
 public class RecCandidateToolTest extends NLocalFileMetadataTestCase {
 
     private static final Option OPERATE_BACKUP = OptionBuilder.getInstance()
@@ -285,16 +287,15 @@ public class RecCandidateToolTest extends NLocalFileMetadataTestCase {
         RecCandidateTool recCandidateTool = new RecCandidateTool();
 
         // test throwing 1st PARAMETER_EMPTY "model"
-        String modelId = null;
         try {
-            ReflectionTestUtils.invokeMethod(recCandidateTool, "getProjectByModelId", modelId);
+            recCandidateTool.getProjectByModelId(null);
         } catch (Exception e) {
             assertTrue(e instanceof KylinException);
             assertEquals("KE-050040201: \"model\" is empty.", e.toString());
         }
 
         // test throwing 2nd PARAMETER_EMPTY "model"
-        modelId = "TEST_MODEL_ID";
+        String modelId = "TEST_MODEL_ID";
         try (MockedStatic<NProjectManager> nProjectManagerMockedStatic = mockStatic(NProjectManager.class)) {
             NProjectManager nProjectManager = mock(NProjectManager.class);
             nProjectManagerMockedStatic.when(() -> NProjectManager.getInstance(any())).thenReturn(nProjectManager);
