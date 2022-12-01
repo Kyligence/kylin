@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -56,11 +57,11 @@ public class ColExcludedChecker {
         NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(config, project);
         List<TableDesc> allTables = tableMgr.listAllTables();
         Map<String, TableRef> identityToRefMap = Maps.newHashMap();
-        if (model != null) {
-            model.getJoinTables().forEach(joinTable -> {
-                TableRef tableRef = joinTable.getTableRef();
+        if (model != null && !model.isBroken()) {
+            for (JoinTableDesc joinTableDesc : model.getJoinTables()) {
+                TableRef tableRef = joinTableDesc.getTableRef();
                 identityToRefMap.put(tableRef.getTableIdentity(), tableRef);
-            });
+            }
         }
         Set<TableDesc> desiredTables = allTables.stream()
                 .filter(table -> model == null || identityToRefMap.containsKey(table.getIdentity()))
@@ -68,36 +69,42 @@ public class ColExcludedChecker {
         for (TableDesc table : desiredTables) {
             TableExtDesc tableExt = tableMgr.getTableExtIfExists(table);
             String factTable = model == null ? "" : model.getRootFactTableName();
-            if (table.getIdentity().equalsIgnoreCase(factTable) || tableExt == null) {
+            if (StringUtils.equalsIgnoreCase(table.getIdentity(), factTable) || tableExt == null) {
                 continue;
             }
 
             Set<String> excludedSet = tableExt.getExcludedColumns();
-            List<ColumnDesc> list = Arrays.stream(table.getColumns())
+            List<ColumnDesc> list = Arrays.stream(table.getColumns()).filter(Objects::nonNull)
                     .filter(col -> tableExt.isExcluded() || excludedSet.contains(col.getName()))
                     .collect(Collectors.toList());
             excludedCols.addAll(list);
         }
 
         // add excluded column from cc
-        if (model != null && !model.isBroken()) {
-            model.init(config, project, Lists.newArrayList());
-            model.getAllTables().stream().flatMap(tableRef -> tableRef.getColumns().stream())
-                    .filter(tblColRef -> excludedCols.contains(tblColRef.getColumnDesc()))
-                    .map(TblColRef::getBackTickIdentity).forEach(excludedColNames::add);
-            model.getEffectiveCols().forEach((id, colRef) -> colIdentityMap.put(colRef.getIdentity(), colRef));
-            model.getComputedColumnDescs().forEach(cc -> {
-                TblColRef tblColRef = colIdentityMap.get(cc.getFullName());
-                if (tblColRef == null) {
-                    return;
-                }
-                ColumnDesc columnDesc = tblColRef.getColumnDesc();
-                if (isExcludedCC(cc.getInnerExpression())) {
-                    excludedCols.add(columnDesc);
-                    excludedColNames.add(columnDesc.getBackTickIdentity());
-                }
-            });
+        collectExcludedComputedColumns(config, project, model);
+    }
+
+    private void collectExcludedComputedColumns(KylinConfig config, String project, NDataModel model) {
+        if (model == null || model.isBroken()) {
+            return;
         }
+        model.init(config, project, Lists.newArrayList());
+        model.getAllTables().stream().filter(Objects::nonNull) //
+                .flatMap(tableRef -> tableRef.getColumns().stream())
+                .filter(tblColRef -> excludedCols.contains(tblColRef.getColumnDesc()))
+                .map(TblColRef::getBackTickIdentity).forEach(excludedColNames::add);
+        model.getEffectiveCols().forEach((id, colRef) -> colIdentityMap.put(colRef.getIdentity(), colRef));
+        model.getComputedColumnDescs().forEach(cc -> {
+            TblColRef tblColRef = colIdentityMap.get(cc.getFullName());
+            if (tblColRef == null) {
+                return;
+            }
+            ColumnDesc columnDesc = tblColRef.getColumnDesc();
+            if (isExcludedCC(cc.getInnerExpression())) {
+                excludedCols.add(columnDesc);
+                excludedColNames.add(columnDesc.getBackTickIdentity());
+            }
+        });
     }
 
     /**

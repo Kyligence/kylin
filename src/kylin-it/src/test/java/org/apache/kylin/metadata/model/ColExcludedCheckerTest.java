@@ -162,6 +162,44 @@ class ColExcludedCheckerTest {
         MetadataTestUtils.mockExcludedCols(getProject(), lookupTable, Sets.newHashSet("ACCOUNT_ID", "ACCOUNT_COUNTRY"));
 
         ColExcludedChecker checker = new ColExcludedChecker(kylinConfig, getProject(), model);
-        Assertions.assertEquals(2, checker.getExcludedCols().size());
+        Assertions.assertTrue(checker.getExcludedCols().isEmpty());
+    }
+
+    @Test
+    void testNewColExcludedCheckerWithModelMissingExcludedTable() {
+        KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+        NDataModel model = prepareModel(kylinConfig);
+        model.setBroken(true);
+        model.setBrokenReason(NDataModel.BrokenReason.NULL);
+
+        String factTable = "DEFAULT.TEST_KYLIN_FACT";
+        String lookupTable = "DEFAULT.TEST_ACCOUNT";
+        MetadataTestUtils.mockExcludedTable(getProject(), factTable);
+        MetadataTestUtils.mockExcludedCols(getProject(), lookupTable, Sets.newHashSet("ACCOUNT_ID", "ACCOUNT_COUNTRY"));
+
+        NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(kylinConfig, getProject());
+        tableMgr.removeSourceTable("DEFAULT.TEST_ACCOUNT");
+
+        ColExcludedChecker checker = new ColExcludedChecker(kylinConfig, getProject(), model);
+        Assertions.assertTrue(checker.getExcludedCols().isEmpty());
+    }
+
+    @Test
+    void testNewColExcludedCheckerWithModelMissingNonExcludedTable() {
+        KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+        NDataModel model = prepareModel(kylinConfig);
+        model.setBroken(true);
+        model.setBrokenReason(NDataModel.BrokenReason.NULL);
+
+        String factTable = "DEFAULT.TEST_KYLIN_FACT";
+        String lookupTable = "DEFAULT.TEST_ACCOUNT";
+        MetadataTestUtils.mockExcludedTable(getProject(), factTable);
+        MetadataTestUtils.mockExcludedCols(getProject(), lookupTable, Sets.newHashSet("ACCOUNT_ID", "ACCOUNT_COUNTRY"));
+
+        NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(kylinConfig, getProject());
+        tableMgr.removeSourceTable("DEFAULT.TEST_ORDER");
+
+        ColExcludedChecker checker = new ColExcludedChecker(kylinConfig, getProject(), model);
+        Assertions.assertTrue(checker.getExcludedCols().isEmpty());
     }
 }
