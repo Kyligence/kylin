@@ -148,4 +148,20 @@ class ColExcludedCheckerTest {
         // if model is null, return all project excluded columns
         Assertions.assertEquals(14, checker.filterRelatedExcludedColumn(null).size());
     }
+
+    @Test
+    void testNewColExcludedCheckerWithBrokenModel() {
+        KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+        NDataModel model = prepareModel(kylinConfig);
+        model.setBroken(true);
+        model.setBrokenReason(NDataModel.BrokenReason.NULL);
+
+        String factTable = "DEFAULT.TEST_KYLIN_FACT";
+        String lookupTable = "DEFAULT.TEST_ACCOUNT";
+        MetadataTestUtils.mockExcludedTable(getProject(), factTable);
+        MetadataTestUtils.mockExcludedCols(getProject(), lookupTable, Sets.newHashSet("ACCOUNT_ID", "ACCOUNT_COUNTRY"));
+
+        ColExcludedChecker checker = new ColExcludedChecker(kylinConfig, getProject(), model);
+        Assertions.assertEquals(2, checker.getExcludedCols().size());
+    }
 }

@@ -80,7 +80,7 @@ public class ColExcludedChecker {
         }
 
         // add excluded column from cc
-        if (model != null) {
+        if (model != null && !model.isBroken()) {
             model.init(config, project, Lists.newArrayList());
             model.getAllTables().stream().flatMap(tableRef -> tableRef.getColumns().stream())
                     .filter(tblColRef -> excludedCols.contains(tblColRef.getColumnDesc()))
