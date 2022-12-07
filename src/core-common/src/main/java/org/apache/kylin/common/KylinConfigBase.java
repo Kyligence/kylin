@@ -1200,10 +1200,6 @@ public abstract class KylinConfigBase implements Serializable {
 
     }
 
-    public boolean isCheckQuotaStorageEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.job.check-quota-storage-enabled", TRUE));
-    }
-
     public boolean isDeleteJobTmpWhenRetry() {
         return Boolean.parseBoolean(getOptional("kylin.job.delete-job-tmp-when-retry", FALSE));
     }
@@ -3738,6 +3734,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Integer.parseInt(getOptional("kylin.query.project-merge-bloat-threshold", "0"));
     }
 
+    public boolean isStorageQuotaEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.storage.check-quota-enabled", FALSE));
+    }
+    
     public boolean skipShardPruningForInExpr() {
         return Boolean.parseBoolean(getOptional("kylin.query.skip-shard-pruning-for-in", FALSE));
     }

@@ -50,19 +50,22 @@ public class HdfsCapacityMetricsTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testRegisterHdfsMetricsFailed() {
+        overwriteSystemProp("kylin.storage.check-quota-enabled", "true");
         HdfsCapacityMetrics.registerHdfsMetrics();
         // scheduledExecutor may like this
         // java.util.concurrent.ScheduledThreadPoolExecutor@5bf61e67[Running, pool size = 1, active threads = 1, queued tasks = 1, completed tasks = 0]
         String scheduledExecutor = HdfsCapacityMetrics.HDFS_METRICS_SCHEDULED_EXECUTOR.toString();
         String poolSizeStr = "pool size = ";
         int activePoolSizeIdx = scheduledExecutor.indexOf(poolSizeStr);
-        String poolSize = scheduledExecutor.substring(activePoolSizeIdx + poolSizeStr.length(), activePoolSizeIdx + poolSizeStr.length() + 1);
+        String poolSize = scheduledExecutor.substring(activePoolSizeIdx + poolSizeStr.length(),
+                activePoolSizeIdx + poolSizeStr.length() + 1);
         Assert.assertEquals(1, Integer.parseInt(poolSize));
     }
 
     @Test
     @Ignore("KE-40537")
     public void testRegisterHdfsMetrics() {
+        overwriteSystemProp("kylin.storage.check-quota-enabled", "true");
         overwriteSystemProp("kylin.metrics.hdfs-periodic-calculation-enabled", "true");
         HdfsCapacityMetrics.registerHdfsMetrics();
         // scheduledExecutor may like this
@@ -70,8 +73,21 @@ public class HdfsCapacityMetricsTest extends NLocalFileMetadataTestCase {
         String scheduledExecutor = HdfsCapacityMetrics.HDFS_METRICS_SCHEDULED_EXECUTOR.toString();
         String activeThreadStr = "active threads = ";
         int activeThreadIdx = scheduledExecutor.indexOf(activeThreadStr);
-        String thread = scheduledExecutor.substring(activeThreadIdx + activeThreadStr.length(), activeThreadIdx + activeThreadStr.length() + 1);
+        String thread = scheduledExecutor.substring(activeThreadIdx + activeThreadStr.length(),
+                activeThreadIdx + activeThreadStr.length() + 1);
         Assert.assertEquals(1, Integer.parseInt(thread));
+    }
+
+    @Test
+    public void testRegisterHdfsMetricsQuotaStorageEnabledFalse() {
+        overwriteSystemProp("kylin.storage.check-quota-enabled", "false");
+        HdfsCapacityMetrics.registerHdfsMetrics();
+        String scheduledExecutor = HdfsCapacityMetrics.HDFS_METRICS_SCHEDULED_EXECUTOR.toString();
+        String activeThreadStr = "active threads = ";
+        int activeThreadIdx = scheduledExecutor.indexOf(activeThreadStr);
+        String thread = scheduledExecutor.substring(activeThreadIdx + activeThreadStr.length(),
+                activeThreadIdx + activeThreadStr.length() + 1);
+        Assert.assertEquals(0, Integer.parseInt(thread));
     }
 
     @Test

@@ -56,6 +56,7 @@ public class HdfsCapacityMetrics {
     protected static final FileSystem WORKING_FS;
     protected static final ScheduledExecutorService HDFS_METRICS_SCHEDULED_EXECUTOR;
     protected static boolean hdfsMetricsPeriodicCalculationEnabled;
+    protected static boolean quotaStorageEnabled;
     // For all places that need to query WorkingDir capacity for retrieval, initialize to avoid NPE
     protected static ConcurrentMap<String, Long> workingDirCapacity = new ConcurrentHashMap<>();
     // Used to clear the existing workingDirCapacity in memory, you cannot use the clear method for workingDirCapacity
@@ -83,8 +84,9 @@ public class HdfsCapacityMetrics {
         // 3. Junk cleanup: theoretically the file will not be very large, do not need to consider cleaning up for the time
         // being, cleaning will affect the recalculation of the directory involved
         hdfsMetricsPeriodicCalculationEnabled = KYLIN_CONFIG.isHdfsMetricsPeriodicCalculationEnabled();
-        if (hdfsMetricsPeriodicCalculationEnabled) {
-            log.info("HDFS metrics periodic calculation is enabled, path: {}", HDFS_CAPACITY_METRICS_PATH);
+        quotaStorageEnabled = KYLIN_CONFIG.isStorageQuotaEnabled();
+        if (quotaStorageEnabled && hdfsMetricsPeriodicCalculationEnabled) {
+            log.info("Quota storage and HDFS metrics periodic calculation are enabled, path: {}", HDFS_CAPACITY_METRICS_PATH);
             HDFS_METRICS_SCHEDULED_EXECUTOR.scheduleAtFixedRate(HdfsCapacityMetrics::handleNodeHdfsMetrics,
                     0, KYLIN_CONFIG.getHdfsMetricsPeriodicCalculationInterval(), TimeUnit.MILLISECONDS);
         }
