@@ -125,20 +125,21 @@ public abstract class IndexMatcher {
             unmatchedCols.removeAll(layout.getStreamingColumns().keySet());
         }
         unmatchedCols.removeAll(layout.getOrderedDimensions().keySet());
-        unmatchedCols.addAll(filterOutExcludedDimension(layout));
+        Set<Integer> excludedColSet = filterExcludedDims(layout);
+        if (!excludedColSet.isEmpty()) {
+            log.debug("Excluded columns of layout need to derive. The id set is: {}", excludedColSet);
+            unmatchedCols.addAll(excludedColSet);
+        }
         return unmatchedCols;
     }
 
-    private Set<Integer> filterOutExcludedDimension(LayoutEntity layout) {
+    Set<Integer> filterExcludedDims(LayoutEntity layout) {
         if (!NProjectManager.getProjectConfig(project).isSnapshotPreferred()) {
             return Sets.newHashSet();
         }
-        Set<Integer> excludedColSet = layout.getOrderedDimensions().entrySet().stream() //
+        return layout.getOrderedDimensions().entrySet().stream() //
                 .filter(entry -> excludedChecker.isExcludedCol(entry.getValue())) //
-                .map(Map.Entry::getKey) //
-                .collect(Collectors.toSet());
-        log.debug("Excluded columns of layout need to derive. The id set is: {}", excludedColSet);
-        return excludedColSet;
+                .map(Map.Entry::getKey).collect(Collectors.toSet());
     }
 
     void goThruDerivedDims(final IndexEntity indexEntity, Map<Integer, DeriveInfo> needDeriveCollector,

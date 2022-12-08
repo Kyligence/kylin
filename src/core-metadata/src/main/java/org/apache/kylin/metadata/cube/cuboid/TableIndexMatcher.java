@@ -71,7 +71,13 @@ public class TableIndexMatcher extends IndexMatcher {
             unmatchedCols.removeAll(dataflow.getAllColumnsIndex());
         }
         goThruDerivedDims(layout.getIndex(), needDerive, unmatchedCols);
-        if (!unmatchedCols.isEmpty()) {
+        boolean isMatch = unmatchedCols.isEmpty();
+        if (!isMatch) {
+            unmatchedCols.removeAll(filterExcludedDims(layout));
+            log.debug("After rolling back to TableIndex to match, the unmatched columns are: {}", unmatchedCols);
+            isMatch = unmatchedCols.isEmpty();
+        }
+        if (!isMatch) {
             if (log.isDebugEnabled()) {
                 log.debug("Table index {} with unmatched columns {}", layout, unmatchedCols);
             }

@@ -107,6 +107,13 @@ public class AggIndexMatcher extends IndexMatcher {
         }
 
         boolean matched = unmatchedCols.isEmpty() && unmatchedMetrics.isEmpty();
+        if (!matched) {
+            unmatchedCols.removeAll(filterExcludedDims(layout));
+            log.debug("After rolling back to AggIndex to match, the unmatched columns are: ({}), "
+                    + "the unmatched measures are: ({})", unmatchedCols, unmatchedMetrics);
+            matched = unmatchedMetrics.isEmpty() && unmatchedCols.isEmpty();
+        }
+
         if (!matched && log.isDebugEnabled()) {
             log.debug("Agg index {} with unmatched columns {}, unmatched metrics {}", //
                     layout, unmatchedCols, unmatchedMetrics);
