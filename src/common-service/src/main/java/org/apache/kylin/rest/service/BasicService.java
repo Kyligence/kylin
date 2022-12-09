@@ -32,6 +32,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.transaction.BroadcastEventReadyNotifier;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.util.AclPermissionUtil;
@@ -136,5 +137,16 @@ public abstract class BasicService {
             return false;
         }
         return true;
+    }
+
+    public Pair<String, String> checkDatabaseAndTable(String table) {
+        if (table == null)
+            table = "";
+        String database = null;
+        if (table.contains(".")) {
+            database = table.split("\\.", 2)[0].trim();
+            table = table.split("\\.", 2)[1].trim();
+        }
+        return Pair.newPair(database, table);
     }
 }
