@@ -19,6 +19,7 @@ package org.apache.kylin.streaming.jobs.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -172,6 +173,9 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
                 "-Djava.security.krb5.conf=./krb5.conf -Djava.security.auth.login.config=./kafka_jaas.conf");
         val mockup = new MockupSparkLauncher();
         ReflectionUtils.setField(launcher, "launcher", mockup);
+        FileUtils.write(new File(kapConfig.getKafkaJaasConfPath()),
+                "KafkaClient{ org.apache.kafka.common.security.scram.ScramLoginModule required;}",
+                StandardCharsets.UTF_8);
         launcher.startYarnJob();
         Assert.assertNotNull(mockup.sparkConf.get("spark.driver.extraJavaOptions"));
         Assert.assertNotNull(mockup.sparkConf.get("spark.executor.extraJavaOptions"));
@@ -191,14 +195,15 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
             val kapConfig = KapConfig.getInstanceFromEnv();
             config.setProperty("kylin.kafka-jaas.enabled", "true");
             FileUtils.write(new File(kapConfig.getKafkaJaasConfPath()),
-                    "KafkaClient{ org.apache.kafka.common.security.scram.ScramLoginModule required}");
+                    "KafkaClient{ org.apache.kafka.common.security.scram.ScramLoginModule required}",
+                    StandardCharsets.UTF_8);
 
             val mockup = new MockupSparkLauncher();
             ReflectionUtils.setField(launcher, "launcher", mockup);
             launcher.startYarnJob();
             Assert.assertNotNull(mockup.sparkConf.get("spark.kerberos.keytab"));
             Assert.assertNotNull(mockup.sparkConf.get("spark.kerberos.principal"));
-            Assert.assertTrue(mockup.files.contains(kapConfig.getKafkaJaasConfPath()));
+            Assert.assertFalse(mockup.files.contains(kapConfig.getKafkaJaasConfPath()));
         } finally {
             FileUtils.deleteQuietly(new File(KapConfig.getInstanceFromEnv().getKafkaJaasConfPath()));
         }
@@ -458,6 +463,30 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
 
         val storageUrl = (StorageURL) ReflectionUtils.getField(launcher, "distMetaStorageUrl");
         Assert.assertEquals(HDFSMetadataStore.HDFS_SCHEME, storageUrl.getScheme());
+    }
+
+    @Test
+    public void testStartYarnBuildJobWithoutExtraOpts() throws Exception {
+        val config = getTestConfig();
+        val modelId = "e78a89dd-847f-4574-8afa-8768b4228b72";
+
+        val launcher = new StreamingJobLauncher();
+        launcher.init(PROJECT, modelId, JobTypeEnum.STREAMING_BUILD);
+        config.setProperty("kylin.kerberos.enabled", "true");
+        config.setProperty("kylin.tool.mount-spark-log-dir", ".");
+        val kapConfig = KapConfig.getInstanceFromEnv();
+
+        config.setProperty("kylin.kerberos.enabled", "true");
+        config.setProperty("kylin.kafka-jaas.enabled", "true");
+        val mockup = new MockupSparkLauncher();
+        ReflectionUtils.setField(launcher, "launcher", mockup);
+        FileUtils.write(new File(kapConfig.getKafkaJaasConfPath()),
+                "KafkaClient{ org.apache.kafka.common.security.scram.ScramLoginModule required;}",
+                StandardCharsets.UTF_8);
+        launcher.startYarnJob();
+        Assert.assertNotNull(mockup.sparkConf.get("spark.driver.extraJavaOptions"));
+        Assert.assertNotNull(mockup.sparkConf.get("spark.executor.extraJavaOptions"));
+        Assert.assertNotNull(mockup.sparkConf.get("spark.yarn.am.extraJavaOptions"));
     }
 
     static class MockupSparkLauncher extends SparkLauncher {
