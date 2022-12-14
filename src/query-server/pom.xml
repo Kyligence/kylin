@@ -22,12 +22,10 @@
 
     <dependencies>
         <!--Add dependencies of KAP extensions-->
-
         <dependency>
             <groupId>org.apache.kylin</groupId>
-            <artifactId>kylin-common-service</artifactId>
+            <artifactId>kylin-common-server</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-query-service</artifactId>
@@ -47,12 +45,6 @@
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-core-common</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kylin-systools</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>io.springfox</groupId>
             <artifactId>springfox-boot-starter</artifactId>
