@@ -36,8 +36,11 @@ import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
+import org.apache.spark.sql.SparderEnv;
+import org.apache.spark.sql.SparkSession;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.Maps;
@@ -49,6 +52,15 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTest {
     private final String STORAGE_FORMAT = "TEXTFILE";
     private final String STORAGE_DFS_DIR = "/test";
     private final String FILED_DELIMITER = "|";
+
+    @BeforeClass
+    public static void beforeClass() {
+        if (SparderEnv.isSparkAvailable()) {
+            SparderEnv.getSparkSession().close();
+        }
+        SparkSession.clearActiveSession();
+        SparkSession.clearDefaultSession();
+    }
 
     @Before
     public void setup() {
@@ -71,9 +83,8 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTest {
         System.setProperty("kylin.source.provider.9",
                 "io.kyligence.kap.engine.spark.source.NSparkDataSource");
         System.setProperty("kylin.build.resource.read-transactional-table-enabled", "true");
-        KylinBuildEnv kylinBuildEnv = KylinBuildEnv.getOrCreate(getTestConfig());
-        NTableMetadataManager tableMgr = NTableMetadataManager
-                .getInstance(getTestConfig(), "tdh");
+        KylinBuildEnv kylinBuildEnv = new KylinBuildEnv(getTestConfig());
+        NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(getTestConfig(), "tdh");
         TableDesc fact = tableMgr.getTableDesc("TDH_TEST.LINEORDER_PARTITION");
         fact.setTransactional(true);
         String result = HiveTransactionTableHelper.doGetQueryHiveTemporaryTableSql(fact, Maps.newHashMap(), "LO_ORDERKEY", kylinBuildEnv);
