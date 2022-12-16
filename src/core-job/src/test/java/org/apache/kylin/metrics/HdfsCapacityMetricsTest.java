@@ -28,6 +28,7 @@ import org.awaitility.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -60,6 +61,7 @@ public class HdfsCapacityMetricsTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    @Ignore("KE-40537")
     public void testRegisterHdfsMetrics() {
         overwriteSystemProp("kylin.metrics.hdfs-periodic-calculation-enabled", "true");
         HdfsCapacityMetrics.registerHdfsMetrics();
