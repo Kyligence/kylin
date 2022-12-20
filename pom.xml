@@ -327,7 +327,6 @@
         <module>src/spark-project/sparder</module>
         <module>src/spark-project/engine-spark</module>
         <module>src/spark-project/source-jdbc</module>
-        <module>src/spark-project/spark-ddl-plugin</module>
         <module>src/spark-project/engine-build-sdk</module>
         <module>src/spark-project/spark-it</module>
         <module>src/streaming</module>
@@ -655,11 +654,6 @@
             <dependency>
                 <groupId>org.apache.kylin</groupId>
                 <artifactId>kylin-soft-affinity-cache</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.kylin</groupId>
-                <artifactId>kylin-spark-ddl</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

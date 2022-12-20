@@ -194,7 +194,7 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
             if (table != null) {
                 dumpList.add(table.getResourcePath());
             }
-
+            dumpList.addAll(getLogicalViewMetaDumpList(config));
             return dumpList;
         }
     }
