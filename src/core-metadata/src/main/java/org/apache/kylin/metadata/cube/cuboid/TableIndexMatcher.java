@@ -49,7 +49,7 @@ public class TableIndexMatcher extends IndexMatcher {
     private int layoutUnmatchedColsSize;
 
     public TableIndexMatcher(SQLDigest sqlDigest, ChooserContext chooserContext, Set<String> excludedTables,
-                             boolean isUseTableIndexAnswerNonRawQuery) {
+            boolean isUseTableIndexAnswerNonRawQuery) {
         super(sqlDigest, chooserContext, excludedTables);
         this.isUseTableIndexAnswerNonRawQuery = isUseTableIndexAnswerNonRawQuery;
         valid = init();

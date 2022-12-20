@@ -162,7 +162,7 @@ public class CandidateSortTest {
     }
 
     private Candidate mockHybridCandidate(String modelId, String modelName, int modelCost, double candidateCost,
-                                          double streamingCandidateCost) {
+            double streamingCandidateCost) {
         val candidate = new Candidate();
         candidate.realization = mockRealization(modelId, modelName, modelCost);
         val cap = new CapabilityResult();
@@ -187,13 +187,13 @@ public class CandidateSortTest {
         return new IRealization() {
             @Override
             public CapabilityResult isCapable(SQLDigest digest, List<NDataSegment> prunedSegments,
-                                              Map<String, Set<Long>> secondStorageSegmentLayoutMap) {
+                    Map<String, Set<Long>> secondStorageSegmentLayoutMap) {
                 return null;
             }
 
             @Override
             public CapabilityResult isCapable(SQLDigest digest, List<NDataSegment> prunedSegments,
-                                              List<NDataSegment> prunedStreamingSegments, Map<String, Set<Long>> secondStorageSegmentLayoutMap) {
+                    List<NDataSegment> prunedStreamingSegments, Map<String, Set<Long>> secondStorageSegmentLayoutMap) {
                 return null;
             }
 

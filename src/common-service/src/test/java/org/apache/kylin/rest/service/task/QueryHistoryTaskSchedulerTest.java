@@ -254,7 +254,7 @@ public class QueryHistoryTaskSchedulerTest extends NLocalFileMetadataTestCase {
         qhAccelerateScheduler.queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
         qhAccelerateScheduler.accelerateRuleUtil = Mockito.mock(AccelerateRuleUtil.class);
         Mockito.when(qhAccelerateScheduler.queryHistoryDAO.queryQueryHistoriesByIdOffset(Mockito.anyLong(),
-                        Mockito.anyInt(), Mockito.anyString())).thenReturn(queryHistoriesWithStringRealization())
+                Mockito.anyInt(), Mockito.anyString())).thenReturn(queryHistoriesWithStringRealization())
                 .thenReturn(null);
 
         // before update dataflow usage, layout usage and last query time

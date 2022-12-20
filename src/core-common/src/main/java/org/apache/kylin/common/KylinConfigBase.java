@@ -617,7 +617,7 @@ public abstract class KylinConfigBase implements Serializable {
         String uuid = RandomUtil.randomUUIDStr().toUpperCase(Locale.ROOT).substring(0, 6);
         String packageName = DIAG_ID_PREFIX
                 + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault(Locale.Category.FORMAT))
-                .format(new Date())
+                        .format(new Date())
                 + "_" + uuid;
         String workDir = KylinConfigBase.getKylinHomeWithoutWarn();
         String diagPath = "diag_dump/" + packageName;
@@ -2040,7 +2040,7 @@ public abstract class KylinConfigBase implements Serializable {
         String value = getOptional("kylin.query.table-detect-transformers");
         return value == null
                 ? new String[] { POWER_BI_CONVERTER, "org.apache.kylin.query.util.DefaultQueryTransformer",
-                "org.apache.kylin.query.util.EscapeTransformer" }
+                        "org.apache.kylin.query.util.EscapeTransformer" }
                 : getOptionalStringArray("kylin.query.table-detect-transformers", new String[0]);
     }
 
@@ -2981,7 +2981,7 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     private double getConfigItemDoubleValue(String configItem, double defaultDoubleValue, double rangeStart,
-                                            double rangeEnd) {
+            double rangeEnd) {
         double resultValue = defaultDoubleValue;
         try {
             resultValue = Integer.parseInt(getOptional(configItem, String.valueOf(defaultDoubleValue)));

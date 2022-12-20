@@ -157,7 +157,7 @@ public class QueryRoutingEngine {
             QueryResultMasks.remove();
         }
     }
-
+    
     public boolean checkIfRetryQuery(Throwable cause) {
         if (TargetSegmentNotFoundException.causedBySegmentNotFound(cause)
                 && QueryContext.current().getMetrics().getRetryTimes() == 0) {

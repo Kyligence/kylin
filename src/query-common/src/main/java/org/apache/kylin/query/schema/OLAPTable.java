@@ -212,7 +212,7 @@ public class OLAPTable extends AbstractQueryableTable implements TranslatableTab
                     : KylinConfig.getInstanceFromEnv();
             String columnName = projectKylinConfig.getSourceNameCaseSensitiveEnabled()
                     ? StringUtils.isNotEmpty(column.getCaseSensitiveName()) ? column.getCaseSensitiveName()
-                    : column.getName()
+                            : column.getName()
                     : column.getName();
             if (column.isComputedColumn()) {
                 fieldNameList.add(columnName);
@@ -317,7 +317,7 @@ public class OLAPTable extends AbstractQueryableTable implements TranslatableTab
         QueryContext.AclInfo aclInfo = QueryContext.current().getAclInfo();
         if (!olapSchema.getConfig().isAclTCREnabled()
                 || Objects.nonNull(aclInfo) && (CollectionUtils.isNotEmpty(aclInfo.getGroups())
-                && aclInfo.getGroups().stream().anyMatch(Constant.ROLE_ADMIN::equals))
+                        && aclInfo.getGroups().stream().anyMatch(Constant.ROLE_ADMIN::equals))
                 || Objects.nonNull(aclInfo) && aclInfo.isHasAdminPermission()) {
             return true;
         }

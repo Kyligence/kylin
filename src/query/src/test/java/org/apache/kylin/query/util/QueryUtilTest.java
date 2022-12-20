@@ -384,7 +384,7 @@ public class QueryUtilTest extends NLocalFileMetadataTestCase {
                 "(select TRANS_ID as test_limit, ORDER_ID as test_offset from TEST_KYLIN_FACT group by TRANS_ID, ORDER_ID)"
                         + "limit 10 offset 3",
                 newSql3);
-
+        
         String sql4 = "select TRANS_ID as test_limit, ORDER_ID as \"limit\" from TEST_KYLIN_FACT group by TRANS_ID, ORDER_ID";
         QueryParams queryParams4 = new QueryParams(config, sql4, "cc_test", 5, 2, "ssb", true);
         String newSql4 = KapQueryUtil.massageSql(queryParams4);

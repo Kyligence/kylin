@@ -489,12 +489,12 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         }
         return resultMap.values().stream()//
                 .flatMap(layoutMap -> //
-                        layoutMap.entrySet().stream().map(p -> ImmutablePair.of(p.getKey(), p.getValue())))
+                layoutMap.entrySet().stream().map(p -> ImmutablePair.of(p.getKey(), p.getValue())))
                 .collect(Collectors.toList());
     }
 
     private void classifyByIndexId(LayoutEntity layout, Map<Long, Map<LayoutEntity, Boolean>> resultMap,
-                                   boolean toBeDeleted) {
+            boolean toBeDeleted) {
         resultMap.compute(layout.getIndexId(), (indexId, layoutMap) -> {
             layoutMap = layoutMap == null ? Maps.newHashMap() : layoutMap;
             layoutMap.put(layout, toBeDeleted);
@@ -571,7 +571,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     public void setRuleBasedIndex(RuleBasedIndex ruleBasedIndex, Set<LayoutEntity> reloadLayouts, boolean reuseStartId,
-                                  boolean markToBeDeleted, boolean restoreDeletedIndex) {
+            boolean markToBeDeleted, boolean restoreDeletedIndex) {
         checkIsNotCachedAndShared();
         ruleBasedIndex.adjustMeasures();
         if (CollectionUtils.isEmpty(ruleBasedIndex.getMeasures())) {
@@ -645,7 +645,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     public void markIndexesToBeDeleted(String indexPlanId, final Set<LayoutEntity> toBeDeletedSet,
-                                       Map<Long, Boolean> secondStorageLayoutStatus) {
+            Map<Long, Boolean> secondStorageLayoutStatus) {
         Preconditions.checkNotNull(indexPlanId);
         Preconditions.checkNotNull(toBeDeletedSet);
         checkIsNotCachedAndShared();
@@ -688,7 +688,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     public void markWhiteIndexToBeDelete(String indexPlanId, final Set<Long> layoutIds,
-                                         Map<Long, Boolean> secondStorageLayoutStatus) {
+            Map<Long, Boolean> secondStorageLayoutStatus) {
         Preconditions.checkNotNull(indexPlanId);
         Preconditions.checkNotNull(layoutIds);
         checkIsNotCachedAndShared();
@@ -864,7 +864,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     }
 
     private void removeLayouts(Collection<IndexEntity> indexes, Set<Long> layoutIds, boolean deleteAuto,
-                               boolean deleteManual) {
+            boolean deleteManual) {
         checkIsNotCachedAndShared();
         val indexIt = indexes.iterator();
         while (indexIt.hasNext()) {
@@ -1180,7 +1180,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
                         if (layoutInIndexPlan.isAuto()) {
                             indexEntity.getLayouts().remove(layoutInIndexPlan);
                             whiteIndexesMap.values().stream().filter(
-                                            indexEntityInIndexPlan -> indexEntityInIndexPlan.getId() == indexEntity.getId())
+                                    indexEntityInIndexPlan -> indexEntityInIndexPlan.getId() == indexEntity.getId())
                                     .findFirst().ifPresent(indexEntityInIndexPlan -> indexEntityInIndexPlan.getLayouts()
                                             .remove(layoutInIndexPlan));
                         }
