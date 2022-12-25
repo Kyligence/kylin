@@ -243,8 +243,6 @@ public class NExecutableManager {
         }
     }
 
-    //for ut
-    @VisibleForTesting
     public void deleteJob(String jobId) {
         checkJobCanBeDeleted(jobId);
         executableDao.deleteJob(jobId);
