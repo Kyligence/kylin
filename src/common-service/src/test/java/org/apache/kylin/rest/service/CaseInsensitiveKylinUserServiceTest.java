@@ -18,15 +18,12 @@
 
 package org.apache.kylin.rest.service;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
 import org.apache.kylin.rest.constant.Constant;
 import org.junit.After;
 import org.junit.Assert;
@@ -44,13 +41,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.google.common.collect.Sets;
 
+import io.kyligence.kap.metadata.user.ManagedUser;
+import io.kyligence.kap.metadata.user.NKylinUserManager;
+
 public class CaseInsensitiveKylinUserServiceTest extends NLocalFileMetadataTestCase {
 
     @Mock
     UserAclService userAclService = Mockito.spy(UserAclService.class);
-
-    @InjectMocks
-    private KylinUserService kylinUserService1;
 
     @InjectMocks
     @Spy
@@ -117,14 +114,14 @@ public class CaseInsensitiveKylinUserServiceTest extends NLocalFileMetadataTestC
     }
 
     @Test
-    public void testListAdminUsers() throws IOException {
+    public void testListAdminUsers() {
         List<String> adminUsers = kylinUserService.listAdminUsers();
         Assert.assertEquals(1, adminUsers.size());
         Assert.assertTrue(adminUsers.contains("ADMIN"));
     }
 
     @Test
-    public void testIsGlobalAdmin() throws IOException {
+    public void testIsGlobalAdmin() {
         Assert.assertTrue(kylinUserService.isGlobalAdmin("ADMIN"));
         Assert.assertTrue(kylinUserService.isGlobalAdmin("AdMIN"));
 
@@ -132,14 +129,14 @@ public class CaseInsensitiveKylinUserServiceTest extends NLocalFileMetadataTestC
     }
 
     @Test
-    public void testRetainsNormalUser() throws IOException {
+    public void testRetainsNormalUser() {
         Set<String> normalUsers = kylinUserService.retainsNormalUser(Sets.newHashSet("ADMIN", "adMIN", "NOTEXISTS"));
         Assert.assertEquals(1, normalUsers.size());
         Assert.assertTrue(normalUsers.contains("NOTEXISTS"));
     }
 
     @Test
-    public void testContainsGlobalAdmin() throws IOException {
+    public void testContainsGlobalAdmin() {
         Assert.assertTrue(kylinUserService.containsGlobalAdmin(Sets.newHashSet("ADMIN")));
         Assert.assertTrue(kylinUserService.containsGlobalAdmin(Sets.newHashSet("adMIN")));
         Assert.assertFalse(kylinUserService.containsGlobalAdmin(Sets.newHashSet("adMI N")));
