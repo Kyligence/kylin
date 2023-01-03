@@ -45,6 +45,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.Singletons;
+import org.apache.kylin.common.constant.LogConstant;
+import org.apache.kylin.common.logging.SetLogCategory;
 import org.apache.kylin.common.persistence.metadata.Epoch;
 import org.apache.kylin.common.persistence.metadata.EpochStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
@@ -74,7 +76,7 @@ import lombok.Synchronized;
 import lombok.val;
 
 public class EpochManager {
-    private static final Logger logger = LoggerFactory.getLogger(EpochManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(LogConstant.METADATA_CATEGORY);
 
     public static EpochManager getInstance() {
         return Singletons.getInstance(EpochManager.class, clz -> {
@@ -176,13 +178,17 @@ public class EpochManager {
             if (CollectionUtils.isNotEmpty(outdatedProjects)) {
                 outdatedProjects.forEach(EpochManager.this::deleteEpoch);
                 notifierEscapedProject(outdatedProjects);
-                logger.warn("remove outdated epoch list :{}", String.join(",", outdatedProjects));
+                try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                    logger.warn("remove outdated epoch list :{}", String.join(",", outdatedProjects));
+                }
             }
         }
 
         @Synchronized("renewLock")
         public void tryRenewOwnedEpochs() {
-            logger.debug("Start renew owned epoch.........");
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                logger.debug("Start renew owned epoch.........");
+            }
             long startTime = System.currentTimeMillis();
 
             //1.check and get project
@@ -199,7 +205,9 @@ public class EpochManager {
             }
 
             if (CollectionUtils.isEmpty(oriOwnedEpochSet)) {
-                logger.info("current node own none project, end renew...");
+                try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                    logger.info("current node own none project, end renew...");
+                }
                 return;
             }
 
@@ -210,8 +218,10 @@ public class EpochManager {
             notifierAfterUpdatedEpoch("renew", lastRenewEpochSet, afterRenewEpochSets);
             lastRenewEpochSet.clear();
             lastRenewEpochSet.addAll(afterRenewEpochSets);
-            logger.debug("End renew owned epoch,cost:{}.........",
-                    TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startTime));
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                logger.debug("End renew owned epoch,cost:{}.........",
+                        TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startTime));
+            }
         }
 
         private Set<String> innerRenewEpochWithRetry(Set<Epoch> oriEpochs) {
@@ -253,7 +263,7 @@ public class EpochManager {
             totalTask.forEach(taskEpochList -> {
                 val epochTargetList = taskEpochList.stream().map(Epoch::getEpochTarget).collect(Collectors.toList());
                 renewExecutor.submit(() -> {
-                    try {
+                    try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
                         if (CollectionUtils.isNotEmpty(epochTargetList)) {
                             batchRenewEpoch(taskEpochList);
                             newRenewEpochSets.addAll(epochTargetList);
@@ -266,7 +276,7 @@ public class EpochManager {
                 });
             });
 
-            try {
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
                 if (!countDownLatch.await(epochRenewTimeout, TimeUnit.SECONDS)) {
                     logger.error("renew not finished,{}/{}...", newRenewEpochSets.size(), oriEpochs.size());
                 }
@@ -278,7 +288,9 @@ public class EpochManager {
 
         @Synchronized("updateLock")
         public void tryUpdateAllEpochs() {
-            logger.debug("Start update Epochs.........");
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                logger.debug("Start update Epochs.........");
+            }
             long startTime = System.currentTimeMillis();
 
             //1.check and get project
@@ -296,7 +308,9 @@ public class EpochManager {
             }
 
             if (CollectionUtils.isEmpty(projects)) {
-                logger.debug("don't have more new project, end update...");
+                try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                    logger.debug("don't have more new project, end update...");
+                }
                 return;
             }
 
@@ -305,8 +319,10 @@ public class EpochManager {
 
             notifierAfterUpdatedEpoch("update", Collections.emptySet(), updatedMewEpochs);
 
-            logger.debug("End update Epochs,cost:{}:.........",
-                    TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startTime));
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                logger.debug("End update Epochs,cost:{}:.........",
+                        TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startTime));
+            }
         }
 
         private Set<String> tryUpdateEpochByProjects(final List<String> projects) {
@@ -347,18 +363,24 @@ public class EpochManager {
                 eventBusFactory.postAsync(new ProjectEscapedNotifier(project));
             }
 
-            logger.warn("notifier escaped project:{}", String.join(",", escapedProjects));
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                logger.warn("notifier escaped project:{}", String.join(",", escapedProjects));
+            }
         }
 
         private void notifierAfterUpdatedEpoch(String updateTypeName, Set<String> oriEpochs, Set<String> newEpochs) {
-            logger.debug("after {} new epoch size:{}, Project {} owned by {}", updateTypeName, newEpochs.size(),
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                logger.debug("after {} new epoch size:{}, Project {} owned by {}", updateTypeName, newEpochs.size(),
                     String.join(",", newEpochs), identity);
+            }
 
             if (CollectionUtils.isNotEmpty(newEpochs)) {
                 Collection<String> newControlledProjects = new HashSet<>(Sets.difference(newEpochs, oriEpochs));
                 if (CollectionUtils.isNotEmpty(newControlledProjects)) {
-                    logger.debug("after {} controlled projects: {}", updateTypeName,
+                    try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                        logger.debug("after {} controlled projects: {}", updateTypeName,
                             String.join(",", newControlledProjects));
+                    }
                     newControlledProjects.forEach(p -> eventBusFactory.postAsync(new ProjectControlledNotifier(p)));
                 }
             }
@@ -366,7 +388,9 @@ public class EpochManager {
             if (CollectionUtils.isNotEmpty(oriEpochs)) {
                 Collection<String> escapedProjects = new HashSet<>(Sets.difference(oriEpochs, newEpochs));
                 if (CollectionUtils.isNotEmpty(escapedProjects)) {
-                    logger.debug("after {} escaped projects: {}", updateTypeName, String.join(",", escapedProjects));
+                    try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                        logger.debug("after {} escaped projects: {}", updateTypeName, String.join(",", escapedProjects));
+                    }
                     notifierEscapedProject(escapedProjects);
                 }
             }
@@ -533,7 +557,7 @@ public class EpochManager {
             return false;
         }
         return EpochUpdateLockManager.executeEpochWithLock(epochTarget, () -> {
-            try {
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
                 Epoch epoch = epochStore.getEpoch(epochTarget);
                 Pair<Epoch, Epoch> oldNewEpochPair = oldEpoch2NewEpoch(epoch, epochTarget, force, null);
 
@@ -674,23 +698,25 @@ public class EpochManager {
     }
 
     private boolean isEpochLegal(Epoch epoch) {
-        if (epoch == null) {
-            logger.debug("Get null epoch");
-            return false;
-        } else if (StringUtils.isEmpty(epoch.getCurrentEpochOwner())) {
-            logger.debug("Epoch {}'s owner is empty", epoch);
-            return false;
-        } else if (System.currentTimeMillis() - epoch.getLastEpochRenewTime() > epochExpiredTime * 1000) {
-            logger.warn("Epoch {}'s last renew time is expired. Current time is {}, expiredTime is {}", epoch,
-                    System.currentTimeMillis(), epochExpiredTime);
-            return false;
-        }
+        try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+            if (epoch == null) {
+                logger.debug("Get null epoch");
+                return false;
+            } else if (StringUtils.isEmpty(epoch.getCurrentEpochOwner())) {
+                logger.debug("Epoch {}'s owner is empty", epoch);
+                return false;
+            } else if (System.currentTimeMillis() - epoch.getLastEpochRenewTime() > epochExpiredTime * 1000) {
+                logger.warn("Epoch {}'s last renew time is expired. Current time is {}, expiredTime is {}", epoch,
+                        System.currentTimeMillis(), epochExpiredTime);
+                return false;
+            }
 
-        ResourceGroupManager rgManager = ResourceGroupManager.getInstance(config);
-        String epochServer = getHostAndPort(epoch.getCurrentEpochOwner());
-        if (!rgManager.instanceHasPermissionToOwnEpochTarget(epoch.getEpochTarget(), epochServer)) {
-            logger.debug("Epoch {}'s owner is not in build request type resource group.", epoch);
-            return false;
+            ResourceGroupManager rgManager = ResourceGroupManager.getInstance(config);
+            String epochServer = getHostAndPort(epoch.getCurrentEpochOwner());
+            if (!rgManager.instanceHasPermissionToOwnEpochTarget(epoch.getEpochTarget(), epochServer)) {
+                logger.debug("Epoch {}'s owner is not in build request type resource group.", epoch);
+                return false;
+            }
         }
         return true;
     }
@@ -715,7 +741,9 @@ public class EpochManager {
         if (!isGlobalProject(epochTargetTemp)) {
             val targetProjectInstance = NProjectManager.getInstance(config).getProject(epochTargetTemp);
             if (Objects.isNull(targetProjectInstance)) {
-                logger.warn("get epoch failed, because the project:{} dose not exist", epochTargetTemp);
+                try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                    logger.warn("get epoch failed, because the project:{} dose not exist", epochTargetTemp);
+                }
                 return null;
             }
 
@@ -764,7 +792,9 @@ public class EpochManager {
     public void deleteEpoch(String epochTarget) {
         EpochUpdateLockManager.executeEpochWithLock(epochTarget, () -> {
             epochStore.delete(epochTarget);
-            logger.debug("delete epoch:{}", epochTarget);
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                logger.debug("delete epoch:{}", epochTarget);
+            }
             return null;
         });
     }
@@ -792,7 +822,9 @@ public class EpochManager {
 
     private boolean checkInMaintenanceMode() {
         if (isMaintenanceMode()) {
-            logger.debug("System is currently undergoing maintenance. Abort updating Epochs");
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                logger.debug("System is currently undergoing maintenance. Abort updating Epochs");
+            }
             return true;
         }
         return false;
@@ -804,7 +836,9 @@ public class EpochManager {
 
     // when shutdown or meta data is inconsistent
     public void releaseOwnedEpochs() {
-        logger.info("Release owned epochs");
+        try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+            logger.info("Release owned epochs");
+        }
         epochStore.executeWithTransaction(() -> {
             val epochs = epochStore.list().stream().filter(this::checkEpochOwnerOnly).collect(Collectors.toList());
             epochs.forEach(epoch -> {
