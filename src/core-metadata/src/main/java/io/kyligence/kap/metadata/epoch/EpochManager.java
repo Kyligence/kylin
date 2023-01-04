@@ -693,8 +693,15 @@ public class EpochManager {
         if (force) {
             return true;
         }
+        return currentInstanceHasPermissionToOwn(epochTarget, AddressUtil.getLocalInstance());
+    }
+
+    private boolean currentInstanceHasPermissionToOwn(String epochTarget, String epochServer) {
+        if (isMaintenanceMode()) {
+            return true;
+        }
         ResourceGroupManager rgManager = ResourceGroupManager.getInstance(config);
-        return rgManager.instanceHasPermissionToOwnEpochTarget(epochTarget, AddressUtil.getLocalInstance());
+        return rgManager.instanceHasPermissionToOwnEpochTarget(epochTarget, epochServer);
     }
 
     private boolean isEpochLegal(Epoch epoch) {
@@ -711,9 +718,8 @@ public class EpochManager {
                 return false;
             }
 
-            ResourceGroupManager rgManager = ResourceGroupManager.getInstance(config);
             String epochServer = getHostAndPort(epoch.getCurrentEpochOwner());
-            if (!rgManager.instanceHasPermissionToOwnEpochTarget(epoch.getEpochTarget(), epochServer)) {
+            if (!currentInstanceHasPermissionToOwn(epoch.getEpochTarget(), epochServer)) {
                 logger.debug("Epoch {}'s owner is not in build request type resource group.", epoch);
                 return false;
             }
