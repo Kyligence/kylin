@@ -38,7 +38,6 @@ import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.scheduler.EventBusFactory;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import org.apache.kylin.metadata.usergroup.UserGroup;
 import org.apache.kylin.rest.response.UserGroupResponseKI;
 import org.apache.kylin.rest.security.AdminUserSyncEventNotifier;
@@ -57,6 +56,8 @@ import org.springframework.security.ldap.SpringSecurityLdapTemplate;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class LdapUserGroupService extends NUserGroupService {
 
@@ -232,5 +233,18 @@ public class LdapUserGroupService extends NUserGroupService {
     @Override
     public String getUuidByGroupName(String groupName) {
         return groupName;
+    }
+
+    @Override
+    public boolean exists(String name) {
+        return getAllUserGroups().contains(name);
+    }
+
+    @Override
+    public Set<String> listUserGroups(String username) {
+        return getAllUserGroups().stream()
+                .filter(group -> getGroupMembersByName(group).stream()
+                        .anyMatch(user -> StringUtils.equalsIgnoreCase(username, user.getUsername())))
+                .collect(Collectors.toSet());
     }
 }
