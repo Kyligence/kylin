@@ -17,6 +17,9 @@
  */
 package org.apache.kylin.streaming.jobs.impl;
 
+import static org.apache.kylin.common.exception.ServerErrorCode.JOB_START_FAILURE;
+import static org.apache.kylin.streaming.constants.StreamingConstants.DEFAULT_PARSER_NAME;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +36,7 @@ import org.apache.kylin.common.persistence.metadata.HDFSMetadataStore;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.metadata.cube.utils.StreamingUtils;
+import org.apache.kylin.metadata.streaming.DataParserInfo;
 import org.apache.kylin.streaming.constants.StreamingConstants;
 import org.apache.kylin.streaming.manager.StreamingJobManager;
 import org.apache.kylin.streaming.util.ReflectionUtils;
@@ -43,21 +47,28 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import lombok.val;
 
+@RunWith(PowerMockRunner.class)
+@PowerMockIgnore({ "javax.net.ssl.*", "javax.management.*", "org.apache.hadoop.*", "javax.security.*", "javax.crypto.*",
+        "javax.script.*" })
+@PrepareForTest(StreamingJobLauncher.class)
 public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
-    private static String PROJECT = "streaming_test";
+    private static final String PROJECT = "streaming_test";
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
     @Rule
     public TestName testName = new TestName();
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
 
     @Before
     public void setUp() throws Exception {
@@ -222,14 +233,15 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
             launcher.launch();
         } catch (Exception e) {
             Assert.assertTrue(e instanceof KylinException);
-            Assert.assertEquals("KE-010035005", ((KylinException) e).getErrorCode().getCodeString());
+            Assert.assertEquals(JOB_START_FAILURE.toErrorCode().getCodeString(),
+                    ((KylinException) e).getErrorCode().getCodeString());
         }
     }
 
     @Test
     public void testLaunchMergeJobException_Yarn() {
         try {
-            overwriteSystemProp("streaming.local", "fale");
+            overwriteSystemProp("streaming.local", "false");
             val config = getTestConfig();
 
             val modelId = "e78a89dd-847f-4574-8afa-8768b4228b72";
@@ -239,7 +251,8 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
             launcher.launch();
         } catch (Exception e) {
             Assert.assertTrue(e instanceof KylinException);
-            Assert.assertEquals("KE-010035005", ((KylinException) e).getErrorCode().getCodeString());
+            Assert.assertEquals(JOB_START_FAILURE.toErrorCode().getCodeString(),
+                    ((KylinException) e).getErrorCode().getCodeString());
         }
     }
 
@@ -255,12 +268,13 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
             launcher.launch();
         } catch (Exception e) {
             Assert.assertTrue(e instanceof KylinException);
-            Assert.assertEquals("KE-010035005", ((KylinException) e).getErrorCode().getCodeString());
+            Assert.assertEquals(JOB_START_FAILURE.toErrorCode().getCodeString(),
+                    ((KylinException) e).getErrorCode().getCodeString());
         }
     }
 
     @Test
-    public void testLaunchBuildJobException_Yarn() throws Exception {
+    public void testLaunchBuildJobException_Yarn() {
 
         try {
             overwriteSystemProp("streaming.local", "true");
@@ -272,7 +286,8 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
             launcher.launch();
         } catch (Exception e) {
             Assert.assertTrue(e instanceof KylinException);
-            Assert.assertEquals("KE-010035005", ((KylinException) e).getErrorCode().getCodeString());
+            Assert.assertEquals(JOB_START_FAILURE.toErrorCode().getCodeString(),
+                    ((KylinException) e).getErrorCode().getCodeString());
         }
     }
 
@@ -489,14 +504,33 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
         Assert.assertNotNull(mockup.sparkConf.get("spark.yarn.am.extraJavaOptions"));
     }
 
+    @Test
+    public void testAddParserJar() throws Exception {
+        val modelId = "e78a89dd-847f-4574-8afa-8768b4228b72";
+        val launcher = new StreamingJobLauncher();
+        launcher.init(PROJECT, modelId, JobTypeEnum.STREAMING_BUILD);
+        val mockup = new MockupSparkLauncher();
+        ReflectionTestUtils.setField(launcher, "launcher", mockup);
+        val mockLaunch = PowerMockito.spy(launcher);
+        PowerMockito.when(mockLaunch, "getParserName").thenReturn("io.kyligence.kap.parser.TimedJsonStreamParser2");
+        DataParserInfo dataParserInfo = new DataParserInfo(PROJECT, DEFAULT_PARSER_NAME, "default");
+        PowerMockito.when(mockLaunch, "getDataParser", Mockito.anyString()).thenReturn(dataParserInfo);
+        PowerMockito.doReturn("default").when(mockLaunch, "getParserJarPath", dataParserInfo);
+        ReflectionTestUtils.invokeMethod(mockLaunch, "addParserJar", mockup);
+        mockup.startApplication();
+        Assert.assertTrue(mockup.jars.contains("default"));
+    }
+
     static class MockupSparkLauncher extends SparkLauncher {
         private Map<String, String> sparkConf;
         private List<String> files;
+        private List<String> jars;
 
-        public SparkAppHandle startApplication(SparkAppHandle.Listener... listeners) throws IOException {
+        public SparkAppHandle startApplication(SparkAppHandle.Listener... listeners) {
             val builder = ReflectionUtils.getField(this, "builder");
-            sparkConf = (Map) ReflectionUtils.getField(builder, "conf");
+            sparkConf = (Map<String, String>) ReflectionUtils.getField(builder, "conf");
             files = (List<String>) ReflectionUtils.getField(builder, "files");
+            jars = (List<String>) ReflectionUtils.getField(builder, "jars");
             return null;
         }
     }

@@ -36,17 +36,17 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
 import org.apache.kylin.metadata.jar.JarInfoManager;
 import org.apache.kylin.metadata.jar.JarTypeEnum;
+import org.apache.kylin.metadata.streaming.DataParserInfo;
 import org.apache.kylin.metadata.streaming.DataParserManager;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.AclUtil;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.mock.web.MockMultipartFile;
@@ -55,9 +55,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import lombok.val;
 
 public class KafkaServiceTest extends NLocalFileMetadataTestCase {
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Mock
     private final KafkaService kafkaService = Mockito.spy(KafkaService.class);
@@ -118,6 +115,7 @@ public class KafkaServiceTest extends NLocalFileMetadataTestCase {
             Assert.assertTrue(e instanceof KylinException);
             KylinException kylinException = (KylinException) e;
             val dataMap = (Map<String, Object>) kylinException.getData();
+            Assert.assertNotNull(dataMap);
             Assert.assertEquals(1, dataMap.size());
             Assert.assertEquals(Collections.singletonList(brokerServer), dataMap.get("failed_servers"));
         }
@@ -169,8 +167,7 @@ public class KafkaServiceTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testGetParsers() {
-        List<String> parsers = kafkaService.getParsers(PROJECT);
-        Assert.assertFalse(parsers.isEmpty());
+        Assert.assertFalse(kafkaService.getParsers(PROJECT).isEmpty());
     }
 
     @Test
@@ -198,6 +195,18 @@ public class KafkaServiceTest extends NLocalFileMetadataTestCase {
         kafkaService.removeParser(PROJECT, PARSER_NAME3);
         Assert.assertNull(manager.getDataParserInfo(PARSER_NAME3));
         Assert.assertNull(infoManager.getJarInfo(JarTypeEnum.valueOf(jarType), JAR_NAME));
+    }
+
+    @Test
+    public void testInitDefaultParser() {
+        DataParserManager manager = DataParserManager.getInstance(getTestConfig(), PROJECT);
+        val defaultParser = manager.getDataParserInfo(DEFAULT_PARSER_NAME);
+        val crud = (CachedCrudAssist<DataParserInfo>) ReflectionTestUtils.getField(manager, "crud");
+        Assert.assertNotNull(crud);
+        crud.delete(defaultParser);
+        Assert.assertNull(manager.getDataParserInfo(DEFAULT_PARSER_NAME));
+        kafkaService.initDefaultParser(PROJECT);
+        Assert.assertNotNull(manager.getDataParserInfo(DEFAULT_PARSER_NAME));
     }
 
 }

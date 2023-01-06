@@ -160,11 +160,14 @@ public class StreamingJobLauncher extends AbstractSparkJobLauncher {
         initialized = true;
     }
 
-    private DataParserInfo getDataParser() {
-        String parserName = NDataModelManager.getInstance(config, project)//
+    private DataParserInfo getDataParser(String parserName) {
+        return DataParserManager.getInstance(config, project).getDataParserInfo(parserName);
+    }
+
+    private String getParserName() {
+        return NDataModelManager.getInstance(config, project)//
                 .getDataModelDesc(this.modelId).getRootFactTable().getTableDesc()//
                 .getKafkaConfig().getParserName();
-        return DataParserManager.getInstance(config, project).getDataParserInfo(parserName);
     }
 
     private String getParserJarPath(DataParserInfo parserInfo) {
@@ -351,10 +354,10 @@ public class StreamingJobLauncher extends AbstractSparkJobLauncher {
     }
 
     private void addParserJar(SparkLauncher sparkLauncher) {
-        DataParserInfo parser = getDataParser();
-        String parserName = parser.getClassName();
+        String parserName = getParserName();
         if (jobType.equals(JobTypeEnum.STREAMING_BUILD) && !StringUtils.equals(DEFAULT_PARSER_NAME, parserName)) {
-            String jarPath = getParserJarPath(parser);
+            DataParserInfo parserInfo = getDataParser(parserName);
+            String jarPath = getParserJarPath(parserInfo);
             sparkLauncher.addJar(jarPath);
             log.info("streaming job {} use parser {} jar path {}", jobId, parserName, jarPath);
         }

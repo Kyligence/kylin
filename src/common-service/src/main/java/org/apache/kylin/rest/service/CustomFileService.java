@@ -244,15 +244,4 @@ public class CustomFileService extends BasicService {
         }
         throw new KylinException(CUSTOM_PARSER_NOT_JAR, jarName);
     }
-
-    private void initDefaultParser(String project) {
-        if (getManager(DataParserManager.class, project).isInitialized()) {
-            return;
-        }
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            getManager(DataParserManager.class, project).initDefault();
-            return null;
-        }, project);
-    }
-
 }
