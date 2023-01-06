@@ -27,11 +27,9 @@ import java.nio.charset.Charset;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.common.persistence.metadata.jdbc.AuditLogRowMapper;
 import org.apache.kylin.common.util.LogOutputTestCase;
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
+import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.tool.garbage.StorageCleaner;
 import org.junit.After;
 import org.junit.Assert;
@@ -42,6 +40,8 @@ import org.junit.rules.TemporaryFolder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import io.kyligence.kap.metadata.user.ManagedUser;
+import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 
 public class KapPasswordResetCLITest extends LogOutputTestCase {
@@ -91,9 +91,10 @@ public class KapPasswordResetCLITest extends LogOutputTestCase {
         val afterManager = NKylinUserManager.getInstance(config);
 
         Assert.assertFalse(pwdEncoder.matches("KYLIN", afterManager.get(user.getUsername()).getPassword()));
+        Assert.assertTrue(output.toString(Charset.defaultCharset().name()).startsWith("The metadata backup path is"));
         Assert.assertTrue(output.toString(Charset.defaultCharset().name())
-                .startsWith(StorageCleaner.ANSI_RED + "Reset password of [" + StorageCleaner.ANSI_RESET + "ADMIN"
-                        + StorageCleaner.ANSI_RED + "] succeed. The password is "));
+            .contains(StorageCleaner.ANSI_RED + "Reset password of [" + StorageCleaner.ANSI_RESET + "ADMIN"
+                + StorageCleaner.ANSI_RED + "] succeed. The password is "));
         Assert.assertTrue(output.toString(Charset.defaultCharset().name())
                 .endsWith("Please keep the password properly." + StorageCleaner.ANSI_RESET + "\n"));
 
