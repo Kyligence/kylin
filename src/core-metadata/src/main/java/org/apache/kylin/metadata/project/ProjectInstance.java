@@ -30,7 +30,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigExt;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
-import org.apache.kylin.common.util.StringUtil;
+import org.apache.kylin.common.util.StringHelper;
 import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.model.AutoMergeTimeEnum;
 import org.apache.kylin.metadata.model.ISourceAware;
@@ -354,7 +354,7 @@ public class ProjectInstance extends RootPersistentEntity implements ISourceAwar
         for (String resource : modelResource) {
             String[] path = resource.split("/");
             resource = path[path.length - 1];
-            resource = StringUtil.dropSuffix(resource, MetadataConstants.FILE_SURFIX);
+            resource = StringHelper.dropSuffix(resource, MetadataConstants.FILE_SURFIX);
             nameList.add(resource);
         }
         return nameList;

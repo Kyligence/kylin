@@ -18,7 +18,9 @@
 
 package org.apache.kylin.engine.spark.job.stage.build
 
-import com.google.common.collect.Sets
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.{Locale, Objects, Timer, TimerTask}
+
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.fs.Path
 import org.apache.kylin.common.util.HadoopUtil
@@ -35,18 +37,13 @@ import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.engine.spark.utils.SparkDataSource._
 import org.apache.kylin.metadata.cube.model.NDataSegment
 import org.apache.kylin.metadata.model._
-import org.apache.kylin.query.util.QueryUtil
+import org.apache.kylin.query.util.PushDownUtil
 import org.apache.spark.sql.KapFunctions.dict_encode_v3
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{col, expr}
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.util.SparderTypeUtil
 import org.apache.spark.utils.ProxyThreadUtils
-import java.util.concurrent.{CountDownLatch, TimeUnit}
-import java.util.{Locale, Objects, Timer, TimerTask}
-
-import org.apache.kylin.common.constant.LogConstant
-import org.apache.kylin.common.logging.SetLogCategory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -54,6 +51,8 @@ import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.concurrent.forkjoin.ForkJoinPool
 import scala.util.{Failure, Success, Try}
+
+import com.google.common.collect.Sets
 
 abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
                                     private val dataSegment: NDataSegment,
@@ -137,7 +136,7 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
       val jointDS = joinFactTableWithLookupTables(fastFactTableDS, lookupTableDSMap, dataModel, sparkSession)
       concatCCs(jointDS, factTableCCs)
     } else {
-      fastFactTableDS
+      concatCCs(fastFactTableDS, factTableCCs)
     }
     flatTableDS = applyFilterCondition(flatTableDS)
     changeSchemeToColumnId(flatTableDS, tableDesc)
@@ -275,8 +274,7 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
       logInfo(s"No available FILTER-CONDITION segment $segmentId")
       return originDS
     }
-    val expression = QueryUtil.massageExpression(dataModel, project, //
-      dataModel.getFilterCondition, null)
+    val expression = PushDownUtil.massageExpression(dataModel, project, dataModel.getFilterCondition, null)
     val converted = replaceDot(expression, dataModel)
     val condition = s" (1=1) AND ($converted)"
     logInfo(s"Apply FILTER-CONDITION: $condition segment $segmentId")
@@ -563,7 +561,7 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
     var tableWithCcs = table
     matchedCols.foreach(m =>
       tableWithCcs = tableWithCcs.withColumn(convertFromDot(m.getBackTickIdentity),
-        expr(convertFromDot(m.getBackTickExpressionInSourceDB))))
+        expr(convertFromDot(m.getBackTickExp))))
     tableWithCcs
   }
 

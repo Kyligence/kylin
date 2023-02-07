@@ -22,24 +22,25 @@
 
 package io.kyligence.kap.common
 
-import com.google.common.base.Preconditions
+import java.util.Locale
+
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.common.util.TempMetadataBuilder
 import org.apache.kylin.metadata.model.NTableMetadataManager
 import org.apache.kylin.metadata.project.NProjectManager
-import org.apache.kylin.query.util.{QueryParams, QueryUtil}
+import org.apache.kylin.query.util.{PushDownUtil, QueryParams}
 import org.apache.spark.sql.common.{LocalMetadata, SharedSparkSession}
 import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.scalatest.Suite
 
-import java.util.Locale
+import com.google.common.base.Preconditions
 
 trait SSSource extends SharedSparkSession with LocalMetadata {
   self: Suite =>
 
-  val CSV_TABLE_DIR = "../" + TempMetadataBuilder.TEMP_TEST_METADATA + "/data/%s.csv"
+  val CSV_TABLE_DIR: String = "../" + TempMetadataBuilder.TEMP_TEST_METADATA + "/data/%s.csv"
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     super.beforeAll()
     val project = getProject
     import org.apache.kylin.metadata.project.NProjectManager
@@ -83,6 +84,6 @@ trait SSSource extends SharedSparkSession with LocalMetadata {
       .replaceAll("\"DEFAULT\"\\.", "")
     val queryParams = new QueryParams("default", sqlForSpark, "DEFAULT", false)
     queryParams.setKylinConfig(NProjectManager.getProjectConfig("default"))
-    QueryUtil.massagePushDownSql(queryParams)
+    PushDownUtil.massagePushDownSql(queryParams)
   }
 }

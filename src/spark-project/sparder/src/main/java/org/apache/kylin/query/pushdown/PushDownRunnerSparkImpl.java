@@ -18,15 +18,16 @@
 
 package org.apache.kylin.query.pushdown;
 
+import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
+import org.apache.kylin.metadata.query.StructField;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.apache.kylin.source.adhocquery.IPushDownRunner;
 import org.apache.kylin.source.adhocquery.PushdownResult;
-import org.apache.kylin.metadata.query.StructField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +46,7 @@ public class PushDownRunnerSparkImpl implements IPushDownRunner {
 
     @Override
     public void executeQuery(String query, List<List<String>> results, List<SelectedColumnMeta> columnMetas,
-            String project) {
+            String project) throws SQLException {
         PushdownResult response = executeQueryToIterator(query, project);
         response.getRows().forEach(results::add);
         columnMetas.addAll(response.getColumnMetas());

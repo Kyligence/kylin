@@ -19,57 +19,21 @@
 package org.apache.kylin.common.util;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-/**
- */
-public class StringUtil {
+public class StringHelper {
 
-    public static String[] EMPTY_ARRAY = new String[0];
+    public static final char QUOTE = '\'';
+    public static final char DOUBLE_QUOTE = '"';
+    public static final char BACKTICK = '`';
 
-    public static String[] filterSystemArgs(String[] args) {
-        List<String> whatsLeft = Lists.newArrayList();
-        for (String a : args) {
-            if (a.startsWith("-D")) {
-                String key;
-                String value;
-                int cut = a.indexOf('=');
-                if (cut < 0) {
-                    key = a.substring(2);
-                    value = "";
-                } else {
-                    key = a.substring(2, cut);
-                    value = a.substring(cut + 1);
-                }
-                Unsafe.setProperty(key, value);
-            } else {
-                whatsLeft.add(a);
-            }
-        }
-        return whatsLeft.toArray(new String[0]);
-    }
-
-    /**
-     * Returns a substring by removing the specified suffix. If the given string
-     * does not ends with the suffix, the string is returned without change.
-     *
-     * @param str
-     * @param suffix
-     * @return
-     */
-    public static String trimSuffix(String str, String suffix) {
-        if (str.endsWith(suffix)) {
-            return str.substring(0, str.length() - suffix.length());
-        } else {
-            return str;
-        }
+    private StringHelper() {
     }
 
     public static String join(Iterable<String> parts, String separator) {
@@ -86,14 +50,10 @@ public class StringUtil {
         if (source != null) {
             for (int i = 0; i < source.length; i++) {
                 if (source[i] != null) {
-                    target[i] = source[i].toUpperCase(Locale.ROOT);
+                    target[i] = StringUtils.upperCase(source[i]);
                 }
             }
         }
-    }
-
-    public static String noBlank(String str, String dft) {
-        return StringUtils.isBlank(str) ? dft : str;
     }
 
     public static String dropSuffix(String str, String suffix) {
@@ -108,24 +68,6 @@ public class StringUtil {
             return str.substring(0, str.indexOf(suffix));
         else
             return str;
-    }
-
-    public static String min(Collection<String> strs) {
-        String min = null;
-        for (String s : strs) {
-            if (min == null || min.compareTo(s) > 0)
-                min = s;
-        }
-        return min;
-    }
-
-    public static String max(Collection<String> strs) {
-        String max = null;
-        for (String s : strs) {
-            if (max == null || max.compareTo(s) < 0)
-                max = s;
-        }
-        return max;
     }
 
     public static String min(String s1, String s2) {
@@ -154,19 +96,6 @@ public class StringUtil {
         return result;
     }
 
-    public static void appendWithSeparator(StringBuilder src, String append) {
-        if (src == null) {
-            throw new IllegalArgumentException();
-        }
-        if (src.length() > 0 && !src.toString().endsWith(",")) {
-            src.append(",");
-        }
-
-        if (!StringUtils.isBlank(append)) {
-            src.append(append);
-        }
-    }
-
     public static String[] splitAndTrim(String str, String splitBy) {
         String[] split = str.split(splitBy);
         ArrayList<String> r = new ArrayList<>(split.length);
@@ -175,30 +104,7 @@ public class StringUtil {
             if (!s.isEmpty())
                 r.add(s);
         }
-        return r.toArray(new String[r.size()]);
-    }
-
-    // calculating length in UTF-8 of Java String without actually encoding it
-    public static int utf8Length(CharSequence sequence) {
-        int count = 0;
-        for (int i = 0, len = sequence.length(); i < len; i++) {
-            char ch = sequence.charAt(i);
-            if (ch <= 0x7F) {
-                count++;
-            } else if (ch <= 0x7FF) {
-                count += 2;
-            } else if (Character.isHighSurrogate(ch)) {
-                count += 4;
-                ++i;
-            } else {
-                count += 3;
-            }
-        }
-        return count;
-    }
-
-    public static boolean equals(String a, String b) {
-        return a == null ? b == null : a.equals(b);
+        return r.toArray(new String[0]);
     }
 
     public static boolean validateNumber(String s) {
@@ -207,6 +113,75 @@ public class StringUtil {
 
     public static boolean validateBoolean(String s) {
         return "true".equals(s) || "false".equals(s);
+    }
+
+    public static String backtickToDoubleQuote(String expression) {
+        return convert(expression, StringHelper.BACKTICK, StringHelper.DOUBLE_QUOTE);
+    }
+
+    public static String doubleQuoteToBacktick(String expression) {
+        return convert(expression, StringHelper.DOUBLE_QUOTE, StringHelper.BACKTICK);
+    }
+
+    private static String convert(String expression, char srcQuote, char targetQuote) {
+        char[] chars = expression.toCharArray();
+        List<Integer> indexList = StringHelper.findQuoteIndexes(srcQuote, expression);
+        for (Integer integer : indexList) {
+            chars[integer] = targetQuote;
+        }
+        return new String(chars);
+    }
+
+    public static String backtickQuote(String identifier) {
+        String str = StringUtils.remove(identifier, StringHelper.BACKTICK);
+        return StringHelper.BACKTICK + str + StringHelper.BACKTICK;
+    }
+
+    public static String doubleQuote(String identifier) {
+        String str = StringUtils.remove(identifier, StringHelper.DOUBLE_QUOTE);
+        return StringHelper.DOUBLE_QUOTE + str + StringHelper.DOUBLE_QUOTE;
+    }
+
+    /**
+     * Search identifier quotes in the sql string.
+     * @param key the char to search
+     * @param str the input string
+     * @return index list of {@code key}
+     */
+    public static List<Integer> findQuoteIndexes(char key, String str) {
+        Preconditions.checkState(key == BACKTICK || key == DOUBLE_QUOTE);
+        char[] chars = str.toCharArray();
+        List<Integer> indexList = Lists.newArrayList();
+        List<Pair<Integer, Character>> toMatchTokens = Lists.newArrayList();
+        for (int i = 0; i < chars.length; i++) {
+            char ch = chars[i];
+            if (toMatchTokens.isEmpty()) {
+                if (ch == key || ch == QUOTE) {
+                    toMatchTokens.add(new Pair<>(i, ch));
+                }
+                continue;
+            }
+
+            // The toMatchTokens is not empty, try to collect
+            Character ex = toMatchTokens.get(toMatchTokens.size() - 1).getSecond();
+            if (ch == ex && ch == key) {
+                toMatchTokens.add(new Pair<>(i, ex));
+                Preconditions.checkState(toMatchTokens.size() == 2);
+                indexList.add(toMatchTokens.get(0).getFirst());
+                indexList.add(toMatchTokens.get(1).getFirst());
+                toMatchTokens.clear();
+            } else if (ch == ex && ch == QUOTE) {
+                // There are two kind of single quote in the char array.
+                // One kind has two successive single quote '', we need to clear the toMatchTokens.
+                // Another kind has a form of \', just ignore it and go on match the next char.
+                Preconditions.checkState(toMatchTokens.size() == 1);
+                if (chars[i - 1] != '\\') {
+                    toMatchTokens.clear();
+                }
+            }
+        }
+        Preconditions.checkState(indexList.size() % 2 == 0);
+        return indexList;
     }
 
 }
