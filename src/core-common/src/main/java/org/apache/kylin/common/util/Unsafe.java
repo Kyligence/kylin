@@ -23,7 +23,7 @@ import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Contains methods that call JDK methods that the

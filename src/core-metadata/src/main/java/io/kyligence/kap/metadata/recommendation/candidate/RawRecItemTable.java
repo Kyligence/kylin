@@ -27,7 +27,7 @@ import java.sql.SQLException;
 
 import io.kyligence.kap.metadata.recommendation.entity.RecItemV2;
 import org.apache.commons.lang.SerializationException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.kylin.common.util.JsonUtil;
