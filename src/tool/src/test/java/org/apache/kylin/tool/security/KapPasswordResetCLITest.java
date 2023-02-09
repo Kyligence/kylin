@@ -23,7 +23,6 @@ import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.datasou
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
-import java.util.stream.Collectors;
 
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.kylin.common.KylinConfig;
@@ -32,19 +31,12 @@ import org.apache.kylin.common.persistence.metadata.jdbc.AuditLogRowMapper;
 import org.apache.kylin.common.util.LogOutputTestCase;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.tool.garbage.StorageCleaner;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -73,61 +65,45 @@ public class KapPasswordResetCLITest extends LogOutputTestCase {
 
     @Test
     public void testResetAdminPassword() throws Exception {
-        Appender appender = Mockito.mock(Appender.class);
-        try {
-            Mockito.when(appender.getName()).thenReturn("mocked");
-            Mockito.when(appender.isStarted()).thenReturn(true);
-            ((Logger) LogManager.getRootLogger()).addAppender(appender);
-            val pwdEncoder = new BCryptPasswordEncoder();
-            overwriteSystemProp("kylin.security.user-password-encoder", pwdEncoder.getClass().getName());
-            val user = new ManagedUser("ADMIN", "KYLIN", true, Constant.ROLE_ADMIN, Constant.GROUP_ALL_USERS);
-            user.setPassword(pwdEncoder.encode(user.getPassword()));
-            val config = KylinConfig.getInstanceFromEnv();
-            val manger = NKylinUserManager.getInstance(config);
-            manger.update(user);
+        val pwdEncoder = new BCryptPasswordEncoder();
+        overwriteSystemProp("kylin.security.user-password-encoder", pwdEncoder.getClass().getName());
+        val user = new ManagedUser("ADMIN", "KYLIN", true, Constant.ROLE_ADMIN, Constant.GROUP_ALL_USERS);
+        user.setPassword(pwdEncoder.encode(user.getPassword()));
+        val config = KylinConfig.getInstanceFromEnv();
+        val manger = NKylinUserManager.getInstance(config);
+        manger.update(user);
 
-            Assert.assertEquals(user.getPassword(), manger.get(user.getUsername()).getPassword());
+        Assert.assertEquals(user.getPassword(), manger.get(user.getUsername()).getPassword());
 
-            val modifyUser = manger.get(user.getUsername());
-            modifyUser.setPassword(pwdEncoder.encode("KYLIN2"));
-            manger.update(modifyUser);
-            Assert.assertEquals(modifyUser.getPassword(), manger.get(user.getUsername()).getPassword());
-            Assert.assertTrue(pwdEncoder.matches("KYLIN2", manger.get(user.getUsername()).getPassword()));
+        val modifyUser = manger.get(user.getUsername());
+        modifyUser.setPassword(pwdEncoder.encode("KYLIN2"));
+        manger.update(modifyUser);
+        Assert.assertEquals(modifyUser.getPassword(), manger.get(user.getUsername()).getPassword());
+        Assert.assertTrue(pwdEncoder.matches("KYLIN2", manger.get(user.getUsername()).getPassword()));
 
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(output, false, Charset.defaultCharset().name()));
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(output, false, Charset.defaultCharset().name()));
 
-            KapPasswordResetCLI.reset();
+        KapPasswordResetCLI.reset();
 
-            ResourceStore.clearCache(config);
-            config.clearManagers();
-            val afterManager = NKylinUserManager.getInstance(config);
+        ResourceStore.clearCache(config);
+        config.clearManagers();
+        val afterManager = NKylinUserManager.getInstance(config);
 
-            Assert.assertFalse(pwdEncoder.matches("KYLIN", afterManager.get(user.getUsername()).getPassword()));
-            ArgumentCaptor<LogEvent> logCaptor = ArgumentCaptor.forClass(LogEvent.class);
-            Mockito.verify(appender, Mockito.atLeast(0)).append(logCaptor.capture());
-            val logs = logCaptor.getAllValues().stream()
-                    .filter(event -> event.getLoggerName().equals("org.apache.kylin.helper.MetadataToolHelper"))
-                    .filter(event -> event.getLevel().equals(Level.INFO))
-                    .map(event -> event.getMessage().getFormattedMessage()).collect(Collectors.toList());
-            val logCount = logs.stream().filter(log -> log.startsWith("The metadata backup path is")).count();
-            Assert.assertEquals(1, logCount);
-            Assert.assertTrue(output.toString(Charset.defaultCharset().name())
-                    .contains(StorageCleaner.ANSI_RED + "Reset password of [" + StorageCleaner.ANSI_RESET + "ADMIN"
-                            + StorageCleaner.ANSI_RED + "] succeed. The password is "));
-            Assert.assertTrue(output.toString(Charset.defaultCharset().name())
-                    .endsWith("Please keep the password properly." + StorageCleaner.ANSI_RESET + "\n"));
+        Assert.assertFalse(pwdEncoder.matches("KYLIN", afterManager.get(user.getUsername()).getPassword()));
+        Assert.assertTrue(output.toString(Charset.defaultCharset().name()).startsWith("The metadata backup path is"));
+        Assert.assertTrue(output.toString(Charset.defaultCharset().name())
+            .contains(StorageCleaner.ANSI_RED + "Reset password of [" + StorageCleaner.ANSI_RESET + "ADMIN"
+                + StorageCleaner.ANSI_RED + "] succeed. The password is "));
+        Assert.assertTrue(output.toString(Charset.defaultCharset().name())
+                .endsWith("Please keep the password properly." + StorageCleaner.ANSI_RESET + "\n"));
 
-            val url = getTestConfig().getMetadataUrl();
-            val jdbcTemplate = getJdbcTemplate();
-            val all = jdbcTemplate.query("select * from " + url.getIdentifier() + "_audit_log",
-                    new AuditLogRowMapper());
-            Assert.assertTrue(all.stream().anyMatch(auditLog -> auditLog.getResPath().equals("/_global/user/ADMIN")));
+        val url = getTestConfig().getMetadataUrl();
+        val jdbcTemplate = getJdbcTemplate();
+        val all = jdbcTemplate.query("select * from " + url.getIdentifier() + "_audit_log", new AuditLogRowMapper());
+        Assert.assertTrue(all.stream().anyMatch(auditLog -> auditLog.getResPath().equals("/_global/user/ADMIN")));
 
-            System.setOut(System.out);
-        } finally {
-            ((Logger) LogManager.getRootLogger()).removeAppender(appender);
-        }
+        System.setOut(System.out);
     }
 
     JdbcTemplate getJdbcTemplate() throws Exception {
