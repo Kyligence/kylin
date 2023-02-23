@@ -23,6 +23,7 @@ import java.math.BigDecimal
 import java.sql.{Date, Timestamp, Types}
 import java.time.ZoneId
 import java.util.{GregorianCalendar, Locale, TimeZone}
+
 import org.apache.calcite.avatica.util.TimeUnitRange
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexLiteral
@@ -33,7 +34,7 @@ import org.apache.kylin.common.util.DateFormat
 import org.apache.kylin.metadata.datatype.DataType
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.Column
-import org.apache.spark.sql.catalyst.expressions.{Base64, Cast}
+import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.parser.ParserUtils
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.functions._
@@ -119,6 +120,32 @@ object SparderTypeUtil extends Logging {
       case tp if tp.startsWith("raw") => BinaryType
       case "any" => StringType
       case _ => throw new IllegalArgumentException(dataTp.toString)
+    }
+  }
+
+  def convertStringToResultValueBasedOnKylinSQLType(s: Any, dataTp: DataType): Any = {
+    if (s == null) {
+      null
+    } else {
+      dataTp.getName match {
+        case "decimal" => new java.math.BigDecimal(s.toString)
+        case "date" => new java.sql.Date(DateFormat.stringToMillis(s.toString))
+        case "time" => new Timestamp(DateFormat.stringToMillis(s.toString))
+        case "timestamp" => new Timestamp(DateFormat.stringToMillis(s.toString))
+        case "datetime" => new java.sql.Date(DateFormat.stringToMillis(s.toString))
+        case "tinyint" => s.toString.toByte
+        case "smallint" => s.toString.toShort
+        case "integer" => s.toString.toInt
+        case "int4" => s.toString.toInt
+        case "bigint" => s.toString.toLong
+        case "long8" => s.toString.toLong
+        case "float" => java.lang.Float.parseFloat(s.toString)
+        case "double" => java.lang.Double.parseDouble(s.toString)
+        case tp if tp.startsWith("varchar") => s.toString
+        case tp if tp.startsWith("char") => s.toString
+        case "boolean" => java.lang.Boolean.parseBoolean(s.toString)
+        case noSupport => throw new IllegalArgumentException(s"No supported data type: $noSupport")
+      }
     }
   }
 
