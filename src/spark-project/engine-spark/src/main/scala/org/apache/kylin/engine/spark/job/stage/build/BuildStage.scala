@@ -558,4 +558,9 @@ abstract class BuildStage(private val jobContext: SegmentJob,
 
   // ----------------------------- Beta feature: Inferior Flat Table. ----------------------------- //
 
+  override def getStageName: String = ""
+
+  override def execute(): Unit = {
+    // parent class is empty
+  }
 }
