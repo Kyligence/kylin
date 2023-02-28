@@ -3796,4 +3796,8 @@ public abstract class KylinConfigBase implements Serializable {
         return !Boolean.parseBoolean(System.getProperty("spark.local", FALSE))
                 && Boolean.parseBoolean(getOptional("kylin.query.diagnose-enabled", TRUE));
     }
+
+    public long getMaxMeasureSegmentPrunerBeforeDays() {
+        return Long.parseLong(getOptional("kylin.query.max-measure-segment-pruner-before-days", "-1"));
+    }
 }
