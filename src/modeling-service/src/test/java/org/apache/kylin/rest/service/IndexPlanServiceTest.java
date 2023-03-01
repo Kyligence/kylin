@@ -34,9 +34,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import io.kyligence.kap.guava20.shaded.common.collect.Maps;
 import org.apache.commons.collections.ListUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
@@ -1150,7 +1153,9 @@ public class IndexPlanServiceTest extends SourceTestCase {
         Assert.assertEquals(1, response.size());
         Assert.assertTrue(ids.contains(20000010001L));
 
-        Mockito.doReturn(Sets.newHashSet(20000020001L)).when(indexPlanService).getLayoutsByRunningJobs(getProject(),
+        Map<String, Set<Long>> underConstructionLayoutsMap = Maps.newHashMap();
+        underConstructionLayoutsMap.put("ef5e0663-feba-4ed2-b71c-21958122bbff", Sets.newHashSet(20000020001L));
+        Mockito.doReturn(underConstructionLayoutsMap).when(indexPlanService).getLayoutsByRunningJobs(getProject(),
                 modelId);
         response = indexPlanService.getIndexes(getProject(), modelId, "",
                 Lists.newArrayList(IndexEntity.Status.BUILDING), "data_size", false, null);

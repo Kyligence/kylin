@@ -108,7 +108,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -671,7 +670,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         Preconditions.checkState(indexPlan != null);
         val model = indexPlan.getModel();
         val layouts = indexPlan.getAllLayouts();
-        Set<Long> layoutsByRunningJobs = getLayoutsByRunningJobs(project, modelId);
+        Map<String, Set<Long>> layoutsByRunningJobs = getLayoutsByRunningJobs(project, modelId);
         if (StringUtils.isBlank(key)) {
             return sortAndFilterLayouts(layouts.stream()
                     .map(layoutEntity -> convertToResponse(layoutEntity, indexPlan.getModel(), layoutsByRunningJobs, segmentId))
@@ -837,8 +836,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         return response;
     }
 
-    @VisibleForTesting
-    public Set<Long> getLayoutsByRunningJobs(String project, String modelId) {
+    public Map<String, Set<Long>> getLayoutsByRunningJobs(String project, String modelId) {
         List<AbstractExecutable> runningJobList = NExecutableManager
                 .getInstance(KylinConfig.getInstanceFromEnv(), project) //
                 .getPartialExecutablesByStatusList(
@@ -846,17 +844,29 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
                                 ExecutableState.ERROR), //
                         path -> StringUtils.endsWith(path, modelId));
 
-        return runningJobList.stream()
-                .filter(abstractExecutable -> Objects.equals(modelId, abstractExecutable.getTargetSubject()))
-                .map(AbstractExecutable::getToBeDeletedLayoutIds).flatMap(Set::stream).collect(Collectors.toSet());
+        Map<String, Set<Long>> underConstructionLayoutsMap = new HashMap<>();
+        runningJobList.stream()
+                .filter(ae -> Objects.equals(modelId, ae.getTargetSubject()))
+                .forEach(ae -> {
+                    Set<Long> layoutIds = ae.getLayoutIds();
+                    for (String segmentId : ae.getSegmentIds()) {
+                        Set<Long> segmentLayoutIds = underConstructionLayoutsMap.get(segmentId);
+                        if (segmentLayoutIds == null) {
+                            underConstructionLayoutsMap.put(segmentId, Sets.newHashSet(layoutIds));
+                        } else {
+                            segmentLayoutIds.addAll(layoutIds);
+                        }
+                    }
+                });
+        return underConstructionLayoutsMap;
     }
 
     private IndexResponse convertToResponse(LayoutEntity layoutEntity, NDataModel model) {
-        return convertToResponse(layoutEntity, model, Sets.newHashSet(), null);
+        return convertToResponse(layoutEntity, model, Maps.newHashMap(), null);
     }
 
     private IndexResponse convertToResponse(LayoutEntity layoutEntity, NDataModel model,
-            Set<Long> layoutIdsOfRunningJobs, String segmentId) {
+                                            Map<String, Set<Long>> layoutIdsOfRunningJobs, String segmentId) {
 
         // remove all internal measures
         val colOrders = Lists.newArrayList(layoutEntity.getColOrder());
@@ -878,7 +888,12 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
 
         List<NDataSegment> segments = StringUtils.isBlank(segmentId) ? dataflow.getSegments()
                 : dataflow.getSegments().stream().filter(seg -> seg.getId().equals(segmentId)).collect(Collectors.toList());
+        Set<Long> layoutIdsOnLoading = Sets.newHashSet();
         for (NDataSegment segment : segments) {
+            Set<Long> segmentLayoutIdsOnLoading = layoutIdsOfRunningJobs.get(segment.getId());
+            if (CollectionUtils.isNotEmpty(segmentLayoutIdsOnLoading)) {
+                layoutIdsOnLoading.addAll(segmentLayoutIdsOnLoading);
+            }
             NDataLayout layout = segment.getLayout(layoutEntity.getId(), true);
             if (layout == null) {
                 continue;
@@ -893,7 +908,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
 
         IndexEntity.Status status;
         if (readyCount <= 0) {
-            if (layoutIdsOfRunningJobs.contains(layoutEntity.getId())) {
+            if (layoutIdsOnLoading.contains(layoutEntity.getId())) {
                 status = IndexEntity.Status.BUILDING;
             } else {
                 status = IndexEntity.Status.NO_BUILD;

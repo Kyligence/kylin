@@ -25,6 +25,7 @@ import static org.apache.kylin.metadata.cube.model.NBatchConstants.P_DATA_RANGE_
 import static org.apache.kylin.metadata.cube.model.NBatchConstants.P_DATA_RANGE_START;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -126,35 +127,12 @@ public class ExecutableParams {
         return Optional.ofNullable(getParam(P_DATA_RANGE_START)).map(Long::parseLong).orElse(0L);
     }
 
-    public Set<Long> getToBeDeletedLayoutIds() {
-        Set<Long> layoutIdList = new LinkedHashSet<>();
-        String idStr = getParam(NBatchConstants.P_LAYOUT_IDS);
-        if (StringUtils.isNotBlank(idStr)) {
-            for (String id : idStr.split(",")) {
-                layoutIdList.add(Long.parseLong(id));
-            }
-        }
-
-        return layoutIdList;
-    }
-
     public Set<Long> getLayoutIds() {
-        if (getParam(NBatchConstants.P_LAYOUT_IDS) != null) {
-            return Sets
-                    .newHashSet(org.apache.commons.lang3.StringUtils.split(getParam(NBatchConstants.P_LAYOUT_IDS), ","))
-                    .stream().map(Long::parseLong).collect(Collectors.toSet());
-        } else {
-            return null;
-        }
+        return strToIds(NBatchConstants.P_LAYOUT_IDS).stream().map(Long::parseLong).collect(Collectors.toSet());
     }
 
     public Set<String> getSegmentIds() {
-        if (getParam(NBatchConstants.P_SEGMENT_IDS) != null) {
-            return Sets.newHashSet(
-                    org.apache.commons.lang3.StringUtils.split(getParam(NBatchConstants.P_SEGMENT_IDS), ","));
-        } else {
-            return null;
-        }
+        return strToIds(NBatchConstants.P_SEGMENT_IDS);
     }
 
     public void setSparkYarnQueue(String queue) {
@@ -214,5 +192,14 @@ public class ExecutableParams {
             partitions.get(bucket.getSegmentId()).add(bucket.getPartitionId());
         });
         return partitions;
+    }
+
+    private Set<String> strToIds(String paramKey) {
+        Set<String> ids = new LinkedHashSet<>();
+        String idStr = getParam(paramKey);
+        if (StringUtils.isNotBlank(idStr)) {
+            ids.addAll(Arrays.asList(idStr.split(",")));
+        }
+        return ids;
     }
 }
