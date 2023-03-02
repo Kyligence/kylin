@@ -3689,7 +3689,7 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     public boolean skipCheckTds() {
-        return Boolean.parseBoolean(getOptional("kylin.model.skip-check-tds", FALSE));
+        return Boolean.parseBoolean(getOptional("kylin.model.skip-check-tds", TRUE));
     }
 
     public boolean isHdfsMetricsPeriodicCalculationEnabled() {
