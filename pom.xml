@@ -2286,6 +2286,12 @@
                 <artifactId>spring-session-data-redis</artifactId>
                 <version>${spring-session.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>9.0.71</version>
+            </dependency>
+
 
             <!-- Spring Security -->
             <dependency>
