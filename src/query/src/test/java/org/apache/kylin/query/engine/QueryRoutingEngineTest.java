@@ -25,12 +25,14 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.concurrent.Semaphore;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.NewQueryRefuseException;
 import org.apache.kylin.common.exception.QueryErrorCode;
+import org.apache.kylin.common.exception.ServerErrorCode;
 import org.apache.kylin.common.exception.TargetSegmentNotFoundException;
 import org.apache.kylin.common.persistence.InMemResourceStore;
 import org.apache.kylin.common.persistence.ResourceStore;
@@ -39,7 +41,9 @@ import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.metadata.realization.NoStreamingRealizationFoundException;
 import org.apache.kylin.query.QueryExtension;
 import org.apache.kylin.query.engine.data.QueryResult;
+import org.apache.kylin.query.exception.BusyQueryException;
 import org.apache.kylin.query.exception.NotSupportedSQLException;
+import org.apache.kylin.query.util.PushDownQueryRequestLimits;
 import org.apache.kylin.query.util.QueryParams;
 import org.apache.kylin.source.adhocquery.PushdownResult;
 import org.apache.spark.SparkException;
@@ -48,6 +52,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 public class QueryRoutingEngineTest extends NLocalFileMetadataTestCase {
@@ -319,5 +324,51 @@ public class QueryRoutingEngineTest extends NLocalFileMetadataTestCase {
         queryParams.setForcedToPushDown(true);
 
         Assert.assertThrows(NotSupportedSQLException.class, () -> queryRoutingEngine.queryWithSqlMassage(queryParams));
+    }
+
+    @Test
+    public void testQueryPushDownFail() {
+        final String sql = "SELECT 1";
+        final String project = "tpch";
+        KylinConfig kylinconfig = KylinConfig.getInstanceFromEnv();
+        kylinconfig.setProperty("kylin.query.timeout-seconds", "5");
+        Semaphore semaphore = new Semaphore(0, true);
+        MockedStatic<PushDownQueryRequestLimits> pushRequest = Mockito.mockStatic(PushDownQueryRequestLimits.class);
+        pushRequest.when((MockedStatic.Verification) PushDownQueryRequestLimits.getSingletonInstance())
+                .thenReturn(semaphore);
+        QueryParams queryParams = new QueryParams();
+        queryParams.setForcedToPushDown(true);
+        queryParams.setProject(project);
+        queryParams.setSql(sql);
+        queryParams.setKylinConfig(kylinconfig);
+        queryParams.setSelect(true);
+        QueryRoutingEngine queryRoutingEngine = Mockito.spy(QueryRoutingEngine.class);
+        try {
+            queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
+            Assert.fail("Query rejected. Caused by PushDown query server is too busy");
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof BusyQueryException
+                    && ((BusyQueryException) e).getErrorCode().equals(QueryErrorCode.BUSY_QUERY.toErrorCode()));
+        }
+    }
+
+    @Test
+    public void testQueryPushDownSuccess() {
+        final String sql = "SELECT 1";
+        final String project = "tpch";
+        KylinConfig kylinconfig = KylinConfig.getInstanceFromEnv();
+        QueryParams queryParams = new QueryParams();
+        queryParams.setForcedToPushDown(true);
+        queryParams.setProject(project);
+        queryParams.setSql(sql);
+        queryParams.setKylinConfig(kylinconfig);
+        queryParams.setSelect(true);
+        try {
+            queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
+            Assert.fail("Can't complete the operation. Please check the Spark environment and try again.");
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof KylinException
+                    && ((KylinException) e).getErrorCode().equals(ServerErrorCode.SPARK_FAILURE.toErrorCode()));
+        }
     }
 }
