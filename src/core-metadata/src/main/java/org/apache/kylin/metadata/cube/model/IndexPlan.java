@@ -41,7 +41,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableBiMap;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.kylin.common.KylinConfig;
@@ -53,12 +52,12 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.model.IEngineAware;
 import org.apache.kylin.metadata.model.JoinTableDesc;
-import org.apache.kylin.metadata.model.SegmentStatusEnum;
-import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
+import org.apache.kylin.metadata.model.SegmentStatusEnum;
+import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -68,6 +67,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -657,14 +657,15 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
         NDataflow df = NDataflowManager.getInstance(config, project).getDataflow(indexPlanId);
         val readySegs = df.getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING);
-        NDataSegment lastReadySegment = readySegs.getLatestReadySegment();
-        if (null == lastReadySegment) {
+        if (readySegs.isEmpty()) {
             return;
         }
 
+        Set<Long> effectiveLayouts = readySegs.stream().flatMap(seg -> seg.getLayoutIds().stream())
+                .collect(Collectors.toSet());
         val toBeDeletedMap = getToBeDeletedIndexesMap();
         for (LayoutEntity layoutEntity : toBeDeletedSet) {
-            if (null == lastReadySegment.getLayout(layoutEntity.getId())
+            if (!effectiveLayouts.contains(layoutEntity.getId())
                     && !secondStorageLayoutStatus.getOrDefault(layoutEntity.getId(), false)) {
                 continue;
             }
