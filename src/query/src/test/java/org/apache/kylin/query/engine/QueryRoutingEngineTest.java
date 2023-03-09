@@ -371,4 +371,25 @@ public class QueryRoutingEngineTest extends NLocalFileMetadataTestCase {
                     && ((KylinException) e).getErrorCode().equals(ServerErrorCode.SPARK_FAILURE.toErrorCode()));
         }
     }
+
+    @Test
+    public void testQueryAsync() {
+        final String sql = "SELECT 1";
+        final String project = "tpch";
+        KylinConfig kylinconfig = KylinConfig.getInstanceFromEnv();
+        QueryParams queryParams = new QueryParams();
+        queryParams.setForcedToPushDown(true);
+        queryParams.setProject(project);
+        queryParams.setSql(sql);
+        queryParams.setKylinConfig(kylinconfig);
+        queryParams.setSelect(true);
+        try {
+            QueryContext.current().getQueryTagInfo().setAsyncQuery(true);
+            queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
+            Assert.fail("Can't complete the operation. Please check the Spark environment and try again.");
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof KylinException
+                    && ((KylinException) e).getErrorCode().equals(ServerErrorCode.SPARK_FAILURE.toErrorCode()));
+        }
+    }
 }

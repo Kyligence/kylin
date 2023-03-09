@@ -269,17 +269,19 @@ public class QueryRoutingEngine {
         logger.info("Query: {} Before the current push down counter {}.", QueryContext.current().getQueryId(),
                 semaphore.availablePermits());
         boolean acquired = false;
+        boolean asyncQuery = QueryContext.current().getQueryTagInfo().isAsyncQuery();
         try {
             //SlowQueryDetector query timeout period is system-level
             int queryTimeout = KylinConfig.getInstanceFromEnv().getQueryTimeoutSeconds();
-            if (!QueryContext.current().getQueryTagInfo().isAsyncQuery()) {
+            if (!asyncQuery) {
                 acquired = semaphore.tryAcquire(queryTimeout, TimeUnit.SECONDS);
+                if (!acquired) {
+                    logger.info("query: {} failed to get acquire.", QueryContext.current().getQueryId());
+                    throw new BusyQueryException("Query rejected. Caused by PushDown query server is too busy.");
+                } else {
+                    logger.info("query: {} success to get acquire.", QueryContext.current().getQueryId());
+                }
             }
-            if (!acquired) {
-                logger.info("query: {} failed to get acquire.", QueryContext.current().getQueryId());
-                throw new BusyQueryException("Query rejected. Caused by PushDown query server is too busy.");
-            }
-            logger.info("query: {} success to get acquire.", QueryContext.current().getQueryId());
             String sqlString = queryParams.getSql();
             if (isPrepareStatementWithParams(queryParams)) {
                 sqlString = queryParams.getPrepareSql();
