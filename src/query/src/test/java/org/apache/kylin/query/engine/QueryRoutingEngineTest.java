@@ -25,11 +25,15 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.UUID;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
+import org.apache.kylin.common.exception.CommonErrorCode;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.exception.KylinTimeoutException;
 import org.apache.kylin.common.exception.NewQueryRefuseException;
 import org.apache.kylin.common.exception.QueryErrorCode;
 import org.apache.kylin.common.exception.ServerErrorCode;
@@ -43,8 +47,10 @@ import org.apache.kylin.query.QueryExtension;
 import org.apache.kylin.query.engine.data.QueryResult;
 import org.apache.kylin.query.exception.BusyQueryException;
 import org.apache.kylin.query.exception.NotSupportedSQLException;
+import org.apache.kylin.query.exception.UserStopQueryException;
 import org.apache.kylin.query.util.PushDownQueryRequestLimits;
 import org.apache.kylin.query.util.QueryParams;
+import org.apache.kylin.query.util.SlowQueryDetector;
 import org.apache.kylin.source.adhocquery.PushdownResult;
 import org.apache.spark.SparkException;
 import org.junit.After;
@@ -52,6 +58,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.MockSettings;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
@@ -349,22 +356,24 @@ public class QueryRoutingEngineTest extends NLocalFileMetadataTestCase {
         KylinConfig kylinconfig = KylinConfig.getInstanceFromEnv();
         kylinconfig.setProperty("kylin.query.timeout-seconds", "5");
         Semaphore semaphore = new Semaphore(0, true);
-        MockedStatic<PushDownQueryRequestLimits> pushRequest = Mockito.mockStatic(PushDownQueryRequestLimits.class);
-        pushRequest.when((MockedStatic.Verification) PushDownQueryRequestLimits.getSingletonInstance())
-                .thenReturn(semaphore);
-        QueryParams queryParams = new QueryParams();
-        queryParams.setForcedToPushDown(true);
-        queryParams.setProject(project);
-        queryParams.setSql(sql);
-        queryParams.setKylinConfig(kylinconfig);
-        queryParams.setSelect(true);
-        QueryRoutingEngine queryRoutingEngine = Mockito.spy(QueryRoutingEngine.class);
-        try {
-            queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
-            Assert.fail("Query rejected. Caused by PushDown query server is too busy");
-        } catch (Exception e) {
-            Assert.assertTrue(e instanceof BusyQueryException
-                    && ((BusyQueryException) e).getErrorCode().equals(QueryErrorCode.BUSY_QUERY.toErrorCode()));
+        try (MockedStatic<PushDownQueryRequestLimits> pushRequest = Mockito
+                .mockStatic(PushDownQueryRequestLimits.class)) {
+            pushRequest.when((MockedStatic.Verification) PushDownQueryRequestLimits.getSingletonInstance())
+                    .thenReturn(semaphore);
+            QueryParams queryParams = new QueryParams();
+            queryParams.setForcedToPushDown(true);
+            queryParams.setProject(project);
+            queryParams.setSql(sql);
+            queryParams.setKylinConfig(kylinconfig);
+            queryParams.setSelect(true);
+            QueryRoutingEngine queryRoutingEngine = Mockito.spy(QueryRoutingEngine.class);
+            try {
+                queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
+                Assert.fail("Query rejected. Caused by PushDown query server is too busy");
+            } catch (Exception e) {
+                Assert.assertTrue(e instanceof BusyQueryException);
+                Assert.assertEquals(QueryErrorCode.BUSY_QUERY.toErrorCode(), ((BusyQueryException) e).getErrorCode());
+            }
         }
     }
 
@@ -383,8 +392,8 @@ public class QueryRoutingEngineTest extends NLocalFileMetadataTestCase {
             queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
             Assert.fail("Can't complete the operation. Please check the Spark environment and try again.");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof KylinException
-                    && ((KylinException) e).getErrorCode().equals(ServerErrorCode.SPARK_FAILURE.toErrorCode()));
+            Assert.assertTrue(e instanceof KylinException);
+            Assert.assertEquals(ServerErrorCode.SPARK_FAILURE.toErrorCode(), ((KylinException) e).getErrorCode());
         }
     }
 
@@ -404,8 +413,75 @@ public class QueryRoutingEngineTest extends NLocalFileMetadataTestCase {
             queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
             Assert.fail("Can't complete the operation. Please check the Spark environment and try again.");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof KylinException
-                    && ((KylinException) e).getErrorCode().equals(ServerErrorCode.SPARK_FAILURE.toErrorCode()));
+            Assert.assertTrue(e instanceof KylinException);
+            Assert.assertEquals(ServerErrorCode.SPARK_FAILURE.toErrorCode(), ((KylinException) e).getErrorCode());
+        }
+    }
+
+    @Test
+    public void testQueryInterruptedTimeOut() {
+        final String sql = "SELECT 1";
+        final String project = "tpch";
+        KylinConfig kylinconfig = KylinConfig.getInstanceFromEnv();
+        QueryParams queryParams = new QueryParams();
+        queryParams.setForcedToPushDown(true);
+        queryParams.setProject(project);
+        queryParams.setSql(sql);
+        queryParams.setKylinConfig(kylinconfig);
+        queryParams.setSelect(true);
+        MockSettings mockSettings = Mockito.withSettings().defaultAnswer(Mockito.RETURNS_DEFAULTS);
+        Semaphore semaphore = Mockito.mock(Semaphore.class, mockSettings);
+        SlowQueryDetector slowQueryDetector = new SlowQueryDetector();
+        try (MockedStatic<PushDownQueryRequestLimits> pushRequest = Mockito
+                .mockStatic(PushDownQueryRequestLimits.class)) {
+            pushRequest.when(PushDownQueryRequestLimits::getSingletonInstance).thenReturn(semaphore);
+            try {
+                UUID uuid = UUID.randomUUID();
+                slowQueryDetector.queryStart(uuid.toString());
+                Mockito.doThrow(new InterruptedException()).when(semaphore).tryAcquire(Mockito.anyLong(),
+                        Mockito.any(TimeUnit.class));
+                QueryRoutingEngine queryRoutingEngine = Mockito.spy(QueryRoutingEngine.class);
+                queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
+            } catch (Exception e) {
+                Assert.assertTrue(e instanceof KylinTimeoutException);
+                Assert.assertEquals(CommonErrorCode.TIMEOUT.toErrorCode(), ((KylinException) e).getErrorCode());
+            }
+        } finally {
+            slowQueryDetector.queryEnd();
+        }
+    }
+
+    @Test
+    public void testQueryInterruptedUserStop() {
+        final String sql = "SELECT 1";
+        final String project = "tpch";
+        KylinConfig kylinconfig = KylinConfig.getInstanceFromEnv();
+        QueryParams queryParams = new QueryParams();
+        queryParams.setForcedToPushDown(true);
+        queryParams.setProject(project);
+        queryParams.setSql(sql);
+        queryParams.setKylinConfig(kylinconfig);
+        queryParams.setSelect(true);
+        MockSettings mockSettings = Mockito.withSettings().defaultAnswer(Mockito.RETURNS_DEFAULTS);
+        Semaphore semaphore = Mockito.mock(Semaphore.class, mockSettings);
+        SlowQueryDetector slowQueryDetector = new SlowQueryDetector();
+        try (MockedStatic<PushDownQueryRequestLimits> pushRequest = Mockito
+                .mockStatic(PushDownQueryRequestLimits.class)) {
+            pushRequest.when(PushDownQueryRequestLimits::getSingletonInstance).thenReturn(semaphore);
+            try {
+                UUID uuid = UUID.randomUUID();
+                slowQueryDetector.queryStart(uuid.toString());
+                SlowQueryDetector.getRunningQueries().get(Thread.currentThread()).setStopByUser(true);
+                Mockito.doThrow(new InterruptedException()).when(semaphore).tryAcquire(Mockito.anyLong(),
+                        Mockito.any(TimeUnit.class));
+                QueryRoutingEngine queryRoutingEngine = Mockito.spy(QueryRoutingEngine.class);
+                queryRoutingEngine.tryPushDownSelectQuery(queryParams, null, true);
+            } catch (Exception e) {
+                Assert.assertTrue(e instanceof UserStopQueryException);
+                Assert.assertEquals(QueryErrorCode.USER_STOP_QUERY.toErrorCode(), ((KylinException) e).getErrorCode());
+            }
+        } finally {
+            slowQueryDetector.queryEnd();
         }
     }
 }

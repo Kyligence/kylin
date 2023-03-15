@@ -60,6 +60,7 @@ import org.apache.kylin.query.mask.QueryResultMasks;
 import org.apache.kylin.query.relnode.OLAPContext;
 import org.apache.kylin.query.util.PushDownQueryRequestLimits;
 import org.apache.kylin.query.util.PushDownUtil;
+import org.apache.kylin.query.util.QueryInterruptChecker;
 import org.apache.kylin.query.util.QueryParams;
 import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.source.adhocquery.PushdownResult;
@@ -274,10 +275,11 @@ public class QueryRoutingEngine {
                 semaphore.availablePermits());
         boolean acquired = false;
         boolean asyncQuery = QueryContext.current().getQueryTagInfo().isAsyncQuery();
+        KylinConfig projectConfig = NProjectManager.getProjectConfig(queryParams.getProject());
         try {
             //SlowQueryDetector query timeout period is system-level
             int queryTimeout = KylinConfig.getInstanceFromEnv().getQueryTimeoutSeconds();
-            if (!asyncQuery) {
+            if (!asyncQuery && projectConfig.isPushDownEnabled()) {
                 acquired = semaphore.tryAcquire(queryTimeout, TimeUnit.SECONDS);
                 if (!acquired) {
                     logger.info("query: {} failed to get acquire.", QueryContext.current().getQueryId());
@@ -304,6 +306,11 @@ public class QueryRoutingEngine {
             queryParams.setSqlException(sqlException);
             queryParams.setPrepare(isPrepare);
             return PushDownUtil.tryIterQuery(queryParams);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            QueryInterruptChecker.checkThreadInterrupted("Interrupted sql push down at the stage of QueryRoutingEngine",
+                    "Current step: try push down select query");
+            throw e;
         } finally {
             if (acquired) {
                 semaphore.release();
