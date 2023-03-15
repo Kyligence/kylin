@@ -169,7 +169,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     @Transaction(project = 0)
     public Pair<IndexPlan, BuildIndexResponse> updateRuleBasedCuboid(String project,
             final UpdateRuleBasedCuboidRequest request) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         try {
             val kylinConfig = KylinConfig.getInstanceFromEnv();
             val indexPlanManager = getManager(NIndexPlanManager.class, project);
@@ -200,7 +200,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
 
     @Transaction(project = 0)
     public BuildIndexResponse updateTableIndex(String project, CreateTableIndexRequest request) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         try {
             val indexPlan = getIndexPlan(request.getProject(), request.getModelId());
             val layout = parseToLayout(project, request, indexPlan.getNextTableIndexId() + 1);
@@ -253,14 +253,14 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
 
     @Transaction(project = 0)
     public BuildIndexResponse createTableIndex(String project, CreateTableIndexRequest request) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         val indexPlan = getIndexPlan(request.getProject(), request.getModelId());
         return createTableIndex(project, request, indexPlan.getNextTableIndexId() + 1);
     }
 
     @Transaction(project = 0)
     public BuildIndexResponse createTableIndex(String project, CreateTableIndexRequest request, long layoutId) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         val newLayout = parseToLayout(project, request, layoutId);
         return createTableIndex(project, request.getModelId(), newLayout, request.isLoadData());
     }
@@ -321,7 +321,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     @Deprecated
     @Transaction(project = 0)
     public void removeTableIndex(String project, String model, final long id) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         val kylinConfig = KylinConfig.getInstanceFromEnv();
         val indexPlanManager = NIndexPlanManager.getInstance(kylinConfig, project);
 
@@ -368,7 +368,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     @Transaction(project = 0)
     public void removeIndexes(String project, String modelId, Set<Long> ids, Set<Integer> invalidDimensions,
             Set<Integer> invalidMeasures) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         if (CollectionUtils.isEmpty(ids)) {
             throw new KylinException(LAYOUT_LIST_EMPTY);
         }
@@ -417,7 +417,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     private boolean addIndexToBeDeleted(String project, String modelId, Set<Long> layoutIds) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         val kylinConfig = KylinConfig.getInstanceFromEnv();
         val indexPlanManager = NIndexPlanManager.getInstance(kylinConfig, project);
 
@@ -451,7 +451,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     public DiffRuleBasedIndexResponse calculateDiffRuleBasedIndex(UpdateRuleBasedCuboidRequest request) {
-        aclEvaluate.checkProjectWritePermission(request.getProject());
+        aclEvaluate.checkProjectOperationDesignPermission(request.getProject());
         UpdateRuleImpact diff = getIndexPlan(request.getProject(), request.getModelId())
                 .diffRuleBasedIndex(convertRequestToRuleBasedIndex(request));
 
@@ -459,7 +459,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     public AggIndexResponse calculateAggIndexCount(UpdateRuleBasedCuboidRequest request) {
-        aclEvaluate.checkProjectWritePermission(request.getProject());
+        aclEvaluate.checkProjectOperationDesignPermission(request.getProject());
         val maxCount = getConfig().getCubeAggrGroupMaxCombination();
         List<NAggregationGroup> aggregationGroups = request.getAggregationGroups();
         val indexPlan = getIndexPlan(request.getProject(), request.getModelId()).copy();
@@ -558,7 +558,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
 
     @Transaction(project = 0)
     public void updateShardByColumns(String project, AggShardByColumnsRequest request) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
 
         val modelId = request.getModelId();
         val indexPlanManager = getManager(NIndexPlanManager.class, project);
@@ -585,7 +585,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     public AggShardByColumnsResponse getShardByColumns(String project, String modelId) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         val indexPlanManager = getManager(NIndexPlanManager.class, project);
         val indexPlan = indexPlanManager.getIndexPlan(modelId);
         val model = indexPlan.getModel();
@@ -780,7 +780,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     public RuleBasedIndex getRule(String project, String model) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         val indexPlan = getIndexPlan(project, model);
         Preconditions.checkState(indexPlan != null);
 
@@ -1257,7 +1257,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
 
     @Transaction(project = 0)
     public BuildBaseIndexResponse createBaseIndex(String project, CreateBaseIndexRequest request) {
-        aclEvaluate.checkProjectWritePermission(project);
+        aclEvaluate.checkProjectOperationDesignPermission(project);
         NDataModel model = getManager(NDataModelManager.class, project).getDataModelDesc(request.getModelId());
         NIndexPlanManager indexPlanManager = getManager(NIndexPlanManager.class, project);
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(request.getModelId());
