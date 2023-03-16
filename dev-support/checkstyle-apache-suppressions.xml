@@ -63,4 +63,6 @@
 
     <suppress checks="IllegalImport" files="FragmentData.java"/>
 
+    <!-- suppress "import sun.security.krb5.internal.ktab.KeyTab;" -->
+    <suppress checks="IllegalImport" files="KerberosLoginUtil.java"/>
 </suppressions>

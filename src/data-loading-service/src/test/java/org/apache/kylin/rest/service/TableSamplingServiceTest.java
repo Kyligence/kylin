@@ -18,8 +18,8 @@
 
 package org.apache.kylin.rest.service;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import io.kyligence.kap.engine.spark.job.NResourceDetectStep;
 import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 import lombok.val;

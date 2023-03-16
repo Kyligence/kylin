@@ -24,7 +24,7 @@ import org.apache.kylin.rest.service.UserAclService;
 import org.apache.kylin.rest.util.SpringContext;
 
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import io.kyligence.kap.guava20.shaded.common.eventbus.Subscribe;
+import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
 import io.kyligence.kap.metadata.epoch.EpochManager;
 
 import lombok.val;

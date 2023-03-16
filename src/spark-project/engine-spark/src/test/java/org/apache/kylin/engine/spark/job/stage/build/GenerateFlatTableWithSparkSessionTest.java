@@ -68,7 +68,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import io.kyligence.kap.guava20.shaded.common.collect.Sets;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

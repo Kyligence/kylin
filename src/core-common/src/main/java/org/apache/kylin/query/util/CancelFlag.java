@@ -20,7 +20,7 @@ package org.apache.kylin.query.util;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 public class CancelFlag {
     public final AtomicBoolean atomicBoolean;

@@ -43,7 +43,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.parallel.ForkJoinTaskSupport
 
-import com.google.common.collect.Maps
+import org.apache.kylin.guava30.shaded.common.collect.Maps
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 

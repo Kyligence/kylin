@@ -1,6 +1,6 @@
 package io.kyligence.kap.engine.spark.job;
 
-import com.google.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.engine.spark.NSparkCubingEngine;

@@ -22,7 +22,7 @@ import java.io.IOException
 import java.util
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap, Executors}
 import java.util.{Objects, UUID}
-import com.google.common.collect.Maps
+import org.apache.kylin.guava30.shaded.common.collect.Maps
 import org.apache.kylin.engine.spark.NSparkCubingEngine
 import org.apache.kylin.engine.spark.job.{DFChooser, KylinBuildEnv}
 import org.apache.kylin.engine.spark.utils.{FileNames, LogUtils}

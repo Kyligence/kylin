@@ -17,7 +17,7 @@
  */
 package io.kyligence.kap.clickhouse.metadata;
 
-import com.google.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import io.kyligence.kap.clickhouse.job.ClickHouse;
 import io.kyligence.kap.clickhouse.job.ClickHouseTableStorageMetric;
 import io.kyligence.kap.clickhouse.parser.ExistsQueryParser;

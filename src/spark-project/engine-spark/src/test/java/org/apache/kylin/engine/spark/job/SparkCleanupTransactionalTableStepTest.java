@@ -17,7 +17,7 @@
  */
 package org.apache.kylin.engine.spark.job;
 
-import com.google.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import io.kyligence.kap.engine.spark.job.SparkCleanupTransactionalTableStep;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

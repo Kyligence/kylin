@@ -18,7 +18,7 @@
 
 package org.apache.kylin.engine.spark.job;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 import lombok.val;
 import org.apache.hadoop.fs.FileStatus;

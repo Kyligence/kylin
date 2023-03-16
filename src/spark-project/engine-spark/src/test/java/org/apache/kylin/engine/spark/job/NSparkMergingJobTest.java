@@ -19,8 +19,8 @@
 package org.apache.kylin.engine.spark.job;
 
 import com.clearspring.analytics.util.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 import io.kyligence.kap.engine.spark.job.NSparkMergingStep;
 import lombok.val;

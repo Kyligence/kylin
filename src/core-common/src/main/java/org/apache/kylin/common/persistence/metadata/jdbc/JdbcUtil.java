@@ -27,7 +27,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Properties;
 
-import io.kyligence.kap.guava20.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.hadoop.util.StringUtils;

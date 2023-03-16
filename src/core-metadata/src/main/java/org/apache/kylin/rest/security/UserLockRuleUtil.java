@@ -20,7 +20,7 @@ package org.apache.kylin.rest.security;
 
 import java.util.Map;
 
-import com.google.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
 

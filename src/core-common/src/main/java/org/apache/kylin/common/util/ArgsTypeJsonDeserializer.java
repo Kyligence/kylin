@@ -23,7 +23,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.ARGS_TYPE_C
 import java.io.IOException;
 import java.util.List;
 
-import com.google.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 

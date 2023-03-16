@@ -19,7 +19,7 @@
 package org.apache.kylin.rest.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import io.kyligence.kap.engine.spark.job.step.NStageForBuild;
 import io.kyligence.kap.engine.spark.job.step.NStageForMerge;
 import io.kyligence.kap.engine.spark.job.step.NStageForSnapshot;

@@ -57,9 +57,9 @@ import org.springframework.security.acls.domain.PermissionFactory;
 import org.springframework.security.acls.model.PermissionGrantingStrategy;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import io.kyligence.kap.metadata.favorite.AccelerateRuleUtil;
 import io.kyligence.kap.metadata.favorite.AsyncAccelerationTask;
