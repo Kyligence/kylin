@@ -22,7 +22,6 @@ import java.io.IOException
 import java.nio.charset.Charset
 import java.util.concurrent.Executors
 import java.util.{Map => JMap}
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.apache.kylin.common.KylinConfig
@@ -31,7 +30,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps
 import org.apache.kylin.metadata.cube.model.{DimensionRangeInfo, LayoutEntity}
 import org.apache.kylin.query.util.QueryInterruptChecker
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.{Expression, SubqueryExpression}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.columnar.InMemoryTableScanExec
 import org.apache.spark.sql.execution.datasources.FileIndex
@@ -44,7 +43,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
-
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -53,15 +51,15 @@ object ResourceDetectUtils extends Logging {
 
   private val errorMsgLog: String = "Interrupted at the stage of get paths in ResourceDetectUtils."
 
-  def getPaths(plan: SparkPlan): Seq[Path] = {
+  def getPaths(plan: SparkPlan, isResourceDetectJob: Boolean = false): Seq[Path] = {
     var paths = Seq.empty[Path]
     plan.foreach {
       case plan: FileSourceScanExec =>
         val info = "Current step: get Partition file status of FileSourceScanExec."
-        paths ++= getFilePaths(plan.relation.location, plan.partitionFilters, plan.dataFilters, info)
+        paths ++= getFilePaths(plan.relation.location, plan.partitionFilters, plan.dataFilters, info, isResourceDetectJob)
       case plan: LayoutFileSourceScanExec =>
         val info = "Current step: get Partition file status of LayoutFileSourceScanExec."
-        paths ++= getFilePaths(plan.relation.location, plan.partitionFilters, plan.dataFilters, info)
+        paths ++= getFilePaths(plan.relation.location, plan.partitionFilters, plan.dataFilters, info, isResourceDetectJob)
       case plan: InMemoryTableScanExec =>
         val _plan = plan.relation.cachedPlan
         paths ++= getPaths(_plan)
@@ -86,10 +84,16 @@ object ResourceDetectUtils extends Logging {
     paths
   }
 
-  def getFilePaths(fileIndex: FileIndex, partitionFilters: Seq[Expression], dataFilters: Seq[Expression], info: String): Seq[Path] = {
+  def getFilePaths(fileIndex: FileIndex, partitionFilters: Seq[Expression], dataFilters: Seq[Expression]
+                   , info: String, isResourceDetectJob: Boolean): Seq[Path] = {
     var paths = Seq.empty[Path]
     if (fileIndex.partitionSchema.nonEmpty) {
-      val selectedPartitions = fileIndex.listFiles(partitionFilters, dataFilters)
+      var newPartitionFilters = partitionFilters
+      if (isResourceDetectJob) {
+        logInfo("The job is resource detect job, add filterNot of SubqueryExpression to the job.")
+        newPartitionFilters = partitionFilters.filterNot(SubqueryExpression.hasSubquery)
+      }
+      val selectedPartitions = fileIndex.listFiles(newPartitionFilters, dataFilters)
       selectedPartitions.flatMap(partition => {
         QueryInterruptChecker.checkThreadInterrupted(errorMsgLog, info)
         partition.files
