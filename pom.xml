@@ -835,10 +835,6 @@
                 <artifactId>hadoop-hdfs</artifactId>
                 <exclusions>
                     <exclusion>
-                        <groupId>io.netty</groupId>
-                        <artifactId>netty-codec-haproxy</artifactId>
-                    </exclusion>
-                    <exclusion>
                         <groupId>com.sun.jersey</groupId>
                         <artifactId>*</artifactId>
                     </exclusion>
@@ -2444,10 +2440,6 @@
                 <artifactId>spark-core_2.12</artifactId>
                 <exclusions>
                     <exclusion>
-                        <groupId>io.netty</groupId>
-                        <artifactId>netty-codec-haproxy</artifactId>
-                    </exclusion>
-                    <exclusion>
                         <artifactId>jetty-plus</artifactId>
                         <groupId>org.eclipse.jetty</groupId>
                     </exclusion>
@@ -2524,10 +2516,6 @@
                 <type>test-jar</type>
                 <scope>test</scope>
                 <exclusions>
-                    <exclusion>
-                        <groupId>io.netty</groupId>
-                        <artifactId>netty-codec-haproxy</artifactId>
-                    </exclusion>
                     <exclusion>
                         <artifactId>jetty-plus</artifactId>
                         <groupId>org.eclipse.jetty</groupId>
