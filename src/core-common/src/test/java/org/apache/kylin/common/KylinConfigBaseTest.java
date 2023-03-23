@@ -67,19 +67,18 @@ import org.apache.kylin.common.constant.NonCustomProjectLevelConfig;
 import org.apache.kylin.common.util.EncryptUtil;
 import org.apache.kylin.common.util.ProcessUtils;
 import org.apache.kylin.common.util.TimeZoneUtils;
-import org.apache.kylin.junit.annotation.MetadataInfo;
-import org.junit.Assert;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-import org.junitpioneer.jupiter.SetSystemProperty;
-
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.util.concurrent.ListenableFuture;
 import org.apache.kylin.guava30.shaded.common.util.concurrent.ListeningExecutorService;
 import org.apache.kylin.guava30.shaded.common.util.concurrent.MoreExecutors;
 import org.apache.kylin.guava30.shaded.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.kylin.junit.annotation.MetadataInfo;
+import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junitpioneer.jupiter.SetSystemProperty;
 
 import lombok.val;
 
@@ -1421,6 +1420,7 @@ class KylinConfigBaseTest {
         config.setProperty("kylin.storage.check-quota-enabled", "true");
         assertTrue(config.isStorageQuotaEnabled());
     }
+
     @Test
     void testCalciteBindableCacheSize() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
@@ -1428,6 +1428,7 @@ class KylinConfigBaseTest {
         config.setProperty("kylin.query.calcite.bindable.cache.maxSize", "7");
         assertEquals(7, config.getCalciteBindableCacheSize());
     }
+
     @Test
     void testCalciteBindableCacheConcurrencyLevel() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
@@ -1458,6 +1459,18 @@ class KylinConfigBaseTest {
 
         config.setProperty("kylin.job.ssh-password", encPassword);
         assertEquals(password, config.getRemoteSSHPassword());
+    }
+
+    @Test
+    void testMultiTenantMode() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        assertFalse(config.isKylinMultiTenantEnabled());
+        config.setProperty("kylin.multi-tenant.enabled", "true");
+        assertTrue(config.isKylinMultiTenantEnabled());
+
+        assertEquals(30 * 60 * 1000, config.getKylinMultiTenantRouteTaskTimeOut());
+        config.setProperty("kylin.multi-tenant.route-task-timeout", "10min");
+        assertEquals(10 * 60 * 1000, config.getKylinMultiTenantRouteTaskTimeOut());
     }
 
 }

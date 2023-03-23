@@ -22,6 +22,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.exception.KylinException;
@@ -255,7 +256,8 @@ public class UnitOfWork {
         // publish events here
         val metadataStore = ResourceStore.getKylinMetaStore(originConfig).getMetadataStore();
         val writeInterceptor = params.getWriteInterceptor();
-        val unitMessages = packageEvents(eventList, get().getProject(), traceId, writeInterceptor);
+        val unitMessages = packageEvents(eventList, get().getProject(), traceId, writeInterceptor,
+                params.getProjectId());
         long entitiesSize = unitMessages.getMessages().stream().filter(event -> event instanceof ResourceRelatedEvent)
                 .count();
         try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
@@ -303,14 +305,16 @@ public class UnitOfWork {
     }
 
     private static UnitMessages packageEvents(List<Event> events, String project, String uuid,
-            Consumer<ResourceRelatedEvent> writeInterceptor) {
+            Consumer<ResourceRelatedEvent> writeInterceptor, String projectId) {
         for (Event e : events) {
             if (!(e instanceof ResourceRelatedEvent)) {
                 continue;
             }
             val event = (ResourceRelatedEvent) e;
+            val endWithProjectId = event.getResPath().startsWith("/" + UnitOfWork.GLOBAL_UNIT)
+                    && StringUtils.isNotBlank(projectId) && event.getResPath().endsWith(projectId);
             if (!(event.getResPath().startsWith("/" + project) || event.getResPath().endsWith("/" + project + ".json")
-                    || get().getParams().isAll())) {
+                    || get().getParams().isAll() || endWithProjectId)) {
                 throw new IllegalStateException("some event are not in project " + project);
             }
             if (writeInterceptor != null) {
