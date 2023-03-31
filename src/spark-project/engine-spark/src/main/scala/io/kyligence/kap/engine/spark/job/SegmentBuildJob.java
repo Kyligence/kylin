@@ -18,10 +18,21 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+import static org.apache.kylin.engine.spark.job.StageType.BUILD_DICT;
+import static org.apache.kylin.engine.spark.job.StageType.BUILD_LAYER;
+import static org.apache.kylin.engine.spark.job.StageType.GATHER_FLAT_TABLE_STATS;
+import static org.apache.kylin.engine.spark.job.StageType.GENERATE_FLAT_TABLE;
+import static org.apache.kylin.engine.spark.job.StageType.MATERIALIZED_FACT_TABLE;
+import static org.apache.kylin.engine.spark.job.StageType.REFRESH_COLUMN_BYTES;
+import static org.apache.kylin.engine.spark.job.StageType.REFRESH_SNAPSHOTS;
+import static org.apache.kylin.engine.spark.job.StageType.WAITE_FOR_RESOURCE;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,6 +46,8 @@ import org.apache.kylin.engine.spark.job.SparkJobConstants;
 import org.apache.kylin.engine.spark.job.exec.BuildExec;
 import org.apache.kylin.engine.spark.job.stage.BuildParam;
 import org.apache.kylin.engine.spark.job.stage.StageExec;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -44,21 +57,8 @@ import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.spark.sql.hive.utils.ResourceDetectUtils;
 import org.apache.spark.tracker.BuildContext;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
-
-import static org.apache.kylin.engine.spark.job.StageType.BUILD_DICT;
-import static org.apache.kylin.engine.spark.job.StageType.BUILD_LAYER;
-import static org.apache.kylin.engine.spark.job.StageType.GATHER_FLAT_TABLE_STATS;
-import static org.apache.kylin.engine.spark.job.StageType.GENERATE_FLAT_TABLE;
-import static org.apache.kylin.engine.spark.job.StageType.MATERIALIZED_FACT_TABLE;
-import static org.apache.kylin.engine.spark.job.StageType.REFRESH_COLUMN_BYTES;
-import static org.apache.kylin.engine.spark.job.StageType.REFRESH_SNAPSHOTS;
-import static org.apache.kylin.engine.spark.job.StageType.WAITE_FOR_RESOURCE;
+import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class SegmentBuildJob extends SegmentJob {
