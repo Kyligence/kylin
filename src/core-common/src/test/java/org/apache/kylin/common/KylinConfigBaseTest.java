@@ -61,6 +61,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
 import org.apache.kylin.common.constant.NonCustomProjectLevelConfig;
@@ -1473,6 +1474,14 @@ class KylinConfigBaseTest {
         assertEquals(10 * 60 * 1000, config.getKylinMultiTenantRouteTaskTimeOut());
     }
 
+    @Test
+    void testGetZKAuths() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        assertTrue(StringUtils.isBlank(config.getZKAuths()));
+
+        config.setProperty("kylin.env.zookeeper.zk-auth", EncryptUtil.encryptWithPrefix("digest:ADMIN:KYLIN"));
+        assertEquals("digest:ADMIN:KYLIN", config.getZKAuths());
+    }
 }
 
 class EnvironmentUpdateUtils {
