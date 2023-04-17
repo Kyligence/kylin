@@ -31,7 +31,7 @@ import org.apache.kylin.engine.spark.job.stage.{BuildParam, StageExec}
 import org.apache.kylin.engine.spark.job.{FiltersUtil, SegmentJob, TableMetaManager}
 import org.apache.kylin.engine.spark.model.SegmentFlatTableDesc
 import org.apache.kylin.engine.spark.smarter.IndexDependencyParser
-import org.apache.kylin.engine.spark.utils.LogEx
+import org.apache.kylin.engine.spark.utils.{LogEx, SparkConfHelper}
 import org.apache.kylin.engine.spark.utils.SparkDataSource._
 import org.apache.kylin.guava30.shaded.common.collect.Sets
 import org.apache.kylin.metadata.cube.cuboid.AdaptiveSpanningTree
@@ -306,11 +306,14 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
     }
     logInfo(s"Segment $segmentId persist flat table: $flatTablePath")
     sparkSession.sparkContext.setJobDescription(s"Segment $segmentId persist flat table.")
-    if (config.isFlatTableRedistributionEnabled) {
-      sparkSession.sessionState.conf.setLocalProperty("spark.sql.sources.repartitionWritingDataSource", "true")
-    }
+    SparkConfHelper.setLocalPropertyIfNeeded(sparkSession,
+      config.isFlatTableRedistributionEnabled,
+      "spark.sql.sources.repartitionWritingDataSource",
+      "true");
     tableDS.write.mode(SaveMode.Overwrite).parquet(flatTablePath.toString)
-    sparkSession.sessionState.conf.setLocalProperty("spark.sql.sources.repartitionWritingDataSource", null)
+    SparkConfHelper.resetLocalPropertyIfNeeded(sparkSession,
+      config.isFlatTableRedistributionEnabled,
+      "spark.sql.sources.repartitionWritingDataSource");
     DFBuilderHelper.checkPointSegment(dataSegment, (copied: NDataSegment) => {
       copied.setFlatTableReady(true)
       if (dataSegment.isFlatTableReady) {
