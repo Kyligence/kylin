@@ -11,7 +11,6 @@
     <modelVersion>4.0.0</modelVersion>
 
     <name>Kylin - Query Server</name>
-    <groupId>org.apache.kylin</groupId>
     <artifactId>kylin-query-server</artifactId>
 
     <properties>
@@ -34,11 +33,6 @@
         <dependency>
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-data-loading-service</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kylin-job-service</artifactId>
         </dependency>
 
         <dependency>

@@ -10,8 +10,8 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>kylin-it</artifactId>
-    <name>Kylin - Integration Test</name>
+    <artifactId>kylin-server-it</artifactId>
+    <name>Kylin - Server Integration Test</name>
 
     <properties>
         <beanutils.version>1.9.4</beanutils.version>
@@ -34,17 +34,34 @@
             <artifactId>commons-io</artifactId>
             <scope>compile</scope>
         </dependency>
-
+        <!--yinglong-->
+        <dependency>
+            <groupId>org.apache.kylin</groupId>
+            <artifactId>kylin-it</artifactId>
+            <type>test-jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kylin</groupId>
+            <artifactId>kylin-query-server</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>spring-boot-starter-validation</artifactId>
+                    <groupId>org.springframework.boot</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kylin</groupId>
+            <artifactId>kylin-metadata-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kylin</groupId>
+            <artifactId>kylin-common-server</artifactId>
+        </dependency>
         <!--KAP-->
         <dependency>
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-core-metadata</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kylin-query</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.kylin</groupId>
@@ -53,14 +70,6 @@
         <dependency>
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-core-common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kylin-core-storage</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kylin-streaming</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.kylin</groupId>
@@ -180,26 +189,8 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kylin</groupId>
-            <artifactId>kylin-query</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-engine-spark</artifactId>
             <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kylin-streaming</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.parquet</groupId>
-            <artifactId>parquet-hadoop-bundle</artifactId>
-            <version>${parquet.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
