@@ -32,24 +32,23 @@ import org.apache.kylin.common.debug.BackdoorToggles;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.QueryErrorCode;
 import org.apache.kylin.common.msg.MsgPicker;
-import org.apache.kylin.query.engine.exec.calcite.CalciteQueryPlanExec;
-import org.apache.kylin.query.relnode.OLAPContext;
-import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.query.engine.exec.ExecuteResult;
 import org.apache.kylin.query.engine.exec.QueryPlanExec;
+import org.apache.kylin.query.engine.exec.calcite.CalciteQueryPlanExec;
 import org.apache.kylin.query.engine.meta.MutableDataContext;
 import org.apache.kylin.query.engine.meta.SimpleDataContext;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.KapContext;
 import org.apache.kylin.query.relnode.KapRel;
+import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OLAPRel;
 import org.apache.kylin.query.runtime.SparkEngine;
 import org.apache.kylin.query.util.QueryContextCutter;
 import org.apache.spark.SparkException;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +68,12 @@ public class SparderQueryPlanExec implements QueryPlanExec {
     public ExecuteResult executeToIterable(RelNode rel, MutableDataContext dataContext) {
         QueryContext.currentTrace().startSpan(QueryTrace.MODEL_MATCHING);
         // select realizations
-        selectRealization(rel);
+        ContextUtil.dumpCalcitePlan("EXECUTION PLAN BEFORE (SparderQueryPlanExec) SELECT REALIZATION", rel, log);
+        QueryContext.current().record("end_plan");
+        QueryContext.current().getQueryTagInfo().setWithoutSyntaxError(true);
+
+        QueryContextCutter.selectRealization(rel, BackdoorToggles.getIsQueryFromAutoModeling());
+        ContextUtil.dumpCalcitePlan("EXECUTION PLAN AFTER (SparderQueryPlanExec) SELECT REALIZATION IS SET", rel, log);
 
         val contexts = ContextUtil.listContexts();
         for (OLAPContext context : contexts) {
@@ -93,18 +97,9 @@ public class SparderQueryPlanExec implements QueryPlanExec {
 
         // rewrite
         rewrite(rel);
-        return doExecute(rel, dataContext);
-    }
 
-    /**
-     * submit rel and dataContext to query engine
-     * @param rel
-     * @param dataContext
-     * @return
-     */
-    private ExecuteResult doExecute(RelNode rel, DataContext dataContext) {
-        QueryEngine queryEngine = new SparkEngine();
-        return internalCompute(queryEngine, dataContext, rel.getInput(0));
+        // submit rel and dataContext to query engine
+        return internalCompute(new SparkEngine(), dataContext, rel.getInput(0));
     }
 
     private static boolean forceTableIndexAtException(Exception e) {
@@ -146,23 +141,11 @@ public class SparderQueryPlanExec implements QueryPlanExec {
                 QueryContext.current().getSecondStorageUsageMap().clear();
             } else if (e instanceof SQLException) {
                 handleForceToTieredStorage(e);
-            }else {
+            } else {
                 return ExceptionUtils.rethrow(e);
             }
         }
         return queryEngine.computeToIterable(dataContext, rel);
-    }
-
-    /**
-     * match cubes
-     */
-    private void selectRealization(RelNode rel) {
-        ContextUtil.dumpCalcitePlan("EXECUTION PLAN BEFORE OLAPImplementor", rel, log);
-        QueryContext.current().record("end_plan");
-
-        QueryContext.current().getQueryTagInfo().setWithoutSyntaxError(true);
-        QueryContextCutter.selectRealization(rel, BackdoorToggles.getIsQueryFromAutoModeling());
-        ContextUtil.dumpCalcitePlan("EXECUTION PLAN AFTER REALIZATION IS SET", rel, log);
     }
 
     /**
@@ -198,7 +181,7 @@ public class SparderQueryPlanExec implements QueryPlanExec {
     }
 
     private void handleForceToTieredStorage(final Exception e) {
-        if (e.getMessage().equals(QueryContext.ROUTE_USE_FORCEDTOTIEREDSTORAGE)){
+        if (e.getMessage().equals(QueryContext.ROUTE_USE_FORCEDTOTIEREDSTORAGE)) {
             ForceToTieredStorage forcedToTieredStorage = QueryContext.current().getForcedToTieredStorage();
             boolean forceTableIndex = QueryContext.current().isForceTableIndex();
             QueryContext.current().setLastFailed(true);
