@@ -22,6 +22,7 @@ import java.io.IOException
 import java.nio.charset.Charset
 import java.util.concurrent.Executors
 import java.util.{Map => JMap}
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.apache.kylin.common.KylinConfig
@@ -43,6 +44,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -169,36 +171,36 @@ object ResourceDetectUtils extends Logging {
     false
   }
 
-  def getResourceSize(configuration: Configuration, isConcurrencyFetchDataSourceSize: Boolean, paths: Path*): Long = {
+  def getResourceSize(kylinConfig: KylinConfig, configuration: Configuration, paths: Path*): Long = {
     val resourceSize = {
-      if (isConcurrencyFetchDataSourceSize) {
-        getResourceSizeWithTimeoutByConcurrency(Duration.Inf, configuration, paths: _*)
+      if (kylinConfig.isConcurrencyFetchDataSourceSize) {
+        getResourceSizeWithTimeoutByConcurrency(kylinConfig, Duration.Inf, configuration, paths: _*)
       } else {
-        getResourceSizBySerial(configuration, paths: _*)
+        getResourceSizBySerial(kylinConfig, configuration, paths: _*)
       }
     }
     resourceSize
   }
 
-  def getResourceSizBySerial(configuration: Configuration, paths: Path*): Long = {
+  def getResourceSizBySerial(kylinConfig: KylinConfig, configuration: Configuration, paths: Path*): Long = {
     paths.map(path => {
       QueryInterruptChecker.checkThreadInterrupted(errorMsgLog, "Current step: get resource size.")
       val fs = path.getFileSystem(configuration)
       if (fs.exists(path)) {
-        HadoopUtil.getContentSummary(fs, path).getLength
+        HadoopUtil.getContentSummaryFromHdfsKylinConfig(fs, path, kylinConfig).getLength
       } else {
         0L
       }
     }).sum
   }
 
-  def getResourceSizeWithTimeoutByConcurrency(timeout: Duration, configuration: Configuration, paths: Path*): Long = {
-    val kylinConfig = KylinConfig.getInstanceFromEnv
+  def getResourceSizeWithTimeoutByConcurrency(kylinConfig: KylinConfig, timeout: Duration,
+                                              configuration: Configuration, paths: Path*): Long = {
     val threadNumber = kylinConfig.getConcurrencyFetchDataSourceSizeThreadNumber
     logInfo(s"Get resource size concurrency, thread number is $threadNumber")
     val executor = Executors.newFixedThreadPool(threadNumber)
     implicit val executionContext: ExecutionContextExecutor = ExecutionContext.fromExecutor(executor)
-    val futures: Seq[Future[Long]] = getResourceSize(configuration, executionContext, paths: _*)
+    val futures: Seq[Future[Long]] = getResourceSize(kylinConfig, configuration, executionContext, paths: _*)
     try {
       val combinedFuture = Future.sequence(futures)
       val results: Seq[Long] = ThreadUtils.awaitResult(combinedFuture, timeout)
@@ -208,8 +210,8 @@ object ResourceDetectUtils extends Logging {
     }
   }
 
-  def getResourceSize(configuration: Configuration, executionContext: ExecutionContextExecutor, paths: Path*): Seq[Future[Long]] = {
-    val kylinConfig = KylinConfig.getInstanceFromEnv
+  def getResourceSize(kylinConfig: KylinConfig, configuration: Configuration,
+                      executionContext: ExecutionContextExecutor, paths: Path*): Seq[Future[Long]] = {
     paths.map { path =>
       Future {
         val fs = path.getFileSystem(configuration)
@@ -222,8 +224,8 @@ object ResourceDetectUtils extends Logging {
     }
   }
 
-  def getResourceSize(isConcurrencyFetchDataSourceSize: Boolean, paths: Path*): Long = {
-    getResourceSize(HadoopUtil.getCurrentConfiguration, isConcurrencyFetchDataSourceSize, paths: _*)
+  def getResourceSize(kylinConfig: KylinConfig, paths: Path*): Long = {
+    getResourceSize(kylinConfig, HadoopUtil.getCurrentConfiguration, paths: _*)
   }
 
   def getMaxResourceSize(shareDir: Path): Long = {
