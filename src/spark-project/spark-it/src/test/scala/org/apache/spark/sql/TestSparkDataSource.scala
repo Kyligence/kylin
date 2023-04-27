@@ -22,7 +22,6 @@
 
 package org.apache.spark.sql
 
-import io.kyligence.kap.common.SSSource
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.engine.spark.job.KylinBuildEnv
 import org.apache.kylin.engine.spark.source.NSparkCubingSourceInput
@@ -32,13 +31,15 @@ import org.apache.spark.sql.common.{LocalMetadata, SparderBaseFunSuite}
 import org.apache.spark.sql.types.DataTypes
 import org.junit.Assert
 
+import io.kyligence.kap.common.SSSource
+
 class TestSparkDataSource extends SparderBaseFunSuite
   with LocalMetadata
   with SSSource
   with Logging {
 
   test("test spark data source") {
-    val kylinBuildEnv = KylinBuildEnv.getOrCreate(KylinConfig.getInstanceFromEnv);
+    KylinBuildEnv.getOrCreate(KylinConfig.getInstanceFromEnv)
     val tableDesc = new TableDesc
     tableDesc.setName("test_country")
     val columnDescs = spark.table("test_country").schema
