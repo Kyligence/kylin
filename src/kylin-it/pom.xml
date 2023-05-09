@@ -162,6 +162,41 @@
             <artifactId>tomcat-embed-core</artifactId>
             <scope>compile</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.glutenproject</groupId>
+            <artifactId>gluten-core</artifactId>
+            <version>0.5.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.glutenproject</groupId>
+            <artifactId>backends-clickhouse</artifactId>
+            <version>0.5.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.glutenproject</groupId>
+            <artifactId>spark-sql-columnar-shims-common</artifactId>
+            <version>0.5.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.glutenproject</groupId>
+            <artifactId>spark-sql-columnar-shims-spark32</artifactId>
+            <version>0.5.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>3.16.3</version>
+            <scope>provided</scope>
+        </dependency>
         <!-- Env & Test -->
         <dependency>
             <groupId>org.apache.kylin</groupId>

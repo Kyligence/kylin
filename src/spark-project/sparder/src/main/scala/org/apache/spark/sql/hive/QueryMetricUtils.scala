@@ -18,6 +18,8 @@
 
 package org.apache.spark.sql.hive
 
+import io.glutenproject.execution.FileSourceScanExecTransformer
+
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.metrics.AppStatus
@@ -48,6 +50,8 @@ object QueryMetricUtils extends Logging {
         (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + exec.metrics.apply("readBytes").value)
       case exec: KylinFileSourceScanExec =>
         (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + exec.metrics.apply("readBytes").value)
+      case transformer: FileSourceScanExecTransformer => // for native file scan
+        (scanRow + transformer.metrics.apply("outputRows").value, scanBytes + transformer.metrics.apply("outputBytes").value)
       case exec: FileSourceScanExec =>
         (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + exec.metrics.apply("readBytes").value)
       case exec: HiveTableScanExec =>
