@@ -22,6 +22,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_ID_NO
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_NAME_NOT_EXIST;
 import static org.apache.kylin.metadata.model.NTableMetadataManager.getInstance;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.io.DataInputStream;
@@ -114,6 +115,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
+import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;
@@ -154,6 +156,9 @@ public class TableServiceTest extends CSVSourceTestCase {
     @Mock
     private KafkaService kafkaServiceMock = Mockito.mock(KafkaService.class);
 
+    @Mock
+    private AclService aclService = Mockito.mock(AclService.class);
+
     @InjectMocks
     private FusionModelService fusionModelService = Mockito.spy(new FusionModelService());
 
@@ -177,6 +182,7 @@ public class TableServiceTest extends CSVSourceTestCase {
         ReflectionTestUtils.setField(userAclService, "userService", userService);
         ReflectionTestUtils.setField(accessService, "userAclService", userAclService);
         ReflectionTestUtils.setField(accessService, "userService", userService);
+        ReflectionTestUtils.setField(accessService, "aclService", aclService);
         ReflectionTestUtils.setField(tableService, "accessService", accessService);
         NProjectManager projectManager = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
         ProjectInstance projectInstance = projectManager.getProject("default");
@@ -328,6 +334,7 @@ public class TableServiceTest extends CSVSourceTestCase {
         Mockito.when(userService.isGlobalAdmin(Mockito.anyString())).thenReturn(true);
         Mockito.when(userAclService.hasUserAclPermissionInProject(Mockito.anyString(), Mockito.anyString()))
                 .thenReturn(false);
+        Mockito.when(userService.loadUserByUsername(eq("test"))).thenReturn(new ManagedUser());
 
         List<TableDesc> tableExtList = tableService
                 .getTableDesc("newten", true, "TEST_COUNTRY", "DEFAULT", true, Collections.emptyList(), 10).getFirst();
