@@ -24,6 +24,12 @@
 
 package org.apache.spark.sql.execution.columnar
 
+import java.io.{IOException, InputStream}
+import java.lang.reflect.Method
+import java.nio.ByteBuffer
+import java.time.ZoneId
+import java.util
+
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.RecordWriter
@@ -42,6 +48,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateUnsafeProjection
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, UnsafeRow}
+import org.apache.spark.sql.catalyst.util.RebaseDateTime.RebaseSpec
 import org.apache.spark.sql.columnar.{CachedBatch, CachedBatchSerializer}
 import org.apache.spark.sql.execution.datasources.DataSourceUtils
 import org.apache.spark.sql.execution.datasources.parquet._
@@ -52,11 +59,6 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.vectorized.{ColumnVector, ColumnarBatch}
 import org.apache.spark.storage.StorageLevel
 
-import java.io.{IOException, InputStream}
-import java.lang.reflect.Method
-import java.nio.ByteBuffer
-import java.time.ZoneId
-import java.util
 import scala.collection.JavaConverters._
 import scala.collection.SeqLike
 import scala.collection.mutable.ArrayBuffer
@@ -348,7 +350,7 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
           val recordReader = // Maybe we should only read the selected columns.
             columnIO.getRecordReader(pages, new ShadeParquetRecordMaterializer(parquetSchema,
               cacheAttributes.toStructType,
-              new ParquetToSparkSchemaConverter(hadoopConf), convertTz, datetimeRebaseMode, int96RebaseMode))
+              new ParquetToSparkSchemaConverter(hadoopConf), convertTz, RebaseSpec(datetimeRebaseMode), RebaseSpec(int96RebaseMode)))
           for (_ <- 0 until rows.toInt) {
             val row = recordReader.read
             unsafeRows += row.copy()

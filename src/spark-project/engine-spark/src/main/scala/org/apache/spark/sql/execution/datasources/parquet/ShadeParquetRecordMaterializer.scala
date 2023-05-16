@@ -25,16 +25,15 @@
 package org.apache.spark.sql.execution.datasources.parquet
 
 import java.time.ZoneId
+
 import org.apache.parquet.schema.MessageType
 import org.apache.spark.sql.catalyst.util.RebaseDateTime.RebaseSpec
-import org.apache.spark.sql.internal.SQLConf.LegacyBehaviorPolicy
 import org.apache.spark.sql.types.StructType
 
 class ShadeParquetRecordMaterializer(parquetSchema: MessageType,
                                      catalystSchema: StructType,
                                      schemaConverter: ParquetToSparkSchemaConverter,
                                      convertTz: Option[ZoneId],
-                                     datetimeRebaseMode: LegacyBehaviorPolicy.Value,
-                                     int96RebaseMode: LegacyBehaviorPolicy.Value)
-  extends ParquetRecordMaterializer(parquetSchema, catalystSchema, schemaConverter,
-    convertTz, RebaseSpec(datetimeRebaseMode), RebaseSpec(int96RebaseMode))
+                                     datetimeRebaseSpec: RebaseSpec,
+                                     int96RebaseSpec: RebaseSpec)
+  extends ParquetRecordMaterializer(parquetSchema, catalystSchema, schemaConverter, convertTz, datetimeRebaseSpec, int96RebaseSpec)
