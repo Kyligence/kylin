@@ -18,6 +18,9 @@
 package org.apache.kylin.rest;
 
 import java.io.File;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
@@ -25,6 +28,7 @@ import org.apache.kylin.common.util.ClassUtil;
 import org.apache.kylin.common.util.TempMetadataBuilder;
 import org.apache.kylin.common.util.TimeZoneUtils;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.source.jdbc.H2Database;
 import org.apache.kylin.tool.kerberos.DelegationTokenManager;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
@@ -62,7 +66,10 @@ public class KylinPrepareEnvListener implements EnvironmentPostProcessor, Ordere
                 setSandboxEnvs("../examples/test_case_data/sandbox");
             }
         } else if (env.acceptsProfiles(Profiles.of("dev"))) {
-            setLocalEnvs();
+            if (env.getSystemEnvironment().containsKey(KylinConfig.KYLIN_CONF))
+                ClassUtil.addClasspath(env.getSystemEnvironment().get(KylinConfig.KYLIN_CONF).toString());
+            if (!StringUtils.equals("true", env.getProperty("dev.diag-meta")))
+                setLocalEnvs();
         }
         // enable CC check
         Unsafe.setProperty("needCheckCC", "true");
@@ -126,5 +133,17 @@ public class KylinPrepareEnvListener implements EnvironmentPostProcessor, Ordere
         Unsafe.setProperty("kylin.query.pushdown.jdbc.driver", "org.h2.Driver");
         Unsafe.setProperty("kylin.query.pushdown.jdbc.username", "sa");
         Unsafe.setProperty("kylin.query.pushdown.jdbc.password", "");
+
+        // Load H2 Tables (inner join) for pushdown to rdbms in local debug mode
+        try {
+            String username = System.getProperty("kylin.query.pushdown.jdbc.username");
+            String password = System.getProperty("kylin.query.pushdown.jdbc.password");
+            Connection h2Connection = DriverManager.getConnection("jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1", username,
+                    password);
+            H2Database h2DB = new H2Database(h2Connection, KylinConfig.getInstanceFromEnv(), "default");
+            h2DB.loadAllTables();
+        } catch (SQLException ex) {
+            log.error(ex.getMessage(), ex);
+        }
     }
 }
