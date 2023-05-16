@@ -18,6 +18,7 @@
 
 package org.apache.kylin.query.pushdown
 
+import io.glutenproject.utils.FallbackUtil
 import io.kyligence.kap.cache.kylin.KylinCacheFileSystem
 import io.kyligence.kap.fileseg.FileSegments
 import io.kyligence.kap.softaffinity.SoftAffinityManager
@@ -199,6 +200,8 @@ object SparkSqlClient {
       val (jobCount, stageCount, taskCount) = QueryMetricUtils.collectTaskRelatedMetrics(jobGroup, ss.sparkContext)
       QueryContext.current().getMetrics.setScanRows(scanRows)
       QueryContext.current().getMetrics.setScanBytes(scanBytes)
+      val glutenFallback = FallbackUtil.isFallback(df.queryExecution.executedPlan)
+      QueryContext.current().getMetrics.setGlutenFallback(glutenFallback)
       QueryContext.current().getMetrics.setQueryJobCount(jobCount)
       QueryContext.current().getMetrics.setQueryStageCount(stageCount)
       QueryContext.current().getMetrics.setQueryTaskCount(taskCount)

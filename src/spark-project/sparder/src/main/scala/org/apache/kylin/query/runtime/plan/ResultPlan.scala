@@ -40,6 +40,7 @@ import org.apache.spark.sql.hive.QueryMetricUtils
 import org.apache.spark.sql.util.{SparderConstants, SparderTypeUtil}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparderEnv}
 import org.apache.spark.sql.execution.gluten.KylinFileSourceScanExecTransformer
+import io.glutenproject.utils.FallbackUtil
 
 import java.io.{File, FileOutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
@@ -127,8 +128,11 @@ object ResultPlan extends LogEx {
       QueryContext.current.record("collect_result")
 
       val (scanRows, scanBytes) = QueryMetricUtils.collectScanMetrics(df.queryExecution.executedPlan)
+      val glutenFallback = FallbackUtil.isFallback(df.queryExecution.executedPlan)
+      QueryContext.current().getMetrics.setGlutenFallback(glutenFallback)
       val (jobCount, stageCount, taskCount) = QueryMetricUtils.collectTaskRelatedMetrics(jobGroup, sparkContext)
       QueryContext.current().getMetrics.setScanRows(scanRows)
+
       QueryContext.current().getMetrics.setScanBytes(scanBytes)
       QueryContext.current().getMetrics.setQueryJobCount(jobCount)
       QueryContext.current().getMetrics.setQueryStageCount(stageCount)
