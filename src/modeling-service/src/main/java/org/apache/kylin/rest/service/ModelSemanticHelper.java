@@ -53,6 +53,11 @@ import org.apache.kylin.common.util.ModifyTableNameSqlVisitor;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.utils.ComputedColumnEvalUtil;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
@@ -107,12 +112,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.metadata.recommendation.ref.OptRecManagerV2;
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
@@ -1141,8 +1140,9 @@ public class ModelSemanticHelper extends BasicService {
             List<ComputedColumnDesc> computedColumnDescs) {
         return computedColumnDescs.stream().map(ccDesc -> {
             AtomicBoolean isValidCC = new AtomicBoolean(true);
+            String calciteSyntaxExp = QueryUtil.adaptCalciteSyntax(ccDesc.getInnerExpression());
             List<Pair<String, String>> colsWithAlias = ComputedColumnUtil.ExprIdentifierFinder
-                    .getExprIdentifiers(ccDesc.getExpression());
+                    .getExprIdentifiers(calciteSyntaxExp);
             colsWithAlias.forEach(c -> {
                 String column = c.getFirst() + "." + c.getSecond();
                 if (!aliasDotColSet.contains(column)) {
