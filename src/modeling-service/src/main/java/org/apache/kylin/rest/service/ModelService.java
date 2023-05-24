@@ -1434,6 +1434,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
     public void cloneModel(String modelId, String newModelName, String project) {
         aclEvaluate.checkProjectWritePermission(project);
         checkAliasExist("", newModelName, project);
+        checkAliasIsExceededLimit(newModelName);
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             NDataModelManager dataModelManager = getManager(NDataModelManager.class, project);
             NDataModel dataModelDesc = getModelById(modelId, project);
