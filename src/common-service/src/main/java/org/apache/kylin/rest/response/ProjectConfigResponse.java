@@ -89,6 +89,8 @@ public class ProjectConfigResponse {
     @JsonProperty("retention_range")
     private RetentionRange retentionRange;
 
+    @JsonProperty("job_states_notification")
+    private List<String> jobStatesNotification;
     @JsonProperty("job_error_notification_enabled")
     private boolean jobErrorNotificationEnabled;
     @JsonProperty("data_load_empty_notification_enabled")
@@ -142,17 +144,17 @@ public class ProjectConfigResponse {
 
     public void setFrequencyTimeWindow(int frequencyTimeWindow) {
         switch (frequencyTimeWindow) {
-            case 1:
-                this.frequencyTimeWindow = "DAY";
-                break;
-            case 7:
-                this.frequencyTimeWindow = "WEEK";
-                break;
-            case 30:
-                this.frequencyTimeWindow = "MONTH";
-                break;
-            default:
-                break;
+        case 1:
+            this.frequencyTimeWindow = "DAY";
+            break;
+        case 7:
+            this.frequencyTimeWindow = "WEEK";
+            break;
+        case 30:
+            this.frequencyTimeWindow = "MONTH";
+            break;
+        default:
+            break;
         }
 
     }

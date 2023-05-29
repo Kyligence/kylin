@@ -631,13 +631,13 @@ class KylinConfigBaseTest {
         map.put("getJobErrorNotificationEnabled",
                 new PropertiesEntity("kylin.job.notification-on-job-error", "false", false));
 
+        map.put("getJobNotificationStates", new PropertiesEntity("kylin.job.notification-enable-states",
+                "error,succeed,discarded", new String[] { "error", "succeed", "discarded" }));
+
         map.put("getStorageResourceSurvivalTimeThreshold",
                 new PropertiesEntity("kylin.storage.resource-survival-time-threshold", "7d", 7L * 24 * 60 * 60 * 1000));
 
         map.put("getTimeMachineEnabled", new PropertiesEntity("kylin.storage.time-machine-enabled", "false", false));
-
-        map.put("getJobSourceRecordsChangeNotificationEnabled",
-                new PropertiesEntity("kylin.job.notification-on-source-records-change", "false", false));
 
         map.put("getMetadataBackupCountThreshold",
                 new PropertiesEntity("kylin.metadata.backup-count-threshold", "7", 7));
@@ -986,9 +986,9 @@ class KylinConfigBaseTest {
     @Test
     void testGetNonCustomProjectConfigs() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        assertEquals(19, config.getNonCustomProjectConfigs().size());
-        config.setProperty("kylin.server.non-custom-project-configs", "kylin.job.retry");
         assertEquals(20, config.getNonCustomProjectConfigs().size());
+        config.setProperty("kylin.server.non-custom-project-configs", "kylin.job.retry");
+        assertEquals(21, config.getNonCustomProjectConfigs().size());
     }
 
     @Test

@@ -30,6 +30,8 @@ public class JobNotificationConfigRequest {
     private Boolean jobErrorNotificationEnabled;
     @JsonProperty("data_load_empty_notification_enabled")
     private Boolean dataLoadEmptyNotificationEnabled;
+    @JsonProperty("job_states_notification")
+    private List<String> jobStatesNotification;
     @JsonProperty("job_notification_emails")
     private List<String> jobNotificationEmails;
 

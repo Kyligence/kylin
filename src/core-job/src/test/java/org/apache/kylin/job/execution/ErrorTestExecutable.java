@@ -40,6 +40,7 @@ public class ErrorTestExecutable extends BaseTestExecutable {
         Map<String, String> info = new HashMap<String, String>() {
             {
                 put("runningStatus", "inRunning");
+                put("yarn_application_id", "application_1677899901295_8888");
             }
         };
         updateJobOutput(getProject(), getId(), ExecutableState.RUNNING, info, null, null);

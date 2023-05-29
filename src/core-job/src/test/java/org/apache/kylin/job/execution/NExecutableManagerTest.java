@@ -48,19 +48,21 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.HadoopUtil;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.constant.ExecutableConstants;
-import org.apache.kylin.job.constant.JobIssueEnum;
 import org.apache.kylin.job.dao.NExecutableDao;
 import org.apache.kylin.job.engine.JobEngineConfig;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
-import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.assertj.core.util.Lists;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
@@ -71,9 +73,6 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.val;
 import lombok.var;
@@ -609,33 +608,6 @@ public class NExecutableManagerTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testEmailNotificationContent() {
-        val project = DEFAULT_PROJECT;
-        val job = new DefaultExecutableOnModel();
-        job.setName(JobTypeEnum.INDEX_BUILD.toString());
-        job.setJobType(JobTypeEnum.INDEX_BUILD);
-        job.setProject(project);
-        val start = "2015-01-01 00:00:00";
-        val end = "2015-02-01 00:00:00";
-        job.setParam(NBatchConstants.P_DATA_RANGE_START, SegmentRange.dateToLong(start) + "");
-        job.setParam(NBatchConstants.P_DATA_RANGE_END, SegmentRange.dateToLong(end) + "");
-        job.setTargetSubject("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
-        EmailNotificationContent content = EmailNotificationContent.createContent(JobIssueEnum.JOB_ERROR, job);
-        Assert.assertTrue(content.getEmailTitle().contains(JobIssueEnum.JOB_ERROR.getDisplayName()));
-        Assert.assertTrue(!content.getEmailBody().contains("$"));
-        Assert.assertTrue(content.getEmailBody().contains(project));
-        Assert.assertTrue(content.getEmailBody().contains(job.getName()));
-
-        content = EmailNotificationContent.createContent(JobIssueEnum.LOAD_EMPTY_DATA, job);
-        Assert.assertTrue(content.getEmailBody().contains(job.getTargetModelAlias()));
-        Assert.assertEquals("89af4ee2-2cdb-4b07-b39e-4c29856309aa", job.getTargetModelId());
-        content = EmailNotificationContent.createContent(JobIssueEnum.SOURCE_RECORDS_CHANGE, job);
-        Assert.assertTrue(content.getEmailBody().contains(start));
-        Assert.assertTrue(content.getEmailBody().contains(end));
-
-    }
-
-    @Test
     public void testGetSampleDataFromHDFS() throws IOException {
         final String junitFolder = temporaryFolder.getRoot().getAbsolutePath();
         final String mainFolder = junitFolder + "/testGetSampleDataFromHDFS";
@@ -954,5 +926,35 @@ public class NExecutableManagerTest extends NLocalFileMetadataTestCase {
 
         manager.updateJobOutput(job.getId(), ExecutableState.RUNNING);
         executable.checkParentJobStatus();
+    }
+
+    @Test
+    public void testLoadEmptyData() {
+        NDataLayout dataLayoutNotEmpty = new NDataLayout();
+        dataLayoutNotEmpty.setRows(100L);
+        NDataLayout[] nDataLayouts = { dataLayoutNotEmpty };
+
+        NDataLayout dataLayoutEmpty = new NDataLayout();
+        NDataLayout[] nDataLayouts2 = { dataLayoutEmpty };
+
+        DefaultExecutable job = new DefaultExecutable();
+        job.setProject("default");
+        val executable = new SucceedTestExecutable();
+        job.addTask(executable);
+        manager.addJob(job);
+
+        boolean notified = job.notifyUserIfNecessary(nDataLayouts);
+        assertFalse(notified);
+
+        notified = job.notifyUserIfNecessary(nDataLayouts2);
+        assertFalse(notified);
+
+        overwriteSystemProp("kylin.job.notification-enabled", "true");
+        notified = job.notifyUserIfNecessary(nDataLayouts2);
+        assertFalse(notified);
+
+        overwriteSystemProp("kylin.job.notification-on-empty-data-load", "true");
+        notified = job.notifyUserIfNecessary(nDataLayouts2);
+        assertFalse(notified);
     }
 }

@@ -75,6 +75,11 @@ import org.apache.kylin.common.util.EncryptUtil;
 import org.apache.kylin.common.util.JdbcUtils;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.SetThreadName;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.base.Strings;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.constant.JobStatusEnum;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.NExecutableManager;
@@ -131,11 +136,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.base.Strings;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
@@ -330,8 +330,8 @@ public class ProjectService extends BasicService {
 
     public StorageVolumeInfoResponse getStorageVolumeInfoResponse(String project) {
         val response = new StorageVolumeInfoResponse();
-        val collector = new ProjectStorageInfoCollector(Lists.newArrayList(StorageInfoEnum.GARBAGE_STORAGE, StorageInfoEnum.STORAGE_QUOTA,
-                StorageInfoEnum.TOTAL_STORAGE));
+        val collector = new ProjectStorageInfoCollector(Lists.newArrayList(StorageInfoEnum.GARBAGE_STORAGE,
+                StorageInfoEnum.STORAGE_QUOTA, StorageInfoEnum.TOTAL_STORAGE));
         val storageVolumeInfo = collector.getStorageVolumeInfo(getConfig(), project);
         response.setGarbageStorageSize(storageVolumeInfo.getGarbageStorageSize());
         response.setStorageQuotaSize(storageVolumeInfo.getStorageQuotaSize());
@@ -445,16 +445,24 @@ public class ProjectService extends BasicService {
         overrideKylinProps.computeIfPresent(KYLIN_SOURCE_JDBC_PASS_KEY, (k, v) -> HIDDEN_VALUE);
     }
 
+    /** Changing the order of assignments is not allowed
+     */
     @Transaction(project = 0)
-    public void updateJobNotificationConfig(String project, JobNotificationConfigRequest jobNotificationConfigRequest) {
+    public void updateJobNotificationConfig(String project, JobNotificationConfigRequest request) {
         aclEvaluate.checkProjectAdminPermission(project);
         Map<String, String> overrideKylinProps = Maps.newHashMap();
-        overrideKylinProps.put("kylin.job.notification-on-empty-data-load",
-                String.valueOf(jobNotificationConfigRequest.getDataLoadEmptyNotificationEnabled()));
+        if (request.getJobStatesNotification() != null) {
+            overrideKylinProps.put("kylin.job.notification-enable-states",
+                    String.join(",", Sets.newHashSet(request.getJobStatesNotification())));
+            overrideKylinProps.put("kylin.job.notification-on-job-error", null);
+        }
+
         overrideKylinProps.put("kylin.job.notification-on-job-error",
-                String.valueOf(jobNotificationConfigRequest.getJobErrorNotificationEnabled()));
+                String.valueOf(request.getJobErrorNotificationEnabled()));
+        overrideKylinProps.put("kylin.job.notification-on-empty-data-load",
+                String.valueOf(request.getDataLoadEmptyNotificationEnabled()));
         overrideKylinProps.put("kylin.job.notification-admin-emails",
-                convertToString(jobNotificationConfigRequest.getJobNotificationEmails()));
+                convertToString(request.getJobNotificationEmails()));
         updateProjectOverrideKylinProps(project, overrideKylinProps);
     }
 
@@ -573,6 +581,16 @@ public class ProjectService extends BasicService {
 
         response.setDataLoadEmptyNotificationEnabled(config.getJobDataLoadEmptyNotificationEnabled());
         response.setJobErrorNotificationEnabled(config.getJobErrorNotificationEnabled());
+
+        List<String> jobStatesNotification = config.getJobNotificationStates() == null ? Lists.newArrayList()
+                : Arrays.stream(config.getJobNotificationStates()).map(String::toLowerCase)
+                        .collect(Collectors.toList());
+        boolean jobErrorNotificationEnabled = config.getJobErrorNotificationEnabled();
+        if (jobErrorNotificationEnabled && !jobStatesNotification.contains("error")) {
+            jobStatesNotification.add("error");
+        }
+        response.setJobStatesNotification(jobStatesNotification);
+
         response.setJobNotificationEmails(Lists.newArrayList(config.getAdminDls()));
 
         response.setFrequencyTimeWindow(config.getFrequencyTimeWindowInDays());
@@ -1050,6 +1068,7 @@ public class ProjectService extends BasicService {
         Set<String> toBeRemovedProps = Sets.newHashSet();
         toBeRemovedProps.add("kylin.job.notification-on-empty-data-load");
         toBeRemovedProps.add("kylin.job.notification-on-job-error");
+        toBeRemovedProps.add("kylin.job.notification-enable-states");
         toBeRemovedProps.add("kylin.job.notification-admin-emails");
         removeProjectOverrideProps(project, toBeRemovedProps);
     }

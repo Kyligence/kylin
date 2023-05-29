@@ -244,7 +244,7 @@ public class NProjectControllerTest extends NLocalFileMetadataTestCase {
     public void testUpdateJobNotificationConfig() throws Exception {
         val request = new JobNotificationConfigRequest();
 
-        request.setJobErrorNotificationEnabled(true);
+        request.setJobStatesNotification(Arrays.asList("Succeed", "Error", "Discard"));
         request.setDataLoadEmptyNotificationEnabled(true);
         request.setJobNotificationEmails(Arrays.asList("fff@g.com"));
 
@@ -468,7 +468,7 @@ public class NProjectControllerTest extends NLocalFileMetadataTestCase {
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         Mockito.verify(nProjectController).getNonCustomProjectConfigs();
-        Assert.assertEquals(19, getTestConfig().getNonCustomProjectConfigs().size());
+        Assert.assertEquals(20, getTestConfig().getNonCustomProjectConfigs().size());
     }
 
     @Test

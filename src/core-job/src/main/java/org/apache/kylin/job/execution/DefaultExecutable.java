@@ -32,17 +32,17 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.mail.MailNotificationType;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.scheduler.JobFinishedNotifier;
-import org.apache.kylin.job.constant.JobIssueEnum;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.exception.ExecuteRuntimeException;
 import org.apache.kylin.job.exception.JobStoppedException;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import lombok.val;
 
 /**
@@ -222,6 +222,63 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
 
     @Override
     protected void onExecuteFinished(ExecuteResult result) throws JobStoppedException {
+        ExecutableState state = checkState();
+        logger.info("Job finished {}, state:{}", this.getDisplayName(), state);
+
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            switch (state) {
+            case SUCCEED:
+                updateToFinalState(ExecutableState.SUCCEED, this::afterUpdateOutput, result.getShortErrMsg());
+                onStatusChange(MailNotificationType.JOB_SUCCEED);
+                break;
+            case DISCARDED:
+                updateToFinalState(ExecutableState.DISCARDED, this::onExecuteDiscardHook, result.getShortErrMsg());
+                onStatusChange(MailNotificationType.JOB_DISCARDED);
+                break;
+            case SUICIDAL:
+                updateToFinalState(ExecutableState.SUICIDAL, this::onExecuteSuicidalHook, result.getShortErrMsg());
+                onStatusChange(MailNotificationType.JOB_ERROR);
+                break;
+            case ERROR:
+            case PAUSED:
+            case READY:
+                if (isStoppedNonVoluntarily()) {
+                    logger.info("Execute finished  {} which is stopped nonvoluntarily, state: {}",
+                            this.getDisplayName(), getOutput().getState());
+                    return null;
+                }
+                Consumer<String> hook = null;
+                Map<String, String> info = null;
+                String output = null;
+                String shortErrMsg = null;
+                if (state == ExecutableState.ERROR) {
+                    logger.warn("[UNEXPECTED_THINGS_HAPPENED] Unexpected ERROR state discovered here!!!");
+                    info = result.getExtraInfo();
+                    output = result.getErrorMsg();
+                    hook = this::onExecuteErrorHook;
+                    shortErrMsg = result.getShortErrMsg();
+                }
+                updateJobOutput(getProject(), getId(), state, info, output, shortErrMsg, hook);
+                if (state == ExecutableState.ERROR) {
+                    onStatusChange(MailNotificationType.JOB_ERROR);
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("Illegal state when job finished: " + state);
+            }
+            return null;
+
+        }, project, UnitOfWork.DEFAULT_MAX_RETRY, getEpochId(), getTempLockName());
+
+        // dispatch job-finished message out
+        EventBusFactory.getInstance()
+                .postSync(new JobFinishedNotifier(getId(), getProject(), getTargetSubject(), getDuration(),
+                        state.toString(), getJobType().toString(), this.getSegmentIds(), this.getLayoutIds(),
+                        getTargetPartitions(), getWaitTime(), this.getClass().getName(), this.getSubmitter(),
+                        result.succeed(), getJobStartTime(), getJobEndTime(), getTag(), result.getThrowable()));
+    }
+
+    private ExecutableState checkState() {
         List<? extends Executable> jobs = getTasks();
         boolean allSucceed = true;
         boolean hasError = false;
@@ -233,8 +290,6 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
             boolean taskSucceed = false;
             switch (task.getStatus()) {
             case RUNNING:
-                hasError = true;
-                break;
             case ERROR:
                 hasError = true;
                 break;
@@ -273,54 +328,7 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
             state = ExecutableState.READY;
         }
 
-        logger.info("Job finished {}, state:{}", this.getDisplayName(), state);
-
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            switch (state) {
-            case SUCCEED:
-                updateToFinalState(ExecutableState.SUCCEED, this::afterUpdateOutput, result.getShortErrMsg());
-                break;
-            case DISCARDED:
-                updateToFinalState(ExecutableState.DISCARDED, this::onExecuteDiscardHook, result.getShortErrMsg());
-                break;
-            case SUICIDAL:
-                updateToFinalState(ExecutableState.SUICIDAL, this::onExecuteSuicidalHook, result.getShortErrMsg());
-                break;
-            case ERROR:
-            case PAUSED:
-            case READY:
-                if (isStoppedNonVoluntarily()) {
-                    logger.info("Execute finished  {} which is stopped nonvoluntarily, state: {}",
-                            this.getDisplayName(), getOutput().getState());
-                    return null;
-                }
-                Consumer<String> hook = null;
-                Map<String, String> info = null;
-                String output = null;
-                String shortErrMsg = null;
-                if (state == ExecutableState.ERROR) {
-                    logger.warn("[UNEXPECTED_THINGS_HAPPENED] Unexpected ERROR state discovered here!!!");
-                    notifyUserJobIssue(JobIssueEnum.JOB_ERROR);
-                    info = result.getExtraInfo();
-                    output = result.getErrorMsg();
-                    hook = this::onExecuteErrorHook;
-                    shortErrMsg = result.getShortErrMsg();
-                }
-                updateJobOutput(getProject(), getId(), state, info, output, shortErrMsg, hook);
-                break;
-            default:
-                throw new IllegalArgumentException("Illegal state when job finished: " + state);
-            }
-            return null;
-
-        }, project, UnitOfWork.DEFAULT_MAX_RETRY, getEpochId(), getTempLockName());
-
-        // dispatch job-finished message out
-        EventBusFactory.getInstance()
-                .postSync(new JobFinishedNotifier(getId(), getProject(), getTargetSubject(), getDuration(),
-                        state.toString(), getJobType().toString(), this.getSegmentIds(), this.getLayoutIds(),
-                        getTargetPartitions(), getWaitTime(), this.getClass().getName(), this.getSubmitter(),
-                        result.succeed(), getJobStartTime(), getJobEndTime(), getTag(), result.getThrowable()));
+        return state;
     }
 
     private long getJobStartTime() {
@@ -400,4 +408,11 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
         // just implement it
     }
 
+    protected boolean onStatusChange(MailNotificationType notificationType) {
+        KylinConfig config = getConfig();
+        if (config.isMailEnabled()) {
+            return super.notifyUser(notificationType);
+        }
+        return false;
+    }
 }

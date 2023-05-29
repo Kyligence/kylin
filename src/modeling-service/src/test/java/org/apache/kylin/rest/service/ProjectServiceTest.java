@@ -40,6 +40,9 @@ import org.apache.kylin.common.util.EncryptUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.TimeUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.common.ShellExecutable;
 import org.apache.kylin.job.constant.JobStatusEnum;
 import org.apache.kylin.job.engine.JobEngineConfig;
@@ -92,10 +95,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.clickhouse.MockSecondStorage;
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
@@ -369,13 +368,13 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
         var response = projectService.getProjectConfig(project);
         val jobNotificationConfigRequest = new JobNotificationConfigRequest();
         jobNotificationConfigRequest.setDataLoadEmptyNotificationEnabled(false);
-        jobNotificationConfigRequest.setJobErrorNotificationEnabled(false);
+        jobNotificationConfigRequest.setJobStatesNotification(Lists.newArrayList("Succeed", "Error", "Discard"));
         jobNotificationConfigRequest.setJobNotificationEmails(
                 Lists.newArrayList("user1@kyligence.io", "user2@kyligence.io", "user2@kyligence.io"));
         projectService.updateJobNotificationConfig(project, jobNotificationConfigRequest);
         response = projectService.getProjectConfig(project);
         Assert.assertEquals(2, response.getJobNotificationEmails().size());
-        Assert.assertFalse(response.isJobErrorNotificationEnabled());
+        Assert.assertEquals(3, response.getJobStatesNotification().size());
         Assert.assertFalse(response.isDataLoadEmptyNotificationEnabled());
 
         jobNotificationConfigRequest
@@ -772,7 +771,7 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
 
         val jobNotificationConfigRequest = new JobNotificationConfigRequest();
         jobNotificationConfigRequest.setDataLoadEmptyNotificationEnabled(true);
-        jobNotificationConfigRequest.setJobErrorNotificationEnabled(true);
+        jobNotificationConfigRequest.setJobStatesNotification(Lists.newArrayList("Succeed", "Error", "Discard"));
         jobNotificationConfigRequest.setJobNotificationEmails(
                 Lists.newArrayList("user1@kyligence.io", "user2@kyligence.io", "user2@kyligence.io"));
         projectService.updateJobNotificationConfig(PROJECT, jobNotificationConfigRequest);
@@ -790,12 +789,12 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
         updateProject();
         var response = projectService.getProjectConfig(PROJECT);
         Assert.assertEquals(2, response.getJobNotificationEmails().size());
-        Assert.assertTrue(response.isJobErrorNotificationEnabled());
+        Assert.assertEquals(3, response.getJobStatesNotification().size());
         Assert.assertTrue(response.isDataLoadEmptyNotificationEnabled());
 
         response = projectService.resetProjectConfig(PROJECT, "job_notification_config");
         Assert.assertEquals(0, response.getJobNotificationEmails().size());
-        Assert.assertFalse(response.isJobErrorNotificationEnabled());
+        Assert.assertEquals(0, response.getJobStatesNotification().size());
         Assert.assertFalse(response.isDataLoadEmptyNotificationEnabled());
 
         Assert.assertFalse(response.isFavoriteQueryTipsEnabled());

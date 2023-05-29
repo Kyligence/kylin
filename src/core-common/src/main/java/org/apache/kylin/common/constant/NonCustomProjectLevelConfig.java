@@ -41,16 +41,16 @@ public enum NonCustomProjectLevelConfig {
 
     JOB_DATA_LOAD_EMPTY_NOTIFICATION_ENABLED(
             "kylin.job.notification-on-empty-data-load"), JOB_ERROR_NOTIFICATION_ENABLED(
-                    "kylin.job.notification-on-job-error"), NOTIFICATION_ADMIN_EMAILS(
-                            "kylin.job.notification-admin-emails"),
+                    "kylin.job.notification-on-job-error"), JOB_NOTIFICATION_ENABLED_STATES(
+                            "kylin.job.notification-enable-states"), NOTIFICATION_USER_EMAILS(
+                                    "kylin.job.notification-admin-emails"),
 
     ENGINE_SPARK_YARN_QUEUE("kylin.engine.spark-conf.spark.yarn.queue"),
 
     MULTI_PARTITION_ENABLED("kylin.model.multi-partition-enabled"),
 
-    SNAPSHOT_MANUAL_MANAGEMENT_ENABLED("kylin.snapshot.manual-management-enabled"),
-    SNAPSHOT_AUTO_REFRESH_ENABLED("kylin.snapshot.auto-refresh-enabled"),
-    SNAPSHOT_AUTO_REFRESH_CRON("kylin.snapshot.auto-refresh-cron"),
+    SNAPSHOT_MANUAL_MANAGEMENT_ENABLED("kylin.snapshot.manual-management-enabled"), SNAPSHOT_AUTO_REFRESH_ENABLED(
+            "kylin.snapshot.auto-refresh-enabled"), SNAPSHOT_AUTO_REFRESH_CRON("kylin.snapshot.auto-refresh-cron"),
 
     EXPOSE_COMPUTED_COLUMN("kylin.query.metadata.expose-computed-column"), OLD_EXPOSE_COMPUTED_COLUMN(
             "kap.query.metadata.expose-computed-column"),

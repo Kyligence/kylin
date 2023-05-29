@@ -1170,6 +1170,10 @@ public abstract class KylinConfigBase implements Serializable {
         return getOptionalStringArray("kylin.job.notification-admin-emails", new String[0]);
     }
 
+    public String[] getJobNotificationStates() {
+        return getOptionalStringArray("kylin.job.notification-enable-states", null);
+    }
+
     public int getJobRetry() {
         return Integer.parseInt(getOptional("kylin.job.retry", "0"));
     }
@@ -2566,10 +2570,6 @@ public abstract class KylinConfigBase implements Serializable {
 
     public Boolean getTimeMachineEnabled() {
         return Boolean.parseBoolean(this.getOptional("kylin.storage.time-machine-enabled", FALSE));
-    }
-
-    public boolean getJobSourceRecordsChangeNotificationEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.job.notification-on-source-records-change", FALSE));
     }
 
     public int getMetadataBackupCountThreshold() {
