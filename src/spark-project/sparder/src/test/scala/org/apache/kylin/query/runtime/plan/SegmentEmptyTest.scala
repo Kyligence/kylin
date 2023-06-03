@@ -18,33 +18,33 @@
 
 package org.apache.kylin.query.runtime.plan
 
+import java.util
+
 import org.apache.kylin.metadata.cube.model.NDataSegment
 import org.apache.spark.sql.common.{LocalMetadata, SharedSparkSession, SparderBaseFunSuite}
 import org.junit.Assert
 
-import java.util
-
 class SegmentEmptyTest extends SparderBaseFunSuite with SharedSparkSession with LocalMetadata {
 
-    val prunedSegment1 = null
-    val prunedSegment2 = new util.LinkedList[NDataSegment]
-    val prunedSegment3 = new util.LinkedList[NDataSegment]
-    prunedSegment3.add(new NDataSegment())
+  val prunedSegment1 = null
+  val prunedSegment2 = new util.LinkedList[NDataSegment]
+  val prunedSegment3 = new util.LinkedList[NDataSegment]
+  prunedSegment3.add(new NDataSegment())
 
-    val prunedStreamingSegment1 = null
-    val prunedStreamingSegment2 = new util.LinkedList[NDataSegment]
-    val prunedStreamingSegment3 = new util.LinkedList[NDataSegment]
-    prunedStreamingSegment3.add(new NDataSegment())
+  val prunedStreamingSegment1 = null
+  val prunedStreamingSegment2 = new util.LinkedList[NDataSegment]
+  val prunedStreamingSegment3 = new util.LinkedList[NDataSegment]
+  prunedStreamingSegment3.add(new NDataSegment())
 
-    Assert.assertTrue(TableScanPlan.isSegmentsEmpty(prunedSegment1, prunedStreamingSegment1))
-    Assert.assertTrue(TableScanPlan.isSegmentsEmpty(prunedSegment1, prunedStreamingSegment2))
-    Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment1, prunedStreamingSegment3))
+  Assert.assertTrue(TableScanPlan.isSegmentsEmpty(prunedSegment1, prunedStreamingSegment1))
+  Assert.assertTrue(TableScanPlan.isSegmentsEmpty(prunedSegment1, prunedStreamingSegment2))
+  Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment1, prunedStreamingSegment3))
 
-    Assert.assertTrue(TableScanPlan.isSegmentsEmpty(prunedSegment2, prunedStreamingSegment1))
-    Assert.assertTrue(TableScanPlan.isSegmentsEmpty(prunedSegment2, prunedStreamingSegment2))
-    Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment2, prunedStreamingSegment3))
+  Assert.assertTrue(TableScanPlan.isSegmentsEmpty(prunedSegment2, prunedStreamingSegment1))
+  Assert.assertTrue(TableScanPlan.isSegmentsEmpty(prunedSegment2, prunedStreamingSegment2))
+  Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment2, prunedStreamingSegment3))
 
-    Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment3, prunedStreamingSegment1))
-    Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment3, prunedStreamingSegment2))
-    Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment3, prunedStreamingSegment3))
+  Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment3, prunedStreamingSegment1))
+  Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment3, prunedStreamingSegment2))
+  Assert.assertFalse(TableScanPlan.isSegmentsEmpty(prunedSegment3, prunedStreamingSegment3))
 }

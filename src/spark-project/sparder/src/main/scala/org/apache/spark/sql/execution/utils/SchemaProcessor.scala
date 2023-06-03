@@ -17,18 +17,19 @@
  */
 package org.apache.spark.sql.execution.utils
 
+import java.util
+
 import org.apache.kylin.common.util.ImmutableBitSet
 import org.apache.kylin.common.{KapConfig, KylinConfig}
-
-import java.util
 import org.apache.kylin.metadata.cube.gridtable.NLayoutToGridTableMapping
 import org.apache.kylin.metadata.cube.model.{LayoutEntity, NDataSegment, NDataflow, NDataflowManager}
-import org.apache.kylin.query.runtime.plan.TableScanPlan
 import org.apache.kylin.metadata.model.{ColumnDesc, FunctionDesc}
-import org.apache.spark.sql.{LayoutEntityConverter, SparkSession}
+import org.apache.kylin.query.runtime.plan.TableScanPlan
+import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.SparderConstants.COLUMN_NAME_SEPARATOR
 import org.apache.spark.sql.util.{SparderConstants, SparderTypeUtil}
+import org.apache.spark.sql.{LayoutEntityConverter, SparkSession}
 
 import scala.collection.JavaConverters._
 
@@ -37,7 +38,7 @@ object SchemaProcessor {
 
   def buildGTSchema(cuboid: LayoutEntity,
                     mapping: NLayoutToGridTableMapping,
-                    tableName: String):Seq[String] = {
+                    tableName: String): Seq[String] = {
 
     genColumnNames(tableName, cuboid, mapping)
   }
@@ -79,7 +80,7 @@ object SchemaProcessor {
           SparderTypeUtil.toSparkType(function.getReturnDataType, true)
         }
       case "COUNT" => LongType
-      case x if x.startsWith("TOP_N")  =>
+      case x if x.startsWith("TOP_N") =>
         val fields = function.getParameters.asScala.drop(1).map(p =>
           StructField(s"DIMENSION_${p.getColRef.getName}", SparderTypeUtil.toSparkType(p.getColRef.getType))
         )
@@ -97,7 +98,7 @@ object SchemaProcessor {
       case "COLLECT_SET" =>
         val parameter = function.getParameters.get(0)
         ArrayType(SparderTypeUtil.toSparkType(parameter.getColRef.getType))
-      case _ =>  SparderTypeUtil.toSparkType(function.getReturnDataType)
+      case _ => SparderTypeUtil.toSparkType(function.getReturnDataType)
     }
   }
 
@@ -113,7 +114,7 @@ object SchemaProcessor {
       val path: String = TableScanPlan.toLayoutPath(df, nCuboidLayout.getId, base, latestReadySegment)
       val schema: StructType = sparkSession.read.parquet(path).schema
       val schemaFromNCuboidLayout: StructType = LayoutEntityConverter.genCuboidSchemaFromNCuboidLayout(nCuboidLayout)
-      if (!(schema == StructType.removeMetadata("__CHAR_VARCHAR_TYPE_STRING",schemaFromNCuboidLayout))) {
+      if (!(schema == StructType.removeMetadata("__CHAR_VARCHAR_TYPE_STRING", schemaFromNCuboidLayout))) {
         throw new RuntimeException(s"Check schema failed : dfName: $dfName, layoutId: ${nCuboidLayout.getId}, actual: ${schemaFromNCuboidLayout.treeString}, expect: ${schema.treeString}")
       }
     }
@@ -147,12 +148,11 @@ object SchemaProcessor {
     AggColumnInfo(index, aggFuncName, hash, aggArgs: _*).toString
   }
 
-  def buildFactTableSortNames(sourceSchema: StructType): Array[String] = {
-    sourceSchema.fieldNames
-      .filter(name => name.startsWith("F" + COLUMN_NAME_SEPARATOR) || name.startsWith("R" + COLUMN_NAME_SEPARATOR))
-      .map(name => (factTableSchemaNameToColumnId(name), name))
+  def buildFactTableSortNames(sourceSchema: Seq[Attribute]): Array[String] = {
+    sourceSchema.filter(att => att.name.startsWith("F" + COLUMN_NAME_SEPARATOR) || att.name.startsWith("R" + COLUMN_NAME_SEPARATOR))
+      .map(att => (factTableSchemaNameToColumnId(att.name), att.name))
       .sortBy(_._1)
-      .map(_._2)
+      .map(_._2).toArray
   }
 
   def buildSchemaWithRawTable(columnDescs: Array[ColumnDesc]): StructType = {
@@ -165,8 +165,8 @@ object SchemaProcessor {
   }
 
   def genTopNSchema(advanceTableName: String,
-                     colId: Int,
-                     columnName: String = "N"): String = {
+                    colId: Int,
+                    columnName: String = "N"): String = {
     TopNColumnInfo(advanceTableName, colId, columnName).toString
   }
 
@@ -188,14 +188,14 @@ sealed abstract class ColumnInfo(tableName: String,
 case class FactTableCulumnInfo(tableName: String,
                                columnId: Int,
                                columnName: String)
-    extends ColumnInfo(tableName, columnId, columnName) {
+  extends ColumnInfo(tableName, columnId, columnName) {
   override val prefix: String = "F"
 }
 
 case class DeriveTableColumnInfo(tableName: String,
                                  columnId: Int,
                                  columnName: String)
-    extends ColumnInfo(tableName, columnId, columnName) {
+  extends ColumnInfo(tableName, columnId, columnName) {
   override val prefix: String = "D"
 }
 
@@ -204,7 +204,7 @@ case class AggColumnInfo(index: Int,
                          hash: String,
                          args: String*) {
   override def toString: String =
-    s"$funcName(${args.mkString("_")})_${index}_$hash"
+    s"$funcName${args.mkString("_")}_${index}_$hash"
 }
 
 case class TopNColumnInfo(tableName: String, columnId: Int, columnName: String)

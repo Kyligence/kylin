@@ -17,43 +17,28 @@
  */
 package org.apache.spark.sql.manager
 
-import java.util.concurrent.TimeUnit
-import org.apache.kylin.guava30.shaded.common.cache.{Cache, CacheBuilder, RemovalListener, RemovalNotification}
+import org.apache.hadoop.fs.Path
 import org.apache.kylin.common.{KapConfig, KylinConfig}
-import org.apache.kylin.metadata.model.NTableMetadataManager
-import org.apache.kylin.metadata.model.ColumnDesc
+import org.apache.kylin.metadata.model.{ColumnDesc, NTableMetadataManager}
+import org.apache.kylin.query.util.PartitionsFilter.{PARTITIONS, PARTITION_COL}
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
+import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, InMemoryFileIndex, LogicalRelation}
 import org.apache.spark.sql.execution.utils.DeriveTableColumnInfo
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparderEnv}
 import org.apache.spark.sql.util.SparderTypeUtil
-import org.apache.kylin.query.util.PartitionsFilter.PARTITION_COL
-import org.apache.kylin.query.util.PartitionsFilter.PARTITIONS
+import org.apache.spark.sql.{SparderEnv, SparkOperation}
 
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.ListBuffer
 
 // scalastyle:off
 object SparderLookupManager extends Logging {
-  val DEFAULT_MAXSIZE = 100
-  val DEFAULT_EXPIRE_TIME = 1
-  val DEFAULT_TIME_UNIT = TimeUnit.HOURS
-
-  val sourceCache: Cache[String, Dataset[Row]] = CacheBuilder.newBuilder
-    .maximumSize(DEFAULT_MAXSIZE)
-    .expireAfterWrite(DEFAULT_EXPIRE_TIME, DEFAULT_TIME_UNIT)
-    .removalListener(new RemovalListener[String, Dataset[Row]]() {
-      override def onRemoval(
-                              notification: RemovalNotification[String, Dataset[Row]]): Unit = {
-        logInfo("Remove lookup table from spark : " + notification.getKey)
-        notification.getValue.unpersist()
-      }
-    })
-    .build
-    .asInstanceOf[Cache[String, Dataset[Row]]]
 
   def create(name: String,
              sourcePath: String,
-             kylinConfig: KylinConfig): Dataset[Row] = {
+             kylinConfig: KylinConfig): LogicalPlan = {
     val names = name.split("@")
     val projectName = names.apply(0)
     val tableName = names.apply(1)
@@ -66,7 +51,6 @@ object SparderLookupManager extends Logging {
       columns = columns :+ tableDesc.findColumnByName(tableDesc.getSnapshotPartitionCol)
     }
     val dfTableName = Integer.toHexString(System.identityHashCode(name))
-
 
     val orderedCol = new ListBuffer[(ColumnDesc, Int)]
     var partitionCol: (ColumnDesc, Int) = null
@@ -84,24 +68,31 @@ object SparderLookupManager extends Logging {
       options.put(PARTITIONS, String.join(",", tableDesc.getSnapshotPartitions.keySet()))
       options.put("mapreduce.input.pathFilter.class", "org.apache.kylin.query.util.PartitionsFilter")
     }
-    val originSchema = StructType(orderedCol.map { case (col, index) => StructField(col.getName, SparderTypeUtil.toSparkType(col.getType)) })
-    val schema = StructType(orderedCol.map { case (col, index) => StructField(DeriveTableColumnInfo(dfTableName, index, col.getName).toString, SparderTypeUtil.toSparkType(col.getType)) })
-    val resourcePath = KapConfig.getInstanceFromEnv.getReadHdfsWorkingDirectory + sourcePath
 
-    SparderEnv.getSparkSession.read.options(options)
-      .schema(originSchema)
-      .parquet(resourcePath)
-      .toDF(schema.fieldNames: _*)
+    val originSchema = StructType(orderedCol.map { case (col, index) => StructField(col.getName, SparderTypeUtil.toSparkType(col.getType)) })
+    val aliasCols = orderedCol.map {
+      case (c, index) =>
+        col(c.getName).as(DeriveTableColumnInfo(dfTableName, index, c.getName).toString)
+    }
+    val resourcePath = new Path(KapConfig.getInstanceFromEnv.getReadHdfsWorkingDirectory + sourcePath)
+
+    val sparkSession = SparderEnv.getSparkSession
+
+    val fileIndex = new InMemoryFileIndex(sparkSession, Seq(resourcePath), options.toMap, Option(originSchema))
+    val fsRelation = HadoopFsRelation(
+      fileIndex,
+      partitionSchema = fileIndex.partitionSchema,
+      dataSchema = originSchema,
+      bucketSpec = None,
+      new ParquetFileFormat,
+      options.toMap)(sparkSession)
+    val plan = LogicalRelation(fsRelation)
+    SparkOperation.project(aliasCols, plan)
   }
 
   def getOrCreate(name: String,
                   sourcePath: String,
-                  kylinConfig: KylinConfig): DataFrame = {
-    val value = sourceCache.getIfPresent(sourcePath)
-    if (value != null) {
-      value
-    } else {
-      create(name, sourcePath, kylinConfig)
-    }
+                  kylinConfig: KylinConfig): LogicalPlan = {
+    create(name, sourcePath, kylinConfig)
   }
 }

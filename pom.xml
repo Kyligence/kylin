@@ -1419,6 +1419,10 @@
                         <groupId>org.codehaus.jackson</groupId>
                         <artifactId>jackson-mapper-asl</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.calcite</groupId>
+                        <artifactId>calcite</artifactId>
+                    </exclusion>
                 </exclusions>
                 <scope>provided</scope>
             </dependency>

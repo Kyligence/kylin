@@ -20,16 +20,10 @@ package org.apache.kylin.query.engine;
 
 import java.sql.SQLException;
 
-import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.debug.BackdoorToggles;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Unsafe;
-import org.apache.kylin.query.engine.meta.SimpleDataContext;
-import org.apache.kylin.query.relnode.KapRel;
-import org.apache.kylin.query.runtime.CalciteToSparkPlaner;
-import org.apache.kylin.query.util.QueryContextCutter;
 import org.apache.kylin.query.util.QueryHelper;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
@@ -40,10 +34,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.springframework.security.util.FieldUtils;
 
 import lombok.val;
-import scala.Function0;
 
 public class QueryExecTest extends NLocalFileMetadataTestCase {
 
@@ -70,7 +62,8 @@ public class QueryExecTest extends NLocalFileMetadataTestCase {
     }
 
     /**
-     *  <p>See also {@link org.apache.kylin.query.engine.QueryExecTest#testSumCaseWhenHasNull()}
+     * <p>See also {@link org.apache.kylin.query.engine.QueryExecTest#testSumCaseWhenHasNull()}
+     *
      * @throws SQLException
      */
     @Test
@@ -92,6 +85,7 @@ public class QueryExecTest extends NLocalFileMetadataTestCase {
      * <code>case COUNT(null) when 0 then null else SUM0(null) end</code>, which is incompatible with model section
      *
      * <p>See also {@link org.apache.kylin.query.engine.QueryExecTest#testWorkWithoutKapAggregateReduceFunctionsRule()}
+     *
      * @throws SqlParseException
      */
     @Test
@@ -142,51 +136,4 @@ public class QueryExecTest extends NLocalFileMetadataTestCase {
             }
         }
     }
-
-    @Test
-    public void testSparkPlanWithoutCache() throws IllegalAccessException, SqlParseException {
-        overwriteSystemProp("kylin.query.dataframe-cache-enabled", "false");
-        String sql = "select count(*) from TEST_KYLIN_FACT group by seller_id";
-        QueryExec qe = new QueryExec(project, KylinConfig.getInstanceFromEnv());
-        RelNode root = qe.parseAndOptimize(sql);
-        SimpleDataContext dataContext = (SimpleDataContext) FieldUtils.getFieldValue(qe, "dataContext");
-        QueryContextCutter.selectRealization(root, BackdoorToggles.getIsQueryFromAutoModeling());
-        CalciteToSparkPlaner calciteToSparkPlaner = new CalciteToSparkPlaner(dataContext) {
-            @Override
-            public Dataset<Row> actionWithCache(KapRel rel, Function0<Dataset<Row>> body) {
-                throw new RuntimeException();
-            }
-        };
-        try {
-            calciteToSparkPlaner.go(root.getInput(0));
-        } finally {
-            calciteToSparkPlaner.cleanCache();
-        }
-    }
-
-    @Test
-    public void testSparkPlanWithCache() throws IllegalAccessException, SqlParseException {
-        overwriteSystemProp("kylin.query.dataframe-cache-enabled", "true");
-        String sql = "select count(*) from TEST_KYLIN_FACT group by seller_id";
-        QueryExec qe = new QueryExec(project, KylinConfig.getInstanceFromEnv());
-        RelNode root = qe.parseAndOptimize(sql);
-        SimpleDataContext dataContext = (SimpleDataContext) FieldUtils.getFieldValue(qe, "dataContext");
-        QueryContextCutter.selectRealization(root, BackdoorToggles.getIsQueryFromAutoModeling());
-        CalciteToSparkPlaner calciteToSparkPlaner = new CalciteToSparkPlaner(dataContext) {
-            @Override
-            public Dataset<Row> actionWithCache(KapRel rel, Function0<Dataset<Row>> body) {
-                throw new IllegalStateException();
-            }
-        };
-        Exception expectException = null;
-        try {
-            calciteToSparkPlaner.go(root.getInput(0));
-        } catch (Exception e) {
-            expectException = e;
-        } finally {
-            calciteToSparkPlaner.cleanCache();
-            Assert.assertTrue(expectException instanceof IllegalStateException);
-        }
-    }
-
 }

@@ -18,6 +18,7 @@
 package org.apache.kylin.query.sql;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -30,8 +31,6 @@ import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.util.ReflectionUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
 
 import lombok.val;
 import lombok.var;
@@ -56,14 +55,15 @@ class KylinDataFrameManagerTest {
             ImmutableBiMap.Builder<Integer, TblColRef> dimsBuilder = ImmutableBiMap.builder();
             ImmutableBiMap<Integer, TblColRef> orderedDimensions = dimsBuilder.put(1, partitionTblCol).build();
             Mockito.when(layoutEntity.getOrderedDimensions()).thenReturn(orderedDimensions);
-            val df = kylinDataFrameManager.cuboidTable(dataflow, layoutEntity, "3e560d22-b749-48c3-9f64-d4230207f120");
-            Assert.assertEquals(1, df.columns().length);
+            val plan = kylinDataFrameManager.cuboidTable(dataflow, layoutEntity,
+                    "3e560d22-b749-48c3-9f64-d4230207f120");
+            Assert.assertEquals(1, plan.output().size());
         }
         {
             // condition: id == null
-            val df = kylinDataFrameManager.cuboidTable(dataflow, new LayoutEntity(),
+            val plan = kylinDataFrameManager.cuboidTable(dataflow, new LayoutEntity(),
                     "3e560d22-b749-48c3-9f64-d4230207f120");
-            Assert.assertEquals(0, df.columns().length);
+            Assert.assertEquals(0, plan.output().size());
         }
 
         {
@@ -91,8 +91,9 @@ class KylinDataFrameManagerTest {
                     }
                 });
             });
-            val df = kylinDataFrameManager.cuboidTable(dataflow, layoutEntity, "3e560d22-b749-48c3-9f64-d4230207f120");
-            Assert.assertEquals(1, df.columns().length);
+            val plan = kylinDataFrameManager.cuboidTable(dataflow, layoutEntity,
+                    "3e560d22-b749-48c3-9f64-d4230207f120");
+            Assert.assertEquals(1, plan.output().size());
         }
         ss.stop();
     }
@@ -108,8 +109,9 @@ class KylinDataFrameManagerTest {
         kylinDataFrameManager.option("isFastBitmapEnabled", "false");
         val layoutEntity = new LayoutEntity();
         {
-            val df = kylinDataFrameManager.cuboidTable(dataflow, layoutEntity, "86b5daaa-e295-4e8c-b877-f97bda69bee5");
-            Assert.assertEquals(0, df.columns().length);
+            val plan = kylinDataFrameManager.cuboidTable(dataflow, layoutEntity,
+                    "86b5daaa-e295-4e8c-b877-f97bda69bee5");
+            Assert.assertEquals(0, plan.output().size());
         }
         ss.stop();
     }

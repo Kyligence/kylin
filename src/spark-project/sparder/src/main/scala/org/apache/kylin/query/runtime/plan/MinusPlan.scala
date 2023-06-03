@@ -19,18 +19,16 @@ package org.apache.kylin.query.runtime.plan
 
 import org.apache.calcite.DataContext
 import org.apache.kylin.query.relnode.KapMinusRel
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.catalyst.plans.logical.{Except, LogicalPlan}
 
 object MinusPlan {
-
-  def minus(
-             inputs: Seq[DataFrame],
-             rel: KapMinusRel,
-             dataContext: DataContext): DataFrame = {
+  def minus(plans: Seq[LogicalPlan],
+            rel: KapMinusRel,
+            dataContext: DataContext): LogicalPlan = {
     if (rel.all) {
-      inputs.reduce((set1, set2) => set1.exceptAll(set2))
+      plans.reduce((p1, p2) => Except(p1, p2, true))
     } else {
-      inputs.reduce((set1, set2) => set1.except(set2))
+      plans.reduce((p1, p2) => Except(p1, p2, false))
     }
   }
 }

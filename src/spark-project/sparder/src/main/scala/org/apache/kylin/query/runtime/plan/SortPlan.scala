@@ -17,27 +17,25 @@
  */
 package org.apache.kylin.query.runtime.plan
 
-import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.calcite.DataContext
+import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.query.relnode.KapSortRel
 import org.apache.kylin.query.runtime.SparderRexVisitor
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.KapFunctions._
+import org.apache.spark.sql.KapFunctions.k_lit
+import org.apache.spark.sql.catalyst.expressions.{Ascending, Descending, NullsFirst, NullsLast, SortOrder}
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Sort}
 
 import scala.collection.JavaConverters._
 
-
 object SortPlan extends LogEx {
-  def sort(inputs: java.util.List[DataFrame],
+  def sort(plan: LogicalPlan,
            rel: KapSortRel,
-           dataContext: DataContext): DataFrame = logTime("sort", debug = true) {
-
-    val dataFrame = inputs.get(0)
+           dataContext: DataContext): LogicalPlan = logTime("sort", debug = true) {
 
     val columns = rel.getChildExps.asScala
       .map(rex => {
-        val visitor = new SparderRexVisitor(dataFrame,
-                                            rel.getInput.getRowType,
+        val visitor = new SparderRexVisitor(plan.output.map(_.name),
+          rel.getInput.getRowType,
           dataContext)
         rex.accept(visitor)
       })
@@ -47,33 +45,33 @@ object SortPlan extends LogEx {
         val collation = rel.collation.getFieldCollations.get(pair._2)
 
         /** From Calcite: org.apache.calcite.rel.RelFieldCollation.Direction#defaultNullDirection
-          * Returns the null direction if not specified. Consistent with Oracle,
-          * NULLS are sorted as if they were positive infinity. */
+         * Returns the null direction if not specified. Consistent with Oracle,
+         * NULLS are sorted as if they were positive infinity. */
         (collation.direction, collation.nullDirection) match {
           case (
-              org.apache.calcite.rel.RelFieldCollation.Direction.ASCENDING,
-              org.apache.calcite.rel.RelFieldCollation.NullDirection.UNSPECIFIED) =>
-            pair._1.asc_nulls_last
+            org.apache.calcite.rel.RelFieldCollation.Direction.ASCENDING,
+            org.apache.calcite.rel.RelFieldCollation.NullDirection.UNSPECIFIED) =>
+            SortOrder(pair._1.expr, Ascending, NullsLast, Seq.empty)
           case (org.apache.calcite.rel.RelFieldCollation.Direction.ASCENDING,
-                org.apache.calcite.rel.RelFieldCollation.NullDirection.LAST) =>
-            pair._1.asc_nulls_last
+          org.apache.calcite.rel.RelFieldCollation.NullDirection.LAST) =>
+            SortOrder(pair._1.expr, Ascending, NullsLast, Seq.empty)
           case (org.apache.calcite.rel.RelFieldCollation.Direction.ASCENDING,
-                org.apache.calcite.rel.RelFieldCollation.NullDirection.FIRST) =>
-            pair._1.asc_nulls_first
+          org.apache.calcite.rel.RelFieldCollation.NullDirection.FIRST) =>
+            SortOrder(pair._1.expr, Ascending, NullsLast, Seq.empty)
           case (
-              org.apache.calcite.rel.RelFieldCollation.Direction.DESCENDING,
-              org.apache.calcite.rel.RelFieldCollation.NullDirection.UNSPECIFIED) =>
-            pair._1.desc_nulls_first
+            org.apache.calcite.rel.RelFieldCollation.Direction.DESCENDING,
+            org.apache.calcite.rel.RelFieldCollation.NullDirection.UNSPECIFIED) =>
+            SortOrder(pair._1.expr, Descending, NullsFirst, Seq.empty)
           case (org.apache.calcite.rel.RelFieldCollation.Direction.DESCENDING,
-                org.apache.calcite.rel.RelFieldCollation.NullDirection.LAST) =>
-            pair._1.desc_nulls_last
+          org.apache.calcite.rel.RelFieldCollation.NullDirection.LAST) =>
+            SortOrder(pair._1.expr, Descending, NullsLast, Seq.empty)
           case (org.apache.calcite.rel.RelFieldCollation.Direction.DESCENDING,
-                org.apache.calcite.rel.RelFieldCollation.NullDirection.FIRST) =>
-            pair._1.desc_nulls_first
+          org.apache.calcite.rel.RelFieldCollation.NullDirection.FIRST) =>
+            SortOrder(pair._1.expr, Descending, NullsFirst, Seq.empty)
           case _ => throw new IllegalArgumentException
         }
       })
 
-    inputs.get(0).sort(columns: _*)
+    Sort(columns, true, plan)
   }
 }

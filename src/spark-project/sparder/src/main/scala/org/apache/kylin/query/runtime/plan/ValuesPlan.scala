@@ -18,27 +18,28 @@
 package org.apache.kylin.query.runtime.plan
 
 import org.apache.kylin.query.relnode.KapValuesRel
-import org.apache.spark.sql.{DataFrame, Row, SparkOperation}
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.expressions.AttributeReference
+import org.apache.spark.sql.catalyst.plans.logical.{LocalRelation, LogicalPlan}
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.util.SparderTypeUtil
 
 import scala.collection.JavaConverters._
 
 object ValuesPlan {
-  def values(rel: KapValuesRel): DataFrame = {
+  def values(rel: KapValuesRel): LogicalPlan = {
 
     val schema = StructType(rel.getRowType.getFieldList.asScala.map { field =>
       StructField(
         field.getName,
         SparderTypeUtil.convertSqlTypeToSparkType(field.getType))
     })
+    val output = schema.map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
+
     val rows = rel.tuples.asScala.map { tp =>
       Row.fromSeq(tp.asScala.map(lit => SparderTypeUtil.getValueFromRexLit(lit)))
-    }.asJava
-    if (rel.tuples.size() == 0) {
-      SparkOperation.createEmptyDataFrame(schema)
-    } else {
-      SparkOperation.createConstantDataFrame(rows, schema)
     }
+
+    LocalRelation.fromExternalRows(output, rows)
   }
 }
