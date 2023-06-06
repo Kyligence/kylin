@@ -30,14 +30,15 @@ import javax.annotation.Nullable;
 
 import org.apache.calcite.sql.SqlKind;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.exception.code.ErrorCodeServer;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.NonEquiJoinCondition;
 import org.apache.kylin.metadata.model.NonEquiJoinConditionType;
 import org.apache.kylin.metadata.model.TblColRef;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 /**
  * simplify non-equi-join
@@ -54,7 +55,7 @@ public class SCD2NonEquiCondSimplification {
      * @param joinDesc
      * @return
      */
-    public SimplifiedJoinDesc convertToSimplifiedSCD2Cond(@Nullable JoinDesc joinDesc) throws SCD2Exception {
+    public SimplifiedJoinDesc convertToSimplifiedSCD2Cond(@Nullable JoinDesc joinDesc) {
 
         if (Objects.isNull(joinDesc)) {
             return null;
@@ -63,7 +64,7 @@ public class SCD2NonEquiCondSimplification {
         NonEquiJoinCondition nonEquiJoinCondition = joinDesc.getNonEquiJoinCondition();
         //null, or is not `and` cond
         if (Objects.isNull(nonEquiJoinCondition) || nonEquiJoinCondition.getOp() != SqlKind.AND) {
-            throw new SCD2Exception("scd2 must has non-equi cond and only support `AND` expression ");
+            throw new KylinException(ErrorCodeServer.SCD2_MODEL_CAN_ONLY_CONNECT_BY_AND);
         }
 
         SimplifiedJoinDesc convertedJoinDesc = new SimplifiedJoinDesc();
@@ -79,7 +80,7 @@ public class SCD2NonEquiCondSimplification {
 
             //any child is illegal, return null
             if (Objects.isNull(scd2Cond)) {
-                throw new SCD2Exception("it has illegal scd2 child expression ");
+                throw new KylinException(ErrorCodeServer.SCD2_MODEL_CONTAINS_ILLEGAL_EXPRESSIONS);
             }
             nonEquiJoinConds.add(scd2Cond);
         }
@@ -88,15 +89,15 @@ public class SCD2NonEquiCondSimplification {
         //check = join , fk and pk
 
         if (!SCD2CondChecker.INSTANCE.checkSCD2NonEquiJoinCondPair(nonEquiJoinConds)) {
-            throw new SCD2Exception("the `>=` and `<` must be pair");
+            throw new KylinException(ErrorCodeServer.SCD2_CONDITION_MUST_APPEAR_IN_PAIRS);
         }
 
         if (CollectionUtils.isEmpty(equiJoinConds)) {
-            throw new SCD2Exception("scd2 should have `=` at leas one");
+            throw new KylinException(ErrorCodeServer.SCD2_MODEL_REQUIRES_AT_LEAST_ONE_EQUAL_CONDITION);
         }
 
         if (CollectionUtils.isEmpty(nonEquiJoinConds)) {
-            throw new SCD2Exception("scd2 should have non-equi condition at leas one");
+            throw new KylinException(ErrorCodeServer.SCD2_MODEL_REQUIRES_AT_LEAST_ONE_NON_EQUAL_CONDITION);
         }
 
         //check unique
@@ -165,13 +166,10 @@ public class SCD2NonEquiCondSimplification {
     }
 
     /**
-     * simplify child cond
-     * (a>=b) and (a<c) ->
-     *     {"a","b",">="} {"a","c","<"}
-     * @param nonEquiJoinCondition
-     * @return
+     * Simplify child condition, for example:
+     * {@code (a>=b) and (a<c) } will be transformed to {@code {"a","b",">="}, {"a","c","<"}}
      */
-    private SimplifiedNonEquiJoinCondition simplifySCD2ChildCond(NonEquiJoinCondition nonEquiJoinCondition) {
+    public SimplifiedNonEquiJoinCondition simplifySCD2ChildCond(NonEquiJoinCondition nonEquiJoinCondition) {
         if (nonEquiJoinCondition.getType() != NonEquiJoinConditionType.EXPRESSION
                 || nonEquiJoinCondition.getOperands().length != 2) {
             return null;
@@ -188,7 +186,7 @@ public class SCD2NonEquiCondSimplification {
                 }).collect(Collectors.toList()).stream()
                 .filter(nonEquiJoinConditionChild -> nonEquiJoinConditionChild.getOperands().length == 0
                         || nonEquiJoinConditionChild.getType() == NonEquiJoinConditionType.COLUMN)
-                .map(nonEquiJoinCondition1 -> new Pair<String, TblColRef>(nonEquiJoinCondition1.getValue(),
+                .map(nonEquiJoinCondition1 -> new Pair<>(nonEquiJoinCondition1.getValue(),
                         nonEquiJoinCondition1.getColRef()))
                 .collect(Collectors.toList());
         if (CollectionUtils.isEmpty(fkPk) || fkPk.size() != 2) {

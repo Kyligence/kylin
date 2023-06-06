@@ -23,6 +23,7 @@ import java.sql.Timestamp
 import java.util
 import java.util.concurrent.{Callable, Executors, TimeUnit, TimeoutException}
 import java.util.{UUID, List => JList}
+
 import org.apache.commons.lang3.StringUtils
 import org.apache.kylin.common.util.{DateFormat, HadoopUtil, Pair}
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
@@ -40,13 +41,13 @@ import org.apache.spark.sql.util.SparderTypeUtil
 import org.apache.spark.sql.{DataFrame, Row, SparderEnv, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
 
-import io.kyligence.kap.cache.kylin.KylinCacheFileSystem
-import io.kyligence.kap.fileseg.FileSegments
-import io.kyligence.kap.softaffinity.SoftAffinityManager
-
 import scala.collection.JavaConverters._
 import scala.collection.{immutable, mutable}
 import scala.concurrent.duration.Duration
+
+import io.kyligence.kap.cache.kylin.KylinCacheFileSystem
+import io.kyligence.kap.fileseg.FileSegments
+import io.kyligence.kap.softaffinity.SoftAffinityManager
 
 object SparkSqlClient {
   val DEFAULT_DB: String = "spark.sql.default.database"
@@ -79,7 +80,11 @@ object SparkSqlClient {
         null
       }
       ss.sessionState.conf.setLocalProperty(DEFAULT_DB, db)
-      val df = QueryResultMasks.maskResult(ss.sql(sqlToRun))
+      val dfOfPushDown = ss.sql(sqlToRun)
+      if (NProjectManager.getProjectConfig(project).isPrintQueryPlanEnabled) {
+        logger.info(dfOfPushDown.queryExecution.logical.toString())
+      }
+      val df = QueryResultMasks.maskResult(dfOfPushDown)
       logger.info("SparkSQL returned result DataFrame")
       QueryContext.current().record("to_spark_plan")
 

@@ -24,16 +24,14 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.exception.QueryErrorCode;
+import org.apache.kylin.common.exception.code.ErrorCodeServer;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.JoinTableDesc;
-import org.apache.kylin.metadata.model.util.scd2.SCD2Exception;
 import org.apache.kylin.metadata.model.util.scd2.SCD2NonEquiCondSimplification;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinDesc;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 public class SCD2SimplificationConvertUtil {
 
@@ -65,12 +63,11 @@ public class SCD2SimplificationConvertUtil {
                         .setSimplifiedNonEquiJoinConditions(convertedJoinDesc.getSimplifiedNonEquiJoinConditions());
                 responseJoinDesc.setForeignKey(convertedJoinDesc.getForeignKey());
                 responseJoinDesc.setPrimaryKey(convertedJoinDesc.getPrimaryKey());
-            } catch (SCD2Exception e) {
-                throw new KylinException(QueryErrorCode.SCD2_COMMON_ERROR, "only support scd2 join condition");
+            } catch (KylinException e) {
+                throw new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
+                        "only support scd2 join condition");
             }
-
         }
-
     }
 
     /**

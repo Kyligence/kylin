@@ -20,15 +20,14 @@ package org.apache.kylin.metadata.model;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.tool.NonEquiJoinConditionComparator;
 import org.apache.kylin.metadata.model.tool.TypedLiteralConverter;
 
@@ -36,7 +35,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -87,6 +85,9 @@ public class NonEquiJoinCondition implements Serializable {
 
     public NonEquiJoinCondition() {
     }
+
+    static final Set<SqlKind> EXCHANGEABLE_OPERATOR = Sets.newHashSet(SqlKind.AND, SqlKind.OR, SqlKind.EQUALS,
+            SqlKind.NOT_EQUALS, SqlKind.IN, SqlKind.NOT_IN);
 
     public NonEquiJoinCondition(SqlOperator op, NonEquiJoinCondition[] operands, RelDataType dataType) {
         this(op.getName(), op.getKind(), operands, new DataType(dataType));
@@ -140,12 +141,22 @@ public class NonEquiJoinCondition implements Serializable {
         return condCopy;
     }
 
+    public NonEquiJoinCondition[] getSortedOperands() {
+        if (EXCHANGEABLE_OPERATOR.contains(op)) {
+            return Arrays.stream(operands).sorted(Comparator.comparing(NonEquiJoinCondition::getOp))
+                    .toArray(NonEquiJoinCondition[]::new);
+        } else {
+            return Arrays.copyOf(operands, operands.length);
+        }
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(op);
         sb.append("(");
-        for (NonEquiJoinCondition input : operands) {
+        NonEquiJoinCondition[] sorted = getSortedOperands();
+        for (NonEquiJoinCondition input : sorted) {
             sb.append(input.toString());
             sb.append(", ");
         }
@@ -164,7 +175,7 @@ public class NonEquiJoinCondition implements Serializable {
 
     @Override
     public boolean equals(Object obj) {
-        return obj != null && obj instanceof NonEquiJoinCondition
+        return obj instanceof NonEquiJoinCondition
                 && NonEquiJoinConditionComparator.equals(this, (NonEquiJoinCondition) obj);
     }
 
@@ -193,21 +204,6 @@ public class NonEquiJoinCondition implements Serializable {
             }
         }
         return result;
-    }
-
-    public Set<String> getAllReferencingColumns() {
-        return doGetAllReferencingColumns(this);
-    }
-
-    private Set<String> doGetAllReferencingColumns(NonEquiJoinCondition cond) {
-        if (cond.type == NonEquiJoinConditionType.COLUMN) {
-            return Sets.newHashSet(cond.colRef.getIdentity());
-        } else if (cond.type == NonEquiJoinConditionType.EXPRESSION) {
-            return Arrays.stream(cond.operands).map(this::doGetAllReferencingColumns).flatMap(Collection::stream)
-                    .collect(Collectors.toSet());
-        } else {
-            return new HashSet<>();
-        }
     }
 
     @Setter
@@ -246,5 +242,9 @@ public class NonEquiJoinCondition implements Serializable {
 
         @JsonIgnore
         private TblColRef pk;
+
+        public String displaySql() {
+            return fk.getDoubleQuoteExp() + " " + op.sql + " " + pk.getDoubleQuoteExp();
+        }
     }
 }

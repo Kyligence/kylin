@@ -45,8 +45,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.CommonErrorCode;
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.exception.QueryErrorCode;
 import org.apache.kylin.common.exception.ServerErrorCode;
+import org.apache.kylin.common.exception.code.ErrorCodeServer;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.ModifyTableNameSqlVisitor;
@@ -94,7 +94,6 @@ import org.apache.kylin.metadata.model.tool.NonEquiJoinConditionVisitor;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.model.util.scd2.SCD2CondChecker;
-import org.apache.kylin.metadata.model.util.scd2.SCD2Exception;
 import org.apache.kylin.metadata.model.util.scd2.SCD2NonEquiCondSimplification;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinDesc;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
@@ -256,7 +255,7 @@ public class ModelSemanticHelper extends BasicService {
 
         HashSet<JoinDescNonEquiCompBean> scd2NonEquiCondSets = new HashSet<>();
 
-        val projectKylinConfig = getManager(NProjectManager.class).getProject(dataModel.getProject()).getConfig();
+        val projectKylinConfig = NProjectManager.getProjectConfig(dataModel.getProject());
         boolean isScd2Enabled = projectKylinConfig.isQueryNonEquiJoinModelEnabled();
 
         for (int i = 0; i < requestJoinTableDescs.size(); i++) {
@@ -269,7 +268,7 @@ public class ModelSemanticHelper extends BasicService {
 
             //1. check scd2 turn on when non-equi join exists
             if (!isScd2Enabled) {
-                throw new KylinException(QueryErrorCode.SCD2_SAVE_MODEL_WHEN_DISABLED, "please turn on scd2 config");
+                throw new KylinException(ErrorCodeServer.PROJECT_SCD2_IS_NOT_ALLOWED);
             }
 
             //2. check request equi join condition
@@ -311,34 +310,35 @@ public class ModelSemanticHelper extends BasicService {
                 modelJoinDesc.setNonEquiJoinCondition(suggModelJoin.getNonEquiJoinCondition());
                 modelJoinDesc.setForeignTable(suggModelJoin.getForeignTable());
                 modelJoinDesc.setPrimaryTable(suggModelJoin.getPrimaryTable());
-            } catch (SCD2Exception e) {
-                logger.error("Update datamodel failed...", e);
-                throw new KylinException(QueryErrorCode.SCD2_COMMON_ERROR, Throwables.getRootCause(e).getMessage());
+            } catch (KylinException e) {
+                throw e;
+            } catch (Exception e) {
+                logger.error("Update model failed...", e);
+                throw new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
+                        Throwables.getRootCause(e).getMessage());
             }
 
             //5. check same join conditions
             if (scd2NonEquiCondSets.contains(new JoinDescNonEquiCompBean(requestJoinDesc))) {
-                throw new KylinException(QueryErrorCode.SCD2_DUPLICATE_CONDITION, "duplicate join edge");
+                throw new KylinException(ErrorCodeServer.DUPLICATE_MODEL_JOIN_CONDITIONS);
             } else {
                 scd2NonEquiCondSets.add(new JoinDescNonEquiCompBean(requestJoinDesc));
             }
-
         }
-
     }
 
     private void checkRequestNonEquiJoinConds(final SimplifiedJoinDesc requestJoinDesc) {
 
         if (!SCD2CondChecker.INSTANCE.checkSCD2EquiJoinCond(requestJoinDesc.getForeignKey(),
                 requestJoinDesc.getPrimaryKey())) {
-            throw new KylinException(QueryErrorCode.SCD2_EMPTY_EQUI_JOIN, "SCD2 must have one equi join conditon");
+            throw new KylinException(ErrorCodeServer.SCD2_MODEL_REQUIRES_AT_LEAST_ONE_EQUAL_CONDITION);
         }
         if (!SCD2CondChecker.INSTANCE
                 .checkSCD2NonEquiJoinCondPair(requestJoinDesc.getSimplifiedNonEquiJoinConditions())) {
-            throw new KylinException(QueryErrorCode.SCD2_DUPLICATE_FK_PK_PAIR, "SCD2 non-equi condition must be pair");
+            throw new KylinException(ErrorCodeServer.SCD2_MODEL_REQUIRES_AT_LEAST_ONE_NON_EQUAL_CONDITION);
         }
         if (!SCD2CondChecker.INSTANCE.checkFkPkPairUnique(requestJoinDesc)) {
-            throw new KylinException(QueryErrorCode.SCD2_DUPLICATE_FK_PK_PAIR, "SCD2 condition must be unqiue");
+            throw new KylinException(ErrorCodeServer.SCD2_MODEL_PK_FK_UNIQUE_CHECK_FAILED);
         }
     }
 

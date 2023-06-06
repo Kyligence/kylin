@@ -20,19 +20,35 @@ package org.apache.kylin.metadata.model.tool;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 import org.apache.calcite.sql.SqlKind;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.metadata.model.NonEquiJoinCondition;
 import org.apache.kylin.metadata.model.NonEquiJoinConditionType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class NonEquiJoinConditionComparator {
 
-    private static Logger logger = LoggerFactory.getLogger(NonEquiJoinConditionComparator.class);
+    private static final Map<SqlKind, TruthTable.Operator> OP_TRUTH_MAPPING = ImmutableMap.<SqlKind, TruthTable.Operator> builder()
+            .put(SqlKind.AND, TruthTable.Operator.AND) //
+            .put(SqlKind.OR, TruthTable.Operator.OR) //
+            .put(SqlKind.NOT, TruthTable.Operator.NOT) //
+            .build();
+
+    private static final Map<SqlKind, SqlKind> OP_INVERSE_MAPPING = ImmutableMap.<SqlKind, SqlKind> builder()
+            .put(SqlKind.NOT_EQUALS, SqlKind.EQUALS) //
+            .put(SqlKind.NOT_IN, SqlKind.IN) //
+            .put(SqlKind.IS_NOT_NULL, SqlKind.IS_NULL) //
+            .put(SqlKind.IS_NOT_FALSE, SqlKind.IS_FALSE) //
+            .put(SqlKind.IS_NOT_TRUE, SqlKind.IS_TRUE) //
+            .put(SqlKind.IS_NOT_DISTINCT_FROM, SqlKind.IS_DISTINCT_FROM) //
+            .put(SqlKind.LESS_THAN, SqlKind.GREATER_THAN_OR_EQUAL) //
+            .put(SqlKind.LESS_THAN_OR_EQUAL, SqlKind.GREATER_THAN) //
+            .build();
 
     private NonEquiJoinConditionComparator() {
     }
@@ -41,7 +57,7 @@ public class NonEquiJoinConditionComparator {
         try {
             return TruthTable.equals(createTruthTable(cond1), createTruthTable(cond2));
         } catch (Throwable e) {
-            logger.error("Error on compareing cond1 {}, cond2 {}", cond1, cond2, e);
+            log.error("Error on compareing cond1 {}, cond2 {}", cond1, cond2, e);
             return false;
         }
     }
@@ -53,20 +69,13 @@ public class NonEquiJoinConditionComparator {
         return builder.build();
     }
 
-    private static Map<SqlKind, TruthTable.Operator> compositeOperatorMapping = new HashMap<>();
-    static {
-        compositeOperatorMapping.put(SqlKind.AND, TruthTable.Operator.AND);
-        compositeOperatorMapping.put(SqlKind.OR, TruthTable.Operator.OR);
-        compositeOperatorMapping.put(SqlKind.NOT, TruthTable.Operator.NOT);
-    }
-
     private static void buildExpr(NonEquiJoinCondition nonEquiJoinCondition,
             TruthTable.TruthTableBuilder<NonEquiJoinCondition> builder) {
         switch (nonEquiJoinCondition.getOp()) {
         case AND:
         case NOT:
         case OR:
-            builder.compositeStart(compositeOperatorMapping.get(nonEquiJoinCondition.getOp()));
+            builder.compositeStart(OP_TRUTH_MAPPING.get(nonEquiJoinCondition.getOp()));
             for (int i = 0; i < nonEquiJoinCondition.getOperands().length; i++) {
                 buildExpr(nonEquiJoinCondition.getOperands()[i], builder);
             }
@@ -92,23 +101,9 @@ public class NonEquiJoinConditionComparator {
         }
     }
 
-    private static Map<SqlKind, SqlKind> operatorInverseMapping = new HashMap<>();
-    static {
-        // NOT_OP -> NOT(OP)
-        operatorInverseMapping.put(SqlKind.NOT_EQUALS, SqlKind.EQUALS);
-        operatorInverseMapping.put(SqlKind.NOT_IN, SqlKind.IN);
-        operatorInverseMapping.put(SqlKind.IS_NOT_NULL, SqlKind.IS_NULL);
-        operatorInverseMapping.put(SqlKind.IS_NOT_FALSE, SqlKind.IS_FALSE);
-        operatorInverseMapping.put(SqlKind.IS_NOT_TRUE, SqlKind.IS_TRUE);
-        operatorInverseMapping.put(SqlKind.IS_NOT_DISTINCT_FROM, SqlKind.IS_DISTINCT_FROM);
-        // < -> NOT(>=), <= -> NOT(>)
-        operatorInverseMapping.put(SqlKind.LESS_THAN, SqlKind.GREATER_THAN_OR_EQUAL);
-        operatorInverseMapping.put(SqlKind.LESS_THAN_OR_EQUAL, SqlKind.GREATER_THAN);
-    }
-
     private static boolean inverseCondOperator(NonEquiJoinCondition cond) {
-        if (operatorInverseMapping.containsKey(cond.getOp())) {
-            cond.setOp(operatorInverseMapping.get(cond.getOp()));
+        if (OP_INVERSE_MAPPING.containsKey(cond.getOp())) {
+            cond.setOp(OP_INVERSE_MAPPING.get(cond.getOp()));
             cond.setOpName(cond.getOp().sql);
             return true;
         }
@@ -152,15 +147,15 @@ public class NonEquiJoinConditionComparator {
             } else if (cond1.getType() == NonEquiJoinConditionType.COLUMN) {
                 return Objects.equals(cond1.getColRef().getColumnDesc(), cond2.getColRef().getColumnDesc()) ? 0 : 1;
             } else {
-                for (int i = 0; i < cond1.getOperands().length; i++) {
-                    if (compare(cond1.getOperands()[i], cond2.getOperands()[i]) != 0) {
+                NonEquiJoinCondition[] sorted1 = cond1.getSortedOperands();
+                NonEquiJoinCondition[] sorted2 = cond2.getSortedOperands();
+                for (int i = 0; i < sorted1.length; i++) {
+                    if (compare(sorted1[i], sorted2[i]) != 0) {
                         return 1;
                     }
                 }
                 return 0;
             }
         }
-
     }
-
 }
