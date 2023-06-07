@@ -1110,12 +1110,15 @@ class KylinConfigBaseTest {
         val config = KylinConfig.getInstanceFromEnv();
         assertEquals(config.getStreamingStatsUrl().toString(), config.getMetadataUrl().toString());
         assertEquals(config.getQueryHistoryUrl().toString(), config.getMetadataUrl().toString());
+        assertEquals(config.getJdbcShareStateUrl().toString(), config.getMetadataUrl().toString());
         val pgUrl = "ke_metadata@jdbc,driverClassName=org.postgresql.Driver,"
                 + "url=jdbc:postgresql://sandbox:5432/kylin,username=postgres,password";
         config.setStreamingStatsUrl(pgUrl);
         assertEquals(pgUrl, config.getStreamingStatsUrl().toString());
         config.setQueryHistoryUrl(pgUrl);
         assertEquals(pgUrl, config.getQueryHistoryUrl().toString());
+        config.setJdbcShareStateUrl(pgUrl);
+        assertEquals(pgUrl, config.getJdbcShareStateUrl().toString());
     }
 
     @Test
