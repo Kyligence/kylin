@@ -31,6 +31,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.rest.controller.NBasicController;
 import org.apache.kylin.rest.response.EnvelopeResponse;
@@ -45,8 +46,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.kyligence.kap.secondstorage.management.request.ModelEnableRequest;
 import io.kyligence.kap.secondstorage.management.request.ModelModifyRequest;
@@ -163,6 +162,7 @@ public class OpenSecondStorageEndpoint extends NBasicController {
         modelEnableRequest.setProject(checkProjectName(modelEnableRequest.getProject()));
         checkRequiredArg(MODEL_ARG_NAME, modelEnableRequest.getModelName());
         checkRequiredArg(MODEL_ENABLE, modelEnableRequest.getEnabled());
+        checkKylinInfo(modelEnableRequest.getEnabled());
         val modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), modelEnableRequest.getProject());
         val model = modelManager.getDataModelDescByAlias(modelEnableRequest.getModelName());
         if (Objects.isNull(model)) {

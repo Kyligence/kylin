@@ -191,6 +191,7 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
         }, project);
         SecondStorageUtil.initModelMetaData(project, model);
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+        Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, model));
 
         val modelRequest = prepare();
         modelRequest.setWithSecondStorage(false);
@@ -216,12 +217,14 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
         }, project);
         SecondStorageUtil.initModelMetaData("default", model);
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+        Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, model));
 
         val modelRequest = prepare();
         modelRequest.setWithSecondStorage(true);
         modelRequest.getPartitionDesc().setPartitionDateColumn("TRANS_ID");
         modelService.updateDataModelSemantic("default", modelRequest);
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+        Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, model));
     }
 
     private ModelRequest prepare() throws IOException {

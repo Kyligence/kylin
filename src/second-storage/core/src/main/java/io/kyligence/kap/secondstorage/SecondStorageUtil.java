@@ -44,6 +44,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.JobErrorCode;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
+import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.job.constant.ExecutableConstants;
@@ -209,11 +210,26 @@ public class SecondStorageUtil {
     }
 
     public static boolean isGlobalEnable() {
+        boolean checkKylinInfo = KylinInfoExtension.getFactory().checkKylinInfo();
+        return SecondStorage.enabled() && checkKylinInfo;
+    }
+
+    // clean project and model job can run, check condition is without check kylin info
+    public static boolean isGlobalEnableWithoutCheckKylinInfo() {
         return SecondStorage.enabled();
     }
 
     public static boolean isProjectEnable(String project) {
-        if (isGlobalEnable()) {
+        return innerIsProjectEnable(isGlobalEnable(), project);
+    }
+
+    // clean project and model job can run, check condition is without check kylin info
+    public static boolean isProjectEnableWithoutCheckKylinInfo(String project) {
+        return innerIsProjectEnable(isGlobalEnableWithoutCheckKylinInfo(), project);
+    }
+
+    private static boolean innerIsProjectEnable(boolean enabled, String project) {
+        if (enabled) {
             KylinConfig config = KylinConfig.getInstanceFromEnv();
             Optional<Manager<NodeGroup>> nodeGroupManager = nodeGroupManager(config, project);
             return nodeGroupManager.isPresent() && !nodeGroupManager.get().listAll().isEmpty();
@@ -235,12 +251,21 @@ public class SecondStorageUtil {
     }
 
     public static boolean isModelEnable(String project, String model) {
-        if (isProjectEnable(project)) {
+        return innerIsModelEnable(isProjectEnable(project), project, model);
+    }
+
+    public static boolean innerIsModelEnable(boolean enabled, String project, String model) {
+        if (enabled) {
             KylinConfig config = KylinConfig.getInstanceFromEnv();
             Optional<Manager<TableFlow>> tableFlowManager = tableFlowManager(config, project);
             return tableFlowManager.isPresent() && tableFlowManager.get().get(model).isPresent();
         }
         return false;
+    }
+
+    // clean model job can run, check condition is without check kylin info
+    public static boolean isModelEnableWithoutCheckKylinInfo(String project, String model) {
+        return innerIsModelEnable(isProjectEnableWithoutCheckKylinInfo(project), project, model);
     }
 
     public static List<SecondStorageInfo> setSecondStorageSizeInfo(List<NDataModel> models) {
@@ -370,8 +395,9 @@ public class SecondStorageUtil {
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
     }
 
+    // clean project and model job can run, check condition is without check kylin info
     public static Optional<Manager<TableFlow>> tableFlowManager(KylinConfig config, String project) {
-        return isGlobalEnable() ? Optional.of(SecondStorage.tableFlowManager(config, project)) : Optional.empty();
+        return isGlobalEnableWithoutCheckKylinInfo() ? Optional.of(SecondStorage.tableFlowManager(config, project)) : Optional.empty();
     }
 
     public static List<TableFlow> listTableFlow(KylinConfig config, String project) {
@@ -391,12 +417,14 @@ public class SecondStorageUtil {
         return tableFlow.get();
     }
 
+    // clean project and model job can run, check condition is without check kylin info
     public static Optional<Manager<TableFlow>> tableFlowManager(NDataflow dataflow) {
-        return isGlobalEnable() ? tableFlowManager(dataflow.getConfig(), dataflow.getProject()) : Optional.empty();
+        return isGlobalEnableWithoutCheckKylinInfo() ? tableFlowManager(dataflow.getConfig(), dataflow.getProject()) : Optional.empty();
     }
 
+    // clean project and model job can run, check condition is without check kylin info
     public static Optional<Manager<TablePlan>> tablePlanManager(KylinConfig config, String project) {
-        return isGlobalEnable() ? Optional.of(SecondStorage.tablePlanManager(config, project)) : Optional.empty();
+        return isGlobalEnableWithoutCheckKylinInfo() ? Optional.of(SecondStorage.tablePlanManager(config, project)) : Optional.empty();
     }
 
     public static TablePlan getTablePlan(String project, String modelId) {
@@ -407,8 +435,9 @@ public class SecondStorageUtil {
         return tablePlan.get();
     }
 
+    // clean project and model job can run, check condition is without check kylin info
     public static Optional<Manager<NodeGroup>> nodeGroupManager(KylinConfig config, String project) {
-        return isGlobalEnable() ? Optional.of(SecondStorage.nodeGroupManager(config, project)) : Optional.empty();
+        return isGlobalEnableWithoutCheckKylinInfo() ? Optional.of(SecondStorage.nodeGroupManager(config, project)) : Optional.empty();
     }
 
     public static List<NodeGroup> listNodeGroup(KylinConfig config, String project) {

@@ -371,6 +371,7 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         val tableData = tableFlowManager.orElseThrow(null).get(modelId).orElseThrow(null).getTableDataList().get(0);
         Assert.assertEquals(0, tableData.getPartitions().size());
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, modelId));
+        Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, modelId));
     }
 
     private void cleanSegments(List<String> segs) {

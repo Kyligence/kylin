@@ -18,20 +18,28 @@
 
 package io.kyligence.kap.secondstorage.management;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import org.apache.kylin.rest.service.ModelService;
-import io.kyligence.kap.secondstorage.management.request.StorageRequest;
-import lombok.val;
+import static org.apache.kylin.common.exception.ServerErrorCode.LOW_LEVEL_LICENSE;
+
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.rest.constant.Constant;
+import org.apache.kylin.rest.service.ModelService;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -41,6 +49,15 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import io.kyligence.kap.secondstorage.management.request.ModelEnableRequest;
+import io.kyligence.kap.secondstorage.management.request.ProjectEnableRequest;
+import io.kyligence.kap.secondstorage.management.request.StorageRequest;
+import lombok.val;
+
+@RunWith(PowerMockRunner.class)
+@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*",
+        "javax.crypto.*" })
+@PrepareForTest({ KylinInfoExtension.class })
 public class SecondStorageEndpointTest extends NLocalFileMetadataTestCase {
 
     @InjectMocks
@@ -81,5 +98,38 @@ public class SecondStorageEndpointTest extends NLocalFileMetadataTestCase {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
         Mockito.verify(secondStorageEndpoint).loadStorage(Mockito.any(StorageRequest.class));
+    }
+
+    @Test
+    public void testEnableModelStorageFalseKylinInfoException() throws Exception {
+        val enableRequest = new ModelEnableRequest();
+        enableRequest.setProject("default");
+        enableRequest.setModel("test");
+        enableRequest.setEnabled(true);
+        val factory = Mockito.mock(KylinInfoExtension.Factory.class);
+        Mockito.when(factory.checkKylinInfo()).thenReturn(false);
+        PowerMockito.stub(PowerMockito.method(KylinInfoExtension.class, "getFactory")).toReturn(factory);
+        try {
+            secondStorageEndpoint.enableStorage(enableRequest);
+            Assert.fail();
+        } catch (KylinException e) {
+            Assert.assertEquals(LOW_LEVEL_LICENSE.toErrorCode(), e.getErrorCode());
+        }
+    }
+
+    @Test
+    public void testEnableProjectStorageFalseKylinInfoException() throws Exception {
+        val request = new ProjectEnableRequest();
+        request.setProject("default");
+        request.setEnabled(true);
+        val factory = Mockito.mock(KylinInfoExtension.Factory.class);
+        Mockito.when(factory.checkKylinInfo()).thenReturn(false);
+        PowerMockito.stub(PowerMockito.method(KylinInfoExtension.class, "getFactory")).toReturn(factory);
+        try {
+            secondStorageEndpoint.enableProjectStorage(request);
+            Assert.fail();
+        } catch (KylinException e) {
+            Assert.assertEquals(LOW_LEVEL_LICENSE.toErrorCode(), e.getErrorCode());
+        }
     }
 }

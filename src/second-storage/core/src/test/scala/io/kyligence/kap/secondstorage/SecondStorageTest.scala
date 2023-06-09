@@ -87,7 +87,9 @@ class SecondStorageTest extends SparderBaseFunSuite with LocalMetadata {
 
     val utility1 = Mockito.mockStatic(classOf[SecondStorageUtil])
     utility1.when(() => SecondStorageUtil.isModelEnable("project", "modelid")).thenReturn(true)
+    utility1.when(() => SecondStorageUtil.isModelEnableWithoutCheckKylinInfo("project", "modelid")).thenReturn(true)
     assertResult(true)(SecondStorageUtil.isModelEnable("project", "modelid"))
+    assertResult(true)(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo("project", "modelid"))
     utility1.when(() => SecondStorageUtil.getProjectLocks("project")).thenReturn(listString)
 
     val utility2 = Mockito.mockStatic(classOf[LockTypeEnum])
@@ -110,7 +112,9 @@ class SecondStorageTest extends SparderBaseFunSuite with LocalMetadata {
 
     val utility1 = Mockito.mockStatic(classOf[SecondStorageUtil])
     utility1.when(() => SecondStorageUtil.isModelEnable("project", "modelid")).thenReturn(true)
+    utility1.when(() => SecondStorageUtil.isModelEnableWithoutCheckKylinInfo("project", "modelid")).thenReturn(true)
     assertResult(true)(SecondStorageUtil.isModelEnable("project", "modelid"))
+    assertResult(true)(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo("project", "modelid"))
     utility1.when(() => SecondStorageUtil.getProjectLocks("project")).thenReturn(listString)
 
     val utility2 = Mockito.mockStatic(classOf[LockTypeEnum])

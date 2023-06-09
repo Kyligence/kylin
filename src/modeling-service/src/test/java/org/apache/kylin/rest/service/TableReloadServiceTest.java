@@ -1737,12 +1737,14 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         request.setWithSecondStorage(true);
         request.setUuid(model);
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+        Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, model));
 
         val tableIdentity = "DEFAULT.TEST_KYLIN_FACT";
         removeColumn(tableIdentity, "IS_EFFECTUAL");
         tableService.innerReloadTable(PROJECT, tableIdentity, true, null);
 
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+        Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, model));
     }
 
     @Test

@@ -20,14 +20,16 @@ package io.kyligence.kap.secondstorage.management;
 
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
+import static org.apache.kylin.common.exception.ServerErrorCode.LOW_LEVEL_LICENSE;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_NAME_NOT_EXIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_EMPTY_PARAMETER;
 
-import io.kyligence.kap.secondstorage.management.request.ModelModifyRequest;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.response.NModelDescResponse;
 import org.apache.kylin.rest.service.ModelService;
@@ -35,10 +37,15 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -48,12 +55,15 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
 import io.kyligence.kap.secondstorage.management.request.ModelEnableRequest;
+import io.kyligence.kap.secondstorage.management.request.ModelModifyRequest;
 import io.kyligence.kap.secondstorage.management.request.StorageRequest;
 import lombok.val;
 
+@RunWith(PowerMockRunner.class)
+@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*",
+        "javax.crypto.*" })
+@PrepareForTest({ KylinInfoExtension.class })
 public class OpenSecondStorageEndpointTest extends NLocalFileMetadataTestCase {
     private static final String NULLABLE_STRING = "Nullable(String)";
     private static final String LOW_CARDINALITY_STRING = "LowCardinality(Nullable(String))";
@@ -149,6 +159,23 @@ public class OpenSecondStorageEndpointTest extends NLocalFileMetadataTestCase {
             Assert.fail();
         } catch (KylinException e) {
             Assert.assertEquals(REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY, e.getErrorCodeProducer());
+        }
+    }
+
+    @Test
+    public void testEnableStorageFalseKylinInfoException() throws Exception {
+        val enableRequest = new ModelEnableRequest();
+        enableRequest.setProject("default");
+        enableRequest.setModelName("test");
+        enableRequest.setEnabled(true);
+        val factory = Mockito.mock(KylinInfoExtension.Factory.class);
+        Mockito.when(factory.checkKylinInfo()).thenReturn(false);
+        PowerMockito.stub(PowerMockito.method(KylinInfoExtension.class, "getFactory")).toReturn(factory);
+        try {
+            openSecondStorageEndpoint.enableStorage(enableRequest);
+            Assert.fail();
+        } catch (KylinException e) {
+            Assert.assertEquals(LOW_LEVEL_LICENSE.toErrorCode(), e.getErrorCode());
         }
     }
 

@@ -28,6 +28,7 @@ import io.kyligence.kap.secondstorage.metadata.TableData;
 import io.kyligence.kap.secondstorage.util.SecondStorageDateUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.metadata.model.SegmentRange;
 
 import com.clearspring.analytics.util.Preconditions;
@@ -110,5 +111,10 @@ public class ClickHousePartitionClean extends AbstractClickHouseClean {
                 ExceptionUtils.rethrow(e);
             }
         };
+    }
+
+    @Override
+    public boolean checkKylinInfo(){
+        return !KylinInfoExtension.getFactory().checkKylinInfo();
     }
 }

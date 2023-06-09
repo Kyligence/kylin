@@ -1577,6 +1577,7 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
         }, project);
         SecondStorageUtil.initModelMetaData(project, model);
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+        Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, model));
 
         val job3 = new DefaultExecutable();
         job3.setProject(getProject());
@@ -1609,6 +1610,7 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
         }, project);
         SecondStorageUtil.initModelMetaData(project, model);
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+        Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, model));
 
         val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         val job = new DefaultExecutable();

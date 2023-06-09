@@ -259,9 +259,10 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
     }
 
+    // clean model job can run, check condition is without check kylin info
     @Override
     public String disableModel(final String project, final String modelId) {
-        if (!SecondStorageUtil.isModelEnable(project, modelId)) {
+        if (!SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, modelId)) {
             return null;
         }
 
@@ -468,7 +469,7 @@ public class SecondStorageService extends BasicService implements SecondStorageU
     public Optional<JobInfoResponse.JobInfo> changeModelSecondStorageState(String project, String modelId, boolean enabled) {
         if (!KylinConfig.getInstanceFromEnv().isUTEnv())
             aclEvaluate.checkProjectAdminPermission(project);
-        if (!SecondStorageUtil.isProjectEnable(project)) {
+        if (!SecondStorageUtil.isProjectEnableWithoutCheckKylinInfo(project)) {
             throw new KylinException(PROJECT_NOT_ENABLE,
                     String.format(Locale.ROOT, MsgPicker.getMsg().getSecondStorageProjectEnabled(), project));
         }

@@ -923,18 +923,22 @@ public class SecondStorageLockTest implements JobWaiter {
 
                 modelService.changeSecondStorageIfNeeded(getProject(), request, () -> true);
                 Assert.assertFalse(SecondStorageUtil.isModelEnable(getProject(), modelId));
+                Assert.assertFalse(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(getProject(), modelId));
 
                 request.setWithSecondStorage(true);
                 modelService.changeSecondStorageIfNeeded(getProject(), request, () -> true);
                 Assert.assertTrue(SecondStorageUtil.isModelEnable(getProject(), modelId));
+                Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(getProject(), modelId));
 
                 request.setWithSecondStorage(true);
                 modelService.changeSecondStorageIfNeeded(getProject(), request, () -> true);
                 Assert.assertTrue(SecondStorageUtil.isModelEnable(getProject(), modelId));
+                Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(getProject(), modelId));
 
                 request.setWithSecondStorage(false);
                 modelService.changeSecondStorageIfNeeded(getProject(), request, () -> true);
                 Assert.assertFalse(SecondStorageUtil.isModelEnable(getProject(), modelId));
+                Assert.assertFalse(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(getProject(), modelId));
 
                 return null;
             });

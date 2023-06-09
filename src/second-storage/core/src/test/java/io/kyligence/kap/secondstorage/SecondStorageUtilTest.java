@@ -26,8 +26,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.execution.NExecutableManager;
@@ -39,6 +41,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -46,7 +49,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.ReflectionUtils;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import io.kyligence.kap.secondstorage.config.ClusterInfo;
 import io.kyligence.kap.secondstorage.config.Node;
 import io.kyligence.kap.secondstorage.metadata.Manager;
@@ -56,7 +58,10 @@ import io.kyligence.kap.secondstorage.metadata.TablePartition;
 import io.kyligence.kap.secondstorage.response.SecondStorageNode;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({SecondStorageNodeHelper.class, NExecutableManager.class})
+@PrepareForTest({ SecondStorageNodeHelper.class, NExecutableManager.class, SecondStorage.class,
+        KylinInfoExtension.class })
+@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*",
+        "javax.crypto.*" })
 public class SecondStorageUtilTest extends NLocalFileMetadataTestCase {
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
     private Manager<TableFlow> tableFlowManager = Mockito.mock(Manager.class);
@@ -185,5 +190,21 @@ public class SecondStorageUtilTest extends NLocalFileMetadataTestCase {
     public void checkJobResumeAndRemoveWhenNotEnable() {
         SecondStorageUtil.checkJobResume("default", RandomUtil.randomUUIDStr());
         SecondStorageUtil.checkSegmentRemove("default", RandomUtil.randomUUIDStr(), new String[]{RandomUtil.randomUUIDStr()});
+    }
+
+    @Test
+    public void isGlobalEnable() {
+        isGlobalEnable(false, false, false);
+        isGlobalEnable(true, false, false);
+        isGlobalEnable(false, true, false);
+        isGlobalEnable(true, true, true);
+    }
+
+    private void isGlobalEnable(boolean checkKylinInfo, boolean enabled, boolean result) {
+        PowerMockito.stub(PowerMockito.method(SecondStorage.class, "enabled")).toReturn(enabled);
+        KylinInfoExtension.Factory factory = Mockito.mock(KylinInfoExtension.Factory.class);
+        Mockito.when(factory.checkKylinInfo()).thenReturn(checkKylinInfo);
+        PowerMockito.stub(PowerMockito.method(KylinInfoExtension.class, "getFactory")).toReturn(factory);
+        Assert.assertEquals(result, SecondStorageUtil.isGlobalEnable());
     }
 }

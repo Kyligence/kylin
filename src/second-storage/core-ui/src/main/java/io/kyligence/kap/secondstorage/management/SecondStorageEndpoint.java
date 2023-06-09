@@ -134,6 +134,7 @@ public class SecondStorageEndpoint extends NBasicController {
     public EnvelopeResponse<JobInfoResponse> enableStorage(@RequestBody ModelEnableRequest modelEnableRequest) {
         checkProjectName(modelEnableRequest.getProject());
         checkRequiredArg(MODEL_ARG, modelEnableRequest.getModel());
+        checkKylinInfo(modelEnableRequest.getEnabled());
         val modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), modelEnableRequest.getProject());
         val model = modelManager.getDataModelDesc(modelEnableRequest.getModel());
         checkModel(modelEnableRequest.getProject(), model.getAlias());
@@ -148,6 +149,7 @@ public class SecondStorageEndpoint extends NBasicController {
     @PostMapping(value = "/project/state", produces = {HTTP_VND_APACHE_KYLIN_JSON, HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON})
     public EnvelopeResponse<JobInfoResponse> enableProjectStorage(@RequestBody ProjectEnableRequest projectEnableRequest) {
         String projectName = checkProjectName(projectEnableRequest.getProject());
+        checkKylinInfo(projectEnableRequest.isEnabled());
         val jobInfo = secondStorageService.changeProjectSecondStorageState(projectName,
                 projectEnableRequest.getNewNodes(),
                 projectEnableRequest.isEnabled());
