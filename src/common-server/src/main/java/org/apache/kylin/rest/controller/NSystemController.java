@@ -26,6 +26,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.TIME_INVALI
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -58,6 +59,7 @@ import org.apache.kylin.rest.response.MaintenanceModeResponse;
 import org.apache.kylin.rest.response.ServerExtInfoResponse;
 import org.apache.kylin.rest.response.ServerInfoResponse;
 import org.apache.kylin.rest.response.ServersResponse;
+import org.apache.kylin.rest.service.ArthasService;
 import org.apache.kylin.rest.service.FileService;
 import org.apache.kylin.rest.service.MaintenanceModeService;
 import org.apache.kylin.rest.service.MetadataBackupService;
@@ -110,6 +112,10 @@ public class NSystemController extends NBasicController {
     @Autowired
     @Qualifier("projectService")
     private ProjectService projectService;
+
+    @Autowired
+    private ArthasService arthasService;
+
     private MetadataToolHelper metadataToolHelper = new MetadataToolHelper();
 
     @Autowired
@@ -222,7 +228,7 @@ public class NSystemController extends NBasicController {
     @ResponseBody
     public void remoteDownloadPackage(@RequestParam(value = "host", required = false) String host,
             @RequestParam(value = "id") String id, @RequestParam(value = "project", required = false) String project,
-            final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+            final HttpServletRequest request, final HttpServletResponse response) throws IOException {
         host = decodeHost(host);
         if (StringUtils.isEmpty(host)) {
             setDownloadResponse(systemService.getDiagPackagePath(id, project), MediaType.APPLICATION_OCTET_STREAM_VALUE,
@@ -271,7 +277,7 @@ public class NSystemController extends NBasicController {
     @ApiOperation(value = "getMaintenance", tags = { "DW" })
     @GetMapping(value = "/maintenance_mode", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
-    public EnvelopeResponse<MaintenanceModeResponse> getMaintenanceMode() throws Exception {
+    public EnvelopeResponse<MaintenanceModeResponse> getMaintenanceMode() {
         return new EnvelopeResponse<>(CODE_SUCCESS, maintenanceModeService.getMaintenanceMode(), "");
     }
 
@@ -391,5 +397,32 @@ public class NSystemController extends NBasicController {
                 request.getTmpFileSize());
         setDownloadResponse(backupInputStream, METADATA_FILE, MediaType.APPLICATION_OCTET_STREAM_VALUE, response);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    @GetMapping(value = "/arthas/register")
+    @ResponseBody
+    public EnvelopeResponse<String> registerArthas(
+            @RequestParam(value = "tunnelServer", required = false) String tunnelServer,
+            @RequestParam(value = "appName", required = false) String appName,
+            @RequestParam(value = "httpPort", required = false) String httpPort) {
+        Map<String, String> overrideConfigMap = new HashMap<>();
+        if (tunnelServer != null) {
+            overrideConfigMap.put("tunnelServer", tunnelServer);
+        }
+        if (appName != null) {
+            overrideConfigMap.put("appName", appName);
+        }
+        if (httpPort != null) {
+            overrideConfigMap.put("httpPort", httpPort);
+        }
+        arthasService.registerArthas(overrideConfigMap);
+        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
+    }
+
+    @GetMapping(value = "/arthas/destory")
+    @ResponseBody
+    public EnvelopeResponse<String> destoryArthas() {
+        arthasService.destoryArthas();
+        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
     }
 }

@@ -98,8 +98,6 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ANT_PATH_MATCHER
-  arthas:
-    enabled: false
   security:
     filter:
       dispatcher-types: forward, request, error, async

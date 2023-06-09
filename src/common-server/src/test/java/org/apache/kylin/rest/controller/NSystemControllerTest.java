@@ -36,6 +36,7 @@ import org.apache.kylin.rest.request.DiagProgressRequest;
 import org.apache.kylin.rest.request.MetadataBackupRequest;
 import org.apache.kylin.rest.response.MaintenanceModeResponse;
 import org.apache.kylin.rest.response.ServerInfoResponse;
+import org.apache.kylin.rest.service.ArthasService;
 import org.apache.kylin.rest.service.MaintenanceModeService;
 import org.apache.kylin.rest.service.SystemService;
 import org.junit.After;
@@ -75,6 +76,9 @@ public class NSystemControllerTest extends NLocalFileMetadataTestCase {
 
     @Mock
     private MaintenanceModeService maintenanceModeService;
+
+    @Mock
+    private ArthasService arthasService;
 
     @Before
     public void setUp() {
@@ -321,4 +325,25 @@ public class NSystemControllerTest extends NLocalFileMetadataTestCase {
         Mockito.verify(nSystemController).downloadMetadataBackTmpFile(Mockito.any(MetadataBackupRequest.class),
                 Mockito.any());
     }
+
+    @Test
+    public void testRegisterKyarthas() throws Exception {
+        String tunnelServer = "ws://127.0.0.1:7777/ws";
+        String appName = "testAppName";
+        String httpPort = "7890";
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/system/arthas/register").param("tunnelServer", tunnelServer)
+                .param("appName", appName).param("httpPort", httpPort)
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        Mockito.verify(arthasService).registerArthas(Mockito.anyMap());
+    }
+
+    @Test
+    public void testDestoryKyarthas() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/system/arthas/destory")
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        Mockito.verify(arthasService).destoryArthas();
+    }
+
 }
