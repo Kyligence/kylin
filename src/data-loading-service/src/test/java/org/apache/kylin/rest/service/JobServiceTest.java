@@ -58,7 +58,6 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
@@ -72,10 +71,14 @@ import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.ClassUtil;
 import org.apache.kylin.common.util.HadoopUtil;
+import org.apache.kylin.common.util.LogOutputTestCase;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.job.NSparkExecutable;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.constant.JobActionEnum;
 import org.apache.kylin.job.constant.JobStatusEnum;
@@ -145,20 +148,17 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-
 import io.kyligence.kap.clickhouse.MockSecondStorage;
 import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 import io.kyligence.kap.engine.spark.job.step.NStageForBuild;
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.val;
 import lombok.var;
 
-public class JobServiceTest extends NLocalFileMetadataTestCase {
+public class JobServiceTest extends LogOutputTestCase {
 
     String project = "default";
     String yarnAppId = "application_1554187389076_9296";
@@ -1466,6 +1466,23 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
 
             Assert.assertFalse(manager.isFrozenJob(job.getId()));
         }
+    }
+
+    @Test
+    public void testDiscardJobAndNotify() {
+        NExecutableManager manager = NExecutableManager.getInstance(getTestConfig(), project);
+        val job = new DefaultExecutable();
+        job.setProject(project);
+        manager.addJob(job);
+
+        overwriteSystemProp("kylin.job.notification-enabled", "true");
+
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            jobService.updateJobStatus(job.getId(), project, "DISCARD");
+            return null;
+        }, project);
+
+        Assert.assertTrue(containsLog("[Job Discarded] is not specified by user, not need to notify users."));
     }
 
     @Test
