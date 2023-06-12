@@ -73,7 +73,7 @@ public class ClickHouseSkipExecuteTest extends NLocalFileMetadataTestCase {
 
             Mockito.when(factory.checkKylinInfo()).thenReturn(false);
             executeResult = clickhouseStep.doWork(context);
-            Assert.assertTrue(executeResult.skip());
+            Assert.assertTrue(executeResult.succeed());
         }
     }
 

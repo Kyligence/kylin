@@ -32,7 +32,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
@@ -112,9 +111,6 @@ public class ClickHouseIndexClean extends AbstractClickHouseClean {
 
     @Override
     public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
-        if (checkKylinInfo()) {
-            return ExecuteResult.createSkip();
-        }
         return wrapWithExecuteException(() -> {
             if (INDEX_CLEAN_READY.equals(this.getParam(CLICKHOUSE_NODE_COUNT_PARAM))) {
                 loadState();
@@ -187,10 +183,5 @@ public class ClickHouseIndexClean extends AbstractClickHouseClean {
                 new ShardCleaner(node, NameUtil.getDatabase(getConfig(), project), NameUtil.getTable(getParam(NBatchConstants.P_DATAFLOW_ID), layoutId),
                         SecondStorageDateUtils.splitByDay(segmentRangeMap.get(segmentId)), getDateFormat())
         ).collect(Collectors.toList());
-    }
-
-    @Override
-    public boolean checkKylinInfo(){
-        return !KylinInfoExtension.getFactory().checkKylinInfo();
     }
 }
