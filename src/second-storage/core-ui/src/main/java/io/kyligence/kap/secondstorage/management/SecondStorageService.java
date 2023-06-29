@@ -726,7 +726,7 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         LockOperateTypeEnum.check(operateType);
         if (LockOperateTypeEnum.LOCK.name().equals(operateType) && !KylinConfig.getInstanceFromEnv().isUTEnv()) {
             JobFilter jobFilter = new JobFilter(Arrays.asList(JobStatusEnum.RUNNING.name()),
-                    null, 0, null, null, project, "last_modified", true);
+                    null, 0, null, null, false, project, "last_modified", true);
             List<ExecutableResponse> executableResponses = jobService.listJobs(jobFilter);
             executableResponses.stream().forEach(job -> {
                 List<ExecutableStepResponse> executableStepResponses = jobService.getJobDetail(project, job.getId());
