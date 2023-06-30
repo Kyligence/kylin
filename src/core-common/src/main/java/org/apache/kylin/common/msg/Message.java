@@ -48,6 +48,7 @@ public class Message {
     private static final String PROFILING_COLLECT_TIMEOUT = "Async profiler timeout";
 
     private static final String PARAMETER_EMPTY = "Please enter the value for the parameter '%s'.";
+    private static final String PARAMETER_MUST_BE_POSITIVE_NUMBER = "The value of %s must be a positive number.";
 
     private static final String LICENSE_ERROR_PRE = "The license couldn’t be updated:\n";
     private static final String LICENSE_ERROR_SUFF = "\nPlease upload a new license, or contact Kyligence.";
@@ -1653,6 +1654,11 @@ public class Message {
 
     public String getQueryNotRunningError() {
         return "Query is not running, please check.";
+    }
+
+    public String getIllegalNegative(String parameter) {
+        return String.format(PARAMETER_MUST_BE_POSITIVE_NUMBER, parameter);
+
     }
 
 }
