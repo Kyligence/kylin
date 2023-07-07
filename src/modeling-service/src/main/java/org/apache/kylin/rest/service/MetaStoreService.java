@@ -75,10 +75,7 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.MetadataChecker;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import org.apache.kylin.helper.MetadataToolHelper;
 import org.apache.kylin.helper.RoutineToolHelper;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
@@ -100,6 +97,7 @@ import org.apache.kylin.metadata.model.schema.SchemaNodeType;
 import org.apache.kylin.metadata.model.schema.SchemaUtil;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.query.util.QueryHisStoreUtil;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.metadata.view.LogicalView;
 import org.apache.kylin.metadata.view.LogicalViewManager;
@@ -116,7 +114,6 @@ import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.AclPermissionUtil;
 import org.apache.kylin.source.ISourceMetadataExplorer;
 import org.apache.kylin.source.SourceFactory;
-import org.apache.kylin.tool.garbage.CleanTaskExecutorService;
 import org.apache.kylin.tool.util.HashFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,6 +121,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
@@ -159,6 +161,8 @@ public class MetaStoreService extends BasicService {
     @Setter
     @Autowired(required = false)
     private List<ModelChangeSupporter> modelChangeSupporters = Lists.newArrayList();
+
+    MetadataToolHelper metadataToolHelper = new MetadataToolHelper();
 
     public List<ModelPreviewResponse> getPreviewModels(String project, List<String> ids) {
         aclEvaluate.checkProjectWritePermission(project);
@@ -803,14 +807,14 @@ public class MetaStoreService extends BasicService {
     public void cleanupMeta(String project) {
         if (project.equals(UnitOfWork.GLOBAL_UNIT)) {
             RoutineToolHelper.cleanGlobalSourceUsage();
-            RoutineToolHelper.cleanQueryHistoriesAsync().join();
+            QueryHisStoreUtil.cleanQueryHistory();
         } else {
             RoutineToolHelper.cleanMetaByProject(project);
         }
     }
 
     public void cleanupStorage(String[] projectsToClean, boolean cleanupStorage) {
-        CleanTaskExecutorService.getInstance().cleanStorageForService(cleanupStorage, Arrays.asList(projectsToClean), 0D, 0);
+        metadataToolHelper.cleanStorage(cleanupStorage, Arrays.asList(projectsToClean), 0D, 0);
     }
 
     public void cleanupStorage(StorageCleanupRequest request, HttpServletRequest servletRequest) {

@@ -757,7 +757,7 @@ public class RDBMSQueryHistoryDaoTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testLargeSplitToSmallTask() throws InterruptedException {
+    public void testLargeSplitToSmallTask() {
         AtomicInteger executions = new AtomicInteger(0);
         AtomicInteger actualSize = new AtomicInteger(0);
         largeSplitToSmallTask(105, 10, currentCount -> {
