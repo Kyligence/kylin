@@ -125,15 +125,21 @@ public class KylinCacheFileSystem extends AbstractCacheFileSystem {
         }
 
         sparkContext.setLocalProperty(key, Long.toString(acceptCacheTime));
+        sparkContext.setLocalProperty(CacheFileSystemConstants.PARAMS_KEY_ACCEPT_CACHE_TIME_FOR_GLUTEN,
+            Long.toString(acceptCacheTime));
     }
 
     public static void clearAcceptCacheTimeLocally() {
         Preconditions.checkState(SparkSession.getDefaultSession().isDefined());
         SparkContext sparkContext = SparkSession.getDefaultSession().get().sparkContext();
         sparkContext.setLocalProperty(CacheFileSystemConstants.PARAMS_KEY_ACCEPT_CACHE_TIME, null);
+        sparkContext.setLocalProperty(CacheFileSystemConstants.PARAMS_KEY_ACCEPT_CACHE_TIME_FOR_GLUTEN, null);
 
         if (TaskContext.get() != null) { // should not have TaskContext, just in case..
-            TaskContext.get().getLocalProperties().remove(CacheFileSystemConstants.PARAMS_KEY_ACCEPT_CACHE_TIME);
+            TaskContext.get().getLocalProperties()
+                    .remove(CacheFileSystemConstants.PARAMS_KEY_ACCEPT_CACHE_TIME);
+            TaskContext.get().getLocalProperties()
+                    .remove(CacheFileSystemConstants.PARAMS_KEY_ACCEPT_CACHE_TIME_FOR_GLUTEN);
         }
     }
 

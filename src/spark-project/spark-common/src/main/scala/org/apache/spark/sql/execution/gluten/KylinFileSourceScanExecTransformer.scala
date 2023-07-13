@@ -58,13 +58,14 @@ class KylinFileSourceScanExecTransformer(@transient relation: HadoopFsRelation,
     sourceScanRows
   }
 
-  override def getPartitions: Seq[Seq[InputPartition]] =
+  override def getPartitions: Seq[InputPartition] =
     BackendsApiManager.getTransformerApiInstance.genInputPartitionSeq(
-      relation, selectedPartitions).map(Seq(_))
-
-  override def getFlattenPartitions: Seq[InputPartition] =
-    BackendsApiManager.getTransformerApiInstance.genInputPartitionSeq(
-      relation, selectedPartitions)
+      relation,
+      selectedPartitions,
+      output,
+      optionalBucketSet,
+      optionalNumCoalescedBuckets,
+      disableBucketedScan)
 
   // Copy from KylinFileSourceScanExec
   @transient override lazy val selectedPartitions: Array[PartitionDirectory] = {

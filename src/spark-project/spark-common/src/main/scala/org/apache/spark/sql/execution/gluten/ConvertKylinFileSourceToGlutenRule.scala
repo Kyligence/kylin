@@ -43,7 +43,7 @@ case class ConvertKylinFileSourceToGlutenRule(session: SparkSession) extends Rul
         f.sourceScanRows
       )
       // Transformer validate
-      if (transformer.doValidate().validated) {
+      if (transformer.doValidate().isValid) {
         logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
         transformer
       } else {
@@ -65,7 +65,7 @@ case class ConvertKylinFileSourceToGlutenRule(session: SparkSession) extends Rul
         l.disableBucketedScan
       )
       // Transformer validate
-      if (transformer.doValidate().validated) {
+      if (transformer.doValidate().isValid) {
         logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
         transformer
       } else {
