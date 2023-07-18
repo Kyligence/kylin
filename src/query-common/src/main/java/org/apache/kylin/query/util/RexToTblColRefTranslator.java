@@ -226,7 +226,7 @@ public class RexToTblColRefTranslator {
             SqlNode sqlCall = rexNodeToSqlConverter.convertCall(call);
             rexToSqlMap.put(call.toString(), sqlCall);
             return sqlCall.toSqlString(SqlDialect.DatabaseProduct.CALCITE.getDialect()).toString();
-        } catch (Exception e) {
+        } catch (Exception | Error e) {
             return call.toString();
         }
     }
