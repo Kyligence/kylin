@@ -179,9 +179,9 @@ public class AppInitializer {
         log.info("KylinConfig in env, metadata is {}", kylinConfig.getMetadataUrl());
         log.info("KylinConfig in env, working dir is {}", kylinConfig.getHdfsWorkingDirectory());
 
-        // Init global static class
+        // Init global static instances
         CleanTaskExecutorService.getInstance().bindWorkingPool(
-            PriorityExecutor.newWorkingThreadPool(
+            () -> PriorityExecutor.newWorkingThreadPool(
                 "clean-storages-pool", kylinConfig.getStorageCleanTaskConcurrency()));
     }
 

@@ -173,10 +173,17 @@ class CleanTaskExecutorServiceTests extends NLocalFileMetadataTestCase {
 
     @Test
     @Order(1)
+    void testRunWithoutThreadPool() {
+        assertThrows(RejectedExecutionException.class,
+            () -> mockedHelper.submit(new TestStorageCleaner(1), 1, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    @Order(1)
     void testBindThreadPool() throws NoSuchFieldException, IllegalAccessException {
         resetInnerPool();
-        assertTrue(mockedHelper.bindWorkingPool(createPriorityPool()));
-        assertFalse(mockedHelper.bindWorkingPool(createPriorityPool()));
+        assertTrue(mockedHelper.bindWorkingPool(this::createPriorityPool));
+        assertFalse(mockedHelper.bindWorkingPool(this::createPriorityPool));
     }
 
     @Test
@@ -187,7 +194,7 @@ class CleanTaskExecutorServiceTests extends NLocalFileMetadataTestCase {
 
         overwriteSystemProp("kylin.storage.clean-tasks-concurrency", "1");
 
-        mockedHelper.bindWorkingPool(createPriorityPool());
+        mockedHelper.bindWorkingPool(this::createPriorityPool);
         CompletableFuture<?> f = mockedHelper.submit(routineSc, 1, TimeUnit.SECONDS);
         CompletionException ce = assertThrows(CompletionException.class, f::join);
 
@@ -202,7 +209,7 @@ class CleanTaskExecutorServiceTests extends NLocalFileMetadataTestCase {
 
         overwriteSystemProp("kylin.storage.clean-tasks-concurrency", "1");
 
-        mockedHelper.bindWorkingPool(createPriorityPool());
+        mockedHelper.bindWorkingPool(this::createPriorityPool);
         mockedHelper.close();
 
         CompletableFuture<?> f = mockedHelper.submit(routineSc, 1, TimeUnit.SECONDS);
@@ -225,7 +232,7 @@ class CleanTaskExecutorServiceTests extends NLocalFileMetadataTestCase {
         overwriteSystemProp("kylin.storage.clean-tasks-concurrency", "1");
 
         resetInnerPool();
-        mockedHelper.bindWorkingPool(createPriorityPool());
+        mockedHelper.bindWorkingPool(this::createPriorityPool);
 
         List<String> completedTasks = new ArrayList<>();
         List<CompletableFuture<?>> tasks = new ArrayList<>();
@@ -258,7 +265,7 @@ class CleanTaskExecutorServiceTests extends NLocalFileMetadataTestCase {
     @Order(11)
     void testDoubleRetriesToShutdown() throws NoSuchFieldException, IllegalAccessException {
         overwriteSystemProp("kylin.storage.clean-tasks-concurrency", "1");
-        mockedHelper.bindWorkingPool(createPriorityPool());
+        mockedHelper.bindWorkingPool(this::createPriorityPool);
 
         AtomicBoolean shutdownTriggered = new AtomicBoolean(false);
         CompletableFuture<?> future = mockedHelper.submit(new AbstractComparableCleanTask() {

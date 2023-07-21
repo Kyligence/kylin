@@ -23,12 +23,17 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Unsafe;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kylin.guava30.shaded.common.util.concurrent.MoreExecutors;
 
 @Slf4j
 public class StorageCleanerCLI {
 
     public static void main(String[] args) {
+        System.out.println("start to cleanup HDFS.");
         try {
+            log.info("Init cleaning task thread pool as the direct executor service.");
+            CleanTaskExecutorService.getInstance().bindWorkingPool(MoreExecutors::newDirectExecutorService);
+
             StorageCleaner cleaner = new StorageCleaner().withTag(StorageCleaner.CleanerTag.CLI);
             CleanTaskExecutorService.getInstance()
                 .submit(

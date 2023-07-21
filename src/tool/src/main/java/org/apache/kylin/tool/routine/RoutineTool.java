@@ -27,12 +27,14 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.guava30.shaded.common.util.concurrent.MoreExecutors;
 import org.apache.kylin.helper.MetadataToolHelper;
 import org.apache.kylin.helper.RoutineToolHelper;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.tool.MaintainModeTool;
 import org.apache.kylin.tool.garbage.CleanTaskExecutorService;
+import org.apache.kylin.tool.garbage.StorageCleaner;
 import org.apache.kylin.tool.util.ToolMainWrapper;
 
 import io.kyligence.kap.metadata.epoch.EpochManager;
@@ -56,6 +58,11 @@ public class RoutineTool extends ExecutableApplication {
     private double requestFSRate;
 
     private MetadataToolHelper helper = new MetadataToolHelper();
+
+    static {
+        log.info("Init cleaning task thread pool as the direct executor service.");
+        CleanTaskExecutorService.getInstance().bindWorkingPool(MoreExecutors::newDirectExecutorService);
+    }
 
     public static void main(String[] args) {
         ToolMainWrapper.wrap(args, () -> {
@@ -106,6 +113,7 @@ public class RoutineTool extends ExecutableApplication {
             return;
         }
         initOptionValues(optionsHelper);
+
         System.out.println("Start to cleanup metadata");
         List<String> projectsToCleanup = getProjectsToCleanup();
         MaintainModeTool maintainModeTool = new MaintainModeTool("routine tool");
@@ -114,6 +122,7 @@ public class RoutineTool extends ExecutableApplication {
         if (EpochManager.getInstance().isMaintenanceMode()) {
             Runtime.getRuntime().addShutdownHook(new Thread(maintainModeTool::releaseEpochs));
         }
+
         doCleanup(projectsToCleanup);
     }
 
@@ -125,12 +134,21 @@ public class RoutineTool extends ExecutableApplication {
             cleanStorage();
         } catch (Exception e) {
             log.error("Failed to execute routintool", e);
+            throw e;
         }
     }
 
     public void cleanStorage() {
-        CleanTaskExecutorService.getInstance().cleanStorageForRoutine(
-            storageCleanup, Arrays.asList(projects), requestFSRate, retryTimes);
+        try {
+            System.out.println("Start to cleanup HDFS");
+            CleanTaskExecutorService.getInstance().cleanStorageForRoutine(
+                storageCleanup, Arrays.asList(projects), requestFSRate, retryTimes);
+            System.out.println("cleanup HDFS finished");
+        } catch (Exception e) {
+            System.out.println(StorageCleaner.ANSI_RED
+                + "cleanup HDFS failed. Detailed Message is at ${KYLIN_HOME}/logs/shell.stderr"
+                + StorageCleaner.ANSI_RESET);
+        }
     }
 
     protected boolean printUsage(OptionsHelper optionsHelper) {

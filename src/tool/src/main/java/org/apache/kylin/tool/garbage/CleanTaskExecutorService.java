@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -81,10 +82,10 @@ public class CleanTaskExecutorService implements Closeable {
     /**
      * True if the instance binds nothing, else false.
      */
-    public boolean bindWorkingPool(ExecutorService workingPool) {
-        Preconditions.checkArgument(workingPool != null, "workingPool is null");
+    public boolean bindWorkingPool(Supplier<ExecutorService> workingPoolProvider) {
+        Preconditions.checkArgument(workingPoolProvider != null, "workingPool is null");
         if (bound.compareAndSet(false, true)) {
-            pool = workingPool;
+            pool = workingPoolProvider.get();
             return true;
         }
         return false;
@@ -178,7 +179,7 @@ public class CleanTaskExecutorService implements Closeable {
 
     public CompletableFuture<Void> submit(AbstractComparableCleanTask task, long timeout, TimeUnit timeUnit) {
         if (pool == null) {
-            return CompletableFuture.completedFuture(null);
+            throw new RejectedExecutionException("The working pool has not been initialized, please bind it at first!");
         }
 
         LOGGER.debug("To submit storage cleaning task {}.", task.getBrief());
@@ -205,7 +206,7 @@ public class CleanTaskExecutorService implements Closeable {
                 cancelFuture.get().cancel(true);
             }
             if (t == null) {
-                LOGGER.debug("Cleaning task {} successfully completed!", task.getBrief());
+                LOGGER.info("Cleaning task {} successfully completed!", task.getBrief());
             } else {
                 throw new CompletionException(
                         "To cancel task watcher because of " + "encountering exceptions for task " + task.getBrief(),

@@ -193,7 +193,11 @@ public class StorageCleaner {
         log.info("all file systems are {}", allFileSystems);
         for (StorageItem allFileSystem : allFileSystems) {
             log.debug("start to collect HDFS from {}", allFileSystem.getPath());
-            collectFromHDFS(allFileSystem);
+            try {
+                collectFromHDFS(allFileSystem);
+            } catch (FileNotFoundException e) {
+                log.warn("No garbage files collected from {}", allFileSystem.getPath());
+            }
             log.debug("folder {} is collected，detailed -> {}", allFileSystem.getPath(), allFileSystems);
         }
         UnitOfWork.doInTransactionWithRetry(() -> {
