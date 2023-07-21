@@ -53,6 +53,9 @@ import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.engine.spark.utils.ComputedColumnEvalUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableParams;
@@ -74,6 +77,7 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.cube.model.PartitionStatusEnum;
+import org.apache.kylin.metadata.cube.optimization.event.BuildIndexEvent;
 import org.apache.kylin.metadata.job.JobBucket;
 import org.apache.kylin.metadata.model.ManagementType;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -116,10 +120,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.engine.spark.job.ExecutableAddCuboidHandler;
 import io.kyligence.kap.engine.spark.job.ExecutableAddSegmentHandler;
@@ -875,6 +875,32 @@ public class ModelServiceBuildTest extends SourceTestCase {
         Assert.assertTrue(((NSparkCubingJob) executables.get(0)).getHandler() instanceof ExecutableAddCuboidHandler);
         Assert.assertEquals(0, executables.get(0).getPriority());
 
+    }
+
+    @Test
+    public void testBuildIndexManuallyForEvent() {
+        val project = "default";
+        val modelId = "abe3bf1a-c4bc-458d-8278-7ea8b00f5e96";
+        val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val df = dataflowManager.getDataflow(modelId);
+        BuildIndexEvent buildIndexEvent = new BuildIndexEvent(project, Lists.newArrayList(df));
+
+        val dfUpdate = new NDataflowUpdate(df.getId());
+        List<NDataLayout> tobeRemoveCuboidLayouts = Lists.newArrayList();
+        Segments<NDataSegment> segments = df.getSegments();
+        for (NDataSegment segment : segments) {
+            tobeRemoveCuboidLayouts.addAll(segment.getLayoutsMap().values());
+        }
+        dfUpdate.setToRemoveLayouts(tobeRemoveCuboidLayouts.toArray(new NDataLayout[0]));
+        dataflowManager.updateDataflow(dfUpdate);
+        val modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        modelManager.updateDataModel(modelId,
+                copyForWrite -> copyForWrite.setManagementType(ManagementType.MODEL_BASED));
+        modelBuildService.buildIndicesManually(buildIndexEvent);
+        val executables = getRunningExecutables(project, modelId);
+        Assert.assertEquals(1, executables.size());
+        Assert.assertTrue(((NSparkCubingJob) executables.get(0)).getHandler() instanceof ExecutableAddCuboidHandler);
+        Assert.assertEquals(3, executables.get(0).getPriority());
     }
 
     @Test

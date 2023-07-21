@@ -52,6 +52,11 @@ import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.engine.spark.smarter.IndexDependencyParser;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.common.SegmentUtil;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -106,13 +111,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
@@ -1122,6 +1122,13 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     public BuildBaseIndexResponse updateBaseIndex(String project, CreateBaseIndexRequest request,
             boolean createIfNotExistTableLayout, boolean createIfNotExistAggLayout, boolean isAuto) {
         aclEvaluate.checkProjectOperationDesignPermission(project);
+        return updateBaseIndexInternal(project, request, createIfNotExistTableLayout, createIfNotExistAggLayout,
+                isAuto);
+    }
+
+    @Transaction(project = 0)
+    public BuildBaseIndexResponse updateBaseIndexInternal(String project, CreateBaseIndexRequest request,
+            boolean createIfNotExistTableLayout, boolean createIfNotExistAggLayout, boolean isAuto) {
         // update = delete + create
         Set<Long> needDelete = checkNeedUpdateBaseIndex(project, request, isAuto);
         List<LayoutEntity> needRetainAggLayout = getNeedRetainAggLayout(project, request, needDelete);
@@ -1138,7 +1145,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
             return BuildBaseIndexResponse.EMPTY;
         }
 
-        BuildBaseIndexResponse response = createBaseIndex(project, request);
+        BuildBaseIndexResponse response = createBaseIndexInternal(project, request);
         response.setIndexUpdateType(needDelete);
         return response;
     }
@@ -1258,6 +1265,10 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     @Transaction(project = 0)
     public BuildBaseIndexResponse createBaseIndex(String project, CreateBaseIndexRequest request) {
         aclEvaluate.checkProjectOperationDesignPermission(project);
+        return createBaseIndexInternal(project, request);
+    }
+
+    public BuildBaseIndexResponse createBaseIndexInternal(String project, CreateBaseIndexRequest request) {
         NDataModel model = getManager(NDataModelManager.class, project).getDataModelDesc(request.getModelId());
         NIndexPlanManager indexPlanManager = getManager(NIndexPlanManager.class, project);
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(request.getModelId());
@@ -1295,7 +1306,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     private void overrideLayout(LayoutEntity layout, LayoutProperty layoutProperty, NDataModel model) {
-        layout.setOwner(BasicService.getUsername());
+        layout.setOwner(SecurityContextHolder.getContext() == null ? "System" : getUsername());
         if (layoutProperty == null) {
             return;
         }
