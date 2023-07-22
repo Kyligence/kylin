@@ -196,7 +196,7 @@ public class SlowQueryDetector extends Thread {
             return (System.currentTimeMillis() - startTime) / 1000;
         }
 
-        public boolean setInterruptIfTimeout() {
+        private boolean setInterruptIfTimeout() {
             if (isAsyncQuery) {
                 return false;
             }

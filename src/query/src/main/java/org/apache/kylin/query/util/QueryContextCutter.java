@@ -25,14 +25,11 @@ import java.util.Locale;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.kylin.common.QueryContext;
-import org.apache.kylin.common.exception.KylinRuntimeException;
-import org.apache.kylin.common.exception.KylinTimeoutException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.metadata.model.ISourceAware;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.metadata.realization.NoStreamingRealizationFoundException;
-import org.apache.kylin.query.exception.UserStopQueryException;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.KapRel;
 import org.apache.kylin.query.relnode.OLAPContext;
@@ -80,8 +77,6 @@ public class QueryContextCutter {
                     throw e;
                 }
                 reCutStrategy.tryCutToSmallerContexts(root, e);
-            } catch (UserStopQueryException | KylinTimeoutException | KylinRuntimeException e) {
-                throw e;
             } finally {
                 // auto-modeling should invoke unfixModel() because it may select some realizations.
                 if (isReCutBanned) {
