@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
@@ -43,6 +44,7 @@ import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.CommonErrorCode;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
@@ -52,6 +54,7 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.ModifyTableNameSqlVisitor;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.common.util.ThreadUtil;
 import org.apache.kylin.engine.spark.utils.ComputedColumnEvalUtil;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
@@ -95,9 +98,12 @@ import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.model.util.scd2.SCD2CondChecker;
 import org.apache.kylin.metadata.model.util.scd2.SCD2NonEquiCondSimplification;
+import org.apache.kylin.metadata.model.util.scd2.SCD2SqlConverter;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinDesc;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.query.engine.QueryExec;
+import org.apache.kylin.query.relnode.OLAPContext;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.rest.request.ModelRequest;
@@ -107,15 +113,11 @@ import org.apache.kylin.rest.util.AclPermissionUtil;
 import org.apache.kylin.rest.util.SCD2SimplificationConvertUtil;
 import org.apache.kylin.rest.util.SpringContext;
 import org.apache.kylin.source.SourceFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import io.kyligence.kap.metadata.recommendation.ref.OptRecManagerV2;
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
-import lombok.Setter;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;
@@ -124,11 +126,6 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class ModelSemanticHelper extends BasicService {
 
-    @Setter
-    @Autowired(required = false)
-    private ModelSmartSupporter modelSmartSupporter;
-
-    private static final Logger logger = LoggerFactory.getLogger(ModelSemanticHelper.class);
     private final ExpandableMeasureUtil expandableMeasureUtil = new ExpandableMeasureUtil((model, ccDesc) -> {
         String ccExpression = PushDownUtil.massageComputedColumn(model, model.getProject(), ccDesc,
                 AclPermissionUtil.createAclInfo(model.getProject(), getCurrentUserGroups()));
@@ -142,7 +139,7 @@ public class ModelSemanticHelper extends BasicService {
             nDataModel = JsonUtil.readValue(JsonUtil.writeValueAsIndentString(originModel), NDataModel.class);
             nDataModel.setJoinTables(SCD2SimplificationConvertUtil.deepCopyJoinTables(originModel.getJoinTables()));
         } catch (IOException e) {
-            logger.error("Parse json failed...", e);
+            ThreadUtil.warnKylinStackTrace("Parse json failed...\n");
             throw new KylinException(CommonErrorCode.FAILED_PARSE_JSON, e);
         }
         return nDataModel;
@@ -154,7 +151,7 @@ public class ModelSemanticHelper extends BasicService {
         try {
             dataModel = JsonUtil.deepCopy(modelRequest, NDataModel.class);
         } catch (IOException e) {
-            logger.error("Parse json failed...", e);
+            ThreadUtil.warnKylinStackTrace("Parse json failed...\n");
             throw new KylinException(CommonErrorCode.FAILED_PARSE_JSON, e);
         }
 
@@ -255,11 +252,13 @@ public class ModelSemanticHelper extends BasicService {
 
         HashSet<JoinDescNonEquiCompBean> scd2NonEquiCondSets = new HashSet<>();
 
-        val projectKylinConfig = NProjectManager.getProjectConfig(dataModel.getProject());
+        String project = dataModel.getProject();
+        val projectKylinConfig = NProjectManager.getProjectConfig(project);
         boolean isScd2Enabled = projectKylinConfig.isQueryNonEquiJoinModelEnabled();
-
+        QueryContext.current().setAclInfo(AclPermissionUtil.createAclInfo(project, getCurrentUserGroups()));
+        QueryExec queryExec = new QueryExec(project, projectKylinConfig, false);
         for (int i = 0; i < requestJoinTableDescs.size(); i++) {
-            final JoinDesc modelJoinDesc = dataModel.getJoinTables().get(i).getJoin();
+            final JoinDesc joinWithoutNonEquivInfo = dataModel.getJoinTables().get(i).getJoin();
             final SimplifiedJoinDesc requestJoinDesc = requestJoinTableDescs.get(i).getSimplifiedJoinDesc();
 
             if (CollectionUtils.isEmpty(requestJoinDesc.getSimplifiedNonEquiJoinConditions())) {
@@ -275,45 +274,46 @@ public class ModelSemanticHelper extends BasicService {
             checkRequestNonEquiJoinConds(requestJoinDesc);
 
             //3. suggest nonEquiModel
-            final JoinDesc suggModelJoin = modelSmartSupporter.suggNonEquiJoinModel(projectKylinConfig,
-                    dataModel.getProject(), modelJoinDesc, requestJoinDesc);
+            String scd2Sql = SCD2SqlConverter.INSTANCE.genSCD2SqlStr(joinWithoutNonEquivInfo,
+                    requestJoinDesc.getSimplifiedNonEquiJoinConditions());
+            final JoinDesc analyzedJoin = deriveJoins(queryExec, scd2Sql);
             // restore table alias in non-equi conditions
             final NonEquiJoinCondition nonEquiCondWithAliasRestored = new NonEquiJoinConditionVisitor() {
                 @Override
                 public NonEquiJoinCondition visitColumn(NonEquiJoinCondition cond) {
                     TableRef originalTableRef;
                     if (cond.getColRef().getTableRef().getTableIdentity()
-                            .equals(modelJoinDesc.getPKSide().getTableIdentity())) {
-                        originalTableRef = modelJoinDesc.getPKSide();
+                            .equals(joinWithoutNonEquivInfo.getPKSide().getTableIdentity())) {
+                        originalTableRef = joinWithoutNonEquivInfo.getPKSide();
                     } else {
-                        originalTableRef = modelJoinDesc.getFKSide();
+                        originalTableRef = joinWithoutNonEquivInfo.getFKSide();
                     }
 
                     return new NonEquiJoinCondition(originalTableRef.getColumn(cond.getColRef().getName()),
                             cond.getDataType());
                 }
-            }.visit(suggModelJoin.getNonEquiJoinCondition());
-            suggModelJoin.setNonEquiJoinCondition(nonEquiCondWithAliasRestored);
-            String expr = suggModelJoin.getNonEquiJoinCondition().getExpr();
-            expr = expr.replaceAll(suggModelJoin.getPKSide().getAlias(), modelJoinDesc.getPKSide().getAlias());
-            expr = expr.replaceAll(suggModelJoin.getFKSide().getAlias(), modelJoinDesc.getFKSide().getAlias());
-            suggModelJoin.getNonEquiJoinCondition().setExpr(expr);
-            suggModelJoin.setPrimaryTableRef(modelJoinDesc.getPKSide());
-            suggModelJoin.setPrimaryTable(modelJoinDesc.getPrimaryTable());
-            suggModelJoin.setForeignTableRef(modelJoinDesc.getFKSide());
-            suggModelJoin.setForeignTable(modelJoinDesc.getForeignTable());
+            }.visit(analyzedJoin.getNonEquiJoinCondition());
+            analyzedJoin.setNonEquiJoinCondition(nonEquiCondWithAliasRestored);
+            String expr = analyzedJoin.getNonEquiJoinCondition().getExpr();
+            expr = expr.replaceAll(analyzedJoin.getPKSide().getAlias(), joinWithoutNonEquivInfo.getPKSide().getAlias());
+            expr = expr.replaceAll(analyzedJoin.getFKSide().getAlias(), joinWithoutNonEquivInfo.getFKSide().getAlias());
+            analyzedJoin.getNonEquiJoinCondition().setExpr(expr);
+            analyzedJoin.setPrimaryTableRef(joinWithoutNonEquivInfo.getPKSide());
+            analyzedJoin.setPrimaryTable(joinWithoutNonEquivInfo.getPrimaryTable());
+            analyzedJoin.setForeignTableRef(joinWithoutNonEquivInfo.getFKSide());
+            analyzedJoin.setForeignTable(joinWithoutNonEquivInfo.getForeignTable());
 
             //4. update dataModel
             try {
-
-                SCD2NonEquiCondSimplification.INSTANCE.convertToSimplifiedSCD2Cond(suggModelJoin);
-                modelJoinDesc.setNonEquiJoinCondition(suggModelJoin.getNonEquiJoinCondition());
-                modelJoinDesc.setForeignTable(suggModelJoin.getForeignTable());
-                modelJoinDesc.setPrimaryTable(suggModelJoin.getPrimaryTable());
-            } catch (KylinException e) {
-                throw e;
+                SCD2NonEquiCondSimplification.INSTANCE.convertToSimplifiedSCD2Cond(analyzedJoin);
+                joinWithoutNonEquivInfo.setNonEquiJoinCondition(analyzedJoin.getNonEquiJoinCondition());
+                joinWithoutNonEquivInfo.setForeignTable(analyzedJoin.getForeignTable());
+                joinWithoutNonEquivInfo.setPrimaryTable(analyzedJoin.getPrimaryTable());
             } catch (Exception e) {
-                logger.error("Update model failed...", e);
+                ThreadUtil.warnKylinStackTrace("Update model failed...\n");
+                if (e instanceof KylinException) {
+                    throw e;
+                }
                 throw new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
                         Throwables.getRootCause(e).getMessage());
             }
@@ -325,6 +325,26 @@ public class ModelSemanticHelper extends BasicService {
                 scd2NonEquiCondSets.add(new JoinDescNonEquiCompBean(requestJoinDesc));
             }
         }
+    }
+
+    private JoinDesc deriveJoins(QueryExec queryExec, String sql) {
+        List<OLAPContext> contexts = queryExec.deriveOlapContexts(sql);
+        Optional<KylinException> th;
+        if (contexts.isEmpty()) {
+            th = Optional.of(new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
+                    "Failed to extract joins from the input sql: " + sql));
+        } else if (contexts.size() > 1) {
+            th = Optional.of(new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
+                    "Small sub-queries were split from the input sql: " + sql));
+        } else {
+            OLAPContext ctx = contexts.get(0);
+            if (ctx.joins.size() == 1) {
+                return ctx.joins.get(0);
+            }
+            th = Optional.of(new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
+                    "Non-equiv-join conditions were split. the input sql is: " + sql));
+        }
+        throw th.get();
     }
 
     private void checkRequestNonEquiJoinConds(final SimplifiedJoinDesc requestJoinDesc) {

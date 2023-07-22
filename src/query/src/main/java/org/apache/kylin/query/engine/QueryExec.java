@@ -45,6 +45,7 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
@@ -70,6 +71,7 @@ import org.apache.kylin.query.relnode.OLAPContext;
 import org.apache.kylin.query.util.AsyncQueryUtil;
 import org.apache.kylin.query.util.CalcitePlanRouterVisitor;
 import org.apache.kylin.query.util.HepUtils;
+import org.apache.kylin.query.util.QueryContextCutter;
 import org.apache.kylin.query.util.QueryInterruptChecker;
 import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.query.util.RelAggPushDownUtil;
@@ -218,6 +220,24 @@ public class QueryExec {
         } finally {
             afterQuery();
         }
+    }
+
+    public List<OLAPContext> deriveOlapContexts(String sql) {
+        List<OLAPContext> contexts = Lists.newArrayList();
+        try {
+            OLAPContext.clearThreadLocalContexts();
+            RelNode relNode = parseAndOptimize(sql);
+            QueryContextCutter.analyzeOlapContext(relNode);
+            Collection<OLAPContext> tmp = OLAPContext.getThreadLocalContexts();
+            if (CollectionUtils.isNotEmpty(tmp)) {
+                contexts.addAll(tmp);
+            }
+        } catch (Exception e) {
+            logger.error("Sql Parsing error.", e);
+        } finally {
+            OLAPContext.clearThreadLocalContexts();
+        }
+        return contexts;
     }
 
     private void magicDirts(String sql) {
