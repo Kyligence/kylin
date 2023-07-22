@@ -33,11 +33,13 @@ import org.apache.kylin.metadata.tuple.TupleInfo
 import org.apache.kylin.query.implicits.sessionToQueryContext
 import org.apache.kylin.query.relnode.{KapRel, OLAPContext}
 import org.apache.kylin.query.util.{RuntimeHelper, SparderDerivedUtil}
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project, Union}
 import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.manager.SparderLookupManager
 import org.apache.spark.sql.types.{ArrayType, DataTypes, DoubleType, StringType, StructField, StructType}
 import org.apache.spark.sql.util.SparderTypeUtil
+import org.apache.spark.sql._
 
 import scala.collection.JavaConverters._
 
