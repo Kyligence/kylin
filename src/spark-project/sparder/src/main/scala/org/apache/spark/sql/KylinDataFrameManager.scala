@@ -99,6 +99,8 @@ class KylinDataFrameManager(sparkSession: SparkSession) {
     SecondStorage.trySecondStorage(sparkSession, dataflow, layout, pruningInfo).getOrElse {
       StorageStoreFactory.create(dataflow.getModel.getStorageType)
         .read(dataflow, layout, sparkSession, extraOptions.toMap)
+    } else {
+      df.get.queryExecution.analyzed
     }
   }
 
