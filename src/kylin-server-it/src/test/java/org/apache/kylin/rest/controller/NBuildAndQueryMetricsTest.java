@@ -31,6 +31,9 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.TempMetadataBuilder;
 import org.apache.kylin.engine.spark.ExecutableUtils;
 import org.apache.kylin.engine.spark.merger.AfterBuildResourceMerger;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.engine.JobEngineConfig;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.NExecutableManager;
@@ -74,10 +77,6 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import io.kyligence.kap.metadata.user.ManagedUser;
@@ -127,29 +126,29 @@ public class NBuildAndQueryMetricsTest extends AbstractMVCIntegrationTestCase {
 
         if (type.isIntegerFamily())
             switch (type.getName()) {
-                case "tinyint":
-                    return DataTypes.ByteType;
-                case "smallint":
-                    return DataTypes.ShortType;
-                case "integer":
-                case "int4":
-                    return DataTypes.IntegerType;
-                default:
-                    return DataTypes.LongType;
+            case "tinyint":
+                return DataTypes.ByteType;
+            case "smallint":
+                return DataTypes.ShortType;
+            case "integer":
+            case "int4":
+                return DataTypes.IntegerType;
+            default:
+                return DataTypes.LongType;
             }
 
         if (type.isNumberFamily())
             switch (type.getName()) {
-                case "float":
-                    return DataTypes.FloatType;
-                case "double":
-                    return DataTypes.DoubleType;
-                default:
-                    if (type.getPrecision() == -1 || type.getScale() == -1) {
-                        return DataTypes.createDecimalType(19, 4);
-                    } else {
-                        return DataTypes.createDecimalType(type.getPrecision(), type.getScale());
-                    }
+            case "float":
+                return DataTypes.FloatType;
+            case "double":
+                return DataTypes.DoubleType;
+            default:
+                if (type.getPrecision() == -1 || type.getScale() == -1) {
+                    return DataTypes.createDecimalType(19, 4);
+                } else {
+                    return DataTypes.createDecimalType(type.getPrecision(), type.getScale());
+                }
             }
 
         if (type.isStringFamily())
@@ -181,7 +180,7 @@ public class NBuildAndQueryMetricsTest extends AbstractMVCIntegrationTestCase {
         projectManager.updateProject(projectInstance, projectInstanceUpdate.getName(),
                 projectInstanceUpdate.getDescription(), projectInstanceUpdate.getOverrideKylinProps());
 
-        Preconditions.checkArgument(projectInstance != null);
+        Preconditions.checkNotNull(projectInstance);
 
         for (String table : projectInstance.getTables()) {
             if (!"DEFAULT.TEST_KYLIN_FACT".equals(table) && !"DEFAULT.TEST_ACCOUNT".equals(table)) {
@@ -251,6 +250,12 @@ public class NBuildAndQueryMetricsTest extends AbstractMVCIntegrationTestCase {
     @Test
     public void testMetricsScanForPushDown() throws Exception {
         String sql = "select account_id from test_account limit 30";
+        assertMetric(sql, 30);
+    }
+
+    @Test
+    public void testSplitFunction() throws Exception {
+        String sql = "select split(account_id, '-')[0] from test_account limit 30";
         assertMetric(sql, 30);
     }
 
