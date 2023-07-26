@@ -103,7 +103,7 @@ class KylinDataFrameManager(sparkSession: SparkSession) {
       StorageStoreFactory.create(dataflow.getModel.getStorageType)
         .read(dataflow, layout, sparkSession, extraOptions.toMap)
     } else {
-      df.get.queryExecution.logical
+      df.get.queryExecution.analyzed
     }
   }
 
