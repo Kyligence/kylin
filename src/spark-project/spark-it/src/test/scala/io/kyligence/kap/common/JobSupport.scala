@@ -23,36 +23,35 @@
 package io.kyligence.kap.common
 
 import java.io.File
-import java.util.Objects
-
+import java.util.stream.Collectors
+import java.util.{Objects, UUID}
+import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps, Sets}
+import io.kyligence.kap.engine.spark.job.{NSparkCubingJob, NSparkCubingStep, NSparkMergingJob, NSparkMergingStep}
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.kylin.common.persistence.ResourceStore
-import org.apache.kylin.common.persistence.metadata.MetadataStore
-import org.apache.kylin.common.util.{RandomUtil, Unsafe}
 import org.apache.kylin.common.{KapConfig, KylinConfig, StorageURL}
-import org.apache.kylin.engine.spark.ExecutableUtils
-import org.apache.kylin.engine.spark.merger.{AfterBuildResourceMerger, AfterMergeOrRefreshResourceMerger}
-import org.apache.kylin.engine.spark.utils.{FileNames, HDFSUtils}
-import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps, Sets}
 import org.apache.kylin.job.engine.JobEngineConfig
 import org.apache.kylin.job.execution.{AbstractExecutable, ExecutableState, NExecutableManager}
 import org.apache.kylin.job.impl.threadpool.NDefaultScheduler
-import org.apache.kylin.metadata.cube.model._
-import org.apache.kylin.metadata.model.SegmentRange
+import org.apache.kylin.metadata.model.{SegmentRange, TableDesc}
 import org.apache.kylin.metadata.realization.RealizationStatusEnum
+import org.apache.kylin.common.persistence.metadata.MetadataStore
+import org.apache.kylin.common.util.{RandomUtil, Unsafe}
+import org.apache.kylin.engine.spark.ExecutableUtils
+import org.apache.kylin.engine.spark.merger.{AfterBuildResourceMerger, AfterMergeOrRefreshResourceMerger}
+import org.apache.kylin.engine.spark.utils.{FileNames, HDFSUtils}
+import org.apache.kylin.metadata.cube.model.{LayoutEntity, NDataSegment, NDataflow, NDataflowManager, NDataflowUpdate}
 import org.apache.kylin.query.runtime.plan.TableScanPlan
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.common.SparderQueryTest
-import org.apache.spark.sql.functions._
 import org.junit.Assert
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
+import org.apache.spark.sql.functions._
 
 import scala.collection.JavaConverters._
-
-import io.kyligence.kap.engine.spark.job.{NSparkCubingJob, NSparkCubingStep, NSparkMergingJob, NSparkMergingStep}
 
 trait JobSupport
   extends BeforeAndAfterAll

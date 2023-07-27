@@ -18,25 +18,23 @@
 
 package org.apache.kylin.query.util
 
-import java.util
-
-import org.apache.calcite.sql.SqlKind
 import org.apache.kylin.guava30.shaded.common.collect.Maps
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate
 import org.apache.kylin.metadata.cube.model.NDataSegment
+import org.apache.kylin.metadata.model.{NDataModel, NTableMetadataManager}
+import org.apache.kylin.metadata.model.util.scd2.SCD2NonEquiCondSimplification
+import org.apache.calcite.sql.SqlKind
 import org.apache.kylin.metadata.model.DeriveInfo.DeriveType
 import org.apache.kylin.metadata.model.NonEquiJoinCondition.SimplifiedNonEquiJoinCondition
-import org.apache.kylin.metadata.model.util.scd2.SCD2NonEquiCondSimplification
-import org.apache.kylin.metadata.model.{DeriveInfo, NDataModel, NTableMetadataManager, TblColRef}
+import org.apache.kylin.metadata.model.{DeriveInfo, TblColRef}
 import org.apache.kylin.metadata.tuple.TupleInfo
-import org.apache.spark.sql.catalyst.plans.JoinType
-import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, LogicalPlan}
 import org.apache.spark.sql.derived.DerivedInfo
 import org.apache.spark.sql.execution.utils.{DeriveTableColumnInfo, SchemaProcessor}
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.manager.SparderLookupManager
-import org.apache.spark.sql.{Column, SparkOperation}
+import org.apache.spark.sql.{Column, DataFrame}
 
+import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -64,8 +62,8 @@ case class SparderDerivedUtil(gtInfoTableName: String,
     .reverse
     .foreach(entry => findDerivedColumn(entry._1, entry._2))
 
-  val derivedColumnNameMapping: util.HashMap[DerivedInfo, Seq[String]] =
-    Maps.newHashMap[DerivedInfo, Seq[String]]()
+  val derivedColumnNameMapping: util.HashMap[DerivedInfo, Array[String]] =
+    Maps.newHashMap[DerivedInfo, Array[String]]()
 
   def findDerivedColumn(hostColIds: util.List[Integer], deriveInfo: DeriveInfo): Unit = {
 
@@ -142,23 +140,23 @@ case class SparderDerivedUtil(gtInfoTableName: String,
     cuboidIdx
   }
 
-  def joinDerived(plan: LogicalPlan): LogicalPlan = {
-    var joinedPlan: LogicalPlan = plan
+  def joinDerived(dataFrame: DataFrame): DataFrame = {
+    var joinedDf: DataFrame = dataFrame
     val joinedLookups = scala.collection.mutable.Set[String]()
 
     for (hostToDerived <- hostToDeriveds) {
       if (hostToDerived.deriveType != DeriveType.PK_FK) {
         //  PK_FK derive does not need joining
         if (!joinedLookups.contains(hostToDerived.aliasTableName)) {
-          joinedPlan = joinLookUpTable(plan.output.map(c => c.name).toArray,
-            joinedPlan,
+          joinedDf = joinLookUpTable(dataFrame.schema.fieldNames,
+            joinedDf,
             hostToDerived)
           joinedLookups.add(hostToDerived.aliasTableName)
         }
       }
     }
 
-    joinedPlan
+    joinedDf
   }
 
   def getLookupTablePathAndPkIndex(deriveInfo: DeriveInfo): (String, String, String, Array[Int]) = {
@@ -181,25 +179,28 @@ case class SparderDerivedUtil(gtInfoTableName: String,
   }
 
   def joinLookUpTable(gTInfoNames: Array[String],
-                      plan: LogicalPlan,
-                      derivedInfo: DerivedInfo): LogicalPlan = {
+                      df: DataFrame,
+                      derivedInfo: DerivedInfo): DataFrame = {
     val lookupTableAlias = derivedInfo.aliasTableName
 
-    val lookupPlan =
+    val lookupDf =
       SparderLookupManager.getOrCreate(derivedInfo.tableIdentity,
         derivedInfo.path,
         dataSeg.getConfig)
 
-    val newNames = lookupPlan.output
-      .map(c => SchemaProcessor.parseDeriveTableSchemaName(c.name))
+    val newNames = lookupDf.schema.fieldNames
+      .map { name =>
+        SchemaProcessor.parseDeriveTableSchemaName(name)
+      }
       .sortBy(_.columnId)
       .map(
         deriveInfo =>
           DeriveTableColumnInfo(lookupTableAlias,
             deriveInfo.columnId,
             deriveInfo.columnName).toString)
+      .array
     derivedColumnNameMapping.put(derivedInfo, newNames)
-    val newNameLookupPlan = SparkOperation.projectAsAlias(newNames, lookupPlan)
+    val newNameLookupDf = lookupDf.toDF(newNames: _*)
     if (derivedInfo.fkIdx.length != derivedInfo.pkIdx.length) {
       throw new IllegalStateException(
         s"unequal host key num ${derivedInfo.fkIdx.length} " +
@@ -223,12 +224,13 @@ case class SparderDerivedUtil(gtInfoTableName: String,
       val simplifiedCond = SCD2NonEquiCondSimplification.INSTANCE
         .convertToSimplifiedSCD2Cond(derivedInfo.join)
         .getSimplifiedNonEquiJoinConditions
-      joinCol = genNonEquiJoinColumn(newNameLookupPlan, gTInfoNames, joinCol, simplifiedCond.asScala)
+      joinCol = genNonEquiJoinColumn(newNameLookupDf, gTInfoNames, joinCol, simplifiedCond.asScala)
     }
-    Join(plan, newNameLookupPlan, JoinType.apply(derivedInfo.join.getType), Option(joinCol.expr), JoinHint.NONE)
+    df.join(newNameLookupDf, joinCol, derivedInfo.join.getType)
+
   }
 
-  def genNonEquiJoinColumn(newNameLookupPlan: LogicalPlan,
+  def genNonEquiJoinColumn(newNameLookupDf: DataFrame,
                            gTInfoNames: Array[String],
                            colOrigin: Column,
                            simplifiedConds: mutable.Buffer[SimplifiedNonEquiJoinCondition]): Column = {
@@ -236,7 +238,7 @@ case class SparderDerivedUtil(gtInfoTableName: String,
     var joinCol = colOrigin
     for (simplifiedCond <- simplifiedConds) {
       val colFk = col(gTInfoNames.apply(indexOnTheCuboidValues(simplifiedCond.getFk)))
-      val colPk = col(newNameLookupPlan.output.apply(simplifiedCond.getPk.getColumnDesc.getZeroBasedIndex).name)
+      val colPk = col(newNameLookupDf.schema.fieldNames.apply(simplifiedCond.getPk.getColumnDesc.getZeroBasedIndex))
       val colOp = simplifiedCond.getOp
 
       val newCol = colOp match {

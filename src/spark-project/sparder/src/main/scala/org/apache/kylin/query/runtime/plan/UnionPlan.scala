@@ -19,21 +19,27 @@ package org.apache.kylin.query.runtime.plan
 
 import org.apache.calcite.DataContext
 import org.apache.kylin.query.relnode.KapUnionRel
-import org.apache.spark.sql.SparkOperation
-import org.apache.spark.sql.catalyst.plans.logical.{Deduplicate, LogicalPlan, Union}
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.DataFrame
+
+import scala.collection.JavaConverters._
 
 object UnionPlan {
-  def union(plans: Seq[LogicalPlan],
-            rel: KapUnionRel,
-            dataContext: DataContext): LogicalPlan = {
-    val unionPlan = if (rel.all) {
-      Union(plans)
-    } else {
-      val uPlan = Union(plans)
-      Deduplicate(plans.head.output, uPlan)
-    }
 
-    SparkOperation.project(plans.head.output.map(c => col(c.name)), unionPlan)
+  def union(
+      inputs: java.util.List[DataFrame],
+      rel: KapUnionRel,
+      dataContext: DataContext): DataFrame = {
+    var df = inputs.get(0)
+    val drop = inputs.asScala.drop(1)
+    if (rel.all) {
+      for (other <- drop) {
+        df = df.union(other)
+      }
+    } else {
+      for (other <- drop) {
+        df = df.union(other).distinct()
+      }
+    }
+    df
   }
 }

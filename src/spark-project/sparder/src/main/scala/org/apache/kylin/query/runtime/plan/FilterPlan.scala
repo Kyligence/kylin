@@ -17,23 +17,22 @@
  */
 package org.apache.kylin.query.runtime.plan
 
-import org.apache.calcite.DataContext
 import org.apache.kylin.engine.spark.utils.LogEx
+import org.apache.calcite.DataContext
 import org.apache.kylin.query.relnode.KapFilterRel
 import org.apache.kylin.query.runtime.SparderRexVisitor
-import org.apache.spark.sql.Column
-import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan}
+import org.apache.spark.sql.{Column, DataFrame}
 
 object FilterPlan extends LogEx {
-  def filter(plan: LogicalPlan,
-            rel: KapFilterRel,
-            dataContext: DataContext): LogicalPlan = logTime("filter", debug = true) {
-
-    val visitor = new SparderRexVisitor(plan.output.map(_.name),
-      rel.getInput.getRowType,
-      dataContext)
-    val filterColumn = rel.getCondition.accept(visitor).asInstanceOf[Column]
-
-    Filter(filterColumn.expr, plan)
+  def filter(
+              inputs: java.util.List[DataFrame],
+              rel: KapFilterRel,
+              dataContext: DataContext): DataFrame = logTime("filter", debug = true) {
+      val df = inputs.get(0)
+      val visitor = new SparderRexVisitor(df,
+        rel.getInput.getRowType,
+        dataContext)
+      val filterColumn = rel.getCondition.accept(visitor).asInstanceOf[Column]
+      df.filter(filterColumn)
   }
 }

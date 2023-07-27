@@ -1905,6 +1905,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(this.getOptional("kylin.query.schema-cache-enabled", FALSE));
     }
 
+    public boolean isDataFrameCacheEnabled() {
+        return Boolean.parseBoolean(this.getOptional("kylin.query.dataframe-cache-enabled", TRUE));
+    }
+
     public boolean enableReplaceDynamicParams() {
         return Boolean.parseBoolean(this.getOptional("kylin.query.replace-dynamic-params-enabled", FALSE));
     }

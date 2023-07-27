@@ -25,7 +25,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.query.engine.exec.ExecuteResult;
 import org.apache.kylin.query.engine.exec.sparder.QueryEngine;
 import org.apache.kylin.query.mask.QueryResultMasks;
@@ -34,6 +33,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 
 public class SparkEngine implements QueryEngine {
     private static final Logger log = LoggerFactory.getLogger(SparkEngine.class);
@@ -48,11 +49,10 @@ public class SparkEngine implements QueryEngine {
         } finally {
             calciteToSparkPlaner.cleanCache();
         }
-        Dataset<Row> df = calciteToSparkPlaner.getResult();
-        QueryContext.current().record("to_spark_plan");
         long takeTime = System.currentTimeMillis() - start;
+        QueryContext.current().record("to_spark_plan");
         log.info("Plan take {} ms", takeTime);
-        return df;
+        return calciteToSparkPlaner.getResult();
     }
 
     @Override

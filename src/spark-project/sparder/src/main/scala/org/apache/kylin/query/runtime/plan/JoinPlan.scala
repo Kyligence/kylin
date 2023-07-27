@@ -18,32 +18,30 @@
 package org.apache.kylin.query.runtime.plan
 
 import java.util
-
 import org.apache.calcite.DataContext
 import org.apache.calcite.rex.RexCall
-import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.query.relnode.{KapJoinRel, KapNonEquiJoinRel}
 import org.apache.kylin.query.runtime.SparderRexVisitor
 import org.apache.kylin.query.util.KapRelUtil
-import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, LogicalPlan}
-import org.apache.spark.sql.catalyst.plans.{Cross, JoinType}
-import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.{Column, SparkOperation}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{Column, DataFrame}
 
 import scala.collection.JavaConverters._
 
-object JoinPlan extends LogEx {
-  def nonEquiJoin(plans: Seq[LogicalPlan],
-                  rel: KapNonEquiJoinRel, dataContext: DataContext): LogicalPlan = {
-    var lPlan = plans.apply(0)
-    var rPlan = plans.apply(1)
-
-    lPlan = SparkOperation.project(lPlan.output.map(c => col(c.name).alias("l_" + c.name)), lPlan)
-    rPlan = SparkOperation.project(rPlan.output.map(c => col(c.name).alias("r_" + c.name)), rPlan)
+object JoinPlan {
+  def nonEquiJoin(inputs: java.util.List[DataFrame],
+           rel: KapNonEquiJoinRel, dataContext: DataContext): DataFrame = {
+    val lDataFrame = inputs.get(0)
+    val rDataFrame = inputs.get(1)
+    val lSchemaNames = lDataFrame.schema.fieldNames.map("l_" + _)
+    val rSchemaNames = rDataFrame.schema.fieldNames.map("r_" + _)
+    // val schema = statefulDF.indexSchema
+    val newLDataFrame = inputs.get(0).toDF(lSchemaNames: _*)
+    val newRDataFrame = inputs.get(1).toDF(rSchemaNames: _*)
     // slice lSchemaNames with rel.getLeftInputSizeBeforeRewrite
     // to strip off the fields added during rewrite
     // as those field will disturb the original index based join condition
-    val visitor = new SparderRexVisitor(Seq(lPlan.output.map(c => c.name).slice(0, rel.getLeftInputSizeBeforeRewrite), rPlan.output.map(c => c.name)).flatten,
+    val visitor = new SparderRexVisitor(Array(lSchemaNames.slice(0, rel.getLeftInputSizeBeforeRewrite), rSchemaNames).flatten,
       null,
       dataContext)
     val pairs = new util.ArrayList[org.apache.kylin.common.util.Pair[Integer, Integer]]()
@@ -64,31 +62,31 @@ object JoinPlan extends LogEx {
         equalCond = equalCond.and(actRemaining.accept(visitor).asInstanceOf[Column])
       }
 
-      Join(lPlan, rPlan, joinType = JoinType(rel.getJoinType.lowerName), Some(equalCond.expr), JoinHint.NONE)
+      newLDataFrame.join(newRDataFrame, equalCond, rel.getJoinType.lowerName)
     } else {
       val conditionExprCol = rel.getCondition.accept(visitor).asInstanceOf[Column]
-      Join(lPlan, rPlan, joinType = JoinType(rel.getJoinType.lowerName), Some(conditionExprCol.expr), JoinHint.NONE)
+      newLDataFrame.join(newRDataFrame, conditionExprCol, rel.getJoinType.lowerName)
     }
   }
 
-  // scalastyle:off
-  def join(plans: Seq[LogicalPlan],
-           rel: KapJoinRel): LogicalPlan = {
+  def join(inputs: java.util.List[DataFrame],
+           rel: KapJoinRel): DataFrame = {
 
-    var lPlan = plans.apply(0)
-    var rPlan = plans.apply(1)
-
-    lPlan = SparkOperation.project(lPlan.output.map(c => col(c.name).alias("l_" + c.name)), lPlan)
-    rPlan = SparkOperation.project(rPlan.output.map(c => col(c.name).alias("r_" + c.name)), rPlan)
-
+    val lDataFrame = inputs.get(0)
+    val rDataFrame = inputs.get(1)
+    val lSchemaNames = lDataFrame.schema.fieldNames.map("l_" + _)
+    val rSchemaNames = rDataFrame.schema.fieldNames.map("r_" + _)
+    // val schema = statefulDF.indexSchema
+    val newLDataFrame = inputs.get(0).toDF(lSchemaNames: _*)
+    val newRDataFrame = inputs.get(1).toDF(rSchemaNames: _*)
     var joinCol: Column = null
 
     //  todo   utils
     rel.getLeftKeys.asScala
       .zip(rel.getRightKeys.asScala)
       .foreach(tuple => {
-        val col1 = col(lPlan.output.apply(tuple._1).name)
-        val col2 = col(rPlan.output.apply(tuple._2).name)
+        val col1 = col(lSchemaNames.apply(tuple._1))
+        val col2 = col(rSchemaNames.apply(tuple._2))
         val equalCond = makeEqualCond(col1, col2, rel.isJoinCondEqualNullSafe)
 
         if (joinCol == null) {
@@ -98,9 +96,9 @@ object JoinPlan extends LogEx {
         }
       })
     if (joinCol == null) {
-      Join(lPlan, rPlan, joinType = Cross, None, JoinHint.NONE)
+      newLDataFrame.crossJoin(newRDataFrame)
     } else {
-      Join(lPlan, rPlan, joinType = JoinType(rel.getJoinType.lowerName), Some(joinCol.expr), JoinHint.NONE)
+      newLDataFrame.join(newRDataFrame, joinCol, rel.getJoinType.lowerName)
     }
   }
 
