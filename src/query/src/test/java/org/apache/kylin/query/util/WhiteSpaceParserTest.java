@@ -25,7 +25,11 @@ public class WhiteSpaceParserTest {
 
     private final EscapeDialect dialect = EscapeDialect.DEFAULT;
 
-    String expected = "select ACCOUNT_ID, ACCOUNT_ID + 1, 'a     +    b', 'c* d', ACCOUNT_ID + 2, count ( * ) from KYLIN_ACCOUNT group by ACCOUNT_ID limit 400 ";
+    private static final String expected = "select ACCOUNT_ID, ACCOUNT_ID + 1, 'a     +    b', 'c* d', ACCOUNT_ID + 2, count ( * ) from KYLIN_ACCOUNT group by ACCOUNT_ID limit 400 ";
+
+    private static final String realSqlWithBinary = "select ACCOUNT_ID, ACCOUNT_ID + 1, x'a+ b', X'c *     d', ACCOUNT_ID + 2, count ( * ) from KYLIN_ACCOUNT group by ACCOUNT_ID limit 400 ";
+
+    private static final String realSql = "select ACCOUNT_ID, ACCOUNT_ID + 1, 'a+ b', 'c * d', ACCOUNT_ID + 2, count ( * ) from KYLIN_ACCOUNT group by ACCOUNT_ID limit 400 ";
 
     @Test
     public void testMultiWhiteSpaces() throws ParseException {
@@ -38,27 +42,21 @@ public class WhiteSpaceParserTest {
     @Test
     public void testNewLines() throws ParseException {
         String newLines = "select   ACCOUNT_ID, ACCOUNT_ID + 1 ,'a     +    b'  ,'c* d', ACCOUNT_ID +2,count(*) from "
-                + "KYLIN_ACCOUNT "
-                + "group   by  ACCOUNT_ID  "
-                + "limit  400   ";
+                + "KYLIN_ACCOUNT " + "group   by  ACCOUNT_ID  " + "limit  400   ";
         testEqual(newLines);
     }
 
     @Test
     public void testCommas() throws ParseException {
         String commas = "select   ACCOUNT_ID   ,     ACCOUNT_ID + 1  ,  'a     +    b'  ,'c* d', ACCOUNT_ID +2,count(*) from "
-                + "KYLIN_ACCOUNT "
-                + "group   by  ACCOUNT_ID  "
-                + "limit  400   ";
+                + "KYLIN_ACCOUNT " + "group   by  ACCOUNT_ID  " + "limit  400   ";
         testEqual(commas);
     }
 
     @Test
     public void testOperators() throws ParseException {
         String operators = "select   ACCOUNT_ID   ,     ACCOUNT_ID     +    1  ,  'a     +    b'  ,'c* d', ACCOUNT_ID+2,count(*) from "
-                + "KYLIN_ACCOUNT "
-                + "group   by  ACCOUNT_ID  "
-                + "limit  400   ";
+                + "KYLIN_ACCOUNT " + "group   by  ACCOUNT_ID  " + "limit  400   ";
         testEqual(operators);
     }
 
@@ -71,26 +69,33 @@ public class WhiteSpaceParserTest {
     @Test
     public void testNormalEscapeString() throws ParseException {
         String sql = "select   ACCOUNT_ID   ,     ACCOUNT_ID     +    1  ,  'a+ b'  ,'c * d', ACCOUNT_ID+2,count(*) from "
-                + "KYLIN_ACCOUNT "
-                + "group   by  ACCOUNT_ID  "
-                + "limit  400   ";
+                + "KYLIN_ACCOUNT " + "group   by  ACCOUNT_ID  " + "limit  400   ";
         WhiteSpaceParser whiteSpaceParser = new WhiteSpaceParser(dialect, sql.trim());
         String parsed = whiteSpaceParser.parse();
         Assert.assertNotEquals(expected, parsed);
-        String real = "select ACCOUNT_ID, ACCOUNT_ID + 1, 'a+ b', 'c * d', ACCOUNT_ID + 2, count ( * ) from KYLIN_ACCOUNT group by ACCOUNT_ID limit 400 ";
-        Assert.assertEquals(real, parsed);
+        Assert.assertEquals(realSql, parsed);
     }
 
     @Test
-    public void testBinaryEscapeString() throws ParseException {
+    public void testBinaryEscapeStringWithRegexWhiteSpace() throws ParseException {
         String sql = "select   ACCOUNT_ID   ,     ACCOUNT_ID     +    1  ,  x'a+ b'  ,X'c *     d', ACCOUNT_ID+2,count(*) from "
-                + "KYLIN_ACCOUNT "
-                + "group   by  ACCOUNT_ID  "
-                + "limit  400   ";
+                + "KYLIN_ACCOUNT " + "group   by  ACCOUNT_ID  " + "limit  400   ";
+        String sql1 = "select   ACCOUNT_ID   ,  \n   ACCOUNT_ID   \r  +    1  ,  x'a+ b'  ,X'c *     d',\f ACCOUNT_ID+2,count(*) from "
+                + "KYLIN_ACCOUNT " + "group   by  ACCOUNT_ID  " + "limit  400   ";
+        String sql2 = "select   ACCOUNT_ID   ,  \n\n   ACCOUNT_ID   \r\r  +    1  ,  x'a+ b'  ,X'c *     d',\f ACCOUNT_ID+2,count(*) from "
+                + "KYLIN_ACCOUNT " + "group   by  ACCOUNT_ID  " + "limit  400   ";
+        String sql3 = "select \n  ACCOUNT_ID   ,  \n\n\r\t   ACCOUNT_ID   \r\r  +    1  ,  x'a+ b'  ,X'c *     d',\f ACCOUNT_ID+2,count(*) from "
+                + "KYLIN_ACCOUNT " + "group   by  ACCOUNT_ID  " + "limit  400   ";
+        testBinary(sql);
+        testBinary(sql1);
+        testBinary(sql2);
+        testBinary(sql3);
+    }
+
+    private void testBinary(String sql) throws ParseException {
         WhiteSpaceParser whiteSpaceParser = new WhiteSpaceParser(dialect, sql.trim());
         String parsed = whiteSpaceParser.parse();
         Assert.assertNotEquals(expected, parsed);
-        String real = "select ACCOUNT_ID, ACCOUNT_ID + 1, x'a+ b', X'c *     d', ACCOUNT_ID + 2, count ( * ) from KYLIN_ACCOUNT group by ACCOUNT_ID limit 400 ";
-        Assert.assertEquals(real, parsed);
+        Assert.assertEquals(realSqlWithBinary, parsed);
     }
 }

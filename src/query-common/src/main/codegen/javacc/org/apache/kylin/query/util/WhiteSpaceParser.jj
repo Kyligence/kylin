@@ -109,7 +109,7 @@ TOKEN :
 | < RPAREN : ")" >
 | < LPAREN : "(" >
 | < COMMA : "," >
-| < SPACE : [" ", "\t","\n", "\r"] >
+| < SPACE : ([" ", "\t", "\n", "\r", "\f"])+ >
 | < QUOTE: "'" >
 // possible strings copied from calcite
 |
@@ -280,7 +280,7 @@ String Space() :
     < SPACE >
     {
         log.trace("meet token <SPACE>");
-        return getToken(0).image;
+        return " ";
     }
 }
 
