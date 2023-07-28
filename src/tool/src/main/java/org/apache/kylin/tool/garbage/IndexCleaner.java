@@ -31,7 +31,6 @@ import org.apache.kylin.common.annotation.Clarification;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -172,31 +171,11 @@ public class IndexCleaner extends MetadataCleaner {
 
             log.info("merge same dimension index for model: {} under project: {}", dataflow.getModelAlias(), project);
             indexPlanManager.updateIndexPlan(dataflow.getId(), copyForWrite -> {
-                IndexPlan indexPlanMerged = doMergeSameDimLayout(indexPlan, mergedLayouts);
+                IndexPlan indexPlanMerged = IndexPlanReduceUtil.mergeSameDimLayout(indexPlan, mergedLayouts);
                 copyForWrite.setIndexes(indexPlanMerged.getIndexes());
                 copyForWrite.setLastModified(System.currentTimeMillis());
             });
         });
-    }
-
-    private IndexPlan doMergeSameDimLayout(IndexPlan indexPlan, List<Set<LayoutEntity>> sameDimLayouts) {
-        IndexPlan.IndexPlanUpdateHandler updateHandler = indexPlan.createUpdateHandler();
-        for (Set<LayoutEntity> layoutEntities : sameDimLayouts) {
-            Set<Integer> colOrder = Sets.newLinkedHashSet();
-            List<Integer> allColOrders = Lists.newArrayList();
-            List<Integer> shardByCol = Lists.newArrayList();
-            for (LayoutEntity layoutEntity : layoutEntities) {
-                colOrder.addAll(layoutEntity.getColOrder());
-                allColOrders.addAll(layoutEntity.getColOrder());
-                shardByCol = layoutEntity.getShardByColumns();
-            }
-
-            LayoutEntity mergedLayout = indexPlan.createLayout(Lists.newArrayList(colOrder), true, false, shardByCol);
-            log.info("merge colOrders: {} into {}", allColOrders, mergedLayout.getColOrder());
-            updateHandler.add(mergedLayout, true, false);
-        }
-
-        return updateHandler.complete();
     }
 
     private void cleanUpIndexAggressively() {

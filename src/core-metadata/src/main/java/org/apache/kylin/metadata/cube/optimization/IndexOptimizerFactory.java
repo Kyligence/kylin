@@ -50,7 +50,9 @@ public class IndexOptimizerFactory {
         }
 
         if (needAggressiveOpt) {
-            optimizer.getStrategiesForAuto().add(MERGED_OPT_STRATEGY);
+            optimizer.getStrategiesForAuto().clear();
+            optimizer.getStrategiesForAuto()
+                    .addAll(Lists.newArrayList(INCLUDED_OPT_STRATEGY, LOW_FREQ_OPT_STRATEGY, MERGED_OPT_STRATEGY));
         }
 
         // log if needed
