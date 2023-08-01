@@ -462,7 +462,7 @@ String ExtractExpression() :
     String functionName;
     String parameter;
     ImmutableSet<String> timeunitSet = ImmutableSet.of("YEAR", "QUARTER", "MONTH", "WEEK",
-        "DAY", "HOUR", "MINUTE", "SECOND", "DOW", "DOY");
+        "DAY", "HOUR", "MINUTE", "SECOND", "DOW", "DOY", "EPOCH");
 }
 {
     <EXTRACT> (<SPACE> )* <LPAREN> (<SPACE> )*
