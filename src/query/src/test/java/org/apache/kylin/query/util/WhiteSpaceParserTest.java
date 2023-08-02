@@ -98,4 +98,13 @@ public class WhiteSpaceParserTest {
         Assert.assertNotEquals(expected, parsed);
         Assert.assertEquals(realSqlWithBinary, parsed);
     }
+
+    @Test
+    public void testExtractEpoch() throws ParseException {
+        String sql = "SELECT ((EXTRACT(EPOCH FROM (DATE '2050-01-01')) / ( 60 * 60 * 24)) + (365 * 70 + 17)) AS \"TEMP(Test)(3947742720)(0)\" FROM \"TDVT\".\"CALCS\" \"CALCS\" HAVING (COUNT(1) > 0)";
+        WhiteSpaceParser whiteSpaceParser = new WhiteSpaceParser(dialect, sql.trim());
+        String parsed = whiteSpaceParser.parse();
+        String real = "SELECT (({fn EPOCH((DATE '2050-01-01' ))} /  (60 *  60 *  24 ) ) +  (365 *  70 +  17 ) ) AS \"TEMP(Test)(3947742720)(0)\" FROM \"TDVT\" . \"CALCS\" \"CALCS\" HAVING (COUNT (1 ) > 0 ) ";
+        Assert.assertEquals(real, parsed);
+    }
 }
