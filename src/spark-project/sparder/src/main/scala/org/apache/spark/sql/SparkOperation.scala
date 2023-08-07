@@ -20,8 +20,8 @@ package org.apache.spark.sql
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GroupingSets
-import org.apache.spark.sql.catalyst.plans.logical.Aggregate
-import org.apache.spark.sql.functions.{count, lit}
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Filter, LogicalPlan, Project}
+import org.apache.spark.sql.functions.{col, count, lit}
 import org.apache.spark.sql.types.StructType
 
 object SparkOperation {
@@ -61,27 +61,51 @@ object SparkOperation {
     SparderEnv.getSparkSession.createDataFrame(rows, structType)
   }
 
-  def agg(aggArgc: AggArgc): DataFrame = {
+  def project(cols: Seq[Column], plan: LogicalPlan): LogicalPlan = {
+    Project(cols.map(_.named), plan)
+  }
+
+  def projectAsAlias(newNames: Seq[String], plan: LogicalPlan): LogicalPlan = {
+    val newCols = plan.output.zip(newNames).map { case (oldAttribute, newName) =>
+      col(oldAttribute.name).as(newName)
+    }
+    project(newCols, plan)
+  }
+
+  def filter(condition: Column, plan: LogicalPlan): LogicalPlan = {
+    Filter(condition.named, plan)
+  }
+
+  def agg(aggArgc: AggArgc): LogicalPlan = {
     if (aggArgc.agg.nonEmpty && aggArgc.group.nonEmpty && !aggArgc.isSimpleGroup && aggArgc.groupSets.nonEmpty) {
-      Dataset.ofRows(
-        aggArgc.dataFrame.sparkSession,
-        Aggregate(
-          Seq(GroupingSets(aggArgc.groupSets.map(gs => gs.map(_.expr)),
-            aggArgc.group.map(_.expr))),
-          aggArgc.group.map(_.named) ++ aggArgc.agg.map(_.named),
-          aggArgc.dataFrame.queryExecution.logical
-        )
+      Aggregate(
+        Seq(GroupingSets(aggArgc.groupSets.map(gs => gs.map(_.expr)),
+          aggArgc.group.map(_.expr))),
+        aggArgc.group.map(_.named) ++ aggArgc.agg.map(_.named),
+        aggArgc.plan
       )
     } else if (aggArgc.agg.nonEmpty && aggArgc.group.nonEmpty) {
-      aggArgc.dataFrame
-        .groupBy(aggArgc.group: _*)
-        .agg(aggArgc.agg.head, aggArgc.agg.drop(1): _*)
+      Aggregate(
+        aggArgc.group.map(_.expr),
+        (aggArgc.group ++ aggArgc.agg).map(_.named),
+        aggArgc.plan
+      )
     } else if (aggArgc.agg.isEmpty && aggArgc.group.nonEmpty) {
-      aggArgc.dataFrame.groupBy(aggArgc.group: _*).agg(count(lit("1"))).select(aggArgc.group: _*)
+      val aggPlan = Aggregate(
+        aggArgc.group.map(_.expr),
+        (aggArgc.group ++ Seq.apply(count(lit("1")))).map(_.named),
+        aggArgc.plan
+      )
+
+      Project(aggArgc.group.map(_.named), aggPlan)
     } else if (aggArgc.agg.nonEmpty && aggArgc.group.isEmpty) {
-      aggArgc.dataFrame.agg(aggArgc.agg.head, aggArgc.agg.drop(1): _*)
+      Aggregate(
+        Nil,
+        aggArgc.agg.map(_.named),
+        aggArgc.plan
+      )
     } else {
-      aggArgc.dataFrame
+      aggArgc.plan
     }
   }
 
@@ -102,4 +126,8 @@ object SparkOperation {
   */
 }
 
-case class AggArgc(dataFrame: DataFrame, group: List[Column], agg: List[Column], groupSets: List[List[Column]], isSimpleGroup: Boolean)
+case class AggArgc(plan: LogicalPlan,
+                   group: List[Column],
+                   agg: List[Column],
+                   groupSets: List[List[Column]],
+                   isSimpleGroup: Boolean)

@@ -22,37 +22,38 @@ package org.apache.kylin.query.runtime
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.ZoneId
+
 import org.apache.calcite.DataContext
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind._
 import org.apache.calcite.sql.`type`.{BasicSqlType, IntervalSqlType, SqlTypeFamily, SqlTypeName}
-import org.apache.calcite.sql.fun.SqlDatetimeSubtractionOperator
-import org.apache.calcite.sql.fun.SqlDateTimeDivisionOperator
+import org.apache.calcite.sql.fun.{SqlDateTimeDivisionOperator, SqlDatetimeSubtractionOperator}
 import org.apache.kylin.common.util.DateFormat
 import org.apache.spark.sql.KapFunctions._
 import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.DateTimeUtils._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{DataTypes, DateType, LongType, TimestampType}
-import org.apache.spark.sql.{Column, DataFrame}
 import org.apache.spark.sql.util.SparderTypeUtil
+import org.apache.spark.sql.{Column, DataFrame}
 import org.apache.spark.unsafe.types.UTF8String
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
- /**
-  * Convert RexNode to a nested Column
-  *
-  * @param inputFieldNames  fieldNames
-  * @param rowType     rowtyple
-  * @param dataContext context
-  */
-class SparderRexVisitor(val inputFieldNames: Array[String],
+/**
+ * Convert RexNode to a nested Column
+ *
+ * @param inputFieldNames fieldNames
+ * @param rowType         rowtyple
+ * @param dataContext     context
+ */
+class SparderRexVisitor(val inputFieldNames: Seq[String],
                         val rowType: RelDataType,
                         val dataContext: DataContext)
-    extends RexVisitorImpl[Any](true) {
+  extends RexVisitorImpl[Any](true) {
 
   def this(dfs: Array[DataFrame],
            rowType: RelDataType,
@@ -61,6 +62,10 @@ class SparderRexVisitor(val inputFieldNames: Array[String],
   def this(df: DataFrame,
            rowType: RelDataType,
            dataContext: DataContext) = this(Array(df), rowType, dataContext)
+
+  def this(plan: LogicalPlan,
+           rowType: RelDataType,
+           dataContext: DataContext) = this(plan.output.map(c => c.name), rowType, dataContext)
 
   // scalastyle:off
   override def visitCall(call: RexCall): Any = {
@@ -297,11 +302,11 @@ class SparderRexVisitor(val inputFieldNames: Array[String],
     val v = convertFilterValueAfterAggr(literal)
     v match {
       case Some(toReturn) => toReturn
-      case None           => null
+      case None => null
     }
   }
 
-   case class MonthNum(num: Column)
+  case class MonthNum(num: Column)
 
   // as underlying schema types for cuboid table are all "string",
   // we rely spark to convert the cuboid col data from string to real type to finish comparing
@@ -313,12 +318,12 @@ class SparderRexVisitor(val inputFieldNames: Array[String],
     literal.getType match {
       case t: IntervalSqlType => {
         if (Seq("MONTH", "YEAR", "QUARTER").contains(
-              t.getIntervalQualifier.timeUnitRange.name)) {
+          t.getIntervalQualifier.timeUnitRange.name)) {
           return Some(
             MonthNum(k_lit(literal.getValue.asInstanceOf[BigDecimal].intValue)))
         }
         if (literal.getType.getFamily
-              .asInstanceOf[SqlTypeFamily] == SqlTypeFamily.INTERVAL_DAY_TIME) {
+          .asInstanceOf[SqlTypeFamily] == SqlTypeFamily.INTERVAL_DAY_TIME) {
           return Some(
             SparderTypeUtil.toSparkTimestamp(
               new java.math.BigDecimal(literal.getValue.toString).longValue()))

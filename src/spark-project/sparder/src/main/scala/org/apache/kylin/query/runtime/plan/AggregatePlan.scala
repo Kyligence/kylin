@@ -17,6 +17,8 @@
  */
 package org.apache.kylin.query.runtime.plan
 
+import java.util.Locale
+
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.sql.SqlKind
@@ -26,19 +28,18 @@ import org.apache.kylin.measure.percentile.PercentileCounter
 import org.apache.kylin.metadata.model.FunctionDesc
 import org.apache.kylin.query.relnode.{KapAggregateRel, KapProjectRel, KylinAggregateCall, OLAPAggregateRel}
 import org.apache.kylin.query.util.RuntimeHelper
-import org.apache.spark.sql.KapFunctions._
+import org.apache.spark.sql.KapFunctions.{k_lit, sum0}
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.aggregate.ApproximatePercentile
-import org.apache.spark.sql.catalyst.expressions.{CreateArray, In}
-import org.apache.spark.sql.catalyst.plans.logical.Project
+import org.apache.spark.sql.catalyst.expressions.{Attribute, CreateArray, In}
+import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan, Project}
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{ArrayType, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.udaf.SingleValueAgg
 import org.apache.spark.sql.util.SparderTypeUtil
 
-import java.util.Locale
 import scala.collection.JavaConverters._
 
 // scalastyle:off
@@ -47,12 +48,12 @@ object AggregatePlan extends LogEx {
     List("PERCENTILE", "PERCENTILE_APPROX", "INTERSECT_COUNT", "COUNT_DISTINCT", "BITMAP_UUID",
       FunctionDesc.FUNC_BITMAP_BUILD, FunctionDesc.FUNC_SUM_LC)
 
-  def agg(inputs: java.util.List[DataFrame],
-          rel: KapAggregateRel): DataFrame = logTime("aggregate", debug = true) {
+  def agg(plan: LogicalPlan,
+          rel: KapAggregateRel): LogicalPlan = logTime("aggregate", debug = true) {
 
-    var dataFrame = inputs.get(0)
-    val schemaNames = dataFrame.schema.fieldNames
-    val groupList = rel.getRewriteGroupKeys.asScala.map(groupId => col(schemaNames.apply(groupId))).toList
+    val schemaNames = plan.output
+
+    val groupList = rel.getRewriteGroupKeys.asScala.map(groupId => col(schemaNames.apply(groupId).name)).toList
 
     if (rel.getContext != null && rel.getContext.isExactlyAggregate && !rel.getContext.isNeedToManyDerived) {
       // exactly match, skip agg, direct project.
@@ -60,8 +61,8 @@ object AggregatePlan extends LogEx {
         case (call: KylinAggregateCall, index: Int) =>
           val funcName = OLAPAggregateRel.getAggrFuncName(call);
           val dataType = call.getFunc.getReturnDataType
-          val argNames = call.getArgList.asScala.map(dataFrame.schema.names.apply(_))
-          val columnName = argNames.map(col)
+          val argNames = call.getArgList.asScala.map(schemaNames.apply(_).name)
+          val columnName = argNames.map(name => col(name))
           val hash = System.identityHashCode(rel).toString
           funcName match {
             case FunctionDesc.FUNC_COUNT_DISTINCT =>
@@ -70,7 +71,7 @@ object AggregatePlan extends LogEx {
                 KapFunctions.approx_count_distinct_decode(columnName.head, dataType.getPrecision).alias(aggName)
               } else if (call.isBitmapCountDistinctFunc) {
                 if (rel.getContext.isExactlyFastBitmap) {
-                  col(schemaNames.apply(call.getArgList.get(0)))
+                  col(schemaNames.apply(call.getArgList.get(0)).name)
                 } else {
                   val aggName = SchemaProcessor.replaceToAggravateSchemaName(index, "PRECISE_COUNT_DISTINCT_DECODE", hash, argNames: _*)
                   KapFunctions.precise_count_distinct_decode(columnName.head).alias(aggName)
@@ -90,32 +91,33 @@ object AggregatePlan extends LogEx {
               val sparkDataType = SparderTypeUtil.toSparkType(dataType)
               KapFunctions.k_sum_lc_decode(columnName.head, sparkDataType.json).alias(aggName)
             case _ =>
-              col(schemaNames.apply(call.getArgList.get(0)))
+              col(schemaNames.apply(call.getArgList.get(0)).name)
           }
         case (call: Any, _: Int) =>
-          col(schemaNames.apply(call.getArgList.get(0)))
+          col(schemaNames.apply(call.getArgList.get(0)).name)
       }.toList
 
       val prjList = groupList ++ aggCols
       logInfo(s"Query exactly match index, skip agg, project $prjList.")
-      dataFrame.select(prjList: _*)
+      SparkOperation.project(prjList, plan)
     } else {
-      dataFrame = genFiltersWhenIntersectCount(rel, dataFrame)
-      val aggList = buildAgg(dataFrame.schema, rel)
+      val intersectplan = genFiltersWhenIntersectCount(rel, plan)
+      val aggList = buildAgg(intersectplan.output, rel, plan)
       val groupSets = rel.getRewriteGroupSets.asScala
-        .map(groupSet => groupSet.asScala.map(groupId => col(schemaNames.apply(groupId))).toList).toList
-      SparkOperation.agg(AggArgc(dataFrame, groupList, aggList, groupSets, rel.isSimpleGroupType))
+        .map(groupSet => groupSet.asScala.map(groupId => col(schemaNames.apply(groupId).name)).toList).toList
+      SparkOperation.agg(AggArgc(intersectplan, groupList, aggList, groupSets, rel.isSimpleGroupType))
     }
   }
 
-  private def genFiltersWhenIntersectCount(rel: KapAggregateRel, dataFrame: DataFrame): DataFrame = {
+  private def genFiltersWhenIntersectCount(rel: KapAggregateRel, plan: LogicalPlan): LogicalPlan = {
     try {
+      val names = plan.output
+
       val intersects = rel.getRewriteAggCalls.asScala.filter(_.isInstanceOf[KylinAggregateCall])
         .filter(!_.asInstanceOf[KylinAggregateCall].getFunc.isCount)
         .map(_.asInstanceOf[KylinAggregateCall])
         .filter(call => !call.getFunc.isCount && OLAPAggregateRel.getAggrFuncName(call).equals(FunctionDesc.FUNC_INTERSECT_COUNT))
-      val names = dataFrame.schema.names
-      val children = dataFrame.queryExecution.logical
+      val children = plan
       if (intersects.nonEmpty && intersects.size == rel.getRewriteAggCalls.size() && children.isInstanceOf[Project]) {
         // only exists intersect count function in agg
         val list = children.asInstanceOf[Project].projectList
@@ -128,24 +130,28 @@ object AggregatePlan extends LogEx {
           val filters = intersects.map { call =>
             val filterColumnIndex = call.getArgList.get(1)
             val litIndex = call.getArgList.get(2)
-            new Column(In(col(names(filterColumnIndex)).expr, list.apply(litIndex).children.head.asInstanceOf[CreateArray].children))
+            new Column(In(col(names(filterColumnIndex).name).expr, list.apply(litIndex).children.head.asInstanceOf[CreateArray].children))
           }
           val column = filters.reduceLeft(_.or(_))
-          dataFrame.filter(column)
+
+          val filterPlan = Filter(column.expr, plan)
+          SparkOperation.project(plan.output.map(c => col(c.name)), filterPlan)
         } else {
-          dataFrame
+          plan
         }
       } else {
-        dataFrame
+        plan
       }
     } catch {
       case e: Throwable => logWarning("Error occurred when generate filters", e)
-        dataFrame
+        plan
     }
   }
 
-  def buildAgg(schema: StructType,
-               rel: KapAggregateRel): List[Column] = {
+  // S53 Fix https://olapio.atlassian.net/browse/KE-42473
+  def buildAgg(schema: Seq[Attribute],
+               rel: KapAggregateRel,
+               plan: LogicalPlan): List[Column] = {
     val hash = System.identityHashCode(rel).toString
 
     rel.getRewriteAggCalls.asScala.zipWithIndex.map {
@@ -155,8 +161,8 @@ object AggregatePlan extends LogEx {
         val isCount = call.getFunc.isCount
         val funcName =
           if (isCount) FunctionDesc.FUNC_COUNT else OLAPAggregateRel.getAggrFuncName(call)
-        val argNames = call.getArgList.asScala.map(schema.names.apply(_))
-        val columnName = argNames.map(col)
+        val argNames = call.getArgList.asScala.map(schema.apply(_).name)
+        val columnName = argNames.map(name => col(name))
         val registeredFuncName = RuntimeHelper.registerSingleByColName(funcName, dataType)
         val aggName = SchemaProcessor.replaceToAggravateSchemaName(index, funcName, hash, argNames: _*)
         if (funcName == FunctionDesc.FUNC_COUNT_DISTINCT) {
@@ -173,8 +179,9 @@ object AggregatePlan extends LogEx {
           KapFunctions.precise_bitmap_build(columnName.head).alias(aggName)
         } else if (funcName.equalsIgnoreCase(FunctionDesc.FUNC_INTERSECT_COUNT)) {
           require(columnName.size >= 3, s"Input columns size ${columnName.size} don't greater than or equal to 3.")
+          val resolvedPlan = SparkInternalAgent.getDataFrame(SparderEnv.getSparkSession, plan)
           val columns = columnName.slice(0, 3).zipWithIndex.map {
-            case (column: Column, 2) => column.cast(ArrayType.apply(schema.fields.apply(call.getArgList.get(1)).dataType))
+            case (column: Column, 2) => column.cast(ArrayType.apply(resolvedPlan.schema.apply(call.getArgList.get(1)).dataType))
             case (column: Column, _) => column
           }
           val separator = s"\\${KylinConfig.getInstanceFromEnv.getIntersectFilterOrSeparator}"
@@ -198,9 +205,8 @@ object AggregatePlan extends LogEx {
         }
       case (call: Any, index: Int) =>
         val funcName = OLAPAggregateRel.getAggrFuncName(call)
-        val schemaNames = schema.names
-        val argNames = call.getArgList.asScala.map(id => schemaNames.apply(id))
-        val columnName = argNames.map(col)
+        val argNames = call.getArgList.asScala.map(id => schema.apply(id).name)
+        val columnName = argNames.map(name => col(name))
         val inputType = call.getType
         val aggName = SchemaProcessor.replaceToAggravateSchemaName(index,
           funcName,
@@ -211,7 +217,11 @@ object AggregatePlan extends LogEx {
             rel.getInput match {
               case projectRel: KapProjectRel =>
                 val percentageArg = projectRel.getChildExps.get(call.getArgList.get(1))
-                val accuracyArg = if (call.getArgList.size() < 3) { None } else { Some(projectRel.getChildExps.get(call.getArgList.get(2))) }
+                val accuracyArg = if (call.getArgList.size() < 3) {
+                  None
+                } else {
+                  Some(projectRel.getChildExps.get(call.getArgList.get(2)))
+                }
                 (percentageArg, accuracyArg) match {
                   case (percentageLitRex: RexLiteral, accuracyArgLitRex: Option[RexLiteral]) =>
                     if (KylinConfig.getInstanceFromEnv.getPercentileApproxAlgorithm.equalsIgnoreCase("t-digest")) {
@@ -260,7 +270,8 @@ object AggregatePlan extends LogEx {
             KapFunctions.precise_bitmap_build_pushdown(columnName.head).alias(aggName)
           // Issue 4337: Supported select (select '2012-01-02') as data, xxx from table group by xxx
           case SqlKind.SINGLE_VALUE.sql =>
-            SingleValueAgg(schema.head).apply(col(argNames.head)).alias(aggName)
+            val structField = StructField(schema.head.name, SparderTypeUtil.convertSqlTypeToSparkType(inputType), true, Metadata.empty)
+            SingleValueAgg(structField).apply(col(argNames.head)).alias(aggName)
           case FunctionDesc.FUNC_GROUPING =>
             if (!rel.isSimpleGroupType) {
               grouping(argNames.head).alias(aggName)

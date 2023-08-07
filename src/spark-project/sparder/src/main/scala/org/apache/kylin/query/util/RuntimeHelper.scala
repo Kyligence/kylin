@@ -26,9 +26,10 @@ import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{ArrayType, DataTypes, StructType}
+import org.apache.spark.sql.types.{ArrayType, DataTypes}
 import org.apache.spark.sql.udf.UdfManager
 
 import scala.collection.JavaConverters._
@@ -51,16 +52,17 @@ object RuntimeHelper extends Logging {
     name
   }
 
-  def gtSchemaToCalciteSchema(
-                               primaryKey: ImmutableBitSet,
-                               derivedUtil: SparderDerivedUtil,
-                               factTableName: String,
-                               allColumns: List[TblColRef],
-                               sourceSchema: StructType,
-                               gtColIdx: Array[Int],
-                               tupleIdx: Array[Int],
-                               topNMapping: Map[Int, Column]
-                             ): Seq[Column] = {
+  // S53 Fix https://olapio.atlassian.net/browse/KE-42473
+  def gtSchemaToCalciteSchema(primaryKey: ImmutableBitSet,
+                              derivedUtil: SparderDerivedUtil,
+                              factTableName: String,
+                              allColumns: List[TblColRef],
+                              plan: LogicalPlan,
+                              colIdx: (Array[Int], Array[Int]),
+                              topNMapping: Map[Int, Column]): Seq[Column] = {
+    val gtColIdx = colIdx._1
+    val tupleIdx = colIdx._2
+    val sourceSchema = plan.output
     val gTInfoNames = SchemaProcessor.buildFactTableSortNames(sourceSchema)
     val calciteToGTinfo = tupleIdx.zipWithIndex.toMap
     var deriveMap: Map[Int, Column] = Map.empty
@@ -98,7 +100,12 @@ object RuntimeHelper extends Logging {
 
     val projectConfig = NProjectManager.getProjectConfig(derivedUtil.model.getProject)
     // may have multi TopN measures.
-    val topNIndexs = sourceSchema.fields.map(_.dataType).zipWithIndex.filter(_._1.isInstanceOf[ArrayType])
+    val topNIndexs = if (plan.resolved) {
+      sourceSchema.map(_.dataType).zipWithIndex.filter(_._1.isInstanceOf[ArrayType])
+    } else {
+      Seq.empty
+    }
+
     allColumns.indices
       .zip(allColumns)
       .map {

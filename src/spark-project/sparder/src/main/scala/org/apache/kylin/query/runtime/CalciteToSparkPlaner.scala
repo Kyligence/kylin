@@ -15,30 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.kylin.query.runtime
 
 import java.util
-import java.util.Collections
 
 import org.apache.calcite.DataContext
 import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.engine.spark.utils.LogEx
-import org.apache.kylin.guava30.shaded.common.collect.Lists
-import org.apache.kylin.query.relnode.{KapAggregateRel, KapFilterRel, KapJoinRel, KapLimitRel, KapMinusRel, KapModelViewRel, KapNonEquiJoinRel, KapProjectRel, KapRel, KapSortRel, KapTableScan, KapUnionRel, KapValuesRel, KapWindowRel}
-import org.apache.kylin.query.runtime.plan.{AggregatePlan, FilterPlan, LimitPlan, ProjectPlan, SortPlan, TableScanPlan, ValuesPlan, WindowPlan}
-import org.apache.kylin.query.util.KapRelUtil
-import org.apache.spark.sql.DataFrame
-
-import scala.collection.JavaConverters._
-
+import org.apache.kylin.query.relnode._
+import org.apache.kylin.query.runtime.plan._
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.{DataFrame, SparderEnv, SparkInternalAgent}
 
 class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with LogEx {
-  private val stack = new util.Stack[DataFrame]()
+  private val stack = new util.Stack[LogicalPlan]()
   private val setOpStack = new util.Stack[Int]()
   private var unionLayer = 0
-  private val dataframeCache = KylinConfig.getInstanceFromEnv.isDataFrameCacheEnabled
 
   // clear cache before any op
   cleanCache()
@@ -61,24 +54,28 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
     stack.push(node match {
       case rel: KapTableScan => convertTableScan(rel)
       case rel: KapFilterRel =>
-        logTime("filter") { FilterPlan.filter(Lists.newArrayList(stack.pop()), rel, dataContext) }
+        logTime("filter") {
+          FilterPlan.filter(stack.pop(), rel, dataContext)
+        }
       case rel: KapProjectRel =>
         logTime("project") {
-          actionWith(rel) {
-            ProjectPlan.select(Lists.newArrayList(stack.pop()), rel, dataContext)
-          }
+          ProjectPlan.select(stack.pop(), rel, dataContext)
         }
       case rel: KapLimitRel =>
-        logTime("limit") { LimitPlan.limit(Lists.newArrayList(stack.pop()), rel, dataContext) }
+        logTime("limit") {
+          LimitPlan.limit(stack.pop(), rel, dataContext)
+        }
       case rel: KapSortRel =>
-        logTime("sort") { SortPlan.sort(Lists.newArrayList(stack.pop()), rel, dataContext) }
+        logTime("sort") {
+          SortPlan.sort(stack.pop(), rel, dataContext)
+        }
       case rel: KapWindowRel =>
-        logTime("window") { WindowPlan.window(Lists.newArrayList(stack.pop()), rel, dataContext) }
+        logTime("window") {
+          WindowPlan.window(stack.pop(), rel, dataContext)
+        }
       case rel: KapAggregateRel =>
         logTime("agg") {
-          actionWith(rel) {
-            AggregatePlan.agg(Lists.newArrayList(stack.pop()), rel)
-          }
+          AggregatePlan.agg(stack.pop(), rel)
         }
       case rel: KapJoinRel => convertJoinRel(rel)
       case rel: KapNonEquiJoinRel => convertNonEquiJoinRel(rel)
@@ -88,21 +85,29 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
         if (KylinConfig.getInstanceFromEnv.isCollectUnionInOrder) {
           unionBlocks = unionBlocks.reverse
         }
-        logTime("union") { plan.UnionPlan.union(unionBlocks.asJava, rel, dataContext) }
+        logTime("union") {
+          plan.UnionPlan.union(unionBlocks, rel, dataContext)
+        }
       case rel: KapMinusRel =>
         val size = setOpStack.pop()
-        logTime("minus") { plan.MinusPlan.minus(Range(0, stack.size() - size).map(a => stack.pop()).reverse, rel, dataContext) }
+        logTime("minus") {
+          plan.MinusPlan.minus(Range(0, stack.size() - size).map(a => stack.pop()).reverse, rel, dataContext)
+        }
       case rel: KapValuesRel =>
-        logTime("values") { ValuesPlan.values(rel) }
+        logTime("values") {
+          ValuesPlan.values(rel)
+        }
       case rel: KapModelViewRel =>
-        logTime("modelview") { stack.pop() }
+        logTime("modelview") {
+          stack.pop()
+        }
     })
     if (node.isInstanceOf[KapUnionRel]) {
       unionLayer = unionLayer - 1
     }
   }
 
-  private def convertTableScan(rel: KapTableScan): DataFrame = {
+  private def convertTableScan(rel: KapTableScan): LogicalPlan = {
     rel.getContext.genExecFunc(rel, rel.getTableName) match {
       case "executeLookupTableQuery" =>
         logTime("createLookupTable") {
@@ -123,7 +128,7 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
     }
   }
 
-  private def convertJoinRel(rel: KapJoinRel): DataFrame = {
+  private def convertJoinRel(rel: KapJoinRel): LogicalPlan = {
     if (!rel.isRuntimeJoin) {
       rel.getContext.genExecFunc(rel, "") match {
         case "executeMetadataQuery" =>
@@ -139,12 +144,12 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
       val right = stack.pop()
       val left = stack.pop()
       logTime("join") {
-        plan.JoinPlan.join(Lists.newArrayList(left, right), rel)
+        plan.JoinPlan.join(Seq.apply(left, right), rel)
       }
     }
   }
 
-  private def convertNonEquiJoinRel(rel: KapNonEquiJoinRel): DataFrame = {
+  private def convertNonEquiJoinRel(rel: KapNonEquiJoinRel): LogicalPlan = {
     if (!rel.isRuntimeJoin) {
       logTime("join with table scan") {
         TableScanPlan.createOLAPTable(rel)
@@ -153,65 +158,17 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
       val right = stack.pop()
       val left = stack.pop()
       logTime("non-equi join") {
-        plan.JoinPlan.nonEquiJoin(Lists.newArrayList(left, right), rel, dataContext)
-      }
-    }
-  }
-
-  def actionWith(rel: KapRel)(body: => DataFrame): DataFrame = {
-    if (!dataframeCache) {
-      body
-    } else {
-      actionWithCache(rel) {
-        body
-      }
-    }
-  }
-
-  protected def actionWithCache(rel: KapRel)(body: => DataFrame): DataFrame = {
-    var layoutId = 0L
-    var modelId = ""
-    var pruningSegmentHashCode = 0
-    if (rel.getDigest == null) {
-      body
-    } else {
-      try {
-        val storageContext = rel.getContext.storageContext
-        val layoutEntity = storageContext.getCandidate.getLayoutEntity
-        val prunedSegments = storageContext.getPrunedSegments
-        val tempTimeRange = new StringBuilder()
-        if (prunedSegments != null) {
-          prunedSegments.forEach(segment => {
-            tempTimeRange.append(segment.getName)
-          })
-        }
-        pruningSegmentHashCode = tempTimeRange.toString().hashCode
-        layoutId = layoutEntity.getId
-        modelId = layoutEntity.getModel.getId + "_" + pruningSegmentHashCode
-      } catch {
-        case e: Throwable => logWarning(s"Calculate layoutId modelId failed ex:${e.getMessage}")
-      }
-      rel.recomputeDigest()
-      val digestWithoutId = KapRelUtil.getDigestWithoutRelNodeId(rel.getDigest, layoutId, modelId)
-      if (unionLayer >= 1 && TableScanPlan.cacheDf.get.containsKey(digestWithoutId)) {
-        stack.pop()
-        logInfo("Happen Optimized from cache dataframe CacheKey:" + digestWithoutId)
-        TableScanPlan.cacheDf.get.get(digestWithoutId)
-      } else {
-        val df = body
-        if (unionLayer >= 1) {
-          TableScanPlan.cacheDf.get.put(digestWithoutId, df)
-        }
-        df
+        plan.JoinPlan.nonEquiJoin(Seq.apply(left, right), rel, dataContext)
       }
     }
   }
 
   def cleanCache(): Unit = {
-    TableScanPlan.cacheDf.get().clear()
+    TableScanPlan.cachePlan.get().clear()
   }
 
   def getResult(): DataFrame = {
-    stack.pop()
+    val logicalPlan = stack.pop()
+    SparkInternalAgent.getDataFrame(SparderEnv.getSparkSession, logicalPlan)
   }
 }

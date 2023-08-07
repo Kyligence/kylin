@@ -20,27 +20,24 @@ package org.apache.kylin.query.runtime.plan
 import org.apache.calcite.DataContext
 import org.apache.kylin.query.relnode.KapLimitRel
 import org.apache.kylin.query.runtime.SparderRexVisitor
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.plans.logical.{Limit, LogicalPlan, Offset}
 
-// scalastyle:off
 object LimitPlan {
-  def limit(inputs: java.util.List[DataFrame],
+  def limit(plan: LogicalPlan,
             rel: KapLimitRel,
-            dataContext: DataContext): DataFrame = {
-    //    val schema = statefulDF.indexSchema
-    val visitor = new SparderRexVisitor(inputs.get(0),
+            dataContext: DataContext): LogicalPlan = {
+    val visitor = new SparderRexVisitor(plan,
       rel.getInput.getRowType,
       dataContext)
     val limit = BigDecimal(rel.localFetch.accept(visitor).toString).toInt
-    if (rel.localOffset == null) {
-      inputs
-        .get(0)
-        .limit(limit)
-    } else {
+
+    if (rel.localOffset != null) {
       val offset = BigDecimal(rel.localOffset.accept(visitor).toString).toInt
-      inputs
-        .get(0)
-        .offset(offset).limit(limit)
+      val offsetPlan = Offset(Literal(offset), plan)
+      Limit(Literal(limit), offsetPlan)
+    } else {
+      Limit(Literal(limit), plan)
     }
   }
 }

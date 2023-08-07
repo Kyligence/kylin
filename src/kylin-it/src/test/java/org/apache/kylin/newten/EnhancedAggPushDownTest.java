@@ -131,7 +131,7 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
             queryExec.executeQuery(sql);
         } catch (Exception e) {
             Assert.assertTrue(e instanceof SQLException);
-            Assert.assertTrue(queryExec.getSparderQueryOptimizedExceptionMsg().contains("Path does not exist"));
+            Assert.assertTrue(queryExec.getSparderQueryOptimizedExceptionMsg().contains("does not exist"));
         }
         return ContextUtil.listContexts();
     }

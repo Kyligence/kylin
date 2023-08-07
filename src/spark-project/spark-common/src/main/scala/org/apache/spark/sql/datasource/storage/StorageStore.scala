@@ -18,13 +18,16 @@
 
 package org.apache.spark.sql.datasource.storage
 
+import java.util.concurrent.Executors
+import java.util.{Objects, List => JList}
+import java.{lang, util}
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.kylin.common.KapConfig
 import org.apache.kylin.common.util.HadoopUtil
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil
-import org.apache.kylin.engine.spark.utils.StorageUtils.findCountDistinctMeasure
-import org.apache.kylin.engine.spark.utils.{Metrics, Repartitioner, StorageUtils}
+import org.apache.kylin.engine.spark.utils.{Metrics, StorageUtils}
 import org.apache.kylin.metadata.cube.model.{LayoutEntity, NDataSegment, NDataflow}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.LayoutEntityConverter._
@@ -38,21 +41,17 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SparkSession}
 import org.apache.spark.util.ThreadUtils
 
-import java.util.concurrent.Executors
-import java.util.{Objects, List => JList}
-import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
-case class WriteTaskStats(
-                           numPartitions: Int,
-                           numFiles: Long,
-                           numBytes: Long,
-                           numRows: Long,
-                           sourceRows: Long,
-                           numBucket: Int,
-                           partitionValues: JList[String])
+case class WriteTaskStats(numPartitions: Int,
+                          numFiles: Long,
+                          numBytes: Long,
+                          numRows: Long,
+                          sourceRows: Long,
+                          numBucket: Int,
+                          partitionValues: JList[String])
 
 abstract class StorageStore extends Logging {
 
@@ -62,22 +61,25 @@ abstract class StorageStore extends Logging {
 
   def setStorageListener(listener: StorageListener): Unit = storageListener = Some(listener)
 
-  def save(
-            layout: LayoutEntity,
-            outputPath: Path,
-            kapConfig: KapConfig,
-            dataFrame: DataFrame): WriteTaskStats
+  def save(layout: LayoutEntity,
+           outputPath: Path,
+           kapConfig: KapConfig,
+           dataFrame: DataFrame): WriteTaskStats
 
-  def read(
-            dataflow: NDataflow, layout: LayoutEntity, sparkSession: SparkSession,
-            extraOptions: Map[String, String] = Map.empty[String, String]): DataFrame
+  def read(dataflow: NDataflow,
+           layout: LayoutEntity,
+           sparkSession: SparkSession,
+           extraOptions: Map[String, String] = Map.empty[String, String]): LogicalPlan
 
-  def readSpecialSegment(
-                          segment: NDataSegment, layout: LayoutEntity, sparkSession: SparkSession,
-                          extraOptions: Map[String, String] = Map.empty[String, String]): DataFrame
+  def readSpecialSegment(segment: NDataSegment,
+                         layout: LayoutEntity,
+                         sparkSession: SparkSession,
+                         extraOptions: Map[String, String] = Map.empty[String, String]): DataFrame
 
-  def readSpecialSegment(
-                          segment: NDataSegment, layout: LayoutEntity, partitionId: java.lang.Long, sparkSession: SparkSession): DataFrame
+  def readSpecialSegment(segment: NDataSegment,
+                         layout: LayoutEntity,
+                         partitionId: java.lang.Long,
+                         sparkSession: SparkSession): DataFrame
 
   def collectFileCountAndSizeAfterSave(outputPath: Path, conf: Configuration): (Long, Long) = {
     val fs = outputPath.getFileSystem(conf)
@@ -125,23 +127,22 @@ class StorageStoreV1 extends StorageStore {
     LayoutFormatWriter.write(afterReplaced, layoutEntity, outputPath, kapConfig, storageListener)
   }
 
-
   override def read(dataflow: NDataflow, layout: LayoutEntity, sparkSession: SparkSession,
-                    extraOptions: Map[String, String] = Map.empty[String, String]): DataFrame = {
+                    extraOptions: Map[String, String] = Map.empty[String, String]): LogicalPlan = {
     val structType = if ("true".equals(extraOptions.apply("isFastBitmapEnabled"))) {
       layout.toExactlySchema()
     } else {
       layout.toSchema()
     }
     val indexCatalog = new FilePruner(sparkSession, options = extraOptions, structType)
-    sparkSession.baseRelationToDataFrame(
-      HadoopFsRelation(
-        indexCatalog,
-        partitionSchema = indexCatalog.partitionSchema,
-        dataSchema = indexCatalog.dataSchema.asNullable,
-        bucketSpec = None,
-        new ParquetFileFormat,
-        options = extraOptions)(sparkSession))
+    val fsRelation = HadoopFsRelation(
+      indexCatalog,
+      partitionSchema = indexCatalog.partitionSchema,
+      dataSchema = indexCatalog.dataSchema.asNullable,
+      bucketSpec = None,
+      new ParquetFileFormat,
+      options = extraOptions)(sparkSession)
+    LogicalRelation(fsRelation)
   }
 
   override def readSpecialSegment(

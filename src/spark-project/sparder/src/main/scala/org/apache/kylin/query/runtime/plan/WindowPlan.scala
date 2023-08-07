@@ -19,27 +19,29 @@ package org.apache.kylin.query.runtime.plan
 
 import java.sql.Date
 import java.util.{Calendar, Locale}
+
 import org.apache.calcite.DataContext
 import org.apache.calcite.rel.RelCollationImpl
 import org.apache.calcite.rel.RelFieldCollation.Direction
 import org.apache.calcite.rex.RexInputRef
 import org.apache.calcite.util.NlsString
 import org.apache.kylin.common.util.DateFormat
+import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.query.relnode.{KapProjectRel, KapWindowRel}
 import org.apache.kylin.query.runtime.SparderRexVisitor
-import org.apache.spark.internal.Logging
-import org.apache.spark.sql.KapFunctions._
+import org.apache.spark.sql.KapFunctions.k_lit
 import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.expressions.{Window, WindowSpec}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.LongType
 import org.apache.spark.sql.util.SparderTypeUtil
-import org.apache.spark.sql.{Column, DataFrame}
+import org.apache.spark.sql.{Column, SparkOperation}
 
 import scala.collection.JavaConverters._
 
-object WindowPlan extends Logging {
+object WindowPlan extends LogEx {
   // the function must have sort
   val sortSpecified =
     List("CUME_DIST", "LEAD", "RANK", "DENSE_RANK", "ROW_NUMBER", "NTILE", "LAG")
@@ -54,23 +56,23 @@ object WindowPlan extends Logging {
     "LEAD"
   )
 
-  def window(input: java.util.List[DataFrame],
-             rel: KapWindowRel, datacontex: DataContext): DataFrame = {
+  def window(plan: LogicalPlan,
+             rel: KapWindowRel,
+             datacontex: DataContext): LogicalPlan = {
     val start = System.currentTimeMillis()
 
     var windowCount = 0
     rel.groups.asScala.head.upperBound
-    val df = input.get(0)
-    val columnSize = df.schema.length
+    val columnSize = plan.output.size
 
-    val columns = df.schema.fieldNames.map(col)
+    val columns = plan.output.map(c => col(c.name))
     val constantMap = rel.getConstants.asScala
       .map(_.getValue)
       .zipWithIndex
       .map { entry =>
         (entry._2 + columnSize, entry._1)
       }.toMap[Int, Any]
-    val visitor = new SparderRexVisitor(df,
+    val visitor = new SparderRexVisitor(plan,
       rel.getInput.getRowType,
       datacontex)
     val constants = rel.getConstants.asScala
@@ -238,9 +240,9 @@ object WindowPlan extends Logging {
 
       }
     val selectColumn = columns ++ windows
-    val window = df.select(selectColumn: _*)
+    val windowPlan = SparkOperation.project(selectColumn, plan)
     logInfo(s"Gen window cost Time :${System.currentTimeMillis() - start} ")
-    window
+    windowPlan
   }
 
   // scalastyle:off
@@ -259,7 +261,7 @@ object WindowPlan extends Logging {
               col.expr.prettyName.toUpperCase(Locale.ROOT) match {
                 case "CURRENT_DATE" =>
                   DateFormat.getDateFormat(DateFormat.DEFAULT_DATE_PATTERN)
-                      .format(DateTimeUtils.currentTimestamp() / 1000)
+                    .format(DateTimeUtils.currentTimestamp() / 1000)
                 case _ => col.expr
               }
             }
@@ -271,6 +273,7 @@ object WindowPlan extends Logging {
       }
     }
   }
+
   def constantValue(value: Any) = {
     value match {
       case v: NlsString => v.getValue
