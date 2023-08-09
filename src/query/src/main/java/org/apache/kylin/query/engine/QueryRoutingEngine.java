@@ -40,7 +40,6 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.debug.BackdoorToggles;
-import org.apache.kylin.common.exception.CalciteNotSupportException;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.NewQueryRefuseException;
 import org.apache.kylin.common.exception.TargetSegmentNotFoundException;
@@ -141,8 +140,6 @@ public class QueryRoutingEngine {
             return handleTransactionException(queryParams, e);
         } catch (SQLException e) {
             return handleSqlException(queryParams, e);
-        } catch (AssertionError e) {
-            return handleAssertionError(queryParams, e);
         } finally {
             QueryResultMasks.remove();
         }
@@ -179,15 +176,6 @@ public class QueryRoutingEngine {
         }
         if (shouldPushdown(e, queryParams)) {
             return pushDownQuery(e, queryParams);
-        }
-        throw e;
-    }
-
-    private QueryResult handleAssertionError(QueryParams queryParams, AssertionError e) throws SQLException {
-        // for example: split('abc', 'b') will jump into this AssertionError
-        if (e.getMessage().equals("OTHER")) {
-            SQLException ex = new SQLException(e.getMessage(), new CalciteNotSupportException());
-            return pushDownQuery(ex, queryParams);
         }
         throw e;
     }

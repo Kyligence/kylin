@@ -18,6 +18,8 @@
 
 package org.apache.kylin.query.udf;
 
+import java.util.List;
+
 import org.apache.calcite.linq4j.function.Parameter;
 import org.apache.calcite.sql.type.NotConstant;
 import org.apache.kylin.common.exception.CalciteNotSupportException;
@@ -90,12 +92,12 @@ public class SparkStringUDF implements NotConstant {
         throw new CalciteNotSupportException();
     }
 
-    public String[] SPLIT(@Parameter(name = "str") Object str, @Parameter(name = "regex") Object regex)
+    public List<String> SPLIT(@Parameter(name = "str") Object str, @Parameter(name = "regex") Object regex)
             throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }
 
-    public String[] SPLIT(@Parameter(name = "str") Object str, @Parameter(name = "regex") Object regex,
+    public List<String> SPLIT(@Parameter(name = "str") Object str, @Parameter(name = "regex") Object regex,
             @Parameter(name = "limit") Object limit) throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }

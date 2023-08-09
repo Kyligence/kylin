@@ -428,6 +428,8 @@ object ExpressionConverter {
             new Column(expressions.Chr(k_lit(children.head).expr))
           case "space" =>
             new Column(StringRepeat(k_lit(" ").expr, k_lit(children.head).expr))
+          case "item" =>
+            element_at(k_lit(children.head), k_lit(children.apply(1).asInstanceOf[Int] + 1))
           case _ =>
             throw new UnsupportedOperationException(
               s"Unsupported function $funcName")
