@@ -1334,6 +1334,10 @@ public class AclTCRServiceTest extends NLocalFileMetadataTestCase {
         responses = accessService.getUserOrGroupAclPermissions(projects, "ANALYST", true);
         Assert.assertEquals(1, responses.size());
         Assert.assertEquals("OPERATION", responses.get(0).getProjectPermission());
+
+        // test user have not project permission
+        responses = accessService.getUserOrGroupAclPermissions(Lists.newArrayList("ssb"), "ANALYST", true);
+        Assert.assertEquals(0, responses.size());
     }
 
     @Test
