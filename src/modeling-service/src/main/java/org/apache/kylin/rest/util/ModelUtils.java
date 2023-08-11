@@ -18,6 +18,9 @@
 package org.apache.kylin.rest.util;
 
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARTITION_COLUMN;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_SECOND_STORAGE_PARTITION_INVALID;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.PARTITION_SECOND_STORAGE_PARTITION_INVALID;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_SECOND_STORAGE_PARTITION_INVALID;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -30,9 +33,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.DateFormat;
-import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
+import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.rest.constant.ModelAttributeEnum;
 import org.apache.kylin.rest.response.NDataModelResponse;
 
@@ -126,6 +129,37 @@ public class ModelUtils {
                 modelResponse.setSecondStorageEnabled(secondStorageInfo.isSecondStorageEnabled());
             }
         }
+    }
+
+    public static void checkSecondStoragePartition(String project, String modelId, PartitionDesc partitionDesc,
+            MessageType type) {
+        if (partitionDesc == null || partitionDesc.getPartitionDateColumn() == null) {
+            return;
+        }
+
+        if (!SecondStorageUtil.isModelEnable(project, modelId)) {
+            return;
+        }
+
+        val model = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getDataModelDesc(modelId);
+        String partitionColumn = partitionDesc.getPartitionDateColumn();
+        if (model.getAllNamedColumns().stream()
+                .noneMatch(col -> col.isDimension() && col.getAliasDotColumn().equalsIgnoreCase(partitionColumn))) {
+            switch (type) {
+            case MODEL:
+                throw new KylinException(MODEL_SECOND_STORAGE_PARTITION_INVALID);
+            case SEGMENT:
+                throw new KylinException(SEGMENT_SECOND_STORAGE_PARTITION_INVALID);
+            case PARTITION:
+                throw new KylinException(PARTITION_SECOND_STORAGE_PARTITION_INVALID);
+            default:
+                throw new IllegalStateException("this should not happen");
+            }
+        }
+    }
+
+    public enum MessageType {
+        SEGMENT, PARTITION, MODEL
     }
 
 }

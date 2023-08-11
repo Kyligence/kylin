@@ -39,6 +39,8 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.constant.Constant;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.exception.LookupTableException;
@@ -78,6 +80,7 @@ import org.apache.kylin.rest.service.IndexPlanService;
 import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.ModelTdsService;
 import org.apache.kylin.rest.service.params.ModelQueryParams;
+import org.apache.kylin.rest.util.ModelUtils;
 import org.apache.kylin.tool.bisync.SyncContext;
 import org.apache.kylin.tool.bisync.model.SyncModel;
 import org.apache.kylin.util.DataRangeUtils;
@@ -95,8 +98,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.swagger.annotations.ApiOperation;
 import lombok.val;
@@ -446,6 +447,8 @@ public class NModelController extends NBasicController {
         DataRangeUtils.validateDataRange(request.getStart(), request.getEnd(), partitionColumnFormat);
         modelService.validatePartitionDesc(request.getPartitionDesc());
         checkRequiredArg(MODEL_ID, request.getUuid());
+        ModelUtils.checkSecondStoragePartition(request.getProject(), request.getUuid(), request.getPartitionDesc(),
+                ModelUtils.MessageType.MODEL);
         try {
             BuildBaseIndexResponse response = BuildBaseIndexResponse.EMPTY;
             if (request.getBrokenReason() == NDataModel.BrokenReason.SCHEMA) {
@@ -472,6 +475,8 @@ public class NModelController extends NBasicController {
         checkProjectName(request.getProject());
         modelService.validatePartitionDesc(request.getPartitionDesc());
         checkRequiredArg(MODEL_ID, modelId);
+        ModelUtils.checkSecondStoragePartition(request.getProject(), modelId, request.getPartitionDesc(),
+                ModelUtils.MessageType.PARTITION);
         try {
             modelService.updatePartitionColumn(request.getProject(), modelId, request.getPartitionDesc(),
                     request.getMultiPartitionDesc());
@@ -627,6 +632,8 @@ public class NModelController extends NBasicController {
     @ResponseBody
     public EnvelopeResponse<ModelSaveCheckResponse> checkBeforeModelSave(@RequestBody ModelRequest modelRequest) {
         checkProjectName(modelRequest.getProject());
+        ModelUtils.checkSecondStoragePartition(modelRequest.getProject(), modelRequest.getUuid(),
+                modelRequest.getPartitionDesc(), ModelUtils.MessageType.MODEL);
         ModelSaveCheckResponse response = modelService.checkBeforeModelSave(modelRequest);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
     }
