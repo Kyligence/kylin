@@ -18,6 +18,7 @@
 
 package org.apache.kylin.query.pushdown
 
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util
 import java.util.concurrent.{Callable, Executors, TimeUnit, TimeoutException}
@@ -212,6 +213,7 @@ object SparkSqlClient {
     case value: immutable.Map[Any, Any] =>
       value.map(p => rawValueToString(p._1, true) + ":" + rawValueToString(p._2, true)).mkString("{", ",", "}")
     case value: Array[Byte] => new String(value)
+    case value: BigDecimal => SparderTypeUtil.adjustDecimal(value)
     case value: Any => value.toString
   }
 }

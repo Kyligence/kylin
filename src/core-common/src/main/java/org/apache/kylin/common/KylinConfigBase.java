@@ -3950,4 +3950,8 @@ public abstract class KylinConfigBase implements Serializable {
     public int getExpectedIndexSizeOptimized() {
         return Integer.parseInt(getOptional("kylin.index.expected-size-after-optimization", "0"));
     }
+
+    public boolean isRoundDecimalZero() {
+        return Boolean.parseBoolean(getOptional("kylin.query.round-decimal-zero", FALSE));
+    }
 }

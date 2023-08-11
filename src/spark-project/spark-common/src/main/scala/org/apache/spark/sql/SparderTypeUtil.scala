@@ -253,6 +253,15 @@ object SparderTypeUtil extends Logging {
     ret
   }
 
+  def adjustDecimal(value: BigDecimal): String = {
+    // customized for Longfor
+    if (value.compareTo(BigDecimal.ZERO) == 0 && KylinConfig.getInstanceFromEnv.isRoundDecimalZero) {
+      BigDecimal.ZERO.toString
+    } else {
+      value.toString
+    }
+  }
+
   def convertToStringWithCalciteType(rawValue: Any, relType: RelDataType, wrapped: Boolean = false): String = {
     val formatStringValue = (value: String) => if (wrapped) StringHelper.doubleQuote(value) else value
     val formatArray = (value: String) => {
@@ -269,7 +278,7 @@ object SparderTypeUtil extends Logging {
     (rawValue, relType.getSqlTypeName) match {
       case (null, _) => null
       // types that matched
-      case (value: BigDecimal, SqlTypeName.DECIMAL) => value.toString
+      case (value: BigDecimal, SqlTypeName.DECIMAL) => adjustDecimal(value)
       case (value: Integer, SqlTypeName.INTEGER) => value.toString
       case (value: Byte, SqlTypeName.TINYINT) => value.toString
       case (value: Short, SqlTypeName.SMALLINT) => value.toString

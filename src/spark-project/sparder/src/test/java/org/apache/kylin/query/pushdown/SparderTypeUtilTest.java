@@ -28,6 +28,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.util.TempMetadataBuilder;
 import org.apache.spark.sql.util.SparderTypeUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -140,4 +142,18 @@ public class SparderTypeUtilTest {
         Assert.assertEquals(Long.class, convert_value.getClass());
         Assert.assertEquals(0L, convert_value);
     }
+
+    @Test
+    public void testBigDecimalRoundZero() {
+        String tempMetadataDir = TempMetadataBuilder.prepareLocalTempMetadata();
+        KylinConfig.setKylinConfigForLocalTest(tempMetadataDir);
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        Assert.assertEquals("0.000", convertToStringWithDecimalType(new BigDecimal("0.000"), 29, 3));
+        config.setProperty("kylin.query.round-decimal-zero", "true");
+        Assert.assertEquals("0", convertToStringWithDecimalType(new BigDecimal("0.000"), 29, 3));
+        Assert.assertEquals("0", convertToStringWithDecimalType(new BigDecimal("0.0000"), 29, 4));
+        Assert.assertEquals("0.001", convertToStringWithDecimalType(new BigDecimal("0.001"), 29, 3));
+
+    }
+
 }
