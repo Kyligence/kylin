@@ -203,6 +203,29 @@ public class FusionIndexServiceTest extends SourceTestCase {
     }
 
     @Test
+    public void testGetRuleWithGlobalDimCap() {
+        val modelId = "b05034a8-c037-416b-aa26-9e6b4a41ee40";
+        val fusionModelId = "334671fd-e383-4fc9-b5c2-94fce832f77a";
+
+        val indePlanManager = NIndexPlanManager.getInstance(getTestConfig(), "streaming_test");
+        indePlanManager.updateIndexPlan(modelId, copy -> copy.getRuleBasedIndex().setGlobalDimCap(1));
+        indePlanManager.updateIndexPlan(fusionModelId, copy -> copy.getRuleBasedIndex().setGlobalDimCap(2));
+
+        val rule = fusionIndexService.getRule("streaming_test", modelId);
+        Assert.assertEquals(1, rule.getGlobalDimCap());
+
+        indePlanManager.updateIndexPlan(fusionModelId,
+                copy -> copy.getRuleBasedIndex().setLastModifiedTime(System.currentTimeMillis() - 1000));
+        val rule2 = fusionIndexService.getRule("streaming_test", modelId);
+        Assert.assertEquals(2, rule2.getGlobalDimCap());
+
+        indePlanManager.updateIndexPlan(modelId,
+                copy -> copy.getRuleBasedIndex().setLastModifiedTime(System.currentTimeMillis()));
+        val rule3 = fusionIndexService.getRule("streaming_test", modelId);
+        Assert.assertEquals(1, rule3.getGlobalDimCap());
+    }
+
+    @Test
     public void testUpdateRuleWithBatch() {
         val modelId = "b05034a8-c037-416b-aa26-9e6b4a41ee40";
         val batchId = "334671fd-e383-4fc9-b5c2-94fce832f77a";

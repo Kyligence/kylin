@@ -117,6 +117,7 @@ public class FusionIndexService extends BasicService {
 
         if (modelRule != null) {
             newRuleBasedIndex.getAggregationGroups().addAll(modelRule.getAggregationGroups());
+            newRuleBasedIndex.setGlobalDimCap(modelRule.getGlobalDimCap());
         }
 
         if (model.fusionModelStreamingPart()) {
@@ -126,9 +127,18 @@ public class FusionIndexService extends BasicService {
             if (batchRule != null) {
                 newRuleBasedIndex.getAggregationGroups().addAll(batchRule.getAggregationGroups().stream()
                         .filter(agg -> agg.getIndexRange() == IndexEntity.Range.BATCH).collect(Collectors.toList()));
+                newRuleBasedIndex.setGlobalDimCap(lastModifiedTimeGlobalDimCap(batchRule, modelRule));
             }
         }
         return newRuleBasedIndex;
+    }
+
+    private int lastModifiedTimeGlobalDimCap(RuleBasedIndex batchRule, RuleBasedIndex modelRule) {
+        if (modelRule == null || (modelRule.getLastModifiedTime() < batchRule.getLastModifiedTime())) {
+            return batchRule.getGlobalDimCap();
+        } else {
+            return modelRule.getGlobalDimCap();
+        }
     }
 
     @Transaction(project = 0)

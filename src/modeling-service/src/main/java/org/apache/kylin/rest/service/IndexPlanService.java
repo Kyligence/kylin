@@ -792,6 +792,8 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
 
         newRuleBasedIndex.setIndexUpdateEnabled(index.getIndexUpdateEnabled());
         newRuleBasedIndex.setAggregationGroups(new LinkedList<>());
+        newRuleBasedIndex.setGlobalDimCap(index.getGlobalDimCap());
+        newRuleBasedIndex.setLastModifiedTime(index.getLastModifiedTime());
 
         for (NAggregationGroup aggGrp : index.getAggregationGroups()) {
             val aggGrpCopy = new NAggregationGroup();
