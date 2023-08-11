@@ -22,6 +22,7 @@ import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.sql.SqlKind
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.engine.spark.utils.LogEx
+import org.apache.kylin.measure.percentile.PercentileCounter
 import org.apache.kylin.metadata.model.FunctionDesc
 import org.apache.kylin.query.relnode.{KapAggregateRel, KapProjectRel, KylinAggregateCall, OLAPAggregateRel}
 import org.apache.kylin.query.util.RuntimeHelper
@@ -213,9 +214,13 @@ object AggregatePlan extends LogEx {
                 val accuracyArg = if (call.getArgList.size() < 3) { None } else { Some(projectRel.getChildExps.get(call.getArgList.get(2))) }
                 (percentageArg, accuracyArg) match {
                   case (percentageLitRex: RexLiteral, accuracyArgLitRex: Option[RexLiteral]) =>
-                    val percentage = percentageLitRex.getValue
-                    val accuracy = accuracyArgLitRex.map(arg => arg.getValue).getOrElse(ApproximatePercentile.DEFAULT_PERCENTILE_ACCURACY)
-                    percentile_approx(col(argNames.head), lit(percentage), lit(accuracy)).alias(aggName)
+                    if (KylinConfig.getInstanceFromEnv.getPercentileApproxAlgorithm.equalsIgnoreCase("t-digest")) {
+                      KapFunctions.k_percentile(columnName.head, columnName(1), PercentileCounter.DEFAULT_PERCENTILE_ACCURACY).alias(aggName)
+                    } else {
+                      val percentage = percentageLitRex.getValue
+                      val accuracy = accuracyArgLitRex.map(arg => arg.getValue).getOrElse(ApproximatePercentile.DEFAULT_PERCENTILE_ACCURACY)
+                      percentile_approx(col(argNames.head), lit(percentage), lit(accuracy)).alias(aggName)
+                    }
                 }
               case _ =>
                 throw new UnsupportedOperationException(s"Invalid percentile_approx parameters, " +

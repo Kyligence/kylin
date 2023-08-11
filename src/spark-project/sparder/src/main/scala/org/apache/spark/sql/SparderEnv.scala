@@ -239,6 +239,9 @@ object SparderEnv extends Logging {
       }
 
       injectExtensions(sparkSession.extensions)
+      if (KylinConfig.getInstanceFromEnv.getPercentileApproxAlgorithm.equalsIgnoreCase("t-digest")) {
+        UdfManager.register(sparkSession, KapFunctions.percentileFunction)
+      }
       spark = sparkSession
       logInfo("Spark context started successfully with stack trace:")
       logInfo(Thread.currentThread().getStackTrace.mkString("\n"))

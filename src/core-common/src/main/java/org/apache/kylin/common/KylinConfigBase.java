@@ -1913,6 +1913,12 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(this.getOptional("kylin.query.replace-dynamic-params-enabled", FALSE));
     }
 
+
+    public String getPercentileApproxAlgorithm() {
+        // Valid values: t-digest
+        return this.getOptional("kylin.query.percentile-approx-algorithm", "");
+    }
+
     public boolean isCollectUnionInOrder() {
         return Boolean.parseBoolean(this.getOptional("kylin.query.collect-union-in-order", TRUE));
     }

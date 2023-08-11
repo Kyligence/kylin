@@ -135,27 +135,37 @@ public class ExecAndComp {
 
     @SneakyThrows
     public static QueryResult queryWithSpark(String prj, String originSql, String joinType, String sqlPath) {
+        return queryWithSpark(prj, originSql, joinType, sqlPath, true);
+    }
+
+    @SneakyThrows
+    public static QueryResult queryWithSpark(String prj, String originSql, String joinType, String sqlPath,
+            boolean withCache) {
         int index = sqlPath.lastIndexOf('/');
         String resultFilePath = "";
         String schemaFilePath = "";
-        if (index > 0) {
-            resultFilePath = sqlPath.substring(0, index) + "/result-" + joinType + sqlPath.substring(index) + ".json";
-            schemaFilePath = sqlPath.substring(0, index) + "/result-" + joinType + sqlPath.substring(index) + ".schema";
-        }
-
-        // query with cache
-        try {
-            if (index > 0 && Files.exists(Paths.get(resultFilePath)) && Files.exists(Paths.get(schemaFilePath))) {
-                StructType schema = StructType.fromDDL(new String(Files.readAllBytes(Paths.get(schemaFilePath))));
-                List<StructField> structs = Arrays.stream(schema.fields())
-                        .map(SparderTypeUtil::convertSparkFieldToJavaField).collect(Collectors.toList());
-                Dataset<Row> ds = SparderEnv.getSparkSession().read().schema(schema).json(resultFilePath);
-                val dsIter = ds.toIterator();
-                Iterable<List<String>> listIter = SparkSqlClient.readPushDownResultRow(dsIter._1(), false);
-                return new QueryResult(Lists.newArrayList(listIter), (int) dsIter._2(), structs);
+        if (withCache) {
+            if (index > 0) {
+                resultFilePath = sqlPath.substring(0, index) + "/result-" + joinType + sqlPath.substring(index)
+                        + ".json";
+                schemaFilePath = sqlPath.substring(0, index) + "/result-" + joinType + sqlPath.substring(index)
+                        + ".schema";
             }
-        } catch (Exception e) {
-            log.warn("try to use cache failed, compare with spark {}", sqlPath, e);
+
+            // query with cache
+            try {
+                if (index > 0 && Files.exists(Paths.get(resultFilePath)) && Files.exists(Paths.get(schemaFilePath))) {
+                    StructType schema = StructType.fromDDL(new String(Files.readAllBytes(Paths.get(schemaFilePath))));
+                    List<StructField> structs = Arrays.stream(schema.fields())
+                            .map(SparderTypeUtil::convertSparkFieldToJavaField).collect(Collectors.toList());
+                    Dataset<Row> ds = SparderEnv.getSparkSession().read().schema(schema).json(resultFilePath);
+                    val dsIter = ds.toIterator();
+                    Iterable<List<String>> listIter = SparkSqlClient.readPushDownResultRow(dsIter._1(), false);
+                    return new QueryResult(Lists.newArrayList(listIter), (int) dsIter._2(), structs);
+                }
+            } catch (Exception e) {
+                log.warn("try to use cache failed, compare with spark {}", sqlPath, e);
+            }
         }
         // query with spark and cache result
         return queryWithSpark(prj, originSql, joinType, sqlPath, resultFilePath, schemaFilePath);

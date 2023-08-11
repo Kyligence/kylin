@@ -18,17 +18,13 @@
 
 package org.apache.spark.sql.udf
 
-import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
-import com.esotericsoftware.kryo.io.{Input, KryoDataInput}
 import org.apache.kylin.guava30.shaded.common.cache.{Cache, CacheBuilder, RemovalListener, RemovalNotification}
-import org.apache.kylin.measure.hllc.HLLCounter
 import org.apache.kylin.metadata.datatype.DataType
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{FunctionEntity, KapFunctions, SparkSession}
-import org.roaringbitmap.longlong.Roaring64NavigableMap
 
 class UdfManager(sparkSession: SparkSession) extends Logging {
   private var udfCache: Cache[String, String] = _
@@ -85,6 +81,11 @@ object UdfManager {
 
   def register(dataType: DataType, func: String): String = {
     defaultManager.get().doRegister(dataType, func)
+  }
+
+  def register(sparkSession: SparkSession, func: FunctionEntity): Unit = {
+    sparkSession.sessionState.functionRegistry.registerFunction(func.name,
+      func.info, func.builder)
   }
 
 }

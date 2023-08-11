@@ -29,6 +29,8 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.util.Properties;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.metadata.query.QueryMetricsContext;
@@ -50,6 +52,7 @@ public class AsyncQueryApplicationTest {
     @Before
     public void setUp() throws Exception {
         asyncQueryApplication = spy(new AsyncQueryApplication());
+        doReturn(KylinConfig.createKylinConfig(new Properties())).when(asyncQueryApplication).getConfig();
     }
 
     @Test

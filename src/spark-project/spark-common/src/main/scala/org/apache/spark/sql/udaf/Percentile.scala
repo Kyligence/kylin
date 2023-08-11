@@ -36,6 +36,11 @@ case class Percentile(aggColumn: Expression,
                       inputAggBufferOffset: Int = 0)
   extends TypedImperativeAggregate[PercentileCounter] with Serializable with Logging {
 
+  // used by spark pushDown
+  def this(aggColumn: Expression, quantile: Expression) {
+    this(aggColumn, PercentileCounter.DEFAULT_PERCENTILE_ACCURACY, Some(quantile), DoubleType)
+  }
+
   override def children: Seq[Expression] = quantile match {
     case None => aggColumn :: Nil
     case Some(q) => aggColumn :: q :: Nil

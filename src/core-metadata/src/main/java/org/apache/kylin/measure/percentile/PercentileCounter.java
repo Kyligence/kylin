@@ -25,6 +25,7 @@ import com.tdunning.math.stats.AVLTreeDigest;
 import com.tdunning.math.stats.TDigest;
 
 public class PercentileCounter implements Serializable {
+    public static final int DEFAULT_PERCENTILE_ACCURACY = 100;
     private static final double INVALID_QUANTILE_RATIO = -1;
 
     double compression;

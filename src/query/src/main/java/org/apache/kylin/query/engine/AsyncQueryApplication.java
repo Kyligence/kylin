@@ -41,6 +41,8 @@ import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
 import org.apache.kylin.metadata.query.util.QueryHistoryUtil;
 import org.apache.kylin.query.util.AsyncQueryUtil;
 import org.apache.kylin.query.util.QueryParams;
+import org.apache.spark.sql.KapFunctions;
+import org.apache.spark.sql.udf.UdfManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +69,9 @@ public class AsyncQueryApplication extends SparkApplication {
         QueryContext queryContext = null;
         QueryParams queryParams = null;
         try {
+            if (getConfig().getPercentileApproxAlgorithm().equalsIgnoreCase("t-digest")) {
+                UdfManager.register(getSparkSession(), KapFunctions.percentileFunction());
+            }
             queryContext = JsonUtil.readValue(getParam(P_QUERY_CONTEXT), QueryContext.class);
             QueryContext.set(queryContext);
             QueryMetricsContext.start(queryContext.getQueryId(), "");
