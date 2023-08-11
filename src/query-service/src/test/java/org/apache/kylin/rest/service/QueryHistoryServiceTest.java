@@ -721,11 +721,11 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         Mockito.doReturn(queryHistoryDAO).when(queryHistoryService).getQueryHistoryDao();
 
         QueryHistoryFiltersResponse response = queryHistoryService.getQueryHistoryModels(request, 10);
-        assertEquals(10, (int) response.getSearchCount());
+        assertEquals(12, (int) response.getSearchCount());
         Assert.assertEquals(8, (int) response.getTotalModelCount());
-        Assert.assertEquals(10, response.getEngines().size() + response.getModels().size());
+        Assert.assertEquals(12, response.getEngines().size() + response.getModels().size());
         Assert.assertEquals("HIVE", response.getEngines().get(0));
-        Assert.assertEquals("CONSTANTS", response.getEngines().get(1));
+        Assert.assertEquals("RDBMS", response.getEngines().get(1));
         Assert.assertEquals("nmodel_basic", response.getModels().get(2));
 
         request.setFilterModelName("nmodel");

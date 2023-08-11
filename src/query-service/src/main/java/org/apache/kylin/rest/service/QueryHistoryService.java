@@ -18,7 +18,11 @@
 
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.common.QueryContext.PUSHDOWN_OBJECT_STORAGE;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.PROJECT_NOT_EXIST;
+import static org.apache.kylin.metadata.query.QueryHistory.EngineType.CONSTANTS;
+import static org.apache.kylin.metadata.query.QueryHistory.EngineType.HIVE;
+import static org.apache.kylin.metadata.query.QueryHistory.EngineType.RDBMS;
 import static org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO.fillZeroForQueryStatistics;
 
 import java.lang.reflect.Field;
@@ -35,6 +39,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -267,26 +272,24 @@ public class QueryHistoryService extends BasicService implements AsyncTaskQueryH
     }
 
     public QueryHistoryFiltersResponse getQueryHistoryModels(QueryHistoryRequest request, int size) {
-        QueryHistoryDAO queryHistoryDAO = getQueryHistoryDao();
-        List<QueryStatistics> queryStatistics = queryHistoryDAO.getQueryHistoriesModelIds(request);
         val dataFlowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), request.getProject());
-        Stream<String> engineStream = queryStatistics.stream().map(QueryStatistics::getEngineType);
         List<NDataflow> models = dataFlowManager.listAllDataflows();
-        Stream<String> modelStream = models.stream()
+        List<String> modelList = models.stream()
                 .sorted(Comparator.comparing(NDataflow::getQueryHitCount, Comparator.reverseOrder()))
-                .map(NDataflow::getModel).map(NDataModel::getAlias);
-        List<String> engineList = filterByName(engineStream, request.getFilterModelName());
-        List<String> modelList = filterByName(modelStream, request.getFilterModelName());
+                .map(NDataflow::getModel).map(NDataModel::getAlias).filter(filterByName(request.getFilterModelName()))
+                .collect(Collectors.toList());
+
+        List<String> engineList = Stream.of(HIVE.name(), RDBMS.name(), CONSTANTS.name(), PUSHDOWN_OBJECT_STORAGE)
+                .filter(filterByName(request.getFilterModelName())).collect(Collectors.toList());
+
         Integer count = engineList.size() + modelList.size();
         return new QueryHistoryFiltersResponse(count, models.size(), engineList,
                 modelList.stream().limit(size).collect(Collectors.toList()));
     }
 
-    private List<String> filterByName(Stream<String> stream, String name) {
-        return stream
-                .filter(alias -> !StringUtils.isEmpty(alias) && (StringUtils.isEmpty(name)
-                        || alias.toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))))
-                .collect(Collectors.toList());
+    private Predicate<String> filterByName(String name) {
+        return alias -> !StringUtils.isEmpty(alias) && (StringUtils.isEmpty(name)
+                || alias.toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT)));
     }
 
     private boolean haveSpaces(String text) {
