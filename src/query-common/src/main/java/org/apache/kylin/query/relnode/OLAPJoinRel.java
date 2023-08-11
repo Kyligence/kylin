@@ -20,6 +20,7 @@ package org.apache.kylin.query.relnode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -55,11 +56,10 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.query.schema.OLAPTable;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 /**
  *
@@ -192,11 +192,14 @@ public class OLAPJoinRel extends EnumerableJoin implements OLAPRel {
             this.context.joins.add(join);
         } else {
             //When join contains subquery, the join-condition fields of fact_table will add into context.
-            Map<TblColRef, TblColRef> joinCol = translateJoinColumn(this.getCondition());
+            Map<TblColRef, Set<TblColRef>> joinCol = translateJoinColumn(this.getCondition());
 
-            for (Map.Entry<TblColRef, TblColRef> columnPair : joinCol.entrySet()) {
-                TblColRef fromCol = (rightHasSubquery ? columnPair.getKey() : columnPair.getValue());
-                this.context.getSubqueryJoinParticipants().add(fromCol);
+            for (Map.Entry<TblColRef, Set<TblColRef>> columnPair : joinCol.entrySet()) {
+                if (rightHasSubquery) {
+                    this.context.getSubqueryJoinParticipants().add(columnPair.getKey());
+                } else {
+                    this.context.getSubqueryJoinParticipants().addAll(columnPair.getValue());
+                }
             }
             joinCol.clear();
         }
@@ -227,19 +230,21 @@ public class OLAPJoinRel extends EnumerableJoin implements OLAPRel {
     }
 
     protected JoinDesc buildJoin(RexCall condition) {
-        Map<TblColRef, TblColRef> joinColumns = translateJoinColumn(condition);
+        Map<TblColRef, Set<TblColRef>> joinColumns = translateJoinColumn(condition);
 
         List<String> pks = new ArrayList<>();
         List<TblColRef> pkCols = new ArrayList<>();
         List<String> fks = new ArrayList<>();
         List<TblColRef> fkCols = new ArrayList<>();
-        for (Map.Entry<TblColRef, TblColRef> columnPair : joinColumns.entrySet()) {
+        for (Map.Entry<TblColRef, Set<TblColRef>> columnPair : joinColumns.entrySet()) {
             TblColRef fromCol = columnPair.getKey();
-            TblColRef toCol = columnPair.getValue();
-            fks.add(fromCol.getName());
-            fkCols.add(fromCol);
-            pks.add(toCol.getName());
-            pkCols.add(toCol);
+            Set<TblColRef> toCols = columnPair.getValue();
+            for (TblColRef toCol : toCols) {
+                fks.add(fromCol.getName());
+                fkCols.add(fromCol);
+                pks.add(toCol.getName());
+                pkCols.add(toCol);
+            }
         }
 
         JoinDesc join = new JoinDesc();
@@ -251,15 +256,15 @@ public class OLAPJoinRel extends EnumerableJoin implements OLAPRel {
         return join;
     }
 
-    protected Map<TblColRef, TblColRef> translateJoinColumn(RexNode condition) {
-        Map<TblColRef, TblColRef> joinColumns = new HashMap<>();
+    protected Map<TblColRef, Set<TblColRef>> translateJoinColumn(RexNode condition) {
+        Map<TblColRef, Set<TblColRef>> joinColumns = new HashMap<>();
         if (condition instanceof RexCall) {
             translateJoinColumn((RexCall) condition, joinColumns);
         }
         return joinColumns;
     }
 
-    void translateJoinColumn(RexCall condition, Map<TblColRef, TblColRef> joinColumns) {
+    void translateJoinColumn(RexCall condition, Map<TblColRef, Set<TblColRef>> joinColumns) {
         SqlKind kind = condition.getOperator().getKind();
         if (kind == SqlKind.AND) {
             for (RexNode operand : condition.getOperands()) {
@@ -273,10 +278,13 @@ public class OLAPJoinRel extends EnumerableJoin implements OLAPRel {
             RexInputRef op1 = (RexInputRef) operands.get(1);
             TblColRef col1 = columnRowType.getColumnByIndex(op1.getIndex());
             // map left => right
-            if (op0.getIndex() < columnRowTypeLeftRightCut)
-                joinColumns.put(col0, col1);
-            else
-                joinColumns.put(col1, col0);
+            if (op0.getIndex() < columnRowTypeLeftRightCut) {
+                Set<TblColRef> rights = joinColumns.computeIfAbsent(col0, key -> new HashSet<>());
+                rights.add(col1);
+            } else {
+                Set<TblColRef> rights = joinColumns.computeIfAbsent(col1, key -> new HashSet<>());
+                rights.add(col0);
+            }
         }
     }
 

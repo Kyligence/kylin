@@ -44,14 +44,13 @@ import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.query.util.ICutContextStrategy;
 import org.apache.kylin.query.util.RexUtils;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.val;
 
@@ -232,9 +231,10 @@ public class KapJoinRel extends OLAPJoinRel implements KapRel {
         if (context != null) {
             collectCtxOlapInfoIfExist();
         } else {
-            Map<TblColRef, TblColRef> joinColumns = translateJoinColumn(this.getCondition());
+            Map<TblColRef, Set<TblColRef>> joinColumns = translateJoinColumn(this.getCondition());
             pushDownJoinColsToSubContexts(joinColumns.entrySet().stream()
-                    .flatMap(e -> Stream.of(e.getKey(), e.getValue())).collect(Collectors.toSet()));
+                    .flatMap(e -> Stream.concat(Stream.of(e.getKey()), e.getValue().stream()))
+                    .collect(Collectors.toSet()));
         }
     }
 
@@ -251,9 +251,10 @@ public class KapJoinRel extends OLAPJoinRel implements KapRel {
             this.context.joins.add(join);
 
         } else {
-            Map<TblColRef, TblColRef> joinColumnsMap = translateJoinColumn(this.getCondition());
+            Map<TblColRef, Set<TblColRef>> joinColumnsMap = translateJoinColumn(this.getCondition());
             Collection<TblColRef> joinCols = joinColumnsMap.entrySet().stream()
-                    .flatMap(e -> Stream.of(e.getKey(), e.getValue())).collect(Collectors.toSet());
+                    .flatMap(e -> Stream.concat(Stream.of(e.getKey()), e.getValue().stream()))
+                    .collect(Collectors.toSet());
             joinCols.stream().flatMap(e -> e.getSourceColumns().stream()).filter(context::belongToContextTables)
                     .forEach(colRef -> {
                         context.getSubqueryJoinParticipants().add(colRef);
