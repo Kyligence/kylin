@@ -39,6 +39,7 @@ public class BuildAppInitializer implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         EventBusFactory.getInstance().registerService(jobService);
+        EventBusFactory.getInstance().register(jobService, false);
         EventBusFactory.getInstance().registerService(modelBuildService);
     }
 }

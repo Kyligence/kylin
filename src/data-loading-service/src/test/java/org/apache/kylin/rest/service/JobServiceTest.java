@@ -69,6 +69,7 @@ import org.apache.kylin.common.persistence.metadata.Epoch;
 import org.apache.kylin.common.persistence.metadata.EpochStore;
 import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.scheduler.EpochStartedNotifier;
 import org.apache.kylin.common.util.ClassUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.LogOutputTestCase;
@@ -189,9 +190,6 @@ public class JobServiceTest extends LogOutputTestCase {
 
     @Mock
     private ProjectService projectService = Mockito.spy(ProjectService.class);
-
-    @Mock
-    private ApplicationEvent applicationEvent = Mockito.mock(ContextClosedEvent.class);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -1478,24 +1476,43 @@ public class JobServiceTest extends LogOutputTestCase {
 
     @Test
     public void testRestartJob_AddAndRemoveFrozenJob() {
+        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
+        try {
+            NExecutableManager manager = NExecutableManager.getInstance(getTestConfig(), project);
+
+            val job = new DefaultExecutable();
+            job.setProject(project);
+            manager.addJob(job);
+
+            scheduler.init(new JobEngineConfig(getTestConfig()));
+
+            try (MockedStatic<NDefaultScheduler> mockScheduler = Mockito.mockStatic(NDefaultScheduler.class)) {
+                mockScheduler.when(() -> NDefaultScheduler.getInstance(project)).thenReturn(scheduler);
+                UnitOfWork.doInTransactionWithRetry(() -> {
+                    jobService.updateJobStatus(job.getId(), project, "RESTART");
+                    Assert.assertTrue(manager.isFrozenJob(job.getId()));
+                    return null;
+                }, project);
+
+                Assert.assertFalse(manager.isFrozenJob(job.getId()));
+            }
+        } finally {
+            scheduler.forceShutdown();
+        }
+    }
+
+    @Test
+    public void testFrozenJobWithoutInitDefaultScheduler() {
         NExecutableManager manager = NExecutableManager.getInstance(getTestConfig(), project);
 
         val job = new DefaultExecutable();
         job.setProject(project);
         manager.addJob(job);
-
         NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        scheduler.init(new JobEngineConfig(getTestConfig()));
-
+        scheduler.forceShutdown();
         try (MockedStatic<NDefaultScheduler> mockScheduler = Mockito.mockStatic(NDefaultScheduler.class)) {
             mockScheduler.when(() -> NDefaultScheduler.getInstance(project)).thenReturn(scheduler);
-            UnitOfWork.doInTransactionWithRetry(() -> {
-                jobService.updateJobStatus(job.getId(), project, "RESTART");
-                Assert.assertTrue(manager.isFrozenJob(job.getId()));
-                return null;
-            }, project);
-
-            Assert.assertFalse(manager.isFrozenJob(job.getId()));
+            Assert.assertTrue(manager.isFrozenJob(job.getId()));
         }
     }
 
@@ -2009,53 +2026,16 @@ public class JobServiceTest extends LogOutputTestCase {
 
     @Test
     public void tstOnApplicationEvent() {
-        final String PROJECT1 = "test1";
-        final String PROJECT2 = "test2";
-        final String PROJECT3 = "test3";
-        KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
-        NExecutableManager manager1 = NExecutableManager.getInstance(kylinConfig, PROJECT2);
+        final String project1 = "test1";
+        final String project2 = "test2";
+        final String project3 = "test3";
+        ExecutablePO result = getInitJob(project1, project2, project3);
 
-        Epoch e1 = new Epoch();
-        e1.setEpochTarget(PROJECT1);
-        e1.setCurrentEpochOwner("owner1");
-
-        Epoch e2 = new Epoch();
-        e2.setEpochTarget(PROJECT2);
-        e2.setCurrentEpochOwner("owner2");
-
-        Epoch e3 = new Epoch();
-        e3.setEpochTarget(PROJECT3);
-        e3.setCurrentEpochOwner("owner2");
-
-        try {
-            EpochStore.getEpochStore(kylinConfig).insertBatch(Arrays.asList(e1, e2, e3));
-        } catch (Exception e) {
-            throw new RuntimeException("cannnot init epoch store!");
-        }
-
-        EpochManager epochManager = EpochManager.getInstance();
-        epochManager.setIdentity("owner2");
-
-        val job = new DefaultExecutable();
-        job.setProject(PROJECT2);
-        job.setJobType(JobTypeEnum.INDEX_BUILD);
-
-        val executable1 = new SucceedDagTestExecutable();
-        executable1.setProject(PROJECT2);
-        job.addTask(executable1);
-
-        val executable2 = new SucceedDagTestExecutable();
-        executable2.setProject(PROJECT2);
-        job.addTask(executable2);
-
-        executable1.setNextSteps(Sets.newHashSet(executable2.getId()));
-        executable2.setPreviousStep(executable1.getId());
-
-        val executablePO = NExecutableManager.toPO(job, PROJECT2);
-        manager1.addJob(executablePO);
-        manager1.updateJobOutput(job.getId(), ExecutableState.RUNNING);
-
+        NExecutableManager manager = NExecutableManager.getInstance(getTestConfig(), project2);
+        ApplicationEvent applicationEvent = Mockito.mock(ContextClosedEvent.class);
         jobService.onApplicationEvent(applicationEvent);
+        var beforeCancel = manager.getJob(result.getId());
+        Assert.assertEquals(ExecutableState.RUNNING, beforeCancel.getStatus());
     }
 
     @Test
@@ -2110,5 +2090,73 @@ public class JobServiceTest extends LogOutputTestCase {
         ExecutableState jobState = ExecutableState.RUNNING;
         ExecutableStepResponse result = jobService.parseToExecutableStep(task, null, new HashMap<>(), jobState);
         Assert.assertSame(PENDING, result.getStatus());
+    }
+
+    @Test
+    public void onEpochStartedCancelRemoteJob() {
+        final String project1 = "test11";
+        final String project2 = "test22";
+        final String project3 = "test33";
+        ExecutablePO result = getInitJob(project1, project2, project3);
+
+        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project2);
+        try {
+            jobService.cancelOrphanRemoteJobOnEpochStarted(new EpochStartedNotifier());
+            NExecutableManager manager = NExecutableManager.getInstance(getTestConfig(), project2);
+            var beforeCancel = manager.getJob(result.getId());
+            Assert.assertTrue(beforeCancel.getStatus().isProgressing());
+
+            scheduler.init(new JobEngineConfig(getTestConfig()));
+            jobService.cancelOrphanRemoteJobOnEpochStarted(new EpochStartedNotifier());
+            beforeCancel = manager.getJob(result.getId());
+            Assert.assertTrue(beforeCancel.getStatus().isProgressing());
+        } finally {
+            scheduler.forceShutdown();
+        }
+    }
+
+    private static ExecutablePO getInitJob(String project1, String project2, String project3) {
+        NExecutableManager manager1 = NExecutableManager.getInstance(getTestConfig(), project2);
+
+        Epoch e1 = new Epoch();
+        e1.setEpochTarget(project1);
+        e1.setCurrentEpochOwner("owner1");
+
+        Epoch e2 = new Epoch();
+        e2.setEpochTarget(project2);
+        e2.setCurrentEpochOwner("owner2");
+
+        Epoch e3 = new Epoch();
+        e3.setEpochTarget(project3);
+        e3.setCurrentEpochOwner("owner2");
+
+        try {
+            EpochStore.getEpochStore(getTestConfig()).insertBatch(Arrays.asList(e1, e2, e3));
+        } catch (Exception e) {
+            throw new RuntimeException("cannnot init epoch store!");
+        }
+
+        EpochManager epochManager = EpochManager.getInstance();
+        epochManager.setIdentity("owner2");
+
+        val job = new DefaultExecutable();
+        job.setProject(project2);
+        job.setJobType(JobTypeEnum.INDEX_BUILD);
+
+        val executable1 = new SucceedDagTestExecutable();
+        executable1.setProject(project2);
+        job.addTask(executable1);
+
+        val executable2 = new SucceedDagTestExecutable();
+        executable2.setProject(project2);
+        job.addTask(executable2);
+
+        executable1.setNextSteps(Sets.newHashSet(executable2.getId()));
+        executable2.setPreviousStep(executable1.getId());
+
+        val executablePO = NExecutableManager.toPO(job, project2);
+        manager1.addJob(executablePO);
+        manager1.updateJobOutput(job.getId(), ExecutableState.RUNNING);
+        return executablePO;
     }
 }
