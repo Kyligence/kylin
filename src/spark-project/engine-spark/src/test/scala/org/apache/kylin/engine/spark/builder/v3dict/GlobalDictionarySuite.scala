@@ -83,7 +83,7 @@ class GlobalDictionarySuite extends SparderBaseFunSuite with LocalMetadata with 
     checkAnswer(originalDF, dictDF)
   }
 
-  test("KE-35145 Test Concurrent Build Dictionary") {
+  test("KE-35145 & KE-42401 Test Concurrent Build Dictionary") {
     val project = "p1"
     val dbName = "db1"
     val tableName = "t1"
@@ -101,7 +101,7 @@ class GlobalDictionarySuite extends SparderBaseFunSuite with LocalMetadata with 
       ec.submit(buildDictTask)
     }
     ec.shutdown()
-    ec.awaitTermination(2, TimeUnit.MINUTES)
+    ec.awaitTermination(5, TimeUnit.MINUTES)
 
     val originalDF = spark.sql(
       """
@@ -110,8 +110,10 @@ class GlobalDictionarySuite extends SparderBaseFunSuite with LocalMetadata with 
       """.stripMargin)
 
     val dictPath: String = DictionaryBuilder.getDictionaryPath(context)
-    val dictResultDF = DeltaTable.forPath(dictPath).toDF.agg(count(col("dict_key")))
-    checkAnswer(originalDF, dictResultDF)
+    val dictResultDFKey = DeltaTable.forPath(dictPath).toDF.select(countDistinct("dict_key"))
+    val dictResultDFValue = DeltaTable.forPath(dictPath).toDF.select(countDistinct("dict_value"))
+    checkAnswer(originalDF, dictResultDFKey)
+    checkAnswer(originalDF, dictResultDFValue)
   }
 
   test("KE-35145 Test the v3 dictionary with random data") {
@@ -278,7 +280,7 @@ class GlobalDictionarySuite extends SparderBaseFunSuite with LocalMetadata with 
     new Runnable {
       override def run(): Unit = {
         val encodeColName: String = context.tableName + NSparkCubingUtil.SEPARATOR + context.columnName
-        val originalDF = genRandomData(spark, encodeColName, 100, 1)
+        val originalDF = genRandomData(spark, encodeColName, 20, 1)
         val dictDF = genDataWithWrapEncodeCol(context.dbName, encodeColName, originalDF)
         DeltaTable.forName("original")
           .merge(originalDF, "1 != 1")
