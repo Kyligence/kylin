@@ -19,19 +19,23 @@
 package io.kyligence.kap.metadata.recommendation.entity;
 
 import java.io.Serializable;
+import java.util.Locale;
 import java.util.Map;
 
+import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.metadata.model.ColumnDesc;
-import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.NDataModel;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
-import io.kyligence.kap.metadata.recommendation.util.RawRecUtil;
+import org.apache.kylin.metadata.model.TableRef;
+import org.apache.kylin.metadata.model.TblColRef;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
+import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
+import io.kyligence.kap.metadata.recommendation.util.RawRecUtil;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,11 +43,20 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Setter
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
+@NoArgsConstructor
 public class DimensionRecItemV2 extends RecItemV2 implements Serializable {
     @JsonProperty("column")
     private NDataModel.NamedColumn column;
     @JsonProperty("data_type")
     private String dataType;
+    
+    public DimensionRecItemV2(NDataModel.NamedColumn column, TblColRef tblColRef, String uniqueContent) {
+        setColumn(column);
+        setDataType(tblColRef.getDatatype());
+        setCreateTime(System.currentTimeMillis());
+        setUniqueContent(uniqueContent);
+        setUuid(String.format(Locale.ROOT, "dimension_%s", RandomUtil.randomUUIDStr()));
+    }
 
     public int[] genDependIds(Map<String, RawRecItem> uniqueRecItemMap, String content, NDataModel dataModel) {
         if (uniqueRecItemMap.containsKey(content)) {

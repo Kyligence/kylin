@@ -1296,6 +1296,15 @@ public class NDataModel extends RootPersistentEntity {
         return Collections.unmodifiableSet(ccColumnNames);
     }
 
+    public Map<String, ComputedColumnDesc> getCcMap() {
+        Map<String, ComputedColumnDesc> ccMap = Maps.newHashMap();
+        getComputedColumnDescs().forEach(cc -> {
+            String aliasDotName = cc.getTableAlias() + "." + cc.getColumnName();
+            ccMap.putIfAbsent(aliasDotName, cc);
+        });
+        return ccMap;
+    }
+
     public int getMaxColumnId() {
         return this.getAllNamedColumns().stream() //
                 .mapToInt(NDataModel.NamedColumn::getId) //
