@@ -55,6 +55,7 @@ import org.apache.kylin.common.util.BufferedLogger;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.StringHelper;
 import org.apache.kylin.helper.MetadataToolHelper;
+import org.apache.kylin.helper.RoutineToolHelper;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
@@ -385,5 +386,13 @@ public class SystemService extends BasicService {
             }
         }
         return result;
+    }
+
+    public void cleanSparderEventLog() {
+        val config = KylinConfig.getInstanceFromEnv();
+        if (config.isQueryNodeOnly()) {
+            logger.info("Clean current sparder event log for RPC");
+            RoutineToolHelper.cleanEventLog(true, true, false);
+        }
     }
 }

@@ -26,12 +26,11 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.metadata.sourceusage.SourceUsageManager;
 import org.apache.kylin.metadata.sourceusage.SourceUsageRecord;
 
-public class SourceUsageCleaner {
+public class SourceUsageCleaner implements GarbageCleaner {
 
-    public void cleanup() {
-
+    @Override
+    public void execute() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-
         long expirationTime = config.getSourceUsageSurvivalTimeThreshold();
 
         SourceUsageManager sourceUsageManager = SourceUsageManager.getInstance(config);

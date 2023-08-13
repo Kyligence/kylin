@@ -103,7 +103,7 @@ public class IndexCleaner extends MetadataCleaner {
     }
 
     @Override
-    public void beforeCleanup() {
+    public void beforeExecute() {
         if (MapUtils.isEmpty(needOptAggressivelyModels)) {
             return;
         }
@@ -113,7 +113,7 @@ public class IndexCleaner extends MetadataCleaner {
     }
 
     @Override
-    public void cleanup() {
+    public void execute() {
         if (MapUtils.isNotEmpty(needOptAggressivelyModels)) {
             cleanUpIndexAggressively();
         }
@@ -135,7 +135,7 @@ public class IndexCleaner extends MetadataCleaner {
     }
 
     @Override
-    public void afterCleanup() {
+    public void afterExecute() {
         if (MapUtils.isEmpty(needOptAggressivelyModels)) {
             return;
         }

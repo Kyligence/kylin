@@ -23,8 +23,6 @@ import static org.apache.kylin.common.exception.code.ErrorCodeTool.PARAMETER_NOT
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.PARAMETER_TIMESTAMP_NOT_SPECIFY;
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.PATH_NOT_EXISTS;
 import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.datasourceParameters;
-import static org.apache.kylin.tool.garbage.StorageCleaner.ANSI_RED;
-import static org.apache.kylin.tool.garbage.StorageCleaner.ANSI_RESET;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -47,23 +45,23 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.util.ExecutableApplication;
-import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.common.util.OptionsHelper;
-import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.common.constant.Constant;
+import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.AuditLog;
 import org.apache.kylin.common.persistence.metadata.JdbcAuditLogStore;
+import org.apache.kylin.common.util.ExecutableApplication;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.OptionBuilder;
+import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.tool.constant.StringConstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 
@@ -116,7 +114,7 @@ public class AuditLogTool extends ExecutableApplication {
             val tool = new AuditLogTool();
             tool.execute(args);
         } catch (Exception e) {
-            System.out.println(ANSI_RED + "Audit log task failed." + ANSI_RESET);
+            System.out.println(StringConstant.ANSI_RED + "Audit log task failed." + StringConstant.ANSI_RESET);
             logger.error("fail execute audit log tool: ", e);
             Unsafe.systemExit(1);
         }

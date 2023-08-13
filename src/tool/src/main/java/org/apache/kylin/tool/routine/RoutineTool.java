@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.OptionsHelper;
@@ -33,8 +34,8 @@ import org.apache.kylin.helper.RoutineToolHelper;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.tool.MaintainModeTool;
+import org.apache.kylin.tool.constant.StringConstant;
 import org.apache.kylin.tool.garbage.CleanTaskExecutorService;
-import org.apache.kylin.tool.garbage.StorageCleaner;
 import org.apache.kylin.tool.util.ToolMainWrapper;
 
 import io.kyligence.kap.metadata.epoch.EpochManager;
@@ -132,6 +133,7 @@ public class RoutineTool extends ExecutableApplication {
                 RoutineToolHelper.cleanMeta(projectsToCleanup);
             }
             cleanStorage();
+            cleanEventLogs();
         } catch (Exception e) {
             log.error("Failed to execute routintool", e);
             throw e;
@@ -141,13 +143,30 @@ public class RoutineTool extends ExecutableApplication {
     public void cleanStorage() {
         try {
             System.out.println("Start to cleanup HDFS");
-            CleanTaskExecutorService.getInstance().cleanStorageForRoutine(
-                storageCleanup, Arrays.asList(projects), requestFSRate, retryTimes);
+            CleanTaskExecutorService.getInstance().cleanStorageForRoutine(storageCleanup, Arrays.asList(projects),
+                    requestFSRate, retryTimes);
             System.out.println("cleanup HDFS finished");
         } catch (Exception e) {
-            System.out.println(StorageCleaner.ANSI_RED
-                + "cleanup HDFS failed. Detailed Message is at ${KYLIN_HOME}/logs/shell.stderr"
-                + StorageCleaner.ANSI_RESET);
+            System.out.println(StringConstant.ANSI_RED
+                    + "cleanup HDFS failed. Detailed Message is at ${KYLIN_HOME}/logs/shell.stderr"
+                    + StringConstant.ANSI_RESET);
+        }
+    }
+
+    protected void cleanEventLogs() {
+        try {
+            if (!ArrayUtils.isEmpty(projects)) {
+                System.out.println("The event log will not be cleaned when the projects is specified");
+                return;
+            }
+
+            System.out.println("Start to clean all event logs");
+            RoutineToolHelper.cleanEventLog(storageCleanup, true, true);
+            System.out.println("Clean all event logs finished");
+        } catch (Exception e) {
+            System.out.println(StringConstant.ANSI_RED
+                    + "Clean all event logs failed. Detailed Message is at ${KYLIN_HOME}/logs/shell.stderr"
+                    + StringConstant.ANSI_RESET);
         }
     }
 

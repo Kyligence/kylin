@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -57,6 +58,12 @@ import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.ShellException;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import org.apache.kylin.guava30.shaded.common.util.concurrent.RateLimiter;
+import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.metadata.cube.model.LayoutPartition;
@@ -69,14 +76,12 @@ import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.query.util.QueryHisStoreUtil;
+import org.apache.kylin.query.util.ExtractFactory;
+import org.apache.kylin.tool.constant.StringConstant;
 import org.apache.kylin.tool.util.ProjectTemporaryTableCleanerHelper;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
-import org.apache.kylin.guava30.shaded.common.util.concurrent.RateLimiter;
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -89,13 +94,7 @@ import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class StorageCleaner {
-    public static final String ANSI_RED = "\u001B[31m";
-    public static final String ANSI_GREEN = "\u001B[32m";
-    public static final String ANSI_YELLOW = "\u001B[33m";
-    public static final String ANSI_BLUE = "\u001B[34m";
-    public static final String ANSI_RESET = "\u001B[0m";
-
+public class StorageCleaner implements GarbageCleaner {
     private final boolean cleanup;
     private final boolean timeMachineEnabled;
 
@@ -165,7 +164,8 @@ public class StorageCleaner {
 
     private Set<StorageItem> allFileSystems = Sets.newHashSet();
 
-    public void execute() throws Exception {
+    @Override
+    public void execute() throws InterruptedException {
         long start = System.currentTimeMillis();
         val config = KylinConfig.getInstanceFromEnv();
         long startTime = System.currentTimeMillis();
@@ -195,8 +195,8 @@ public class StorageCleaner {
             log.debug("start to collect HDFS from {}", allFileSystem.getPath());
             try {
                 collectFromHDFS(allFileSystem);
-            } catch (FileNotFoundException e) {
-                log.warn("No garbage files collected from {}", allFileSystem.getPath());
+            } catch (IOException e) {
+                log.warn("No garbage files collected from {}", allFileSystem.getPath(), e);
             }
             log.debug("folder {} is collected，detailed -> {}", allFileSystem.getPath(), allFileSystems);
         }
@@ -221,8 +221,8 @@ public class StorageCleaner {
                 try {
                     log.debug("start to add item {}", path);
                     addItem(item.getFileSystemDecorator(), path, protectionTime);
-                } catch (FileNotFoundException e) {
-                    log.warn("{} not found", path);
+                } catch (IOException e) {
+                    log.warn("{} not found", path, e);
                 }
             }
         }
@@ -231,21 +231,25 @@ public class StorageCleaner {
     }
 
     public void printConsole(boolean success, long duration) {
-        System.out.println(ANSI_BLUE + "Kyligence Enterprise garbage report: (cleanup=" + cleanup + ")" + ANSI_RESET);
+        System.out.println(StringConstant.ANSI_BLUE + "Kyligence Enterprise garbage report: (cleanup=" + cleanup + ")"
+                + StringConstant.ANSI_RESET);
         for (StorageItem item : outdatedItems) {
             System.out.println("  Storage File: " + item.getPath());
         }
         String jobName = "Storage GC cleanup job ";
         if (!cleanup) {
-            System.out.println(ANSI_BLUE + "Dry run mode, no data is deleted." + ANSI_RESET);
+            System.out.println(
+                    StringConstant.ANSI_BLUE + "Dry run mode, no data is deleted." + StringConstant.ANSI_RESET);
             jobName = "Storage GC check job ";
         }
         if (!success) {
-            System.out.println(ANSI_RED + jobName + "FAILED." + ANSI_RESET);
-            System.out.println(ANSI_RED + jobName + "finished in " + duration + " ms." + ANSI_RESET);
+            System.out.println(StringConstant.ANSI_RED + jobName + "FAILED." + StringConstant.ANSI_RESET);
+            System.out.println(
+                    StringConstant.ANSI_RED + jobName + "finished in " + duration + " ms." + StringConstant.ANSI_RESET);
         } else {
-            System.out.println(ANSI_GREEN + jobName + "SUCCEED." + ANSI_RESET);
-            System.out.println(ANSI_GREEN + jobName + "finished in " + duration + " ms." + ANSI_RESET);
+            System.out.println(StringConstant.ANSI_GREEN + jobName + "SUCCEED." + StringConstant.ANSI_RESET);
+            System.out.println(StringConstant.ANSI_GREEN + jobName + "finished in " + duration + " ms."
+                    + StringConstant.ANSI_RESET);
         }
 
     }
@@ -267,7 +271,7 @@ public class StorageCleaner {
         new ProjectTemporaryTableCleaner(project).execute();
     }
 
-    public boolean cleanup() throws Exception {
+    public boolean cleanup() throws InterruptedException {
         boolean success = true;
         if (cleanup) {
             Stats stats = new Stats() {
@@ -535,7 +539,7 @@ public class StorageCleaner {
         return getDataLayoutDir(dataLayout) + "/" + dataPartition.getBucketId();
     }
 
-    private void collectFromHDFS(StorageItem item) throws Exception {
+    private void collectFromHDFS(StorageItem item) throws IOException {
         val projectFolders = item.getFileSystemDecorator().listStatus(new Path(item.getPath()),
                 path -> !path.getName().startsWith("_")
                         && (this.projectNames.isEmpty() || this.projectNames.contains(path.getName())));
@@ -575,7 +579,8 @@ public class StorageCleaner {
                             .forEach(x -> slot.add(new FileTreeNode(x.getPath().getName(), node)));
                 }
             }
-            projectNode.getBuckets().addAll(collectMultiPartitions(item, projectNode.getName(), projectNode.getLayouts()));
+            projectNode.getBuckets()
+                    .addAll(collectMultiPartitions(item, projectNode.getName(), projectNode.getLayouts()));
         }
 
     }
@@ -839,6 +844,135 @@ public class StorageCleaner {
 
         public boolean hasError() {
             return !errorItems.isEmpty();
+        }
+    }
+
+    /**
+     * Sparder history dir hierarchy is
+     *
+     * /${kylin.storage.columnar.spark-conf.spark.eventLog.dir}
+     * |--/${hostName_port}
+     *    |--/{eventlog_v2_${appid}#${timestamp}}
+     *    |  +--/${events_${fileindex}_${appid}_${starttime}_${endtime}}
+     */
+
+    @Slf4j
+    public static class EventLogCleaner {
+        private static final KylinConfig KYLIN_CONFIG = KylinConfig.getInstanceFromEnv();
+        private static final FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        private static final String FIRST_EVENT_LOG_FILE_PREFIX = "events_1_";
+        private static final String SPARK_EVENTLOG_DIR = "spark.eventLog.dir";
+        private long queryExpirationTime;
+        private long buildExpirationTime;
+        private final boolean cleanup;
+
+        private void init() {
+            long eventLogCleanStartTime = System.currentTimeMillis();
+            Long minQueryHistoryTime = QueryHisStoreUtil.getQueryHistoryMinQueryTime();
+            long cleanTime = eventLogCleanStartTime - KYLIN_CONFIG.getQueryHistorySurvivalThreshold();
+            queryExpirationTime = Objects.isNull(minQueryHistoryTime) ? cleanTime
+                    : Math.min(cleanTime, minQueryHistoryTime);
+            log.info("eventLogCleanStartTime is {}, queryHistorySurvivalThreshold is {}ms, minQueryHistoryTime is {}, queryExpirationTime is {}",
+                    eventLogCleanStartTime, KYLIN_CONFIG.getQueryHistorySurvivalThreshold(), minQueryHistoryTime,
+                    queryExpirationTime);
+
+            long earliest = Long.MAX_VALUE;
+            NProjectManager projectManager = NProjectManager.getInstance(KYLIN_CONFIG);
+            for (ProjectInstance prj : projectManager.listAllProjects()) {
+                NExecutableManager executableManager = NExecutableManager.getInstance(KYLIN_CONFIG, prj.getName());
+                for (AbstractExecutable executable : executableManager.getAllExecutables()) {
+                    if (executable.getCreateTime() < earliest) {
+                        earliest = executable.getCreateTime();
+                    }
+                }
+            }
+
+            buildExpirationTime = Math.min(eventLogCleanStartTime - KYLIN_CONFIG.getExecutableSurvivalTimeThreshold(),
+                    earliest);
+            log.info("eventLogCleanStartTime is {}, executableSurvivalTimeThreshold is {}ms, earliest executable's createTime is {}, buildExpirationTime is {}",
+                    eventLogCleanStartTime, KYLIN_CONFIG.getExecutableSurvivalTimeThreshold(), earliest,
+                    buildExpirationTime);
+        }
+
+        public EventLogCleaner(boolean cleanup) {
+            this.cleanup = cleanup;
+            init();
+        }
+
+        public void execute() {
+            if (cleanup) {
+                cleanCurrentSparderEventLog();
+                cleanSparkEventLogs();
+            }
+        }
+
+        public void cleanCurrentSparderEventLog() {
+            log.info("Start to clean sparder event log");
+            String currentSparderEvenLogDir = ExtractFactory.create().getSparderEvenLogDir();
+            clean(currentSparderEvenLogDir, queryExpirationTime);
+            log.info("End to clean sparder event log");
+        }
+
+        private void cleanSparkEventLogs() {
+            log.info("Start to clean spark event log");
+            String allSparkEventLogDir = KYLIN_CONFIG.getSparkConfigOverride().get(SPARK_EVENTLOG_DIR).trim();
+            clean(allSparkEventLogDir, buildExpirationTime);
+
+            EpochManager epochManager = EpochManager.getInstance();
+            NProjectManager prjManager = NProjectManager.getInstance(KYLIN_CONFIG);
+            prjManager.listAllProjects().forEach(project -> {
+                if (!epochManager.checkEpochOwner(project.getName())) {
+                    return;
+                }
+                String sparkEventLogDir = project.getConfig().getExtendedOverrides()
+                        .get("kylin.engine.spark-conf.spark.eventLog.dir");
+                if (!StringUtils.isEmpty(sparkEventLogDir)) {
+                    clean(sparkEventLogDir, buildExpirationTime);
+                }
+            });
+            log.info("End to clean spark event log");
+        }
+
+        // for RoutineTool & FastRoutineTool
+        public void cleanAllEventLog() {
+            log.info("Start to clean all event log");
+            String rootSparderEvenLogDir = KapConfig.wrap(KYLIN_CONFIG).getSparkConf().get(SPARK_EVENTLOG_DIR);
+            try {
+                Arrays.stream(fs.listStatus(new Path(rootSparderEvenLogDir)))
+                        .forEach(fileStatus -> clean(fileStatus.getPath().toString(), queryExpirationTime));
+            } catch (IOException e) {
+                log.warn("Failed to clean all sparder event log of [{}]", rootSparderEvenLogDir, e);
+            }
+
+            cleanSparkEventLogs();
+            log.info("End to clean all event log");
+        }
+
+        private void clean(String dir, long expirationTime) {
+            Path path = new Path(dir);
+            try {
+                FileStatus[] fileStatuses = fs.listStatus(path);
+                for (FileStatus fileStatus : fileStatuses) {
+                    deleteEventLogFile(fileStatus, expirationTime);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to clean the event log of [{}]", path.getName(), e);
+            }
+        }
+
+        private void deleteEventLogFile(FileStatus fileStatus, long expirationTime) throws IOException {
+            if (fileStatus.getModificationTime() <= expirationTime
+                    && !fileStatus.getPath().getName().startsWith(FIRST_EVENT_LOG_FILE_PREFIX)) {
+                log.info("Delete event log file: {}", fileStatus.getPath().toString());
+                fs.delete(fileStatus.getPath(), true);
+                return;
+            }
+
+            if (fileStatus.isFile()) {
+                return;
+            }
+
+            clean(fileStatus.getPath().toString(), expirationTime);
         }
     }
 }

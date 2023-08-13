@@ -144,6 +144,8 @@ public class QueryNodeFilter extends BaseFilter {
         notRoutePostApiSet.add("/kylin/api/metastore/cleanup_storage/tenant_node");
         notRoutePostApiSet.add("/kylin/api/metastore/cleanup_storage");
 
+        notRouteDeleteApiSet.add("/kylin/api/system/clean_sparder_event_log");
+
         notRouteDeleteApiSet.add("/kylin/api/async_query/tenant_node");
 
         routeMultiTenantModeFilterApiSet.add("/kylin/api/jobs/{jobId}/resume");

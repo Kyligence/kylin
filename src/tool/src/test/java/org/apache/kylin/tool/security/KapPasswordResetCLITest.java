@@ -30,7 +30,7 @@ import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.metadata.jdbc.AuditLogRowMapper;
 import org.apache.kylin.common.util.LogOutputTestCase;
 import org.apache.kylin.rest.constant.Constant;
-import org.apache.kylin.tool.garbage.StorageCleaner;
+import org.apache.kylin.tool.constant.StringConstant;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -94,10 +94,10 @@ public class KapPasswordResetCLITest extends LogOutputTestCase {
         Assert.assertFalse(pwdEncoder.matches("KYLIN", afterManager.get(user.getUsername()).getPassword()));
         Assert.assertTrue(output.toString(Charset.defaultCharset().name()).startsWith("The metadata backup path is"));
         Assert.assertTrue(output.toString(Charset.defaultCharset().name())
-            .contains(StorageCleaner.ANSI_RED + "Reset password of [" + StorageCleaner.ANSI_RESET + "ADMIN"
-                + StorageCleaner.ANSI_RED + "] succeed. The password is "));
+                .contains(StringConstant.ANSI_RED + "Reset password of [" + StringConstant.ANSI_RESET + "ADMIN"
+                        + StringConstant.ANSI_RED + "] succeed. The password is "));
         Assert.assertTrue(output.toString(Charset.defaultCharset().name())
-                .endsWith("Please keep the password properly." + StorageCleaner.ANSI_RESET + "\n"));
+                .endsWith("Please keep the password properly." + StringConstant.ANSI_RESET + "\n"));
 
         val url = getTestConfig().getMetadataUrl();
         val jdbcTemplate = getJdbcTemplate();

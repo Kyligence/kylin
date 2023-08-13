@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.TimeUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.junit.TimeZoneTestRunner;
 import org.apache.kylin.metadata.query.util.QueryHisStoreUtil;
 import org.junit.After;
@@ -34,8 +35,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 @RunWith(TimeZoneTestRunner.class)
 public class RDBMSQueryHistoryDaoTest extends NLocalFileMetadataTestCase {
@@ -533,6 +532,17 @@ public class RDBMSQueryHistoryDaoTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    public void testGetQueryHistoryMinQueryTime() {
+        QueryMetrics queryMetrics1 = createQueryMetrics(1580311512000L, 1L, true, PROJECT, true);
+        QueryMetrics queryMetrics2 = createQueryMetrics(1580397912000L, 2L, false, PROJECT, true);
+        queryHistoryDAO.insert(queryMetrics1);
+        queryHistoryDAO.insert(queryMetrics2);
+
+        Long queryHistoryMinQueryTime = QueryHisStoreUtil.getQueryHistoryMinQueryTime();
+        Assert.assertEquals(1580311512000L, queryHistoryMinQueryTime.longValue());
+    }
+
+    @Test
     public void testGetRetainTime() throws Exception {
         long retainTime = RDBMSQueryHistoryDAO.getRetainTime();
         long currentTime = System.currentTimeMillis();
@@ -840,8 +850,7 @@ public class RDBMSQueryHistoryDaoTest extends NLocalFileMetadataTestCase {
             realizationMetrics.setProjectName(project);
             realizationMetrics.setModelId("82fa7671-a935-45f5-8779-85703601f49a.json");
 
-            realizationMetrics.setSnapshots(
-                    Lists.newArrayList("DEFAULT.TEST_KYLIN_ACCOUNT", "DEFAULT.TEST_COUNTRY"));
+            realizationMetrics.setSnapshots(Lists.newArrayList("DEFAULT.TEST_KYLIN_ACCOUNT", "DEFAULT.TEST_COUNTRY"));
 
             List<QueryMetrics.RealizationMetrics> realizationMetricsList = Lists.newArrayList();
             realizationMetricsList.add(realizationMetrics);

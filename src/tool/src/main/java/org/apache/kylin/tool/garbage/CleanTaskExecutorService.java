@@ -37,10 +37,10 @@ import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.util.DaemonThreadFactory;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.tool.constant.StringConstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,9 +125,7 @@ public class CleanTaskExecutorService implements Closeable {
             storageCleaner.withTag(tag);
             storageCleaner.withTraceId(traceId);
         } catch (Exception e) {
-            LOGGER.error(
-                    "Failed to create storage cleaner for projects: {}. TraceId: {}", projects, traceId,
-                    e);
+            LOGGER.error("Failed to create storage cleaner for projects: {}. TraceId: {}", projects, traceId, e);
         }
         return storageCleaner;
     }
@@ -141,9 +139,9 @@ public class CleanTaskExecutorService implements Closeable {
                 LOGGER.info("HDFS files cleaning task has successfully completed. TraceId: {}", cleaner.getTraceId());
                 return;
             }
-            LOGGER.error(StorageCleaner.ANSI_RED
+            LOGGER.error(StringConstant.ANSI_RED
                     + "cleanup HDFS failed. Detailed Message is at ${KYLIN_HOME}/logs/shell.stderr"
-                    + StorageCleaner.ANSI_RESET + ". TraceId: " + cleaner.getTraceId(), t);
+                    + StringConstant.ANSI_RESET + ". TraceId: " + cleaner.getTraceId(), t);
         });
         return f;
     }
@@ -170,8 +168,8 @@ public class CleanTaskExecutorService implements Closeable {
             protected void doRun() {
                 try {
                     cleaner.execute();
-                } catch (Exception e) {
-                    throw new KylinRuntimeException(e);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
             }
         }, timeout, timeUnit);

@@ -28,20 +28,20 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.rest.constant.Constant;
-import org.apache.kylin.util.PasswordEncodeFactory;
 import org.apache.kylin.common.persistence.metadata.PersistException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.Unsafe;
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
-import org.apache.kylin.tool.garbage.StorageCleaner;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import org.apache.kylin.rest.constant.Constant;
+import org.apache.kylin.tool.constant.StringConstant;
+import org.apache.kylin.util.PasswordEncodeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import io.kyligence.kap.metadata.user.ManagedUser;
+import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 
 public class AdminUserInitCLI {
@@ -100,13 +100,13 @@ public class AdminUserInitCLI {
                     ByteSource.wrap(JsonUtil.writeValueAsBytes(managedUser)), System.currentTimeMillis(), 0L);
             metaStore.putResource(rawResource, null, UnitOfWork.DEFAULT_EPOCH_ID);
 
-            String blackColorUsernameForPrint = StorageCleaner.ANSI_RESET + ADMIN_USER_NAME + StorageCleaner.ANSI_RED;
-            String blackColorPasswordForPrint = StorageCleaner.ANSI_RESET + password + StorageCleaner.ANSI_RED;
+            String blackColorUsernameForPrint = StringConstant.ANSI_RESET + ADMIN_USER_NAME + StringConstant.ANSI_RED;
+            String blackColorPasswordForPrint = StringConstant.ANSI_RESET + password + StringConstant.ANSI_RED;
             String info = String.format(Locale.ROOT,
                     "Create default user finished. The username of initialized user is [%s], which password is [%s].\n"
                             + "Please keep the password properly. And if you forget the password, you can reset it according to user manual.",
                     blackColorUsernameForPrint, blackColorPasswordForPrint);
-            System.out.println(StorageCleaner.ANSI_RED + info + StorageCleaner.ANSI_RESET);
+            System.out.println(StringConstant.ANSI_RED + info + StringConstant.ANSI_RESET);
         } catch (PersistException e) {
             logger.warn("{} user has been created on another node.", ADMIN_USER_NAME);
         }

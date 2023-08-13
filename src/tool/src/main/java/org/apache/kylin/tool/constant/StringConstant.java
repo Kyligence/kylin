@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.kylin.helper;
+package org.apache.kylin.tool.constant;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -24,10 +24,18 @@ import java.util.Locale;
 /*
  * this class is only for removing dependency of kylin-tool module, and should be refactor later
  */
-class HelperConstants {
+public class StringConstant {
 
-    private HelperConstants() {}
+    private StringConstant() {
+    }
 
-    static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss",
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_GREEN = "\u001B[32m";
+    public static final String ANSI_YELLOW = "\u001B[33m";
+    public static final String ANSI_BLUE = "\u001B[34m";
+
+    public static final String ANSI_RESET = "\u001B[0m";
+
+    public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss",
             Locale.getDefault(Locale.Category.FORMAT));
 }

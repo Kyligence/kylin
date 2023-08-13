@@ -109,6 +109,11 @@ public class RDBMSQueryHistoryDAO implements QueryHistoryDAO {
         return jdbcQueryHisStore.queryByQueryId(queryId);
     }
 
+    @Override
+    public Long getQueryHistoryMinQueryTime() {
+        return jdbcQueryHisStore.queryQueryHistoryMinQueryTime();
+    }
+
     public void deleteQueryHistoriesIfMaxSizeReached() throws InterruptedException {
         long maxSize = KylinConfig.getInstanceFromEnv().getQueryHistoryMaxSize();
         long totalCount = jdbcQueryHisStore.getCountOnQueryHistory();

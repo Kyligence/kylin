@@ -22,20 +22,20 @@ import java.util.Locale;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.util.PasswordEncodeFactory;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Unsafe;
-import io.kyligence.kap.metadata.epoch.EpochManager;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.tool.MaintainModeTool;
 import org.apache.kylin.tool.MetadataTool;
-import org.apache.kylin.tool.garbage.StorageCleaner;
+import org.apache.kylin.tool.constant.StringConstant;
+import org.apache.kylin.util.PasswordEncodeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import io.kyligence.kap.metadata.epoch.EpochManager;
+import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 
 public class KapPasswordResetCLI {
@@ -105,16 +105,16 @@ public class KapPasswordResetCLI {
         }
 
         if (randomPasswordEnabled) {
-            String blackColorUsernameForPrint = StorageCleaner.ANSI_RESET + AdminUserInitCLI.ADMIN_USER_NAME
-                    + StorageCleaner.ANSI_RED;
-            String blackColorPasswordForPrint = StorageCleaner.ANSI_RESET + password + StorageCleaner.ANSI_RED;
+            String blackColorUsernameForPrint = StringConstant.ANSI_RESET + AdminUserInitCLI.ADMIN_USER_NAME
+                    + StringConstant.ANSI_RED;
+            String blackColorPasswordForPrint = StringConstant.ANSI_RESET + password + StringConstant.ANSI_RED;
             String info = String.format(Locale.ROOT,
                     "Reset password of [%s] succeed. The password is [%s].\n" + "Please keep the password properly.",
                     blackColorUsernameForPrint, blackColorPasswordForPrint);
-            System.out.println(StorageCleaner.ANSI_RED + info + StorageCleaner.ANSI_RESET);
+            System.out.println(StringConstant.ANSI_RED + info + StringConstant.ANSI_RESET);
         } else {
             System.out.println(
-                    StorageCleaner.ANSI_YELLOW + "Reset the ADMIN password successfully." + StorageCleaner.ANSI_RESET);
+                    StringConstant.ANSI_YELLOW + "Reset the ADMIN password successfully." + StringConstant.ANSI_RESET);
         }
 
         return true;

@@ -53,6 +53,8 @@ public interface QueryHistoryDAO {
 
     QueryHistory getByQueryId(String queryId);
 
+    Long getQueryHistoryMinQueryTime();
+
     List<QueryHistory> getQueryHistoriesSubmitters(QueryHistoryRequest request, int size);
 
     List<QueryStatistics> getQueryHistoriesModelIds(QueryHistoryRequest request);

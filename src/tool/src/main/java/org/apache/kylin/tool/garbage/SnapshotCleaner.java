@@ -44,7 +44,7 @@ public class SnapshotCleaner extends MetadataCleaner {
     }
 
     @Override
-    public void beforeCleanup() {
+    public void beforeExecute() {
         // do nothing
     }
 
@@ -74,7 +74,7 @@ public class SnapshotCleaner extends MetadataCleaner {
     }
 
     @Override
-    public void cleanup() {
+    public void execute() {
         logger.info("Start to clean snapshot in project {}", project);
         // remove stale snapshot path from tables
         NTableMetadataManager tblMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
@@ -95,7 +95,7 @@ public class SnapshotCleaner extends MetadataCleaner {
     }
 
     @Override
-    public void afterCleanup() {
+    public void afterExecute() {
         // do nothing
     }
 }

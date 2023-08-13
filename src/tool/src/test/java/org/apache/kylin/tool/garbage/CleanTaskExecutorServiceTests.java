@@ -72,7 +72,7 @@ class CleanTaskExecutorServiceTests extends NLocalFileMetadataTestCase {
         }
 
         @Override
-        public void execute() throws Exception {
+        public void execute() throws InterruptedException {
             if (runnable != null) {
                 runnable.run();
             }

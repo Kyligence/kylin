@@ -25,8 +25,7 @@ import java.nio.charset.Charset;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
-import org.apache.kylin.tool.garbage.StorageCleaner;
+import org.apache.kylin.tool.constant.StringConstant;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,6 +34,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 
 public class AdminUserInitCLITest extends NLocalFileMetadataTestCase {
@@ -72,13 +72,13 @@ public class AdminUserInitCLITest extends NLocalFileMetadataTestCase {
 
         // assert output on console
         Assert.assertTrue(output.toString(Charset.defaultCharset().name())
-                .startsWith(StorageCleaner.ANSI_RED
+                .startsWith(StringConstant.ANSI_RED
                         + "Create default user finished. The username of initialized user is ["
-                        + StorageCleaner.ANSI_RESET + "ADMIN" + StorageCleaner.ANSI_RED + "], which password is "));
+                        + StringConstant.ANSI_RESET + "ADMIN" + StringConstant.ANSI_RED + "], which password is "));
         Assert.assertTrue(output.toString(Charset.defaultCharset().name())
                 .endsWith("Please keep the password properly. "
                         + "And if you forget the password, you can reset it according to user manual."
-                        + StorageCleaner.ANSI_RESET + "\n"));
+                        + StringConstant.ANSI_RESET + "\n"));
 
         System.setOut(System.out);
 

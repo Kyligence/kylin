@@ -18,12 +18,12 @@
 
 package org.apache.kylin.tool.garbage;
 
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.dao.NExecutableDao;
 import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,7 +54,7 @@ public class ExecutableCleanerTest extends NLocalFileMetadataTestCase {
         createUnexpiredJob(jobId);
         Assert.assertEquals(1, manager.getJobs().size());
         manager.discardJob(jobId);
-        new ExecutableCleaner(DEFAULT_PROJECT).cleanup();
+        new ExecutableCleaner(DEFAULT_PROJECT).execute();
         Assert.assertEquals(1, manager.getJobs().size());
     }
 
@@ -62,7 +62,7 @@ public class ExecutableCleanerTest extends NLocalFileMetadataTestCase {
     public void testCleanupWithRunningJob() {
         createExpiredJob(RandomUtil.randomUUIDStr());
         Assert.assertEquals(1, manager.getJobs().size());
-        new ExecutableCleaner(DEFAULT_PROJECT).cleanup();
+        new ExecutableCleaner(DEFAULT_PROJECT).execute();
         Assert.assertEquals(1, manager.getJobs().size());
     }
 
@@ -72,7 +72,7 @@ public class ExecutableCleanerTest extends NLocalFileMetadataTestCase {
         createExpiredJob(jobId);
         manager.discardJob(jobId);
         Assert.assertEquals(1, manager.getJobs().size());
-        new ExecutableCleaner(DEFAULT_PROJECT).cleanup();
+        new ExecutableCleaner(DEFAULT_PROJECT).execute();
         Assert.assertEquals(0, manager.getJobs().size());
     }
 

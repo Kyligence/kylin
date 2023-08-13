@@ -31,6 +31,7 @@ import static org.mybatis.dynamic.sql.SqlBuilder.isLikeCaseInsensitive;
 import static org.mybatis.dynamic.sql.SqlBuilder.isNotEqualTo;
 import static org.mybatis.dynamic.sql.SqlBuilder.isNotIn;
 import static org.mybatis.dynamic.sql.SqlBuilder.max;
+import static org.mybatis.dynamic.sql.SqlBuilder.min;
 import static org.mybatis.dynamic.sql.SqlBuilder.or;
 import static org.mybatis.dynamic.sql.SqlBuilder.select;
 import static org.mybatis.dynamic.sql.SqlBuilder.selectDistinct;
@@ -63,6 +64,8 @@ import org.apache.kylin.common.logging.LogOutputStream;
 import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.query.util.QueryHisStoreUtil;
 import org.mybatis.dynamic.sql.BasicColumn;
 import org.mybatis.dynamic.sql.SqlBuilder;
@@ -71,13 +74,10 @@ import org.mybatis.dynamic.sql.insert.render.InsertStatementProvider;
 import org.mybatis.dynamic.sql.render.RenderingStrategies;
 import org.mybatis.dynamic.sql.select.QueryExpressionDSL;
 import org.mybatis.dynamic.sql.select.SelectModel;
-import org.mybatis.dynamic.sql.select.join.EqualTo;
 import org.mybatis.dynamic.sql.select.aggregate.Count;
+import org.mybatis.dynamic.sql.select.join.EqualTo;
 import org.mybatis.dynamic.sql.select.render.SelectStatementProvider;
 import org.mybatis.dynamic.sql.update.render.UpdateStatementProvider;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -376,6 +376,17 @@ public class JdbcQueryHistoryStore {
                     .build().render(RenderingStrategies.MYBATIS3);
             Long maxId = mapper.selectAsLong(statementProvider);
             return maxId == null ? 0L : maxId;
+        }
+    }
+
+    protected Long queryQueryHistoryMinQueryTime() {
+        try (SqlSession session = sqlSessionFactory.openSession()) {
+            QueryHistoryMapper mapper = session.getMapper(QueryHistoryMapper.class);
+            SelectStatementProvider statementProvider = select(queryHistoryTable.queryTime) //
+                    .from(queryHistoryTable) //
+                    .where(queryHistoryTable.id, isEqualTo(select(min(queryHistoryTable.id)).from(queryHistoryTable)))
+                    .build().render(RenderingStrategies.MYBATIS3);
+            return mapper.selectAsLong(statementProvider);
         }
     }
 

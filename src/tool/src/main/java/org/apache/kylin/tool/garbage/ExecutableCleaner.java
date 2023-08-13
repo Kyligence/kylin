@@ -37,12 +37,12 @@ public class ExecutableCleaner extends MetadataCleaner {
     }
 
     @Override
-    public void beforeCleanup() {
+    public void beforeExecute() {
         // do nothing
     }
 
     @Override
-    public void cleanup() {
+    public void execute() {
 
         logger.info("Start to clean executable in project {}", project);
 
@@ -68,7 +68,7 @@ public class ExecutableCleaner extends MetadataCleaner {
     }
 
     @Override
-    public void afterCleanup() {
+    public void afterExecute() {
         // do nothing
     }
 

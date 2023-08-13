@@ -26,21 +26,20 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.util.ExecutableApplication;
-import org.apache.kylin.common.util.OptionsHelper;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.AddressUtil;
+import org.apache.kylin.common.util.ExecutableApplication;
+import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.Unsafe;
-import io.kyligence.kap.metadata.epoch.EpochManager;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.project.NProjectManager;
-import org.apache.kylin.tool.garbage.StorageCleaner;
+import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.tool.constant.StringConstant;
 import org.apache.kylin.tool.util.ToolMainWrapper;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -153,9 +152,9 @@ public class MaintainModeTool extends ExecutableApplication {
             enterMaintenanceModeWithRetry(config.getTurnMaintainModeRetryTimes(), reason, projects);
         } catch (Exception e) {
             log.error("Mark epoch failed", e);
-            System.out.println(StorageCleaner.ANSI_RED
+            System.out.println(StringConstant.ANSI_RED
                     + "Turn on maintain mode failed. Detailed Message is at ${KYLIN_HOME}/logs/shell.stderr"
-                    + StorageCleaner.ANSI_RESET);
+                    + StringConstant.ANSI_RESET);
             Unsafe.systemExit(1);
         } finally {
             Unsafe.clearProperty(LEADER_RACE_KEY);
@@ -219,9 +218,9 @@ public class MaintainModeTool extends ExecutableApplication {
             exitMaintenanceModeWithRetry(config.getTurnMaintainModeRetryTimes(), null, projects, forceToTurnOff);
         } catch (Exception e) {
             log.error("Release epoch failed, try to turn off maintain mode manually.", e);
-            System.out.println(StorageCleaner.ANSI_RED
+            System.out.println(StringConstant.ANSI_RED
                     + "Turn off maintain mode failed. Detailed Message is at ${KYLIN_HOME}/logs/shell.stderr"
-                    + StorageCleaner.ANSI_RESET);
+                    + StringConstant.ANSI_RESET);
             throw new IllegalStateException("Turn off maintain mode failed.");
         } finally {
             Unsafe.clearProperty(LEADER_RACE_KEY);

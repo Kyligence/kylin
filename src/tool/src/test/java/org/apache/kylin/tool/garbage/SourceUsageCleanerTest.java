@@ -58,7 +58,7 @@ public class SourceUsageCleanerTest extends NLocalFileMetadataTestCase {
         manager.updateSourceUsage(record);
         List<SourceUsageRecord> allRecords = manager.getAllRecords();
         Assert.assertEquals(1, allRecords.size());
-        sourceUsageCleaner.cleanup();
+        sourceUsageCleaner.execute();
         allRecords = manager.getAllRecords();
         Assert.assertEquals(1, allRecords.size());
     }
@@ -74,7 +74,7 @@ public class SourceUsageCleanerTest extends NLocalFileMetadataTestCase {
         manager.updateSourceUsage(record1);
         List<SourceUsageRecord> allRecords = manager.getAllRecords();
         Assert.assertEquals(2, allRecords.size());
-        sourceUsageCleaner.cleanup();
+        sourceUsageCleaner.execute();
         allRecords = manager.getAllRecords();
         Assert.assertEquals(1, allRecords.size());
         Assert.assertEquals(1, allRecords.get(0).getCreateTime());
@@ -87,7 +87,7 @@ public class SourceUsageCleanerTest extends NLocalFileMetadataTestCase {
         manager.updateSourceUsage(record);
         List<SourceUsageRecord> allRecords = manager.getAllRecords();
         Assert.assertEquals(1, allRecords.size());
-        sourceUsageCleaner.cleanup();
+        sourceUsageCleaner.execute();
         allRecords = manager.getAllRecords();
         Assert.assertEquals(1, allRecords.size());
     }
@@ -95,7 +95,7 @@ public class SourceUsageCleanerTest extends NLocalFileMetadataTestCase {
     @Test
     public void testCleanupZeroSourceUsage() {
         List<SourceUsageRecord> allRecords = manager.getAllRecords();
-        sourceUsageCleaner.cleanup();
+        sourceUsageCleaner.execute();
         Assert.assertEquals(0, allRecords.size());
     }
 

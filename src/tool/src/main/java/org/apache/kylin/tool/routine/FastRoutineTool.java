@@ -53,6 +53,7 @@ public class FastRoutineTool extends RoutineTool {
             }
             System.out.println("Start to fast cleanup hdfs");
             cleanStorage();
+            cleanEventLogs();
         } catch (Exception e) {
             log.error("Failed to execute fast routintool", e);
         }

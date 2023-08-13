@@ -18,51 +18,6 @@
 
 package org.apache.kylin.tool.garbage;
 
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.metrics.MetricsCategory;
-import org.apache.kylin.common.metrics.MetricsGroup;
-import org.apache.kylin.common.metrics.MetricsName;
-import org.apache.kylin.common.scheduler.EventBusFactory;
-import org.apache.kylin.common.scheduler.SourceUsageUpdateNotifier;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
-import org.apache.kylin.metadata.project.NProjectManager;
-
-import lombok.val;
-
-public class GarbageCleaner {
-
-    private GarbageCleaner() {
-    }
-
-    /**
-     * Clean up metadata
-     * @param project
-     */
-    public static void cleanMetadata(String project, boolean needAggressiveOpt) {
-        val projectInstance = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).getProject(project);
-        if (projectInstance == null) {
-            return;
-        }
-
-        List<MetadataCleaner> cleaners = initCleaners(project, needAggressiveOpt);
-        cleaners.forEach(MetadataCleaner::prepare);
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            cleaners.forEach(MetadataCleaner::beforeCleanup);
-            cleaners.forEach(MetadataCleaner::cleanup);
-            cleaners.forEach(MetadataCleaner::afterCleanup);
-            return 0;
-        }, project);
-
-        EventBusFactory.getInstance().postAsync(new SourceUsageUpdateNotifier());
-        MetricsGroup.hostTagCounterInc(MetricsName.METADATA_CLEAN, MetricsCategory.PROJECT, project);
-    }
-
-    private static List<MetadataCleaner> initCleaners(String project, boolean needAggressiveOpt) {
-        return Arrays.asList(new SnapshotCleaner(project), new IndexCleaner(project, needAggressiveOpt),
-                new ExecutableCleaner(project));
-    }
-
+public interface GarbageCleaner {
+    void execute() throws InterruptedException;
 }

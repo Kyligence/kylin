@@ -35,9 +35,10 @@ import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.query.util.QueryHisStoreUtil;
 import org.apache.kylin.metadata.streaming.util.StreamingJobRecordStoreUtil;
 import org.apache.kylin.metadata.streaming.util.StreamingJobStatsStoreUtil;
+import org.apache.kylin.tool.constant.StringConstant;
 import org.apache.kylin.tool.garbage.AbstractComparableCleanTask;
 import org.apache.kylin.tool.garbage.CleanTaskExecutorService;
-import org.apache.kylin.tool.garbage.GarbageCleaner;
+import org.apache.kylin.tool.garbage.MetadataCleaner;
 import org.apache.kylin.tool.garbage.PriorityExecutor;
 import org.apache.kylin.tool.garbage.SourceUsageCleaner;
 import org.apache.kylin.tool.garbage.StorageCleaner;
@@ -81,6 +82,35 @@ public class RoutineToolHelper {
             KylinConfig.getInstanceFromEnv().getStorageCleanTaskTimeout(), TimeUnit.MILLISECONDS);
     }
 
+    public static CompletableFuture<Void> cleanEventLog(boolean cleanUp, boolean cleanCurrentSparder,
+            boolean cleanAll) {
+        tryInitCleanTaskExecutorService();
+        return CleanTaskExecutorService.getInstance().submit(new AbstractComparableCleanTask() {
+            @Override
+            public String getName() {
+                return "cleanEventLog";
+            }
+
+            @Override
+            protected void doRun() {
+                StorageCleaner.EventLogCleaner eventLogCleaner = new StorageCleaner.EventLogCleaner(cleanUp);
+                if (cleanAll) {
+                    eventLogCleaner.cleanAllEventLog();
+                } else if (cleanCurrentSparder) {
+                    eventLogCleaner.cleanCurrentSparderEventLog();
+                } else {
+                    // clean current sparder event log and spark event log
+                    eventLogCleaner.execute();
+                }
+            }
+
+            @Override
+            public StorageCleaner.CleanerTag getCleanerTag() {
+                return StorageCleaner.CleanerTag.ROUTINE;
+            }
+        }, KylinConfig.getInstanceFromEnv().getStorageCleanTaskTimeout(), TimeUnit.MILLISECONDS);
+    }
+
     public static void cleanStorageForRoutine() {
         tryInitCleanTaskExecutorService();
         CleanTaskExecutorService.getInstance().cleanStorageForRoutine(true, Collections.emptyList(), 0, 0);
@@ -118,7 +148,7 @@ public class RoutineToolHelper {
         log.info("Start to clean up global meta");
         try {
             EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                new SourceUsageCleaner().cleanup();
+                new SourceUsageCleaner().execute();
                 return null;
             }, UnitOfWork.GLOBAL_UNIT);
         } catch (Exception e) {
@@ -135,7 +165,7 @@ public class RoutineToolHelper {
                     .stream(KylinConfig.getInstanceFromEnv().getProjectsAggressiveOptimizationIndex())
                     .map(StringUtils::lowerCase).collect(Collectors.toList())
                     .contains(StringUtils.toRootLowerCase(projectName));
-            GarbageCleaner.cleanMetadata(projectName, needAggressiveOpt);
+            MetadataCleaner.clean(projectName, needAggressiveOpt);
         } catch (Exception e) {
             log.error("Project[{}] cleanup Metadata failed", projectName, e);
         }
@@ -154,11 +184,10 @@ public class RoutineToolHelper {
             System.out.println("Metadata cleanup finished");
         } catch (Exception e) {
             log.error("Metadata cleanup failed", e);
-            System.out.println(StorageCleaner.ANSI_RED
+            System.out.println(StringConstant.ANSI_RED
                     + "Metadata cleanup failed. Detailed Message is at ${KYLIN_HOME}/logs/shell.stderr"
-                    + StorageCleaner.ANSI_RESET);
+                    + StringConstant.ANSI_RESET);
         }
 
     }
-
 }

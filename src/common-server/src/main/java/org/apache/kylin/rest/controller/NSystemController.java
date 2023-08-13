@@ -425,4 +425,14 @@ public class NSystemController extends NBasicController {
         arthasService.destoryArthas();
         return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
     }
+
+    /**
+     * RPC Call
+     */
+    @DeleteMapping(value = "clean_sparder_event_log")
+    @ResponseBody
+    public EnvelopeResponse<String> queryNodeCleanSparderEventsLogs() {
+        systemService.cleanSparderEventLog();
+        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
+    }
 }

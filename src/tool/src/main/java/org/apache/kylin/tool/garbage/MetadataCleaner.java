@@ -18,7 +18,21 @@
 
 package org.apache.kylin.tool.garbage;
 
-public abstract class MetadataCleaner {
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.metrics.MetricsCategory;
+import org.apache.kylin.common.metrics.MetricsGroup;
+import org.apache.kylin.common.metrics.MetricsName;
+import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.common.scheduler.SourceUsageUpdateNotifier;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
+import org.apache.kylin.metadata.project.NProjectManager;
+
+import lombok.val;
+
+public abstract class MetadataCleaner implements GarbageCleaner {
     protected final String project;
 
     protected MetadataCleaner(String project) {
@@ -26,15 +40,40 @@ public abstract class MetadataCleaner {
     }
 
     // do in transaction
-    public abstract void beforeCleanup();
+    public abstract void beforeExecute();
 
     // do in transaction
-    public abstract void cleanup();
+    @Override
+    public abstract void execute();
 
     // do in transaction
-    public abstract void afterCleanup();
+    public abstract void afterExecute();
 
     public void prepare() {
         // default do nothing
+    }
+
+    public static void clean(String project, boolean needAggressiveOpt) {
+        val projectInstance = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).getProject(project);
+        if (projectInstance == null) {
+            return;
+        }
+
+        List<MetadataCleaner> cleaners = initCleaners(project, needAggressiveOpt);
+        cleaners.forEach(MetadataCleaner::prepare);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            cleaners.forEach(MetadataCleaner::beforeExecute);
+            cleaners.forEach(MetadataCleaner::execute);
+            cleaners.forEach(MetadataCleaner::afterExecute);
+            return 0;
+        }, project);
+
+        EventBusFactory.getInstance().postAsync(new SourceUsageUpdateNotifier());
+        MetricsGroup.hostTagCounterInc(MetricsName.METADATA_CLEAN, MetricsCategory.PROJECT, project);
+    }
+
+    private static List<MetadataCleaner> initCleaners(String project, boolean needAggressiveOpt) {
+        return Arrays.asList(new SnapshotCleaner(project), new IndexCleaner(project, needAggressiveOpt),
+                new ExecutableCleaner(project));
     }
 }

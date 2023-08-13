@@ -17,8 +17,13 @@
  */
 package org.apache.kylin.tool;
 
+import static org.apache.kylin.common.KylinConfigBase.WRITING_CLUSTER_WORKING_DIR;
+
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -33,32 +38,34 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.HadoopUtil;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.common.ShellExecutable;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.metadata.project.ProjectInstance;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.query.util.QueryHisStoreUtil;
 import org.apache.kylin.tool.garbage.StorageCleaner;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import lombok.val;
+import lombok.var;
 import lombok.extern.slf4j.Slf4j;
-
-import static org.apache.kylin.common.KylinConfigBase.WRITING_CLUSTER_WORKING_DIR;
 
 @Slf4j
 public class StorageCleanerTest extends NLocalFileMetadataTestCase {
@@ -90,6 +97,51 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(garbageFiles.size(), outdatedItems.size());
         for (String item : outdatedItems) {
             Assert.assertTrue(item + " not in garbageFiles", garbageFiles.contains(item));
+        }
+    }
+
+    @Test
+    public void testEventLogClean() throws IOException {
+        prepareForEventLogClean();
+        String allSparderEventLogDir = (KapConfig.wrap(getTestConfig()).getSparkConf().get("spark.eventLog.dir"))
+                .replace("file:", "");
+        String currentSparderEventLogDir = (KapConfig.wrap(getTestConfig()).getSparkConf().get("spark.eventLog.dir")
+                + "/" + AddressUtil.getLocalServerInfo() + "/eventlog_v2_application_1677899901295_4823#1690192675042")
+                        .replace("file:", "");
+        String sparkEventLogDir = getTestConfig().getSparkConfigOverride().get("spark.eventLog.dir").replace("file:",
+                "");
+
+        try (MockedStatic<QueryHisStoreUtil> qhsuMocked = Mockito.mockStatic(QueryHisStoreUtil.class)) {
+            qhsuMocked.when(QueryHisStoreUtil::getQueryHistoryMinQueryTime).thenReturn(null);
+
+            int fileSize = new File(currentSparderEventLogDir).listFiles().length;
+            Assert.assertEquals(3, fileSize);
+            var cleaner = new StorageCleaner.EventLogCleaner(false);
+            cleaner.cleanCurrentSparderEventLog();
+            fileSize = new File(currentSparderEventLogDir).listFiles().length;
+            Assert.assertEquals(2, fileSize);
+            Assert.assertTrue(
+                    new File(currentSparderEventLogDir + "/events_1_application_1677899901295_8490_1690953331329")
+                            .exists());
+
+            int sparkEventLogFileSize = new File(sparkEventLogDir).listFiles().length;
+            Assert.assertEquals(5, sparkEventLogFileSize);
+            cleaner.execute();
+            Assert.assertEquals(5, sparkEventLogFileSize);
+
+            cleaner = new StorageCleaner.EventLogCleaner(true);
+            cleaner.execute();
+            sparkEventLogFileSize = new File(sparkEventLogDir).listFiles().length;
+            Assert.assertEquals(4, sparkEventLogFileSize);
+            Assert.assertFalse(new File(sparkEventLogDir + "/application_1677899901295_8243").exists());
+
+            File otherSparderEventLogFile = new File(
+                    allSparderEventLogDir + "/localhost_7071/eventlog_v2_application_1677899901295_4824#1690192771380");
+            Assert.assertTrue(otherSparderEventLogFile.exists());
+            cleaner.cleanAllEventLog();
+            otherSparderEventLogFile = new File(
+                    allSparderEventLogDir + "/localhost_7071/eventlog_v2_application_1677899901295_4824#1690192771380");
+            Assert.assertFalse(otherSparderEventLogFile.exists());
         }
     }
 
@@ -337,6 +389,68 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
         val job2 = new DefaultExecutable();
         job2.setId("job2");
         execMgr.addJob(job2);
+    }
+
+    private void prepareForEventLogClean() throws IOException {
+        KylinConfig config = getTestConfig();
+        String currentSparderEventLogDir = (KapConfig.wrap(config).getSparkConf().get("spark.eventLog.dir") + "/"
+                + AddressUtil.getLocalServerInfo()).replace("file:", "");
+        Files.createDirectories(Paths.get(currentSparderEventLogDir));
+
+        String allSparderEventLogDir = (KapConfig.wrap(config).getSparkConf().get("spark.eventLog.dir"))
+                .replace("file:", "");
+        String sparkEventLogDir = (config.getSparkConfigOverride().get("spark.eventLog.dir")).replace("file:", "");
+
+        FileUtils.copyDirectory(new File("src/test/resources/ut_storage/working-dir2/sparder-history/localhost_7070"),
+                new File(currentSparderEventLogDir));
+        FileUtils.copyDirectoryToDirectory(
+                new File("src/test/resources/ut_storage/working-dir2/sparder-history/localhost_7071"),
+                new File(allSparderEventLogDir));
+        FileUtils.copyFileToDirectory(
+                new File("src/test/resources/ut_storage/working-dir2/spark-history/application_1677899901295_0989"),
+                new File(sparkEventLogDir));
+        FileUtils.copyFileToDirectory(
+                new File("src/test/resources/ut_storage/working-dir2/spark-history/application_1677899901295_8243"),
+                new File(sparkEventLogDir));
+
+        long currentTime = System.currentTimeMillis();
+        long twoMonth = 2 * 30 * 24 * 60 * 60 * 1000L;
+        long oneDay = 24 * 60 * 60 * 1000L;
+        long expired = currentTime - twoMonth;
+        long notExpired = currentTime - oneDay;
+
+        // Not expired
+        updateLastModified(currentSparderEventLogDir + "/eventlog_v2_application_1677899901295_4823#1690192675042",
+                notExpired);
+
+        // Expired
+        updateLastModified(currentSparderEventLogDir + "/eventlog_v2_application_1677899901295_4823#1690192675042/"
+                + "appstatus_application_1677899901295_8490", expired);
+
+        // Expired
+        updateLastModified(currentSparderEventLogDir + "/eventlog_v2_application_1677899901295_4823#1690192675042/"
+                + "events_1_application_1677899901295_8490_1690953331329", expired);
+
+        // Not expired
+        updateLastModified(currentSparderEventLogDir + "/eventlog_v2_application_1677899901295_4823#1690192675042/"
+                + "events_2_application_1677899901295_8490_1690953331329", notExpired);
+
+        // Expired
+        updateLastModified(
+                allSparderEventLogDir + "/localhost_7071/eventlog_v2_application_1677899901295_4824#1690192771380",
+                expired);
+
+        // Expired: Less than the creation time of the earliest executable 
+        updateLastModified(sparkEventLogDir + "/application_1677899901295_8243", 974600451000L);
+
+        // Not expired 
+        updateLastModified(sparkEventLogDir + "/application_1677899901295_0989", notExpired);
+    }
+
+    public void updateLastModified(String file, long timeStamp) throws IOException {
+        java.nio.file.Path path = Paths.get(file);
+        FileTime newLastModifiedTime = FileTime.fromMillis(timeStamp);
+        Files.setLastModifiedTime(path, newLastModifiedTime);
     }
 
     private Set<String> normalizeGarbages(Set<StorageCleaner.StorageItem> items) {

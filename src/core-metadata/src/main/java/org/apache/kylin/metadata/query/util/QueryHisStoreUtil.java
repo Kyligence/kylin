@@ -181,6 +181,11 @@ public class QueryHisStoreUtil {
         }
     }
 
+    @SneakyThrows
+    public static Long getQueryHistoryMinQueryTime() {
+        return getQueryHistoryDao().getQueryHistoryMinQueryTime();
+    }
+
     public static void cleanQueryHistory(String projectName, long historyCount) {
         long projectMaxSize = KylinConfig.getInstanceFromEnv().getQueryHistoryProjectMaxSize();
         if (historyCount <= projectMaxSize) {

@@ -27,23 +27,36 @@ import static org.mockito.Mockito.doThrow;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.kylin.common.response.RestResponse;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.junit.annotation.OverwriteProp;
+import org.apache.kylin.rest.cluster.MockClusterManager;
 import org.apache.kylin.rest.constant.Constant;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.SneakyThrows;
+import lombok.val;
+import lombok.var;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -58,17 +71,27 @@ public class ScheduleServiceTest extends NLocalFileMetadataTestCase {
     @Mock
     private ScheduleService scheduleService = Mockito.spy(ScheduleService.class);
 
+    @Mock
+    private RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
+
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
     @Before
-    public void setup() {
+    public void setup() throws JsonProcessingException {
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         createTestMetadata();
         SecurityContextHolder.getContext()
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
         ReflectionTestUtils.setField(scheduleService, "projectService", projectService);
         ReflectionTestUtils.setField(scheduleService, "backupService", backupService);
+        ReflectionTestUtils.setField(scheduleService, "clusterManager", new MockClusterManager());
+        ReflectionTestUtils.setField(scheduleService, "restTemplate", restTemplate);
+
+        val restResult = JsonUtil.writeValueAsString(RestResponse.ok());
+        var resp = new ResponseEntity<>(restResult, HttpStatus.OK);
+        Mockito.doReturn(resp).when(restTemplate).exchange(anyString(), ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(HttpEntity.class), ArgumentMatchers.<Class<String>> any());
     }
 
     @After

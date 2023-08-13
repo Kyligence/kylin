@@ -47,6 +47,7 @@ import org.apache.kylin.common.metrics.MetricsGroup;
 import org.apache.kylin.common.metrics.MetricsName;
 import org.apache.kylin.common.response.RestResponse;
 import org.apache.kylin.common.util.AddressUtil;
+import org.apache.kylin.common.util.ClusterConstant;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NamedThreadFactory;
 import org.apache.kylin.common.util.Pair;
@@ -59,11 +60,14 @@ import org.apache.kylin.metadata.resourcegroup.KylinInstance;
 import org.apache.kylin.metadata.resourcegroup.RequestTypeEnum;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupManager;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupMappingInfo;
+import org.apache.kylin.rest.cluster.ClusterManager;
+import org.apache.kylin.rest.response.ServerInfoResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -80,6 +84,8 @@ public class ScheduleService {
 
     private static final String GLOBAL = "global";
 
+    private static final String CLEAN_SPARDER_EVENT_LOG = "http://%s/kylin/api/system/clean_sparder_event_log";
+
     @Autowired
     @Qualifier("normalRestTemplate")
     RestTemplate restTemplate;
@@ -95,6 +101,9 @@ public class ScheduleService {
 
     @Autowired(required = false)
     ProjectSmartSupporter projectSmartSupporter;
+
+    @Autowired
+    private ClusterManager clusterManager;
 
     private final ExecutorService executors = Executors
             .newSingleThreadExecutor(new NamedThreadFactory("RoutineTaskScheduler"));
@@ -122,6 +131,7 @@ public class ScheduleService {
             try (SetThreadName ignored = new SetThreadName("RoutineOpsWorker")) {
                 if (epochManager.checkEpochOwner(EpochManager.GLOBAL)) {
                     AtomicReference<Pair<String, String>> backupFolder = new AtomicReference<>(null);
+                    broadcastCleanSparderEventLogToQueryNodes();
                     executeTask(() -> backupFolder.set(backupService.backupAll()), "MetadataBackup", startTime);
                     executeMetadataBackupInTenantMode(kylinConfig, startTime, backupFolder);
                     executeTask(() -> RoutineToolHelper.cleanQueryHistoriesAsync(getRemainingTime(startTime),
@@ -134,6 +144,7 @@ public class ScheduleService {
                 executeTask(() -> projectService.garbageCleanup(getRemainingTime(startTime)), "ProjectGarbageCleanup",
                         startTime);
                 executeTask(RoutineToolHelper::cleanStorageForRoutine, "HdfsCleanup", startTime);
+                executeTask(() -> RoutineToolHelper.cleanEventLog(true, false, false), "EventLogCleanup", startTime);
                 log.info("Finish to work, cost {}ms", System.currentTimeMillis() - startTime);
             }
         } catch (InterruptedException e) {
@@ -223,6 +234,43 @@ public class ScheduleService {
         }
     }
 
+    private void broadcastCleanSparderEventLogToQueryNodes() {
+        List<ServerInfoResponse> queryNodes = clusterManager.getQueryServers();
+
+        try {
+            for (ServerInfoResponse node : queryNodes) {
+                if (ClusterConstant.ALL.equals(node.getMode())) {
+                    continue;
+                }
+
+                val url = String.format(Locale.ROOT, CLEAN_SPARDER_EVENT_LOG, node.getHost());
+                log.info("Start broadcasting to clean the sparder event log of {}", url);
+
+                val httpHeaders = new HttpHeaders();
+                httpHeaders.add(HttpHeaders.CONTENT_TYPE, HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON);
+                val response = restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(httpHeaders),
+                        String.class);
+                receive(response, "noticeToQueryNode");
+            }
+        } catch (Exception e) {
+            log.error("Broadcast cleaning sparder event log failed!", e);
+        }
+    }
+
+    private void receive(ResponseEntity<String> response, String msg) throws IOException {
+        val responseStatus = response.getStatusCodeValue();
+        if (responseStatus != HttpStatus.SC_OK) {
+            log.error("{} failed, HttpStatus is {}", msg, responseStatus);
+        }
+
+        val responseBody = Optional.ofNullable(response.getBody()).orElse("");
+        val responseJson = JsonUtil.readValue(responseBody, new TypeReference<RestResponse<Boolean>>() {
+        });
+        if (!StringUtils.equals(responseJson.getCode(), KylinException.CODE_SUCCESS)) {
+            log.error("{} failed, response code is {}", msg, responseJson.getCode());
+        }
+    }
+
     public void broadcastToTenantNode(String resourceGroupId, String backupDir, String tmpFilePath, long tmpFileLength,
             String host) {
         try {
@@ -236,17 +284,7 @@ public class ScheduleService {
             httpHeaders.add(HttpHeaders.CONTENT_TYPE, HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON);
             val exchange = restTemplate.exchange(url, HttpMethod.POST,
                     new HttpEntity<>(JsonUtil.writeValueAsBytes(req), httpHeaders), String.class);
-            val responseStatus = exchange.getStatusCodeValue();
-            if (responseStatus != HttpStatus.SC_OK) {
-                log.error("noticeToTenantNode failed, HttpStatus is {}", responseStatus);
-                return;
-            }
-            val responseBody = Optional.ofNullable(exchange.getBody()).orElse("");
-            val response = JsonUtil.readValue(responseBody, new TypeReference<RestResponse<Boolean>>() {
-            });
-            if (!StringUtils.equals(response.getCode(), KylinException.CODE_SUCCESS)) {
-                log.error("noticeToTenantNode failed, response code is {}", response.getCode());
-            }
+            receive(exchange, "noticeToTenantNode");
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
