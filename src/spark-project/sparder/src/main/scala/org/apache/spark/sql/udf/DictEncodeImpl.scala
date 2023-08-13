@@ -17,11 +17,11 @@
  */
 package org.apache.spark.sql.udf
 
-import java.util
-
 import org.apache.spark.TaskContext
 import org.apache.spark.dict.{NBucketDictionary, NGlobalDictionaryV2}
 import org.apache.spark.util.TaskCompletionListener
+
+import java.util
 
 object DictEncodeImpl {
 
@@ -43,7 +43,7 @@ object DictEncodeImpl {
     val encodeBucketId = partitionID % bucketSize.toInt
     val globalDict = new NGlobalDictionaryV2(dictParams)
 
-    val cachedBucketDict = globalDict.loadBucketDictionary(encodeBucketId)
+    val cachedBucketDict = globalDict.loadBucketDictionary(encodeBucketId, true)
     DictEncodeImpl.cacheBucketDict.get.put(dictParams, cachedBucketDict)
     TaskContext.get().addTaskCompletionListener(new TaskCompletionListener {
       override def onTaskCompletion(context: TaskContext): Unit = {

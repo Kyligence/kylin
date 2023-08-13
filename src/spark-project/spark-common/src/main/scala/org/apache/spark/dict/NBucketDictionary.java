@@ -39,6 +39,11 @@ public class NBucketDictionary {
 
     NBucketDictionary(String baseDir, String workingDir, int bucketId, NGlobalDictMetaInfo metainfo)
             throws IOException {
+        this(baseDir, workingDir, bucketId, metainfo, false);
+    }
+
+    NBucketDictionary(String baseDir, String workingDir, int bucketId, NGlobalDictMetaInfo metainfo, boolean isForColumnEncoding)
+            throws IOException {
         this.workingDir = workingDir;
         this.bucketId = bucketId;
         final NGlobalDictStore globalDictStore = NGlobalDictStoreFactory.getResourceStore(baseDir);
@@ -47,7 +52,7 @@ public class NBucketDictionary {
         if (versions.length == 0) {
             this.absoluteDictMap = new Object2LongOpenHashMap<>();
         } else {
-            this.absoluteDictMap = globalDictStore.getBucketDict(versions[versions.length - 1], metainfo, bucketId);
+            this.absoluteDictMap = globalDictStore.getBucketDict(versions[versions.length - 1], metainfo, bucketId, isForColumnEncoding);
         }
         this.relativeDictMap = new Object2LongOpenHashMap<>();
     }

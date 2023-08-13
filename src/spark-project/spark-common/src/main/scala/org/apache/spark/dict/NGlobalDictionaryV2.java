@@ -72,10 +72,14 @@ public class NGlobalDictionaryV2 implements Serializable {
     }
 
     public NBucketDictionary loadBucketDictionary(int bucketId) throws IOException {
+        return loadBucketDictionary(bucketId, false);
+    }
+
+    public NBucketDictionary loadBucketDictionary(int bucketId, boolean isForColumnEncoding) throws IOException {
         if (null == metadata) {
             metadata = getMetaInfo();
         }
-        return new NBucketDictionary(baseDir, getWorkingDir(), bucketId, metadata);
+        return new NBucketDictionary(baseDir, getWorkingDir(), bucketId, metadata, isForColumnEncoding);
     }
 
     public NBucketDictionary createNewBucketDictionary() {

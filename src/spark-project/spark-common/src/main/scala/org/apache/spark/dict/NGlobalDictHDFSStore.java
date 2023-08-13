@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,13 +159,20 @@ public class NGlobalDictHDFSStore implements NGlobalDictStore {
         }
     }
 
-
     @Override
-    public Object2LongMap<String> getBucketDict(long version, NGlobalDictMetaInfo metaInfo, int bucketId)
+    public Object2LongMap<String> getBucketDict(long version, NGlobalDictMetaInfo metaInfo, int bucketId, boolean isForColumnEncoding)
             throws IOException {
         Object2LongMap<String> object2IntMap = new Object2LongOpenHashMap<>();
         Path versionDir = getVersionDir(version);
         FileStatus[] bucketFiles = fileSystem.listStatus(versionDir, path -> path.getName().endsWith("_" + bucketId));
+
+        // https://olapio.atlassian.net/browse/AL-8865
+        // Only do check and retry when isForColumnEncoding is true
+        bucketFiles = checkAndRetryGetBucketFiles(versionDir, bucketId, isForColumnEncoding, bucketFiles);
+
+        // Log detailed bucket files to confirm that we do not lose
+        // necessary files when do flat table column encoding.
+        logBucketFiles(bucketId, isForColumnEncoding, bucketFiles);
 
         for (FileStatus file : bucketFiles) {
             if (file.getPath().getName().startsWith(DICT_CURR_PREFIX)) {
@@ -178,6 +184,75 @@ public class NGlobalDictHDFSStore implements NGlobalDictStore {
         }
 
         return object2IntMap;
+    }
+
+    private FileStatus[] checkAndRetryGetBucketFiles(Path versionDir, int bucketId, boolean isForColumnEncoding, FileStatus[] bucketFiles) throws IOException {
+        logger.info("[bucketId:{}][isForColumnEncoding:{}]", bucketId, isForColumnEncoding);
+
+        // isForColumnEncoding == true means at least 1 dict file should exist
+        if (isForColumnEncoding && bucketFiles.length == 0) {
+            logger.warn("[bucketId:{}][isForColumnEncoding:{}] Get bucket dict under strict mode but no bucket dict files found in dir {}", bucketId, isForColumnEncoding, versionDir);
+            tryOpenAndLogBucketDictFiles(versionDir, bucketId, bucketFiles);
+            final int MAX_RETRY = 3;
+            int retry = 1;
+            while (retry <= MAX_RETRY && bucketFiles.length == 0) {
+                logger.info("[bucketId:{}][retry:{}] Retry listing bucket dict files", bucketId, retry);
+                bucketFiles = fileSystem.listStatus(versionDir, path -> path.getName().endsWith("_" + bucketId));
+                if (bucketFiles.length == 0) {
+                    logger.warn("[bucketId:{}][retry:{}] Retry listing bucket dict files, no bucket dict files found", bucketId, retry);
+                }
+                retry++;
+                if (retry <= MAX_RETRY) {
+                    sleep();
+                }
+            }
+            if (bucketFiles.length == 0) {
+                // List bucket dict files failed
+                logger.error("[bucketId:{}] The necessary bucket dict files were not available", bucketId);
+                // Try open again for logging evidence
+                tryOpenAndLogBucketDictFiles(versionDir, bucketId, bucketFiles);
+                // Throw exception
+                throw new FileNotFoundException(String.format("[bucketId:%s] The necessary bucket dict files were not available", bucketId));
+            }
+        }
+        return bucketFiles;
+    }
+
+    private void logBucketFiles(int bucketId, boolean isForColumnEncoding, FileStatus[] bucketFiles) {
+        if (bucketFiles.length == 0) {
+            logger.info("[bucketId:{}][isForColumnEncoding:{}] Try listing bucketFiles, but no bucketFiles found", bucketId, isForColumnEncoding);
+            return;
+        }
+        logger.info("[bucketId:{}][isForColumnEncoding:{}] bucketFiles size: {}", bucketId, isForColumnEncoding, bucketFiles.length);
+        for (FileStatus file : bucketFiles) {
+            logger.info("[bucketId:{}][isForColumnEncoding:{}] Listing dict file: {}, file size: {}", bucketId, isForColumnEncoding, file.getPath(), file.getLen());
+        }
+    }
+
+    private void tryOpenAndLogBucketDictFiles(Path versionDir, int bucketId, FileStatus[] bucketFiles) {
+        if (bucketFiles.length == 0) {
+            openAndLog(new Path(versionDir, DICT_CURR_PREFIX + bucketId));
+            openAndLog(new Path(versionDir, DICT_PREV_PREFIX + bucketId));
+        }
+    }
+
+    private void openAndLog(Path bucketDictFile) {
+        try {
+            // Do nothing, open and close
+            fileSystem.open(bucketDictFile).close();
+            logger.info("Bucket dict file {} opened", bucketDictFile);
+        } catch (Exception e) {
+            logger.error(String.format("Error on opening bucket dict file: %s", bucketDictFile), e);
+        }
+    }
+
+    private void sleep() {
+        try {
+            TimeUnit.MINUTES.sleep(2);
+        } catch (InterruptedException e) {
+            logger.error("Interrupted on sleep", e);
+            Thread.currentThread().interrupt();
+        }
     }
 
     private Object2LongMap<String> getBucketDict(Path dictPath, long offset) throws IOException {
@@ -321,4 +396,6 @@ public class NGlobalDictHDFSStore implements NGlobalDictStore {
             }
         }
     }
+
+
 }

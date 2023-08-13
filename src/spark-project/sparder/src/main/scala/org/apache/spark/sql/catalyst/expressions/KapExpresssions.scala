@@ -403,7 +403,7 @@ case class DictEncode(left: Expression, mid: Expression, right: Expression) exte
          |   try {
          |     int bucketId = idx % $bucketSizeTerm;
          |     $globalDictTerm = new org.apache.spark.dict.NGlobalDictionaryV2("$dictParamsTerm");
-         |     $bucketDictTerm = $globalDictTerm.loadBucketDictionary(bucketId);
+         |     $bucketDictTerm = $globalDictTerm.loadBucketDictionary(bucketId, true);
          |   } catch (Exception e) {
          |     throw new RuntimeException(e);
          |   }

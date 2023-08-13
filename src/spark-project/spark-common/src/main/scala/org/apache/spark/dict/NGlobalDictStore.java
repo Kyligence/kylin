@@ -40,7 +40,7 @@ public interface NGlobalDictStore {
 
     NGlobalDictMetaInfo getMetaInfo(long version) throws IOException;
 
-    Object2LongMap<String> getBucketDict(long version, NGlobalDictMetaInfo metadata, int bucketId) throws IOException;
+    Object2LongMap<String> getBucketDict(long version, NGlobalDictMetaInfo metadata, int bucketId, boolean isForColumnEncoding) throws IOException;
 
     void writeBucketCurrDict(String workingPath, int bucketId, Object2LongMap<String> openHashMap) throws IOException;
 
