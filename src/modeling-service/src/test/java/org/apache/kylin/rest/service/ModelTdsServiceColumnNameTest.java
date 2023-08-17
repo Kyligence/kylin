@@ -90,7 +90,7 @@ public class ModelTdsServiceColumnNameTest extends SourceTestCase {
         ReflectionTestUtils.setField(modelService, "aclEvaluate", aclEvaluate);
         ReflectionTestUtils.setField(modelService, "accessService", accessService);
         ReflectionTestUtils.setField(modelService, "userGroupService", userGroupService);
-        ReflectionTestUtils.setField(modelService, "userGroupService", userGroupService);
+        ReflectionTestUtils.setField(semanticService, "userGroupService", userGroupService);
 
         ReflectionTestUtils.setField(tdsService, "accessService", accessService);
         ReflectionTestUtils.setField(tdsService, "userGroupService", userGroupService);

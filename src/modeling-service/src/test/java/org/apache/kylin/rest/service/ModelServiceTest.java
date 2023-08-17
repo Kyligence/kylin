@@ -3476,7 +3476,7 @@ public class ModelServiceTest extends SourceTestCase {
         okModel.setFilterCondition("TEST_KYLIN_FACT.SELLER_ID > 0");
         ModelRequest okModelRequest = new ModelRequest(okModel);
         okModelRequest.setProject(project);
-        when(semanticService.convertToDataModel(okModelRequest)).thenReturn(okModel);
+        doReturn(okModel).when(semanticService).convertToDataModel(okModelRequest);
         okModelRequest.setPartitionDesc(null);
         modelService.checkBeforeModelSave(okModelRequest);
     }
