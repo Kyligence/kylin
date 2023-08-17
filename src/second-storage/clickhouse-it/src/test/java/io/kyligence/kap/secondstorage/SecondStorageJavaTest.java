@@ -265,6 +265,37 @@ public class SecondStorageJavaTest implements JobWaiter {
         Assert.fail();
     }
 
+    @Test
+    public void testParallelCleanSegment() throws Exception {
+        buildModel();
+        val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val dataflow = dataflowManager.getDataflow(modelId);
+        val segs = dataflow.getQueryableSegments().stream().map(NDataSegment::getId).collect(Collectors.toList());
+        val request = new StorageRequest();
+        request.setProject(project);
+        request.setModel(modelId);
+        AtomicInteger exceptionCnt = new AtomicInteger(0);
+        Runnable runner = () ->{
+            SecurityContextHolder.getContext()
+                    .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
+            try {
+                EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                        () -> secondStorageEndpoint.cleanStorage(request, segs), project);
+            } catch (TransactionException e) {
+                if(SECOND_STORAGE_JOB_EXISTS.toErrorCode() == ((KylinException)e.getCause()).getErrorCode()) {
+                    exceptionCnt.getAndIncrement();
+                }
+            }
+        };
+        Thread t1 = new Thread(runner);
+        Thread t2 = new Thread(runner);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        Assert.assertEquals(1, exceptionCnt.get());
+    }
+
     @Test(expected = KylinException.class)
     public void testRecoverModelNotExist() {
         val request = new RecoverRequest();
