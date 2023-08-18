@@ -72,7 +72,6 @@ import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.metadata.Epoch;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.persistence.transaction.UnitOfWorkContext;
-import org.apache.kylin.common.scheduler.EpochStartedNotifier;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.scheduler.JobDiscardNotifier;
 import org.apache.kylin.common.scheduler.JobReadyNotifier;
@@ -84,7 +83,6 @@ import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
 import org.apache.kylin.job.common.JobUtil;
 import org.apache.kylin.job.common.ShellExecutable;
 import org.apache.kylin.job.constant.ExecutableConstants;
@@ -104,7 +102,6 @@ import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.execution.Output;
 import org.apache.kylin.job.execution.StageBase;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -1401,43 +1398,22 @@ public class JobService extends BasicService implements JobSupporter, ISmartAppl
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ContextClosedEvent) {
             try (SetLogCategory ignored = new SetLogCategory(LogConstant.BUILD_CATEGORY)) {
-                logger.info("Stop kylin node, cancel build job orphan application");
-                EpochManager epochManager = EpochManager.getInstance();
-                KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
-                List<Epoch> ownedEpochs = epochManager.getOwnedEpochs();
-
-                for (Epoch epoch : ownedEpochs) {
-                    String project = epoch.getEpochTarget();
-                    NExecutableManager executableManager = NExecutableManager.getInstance(kylinConfig, project);
-                    List<ExecutablePO> allJobs = executableManager.getAllJobs();
-                    for (ExecutablePO executablePO : allJobs) {
-                        executableManager.cancelRemoteJob(executablePO);
-                    }
-                }
+                logger.info("Stop kyligence node, kill job on yarn for yarn cluster mode");
             }
-        }
-    }
-
-    @Subscribe
-    public void cancelOrphanRemoteJobOnEpochStarted(EpochStartedNotifier notifier) {
-        try (SetLogCategory ignored = new SetLogCategory(LogConstant.BUILD_CATEGORY)) {
-            logger.info("Start kylin node, cancel build job orphan application");
             EpochManager epochManager = EpochManager.getInstance();
             KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
             List<Epoch> ownedEpochs = epochManager.getOwnedEpochs();
 
             for (Epoch epoch : ownedEpochs) {
                 String project = epoch.getEpochTarget();
-                if (!NDefaultScheduler.getInstance(project).hasStarted()) {
-                    NExecutableManager executableManager = NExecutableManager.getInstance(kylinConfig, project);
+                NExecutableManager executableManager = NExecutableManager.getInstance(kylinConfig, project);
+                if (executableManager != null) {
                     List<ExecutablePO> allJobs = executableManager.getAllJobs();
                     for (ExecutablePO executablePO : allJobs) {
                         executableManager.cancelRemoteJob(executablePO);
                     }
                 }
             }
-        } catch (Exception e) {
-            logger.error("cancel orphan build job has error", e);
         }
     }
 

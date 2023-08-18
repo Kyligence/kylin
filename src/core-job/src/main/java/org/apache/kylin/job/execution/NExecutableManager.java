@@ -227,10 +227,6 @@ public class NExecutableManager {
 
     public boolean isFrozenJob(String jobId) {
         val scheduler = NDefaultScheduler.getInstance(project);
-        if (!scheduler.hasStarted()) {
-            logger.warn("NDefaultScheduler[project: {}] is not started, job[{}] is frozen job", project, jobId);
-            return true;
-        }
         return scheduler.getContext().isFrozenJob(jobId);
     }
 
