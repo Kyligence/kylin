@@ -168,11 +168,11 @@ public class NGlobalDictHDFSStore implements NGlobalDictStore {
 
         // https://olapio.atlassian.net/browse/AL-8865
         // Only do check and retry when isForColumnEncoding is true
-        bucketFiles = checkAndRetryGetBucketFiles(versionDir, bucketId, isForColumnEncoding, bucketFiles);
+        bucketFiles = checkAndRetryGetBucketFiles(metaInfo, versionDir, bucketId, isForColumnEncoding, bucketFiles);
 
         // Log detailed bucket files to confirm that we do not lose
         // necessary files when do flat table column encoding.
-        logBucketFiles(bucketId, isForColumnEncoding, bucketFiles);
+        logBucketFiles(metaInfo, bucketId, isForColumnEncoding, bucketFiles);
 
         for (FileStatus file : bucketFiles) {
             if (file.getPath().getName().startsWith(DICT_CURR_PREFIX)) {
@@ -186,8 +186,13 @@ public class NGlobalDictHDFSStore implements NGlobalDictStore {
         return object2IntMap;
     }
 
-    private FileStatus[] checkAndRetryGetBucketFiles(Path versionDir, int bucketId, boolean isForColumnEncoding, FileStatus[] bucketFiles) throws IOException {
+    private FileStatus[] checkAndRetryGetBucketFiles(NGlobalDictMetaInfo metaInfo, Path versionDir, int bucketId, boolean isForColumnEncoding, FileStatus[] bucketFiles) throws IOException {
         logger.info("[bucketId:{}][isForColumnEncoding:{}]", bucketId, isForColumnEncoding);
+
+        if (bucketFiles.length == 0 && metaInfo.isEmptyDict()) {
+            logger.info("[bucketId:{}][isForColumnEncoding:{}] Empty dict, no bucket files check required", bucketId, isForColumnEncoding);
+            return bucketFiles;
+        }
 
         // isForColumnEncoding == true means at least 1 dict file should exist
         if (isForColumnEncoding && bucketFiles.length == 0) {
@@ -218,9 +223,13 @@ public class NGlobalDictHDFSStore implements NGlobalDictStore {
         return bucketFiles;
     }
 
-    private void logBucketFiles(int bucketId, boolean isForColumnEncoding, FileStatus[] bucketFiles) {
+    private void logBucketFiles(NGlobalDictMetaInfo metaInfo, int bucketId, boolean isForColumnEncoding, FileStatus[] bucketFiles) {
         if (bucketFiles.length == 0) {
-            logger.info("[bucketId:{}][isForColumnEncoding:{}] Try listing bucketFiles, but no bucketFiles found", bucketId, isForColumnEncoding);
+            if (metaInfo.isEmptyDict()) {
+                logger.info("[bucketId:{}][isForColumnEncoding:{}] Empty dict, no need to log bucket files", bucketId, isForColumnEncoding);
+            } else {
+                logger.info("[bucketId:{}][isForColumnEncoding:{}] Try listing bucketFiles, but no bucketFiles found", bucketId, isForColumnEncoding);
+            }
             return;
         }
         logger.info("[bucketId:{}][isForColumnEncoding:{}] bucketFiles size: {}", bucketId, isForColumnEncoding, bucketFiles.length);

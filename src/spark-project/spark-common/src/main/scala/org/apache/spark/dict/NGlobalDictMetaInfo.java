@@ -51,4 +51,8 @@ public class NGlobalDictMetaInfo implements Serializable {
     public void setBucketSize(int bucketSize) {
         this.bucketSize = bucketSize;
     }
+
+    public boolean isEmptyDict() {
+        return dictCount == 0;
+    }
 }
