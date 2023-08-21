@@ -57,7 +57,7 @@ object SortPlan extends LogEx {
             SortOrder(pair._1.expr, Ascending, NullsLast, Seq.empty)
           case (org.apache.calcite.rel.RelFieldCollation.Direction.ASCENDING,
           org.apache.calcite.rel.RelFieldCollation.NullDirection.FIRST) =>
-            SortOrder(pair._1.expr, Ascending, NullsLast, Seq.empty)
+            SortOrder(pair._1.expr, Ascending, NullsFirst, Seq.empty)
           case (
             org.apache.calcite.rel.RelFieldCollation.Direction.DESCENDING,
             org.apache.calcite.rel.RelFieldCollation.NullDirection.UNSPECIFIED) =>
