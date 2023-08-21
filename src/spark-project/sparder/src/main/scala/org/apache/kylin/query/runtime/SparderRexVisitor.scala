@@ -171,7 +171,12 @@ class SparderRexVisitor(val inputFieldNames: Seq[String],
             case num: MonthNum => {
               // both add_month and add_year case
               val ts = k_lit(children.head).cast(TimestampType)
-              return k_lit(k_add_months(k_lit(ts), num.num))
+              call.getType.getSqlTypeName match {
+                case SqlTypeName.DATE =>
+                  return k_lit(k_add_months(k_lit(ts), num.num)).cast(DateType)
+                case _ =>
+                  return k_lit(k_add_months(k_lit(ts), num.num))
+              }
             }
             case _ =>
           }
