@@ -79,6 +79,7 @@ public class LdapUtils {
 
     public static Set<String> getAllGroupMembers(SpringSecurityLdapTemplate ldapTemplate, String name) {
         String ldapGroupSearchBase = KylinConfig.getInstanceFromEnv().getLDAPGroupSearchBase();
+
         String ldapGroupMemberSearchFilter = KapConfig.getInstanceFromEnv().getLDAPGroupMemberSearchFilter();
         String ldapGroupMemberAttr = KapConfig.getInstanceFromEnv().getLDAPGroupMemberAttr();
         Set<String> ldapUserDNs = ldapTemplate.searchForSingleAttributeValues(ldapGroupSearchBase,
@@ -112,8 +113,19 @@ public class LdapUtils {
                 left += maxValRange;
             }
         }
+        rewriteUserDnIfNeeded(ldapUserDNs);
 
         return ldapUserDNs;
     }
 
+    public static void rewriteUserDnIfNeeded(Set<String> ldapUserDNs) {
+        String ldapUserSearchBase = KylinConfig.getInstanceFromEnv().getLDAPUserSearchBase();
+        ldapUserDNs.stream().map(dn -> {
+            String dnName = dn;
+            if (!dn.contains(ldapUserSearchBase)) {
+                dnName = "cn=" + dn + "," + ldapUserSearchBase;
+            }
+            return dnName;
+        });
+    }
 }
