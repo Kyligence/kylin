@@ -17,6 +17,7 @@
  */
 package org.apache.kylin.tool.util;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
@@ -24,8 +25,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.google.common.collect.Sets;
 
 public class LdapUtilsTest extends NLocalFileMetadataTestCase {
 
@@ -41,9 +40,18 @@ public class LdapUtilsTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testRewriteUserDn() {
+        getTestConfig().setProperty("kylin.security.ldap.user-search-base", "cn=Users,dc=example,dc=com");
         String ldapUserSearchBase = getTestConfig().getLDAPUserSearchBase();
-        Set<String> ldapUserDNs = Sets.newHashSet("a", "b", "c");
-        LdapUtils.rewriteUserDnIfNeeded(ldapUserDNs);
+        Set<String> ldapUserDNs = new HashSet<>();
+        ldapUserDNs.add("a");
+        ldapUserDNs.add("b");
+        ldapUserDNs = LdapUtils.rewriteUserDnIfNeeded(ldapUserDNs);
         Assert.assertTrue(ldapUserDNs.stream().allMatch(x -> x.contains(ldapUserSearchBase)));
+
+        Set<String> ldapUserDNs2 = new HashSet<>();
+        ldapUserDNs2.add("uid=a,cn=Users,dc=example,dc=com");
+        ldapUserDNs2.add("uid=b,cn=Users,dc=example,dc=com");
+        ldapUserDNs2 = LdapUtils.rewriteUserDnIfNeeded(ldapUserDNs2);
+        Assert.assertTrue(ldapUserDNs2.stream().allMatch(x -> x.contains(ldapUserSearchBase)));
     }
 }
