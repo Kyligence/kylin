@@ -90,7 +90,8 @@ class KylinDataFrameManager(sparkSession: SparkSession) {
       val id = layout.getOrderedDimensions.inverse().get(partition)
       var plan = read(dataflow, layout, pruningInfo)
       if (id != null && end != Long.MinValue) {
-        plan = Filter(col(id.toString).geq(new Timestamp(end)).named, plan)
+        val filterPlan = Filter(col(id.toString).geq(new Timestamp(end)).expr, plan)
+        plan = SparkOperation.project(filterPlan.output.map(c => col(c.name)), filterPlan)
       }
       return plan
     }
