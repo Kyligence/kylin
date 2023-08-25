@@ -243,6 +243,10 @@ public class QueryExec {
             postOptRules.addAll(HepUtils.AggPushDownRules);
         }
 
+        if(kylinConfig.isScalarSubqueryJoinEnabled()) {
+            postOptRules.addAll(HepUtils.ScalarSubqueryJoinRules);
+        }
+
         if (kylinConfig.isOptimizedSumCastDoubleRuleEnabled()) {
             postOptRules.addAll(HepUtils.SumCastDoubleRules);
         }

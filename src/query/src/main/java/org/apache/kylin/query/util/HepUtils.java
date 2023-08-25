@@ -49,6 +49,7 @@ import io.kyligence.kap.query.optrule.KapProjectMergeRule;
 import io.kyligence.kap.query.optrule.KapProjectRule;
 import io.kyligence.kap.query.optrule.KapSumCastTransposeRule;
 import io.kyligence.kap.query.optrule.KapSumTransCastToThenRule;
+import io.kyligence.kap.query.optrule.ScalarSubqueryJoinRule;
 import io.kyligence.kap.query.optrule.SumBasicOperatorRule;
 import io.kyligence.kap.query.optrule.SumCaseWhenFunctionRule;
 import io.kyligence.kap.query.optrule.SumConstantConvertRule;
@@ -95,6 +96,14 @@ public class HepUtils {
             KapProjectRule.INSTANCE,
             KapAggregateRule.INSTANCE,
             KapJoinRule.INSTANCE
+    );
+
+    public static final ImmutableList<RelOptRule> ScalarSubqueryJoinRules = ImmutableList.of(
+            KapAggregateRule.INSTANCE, //
+            KapProjectRule.INSTANCE, //
+            KapJoinRule.INSTANCE, //
+            ScalarSubqueryJoinRule.AGG_JOIN, //
+            ScalarSubqueryJoinRule.AGG_PRJ_JOIN
     );
 
     public static final ImmutableList<RelOptRule> CountDistinctExprRules = ImmutableList.of(

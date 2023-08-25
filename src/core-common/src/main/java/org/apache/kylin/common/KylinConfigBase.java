@@ -2505,6 +2505,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.query.calcite.aggregate-pushdown-enabled", FALSE));
     }
 
+    public boolean isScalarSubqueryJoinEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.query.scalar-subquery-join-enabled", FALSE));
+    }
+
     public int getCalciteBindableCacheSize() {
         return Integer.parseInt(getOptional("kylin.query.calcite.bindable.cache.maxSize", "10"));
     }
