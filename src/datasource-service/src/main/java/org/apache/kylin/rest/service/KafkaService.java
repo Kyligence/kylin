@@ -40,26 +40,28 @@ import org.apache.kafka.common.errors.TimeoutException;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.HadoopUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.loader.ParserClassLoaderState;
 import org.apache.kylin.metadata.jar.JarInfoManager;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.streaming.DataParserInfo;
 import org.apache.kylin.metadata.streaming.DataParserManager;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
+import org.apache.kylin.rest.KafkaCondition;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.sample.KafkaSourceHandler;
 import org.apache.kylin.sample.StreamingSourceHandler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component("kafkaService")
+@Conditional(KafkaCondition.class)
 public class KafkaService extends BasicService {
 
     @Autowired

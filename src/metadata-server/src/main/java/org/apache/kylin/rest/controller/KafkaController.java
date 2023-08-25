@@ -46,7 +46,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping(value = "/api/kafka", produces = { HTTP_VND_APACHE_KYLIN_JSON, HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
 public class KafkaController extends NBasicController {
 
-    @Autowired
+    @Autowired(required = false)
     @Qualifier("kafkaService")
     private KafkaService kafkaService;
 
