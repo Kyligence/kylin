@@ -62,6 +62,7 @@ public class PasswordPlaceholderConfigurer extends PropertyPlaceholderConfigurer
         }
         InputStream is = IOUtils.toInputStream(propString, Charset.defaultCharset());
         resources[0] = new InputStreamResource(is);
+        this.setFileEncoding(Charset.defaultCharset().toString());
         this.setLocations(resources);
     }
 
