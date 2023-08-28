@@ -98,10 +98,6 @@ public class HadoopUtil {
     }
 
     public static Configuration healSickConfig(Configuration conf) {
-        // https://issues.apache.org/jira/browse/KYLIN-953
-        if (StringUtils.isBlank(conf.get("hadoop.tmp.dir"))) {
-            conf.set("hadoop.tmp.dir", "/tmp");
-        }
         //  https://issues.apache.org/jira/browse/KYLIN-3064
         conf.set("yarn.timeline-service.enabled", "false");
 
