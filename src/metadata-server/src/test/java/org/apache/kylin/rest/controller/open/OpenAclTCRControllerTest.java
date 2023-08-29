@@ -26,14 +26,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.service.AccessService;
 import org.apache.kylin.rest.service.IUserGroupService;
 import org.apache.kylin.rest.service.UserService;
 import org.apache.kylin.rest.request.AclTCRRequest;
 import org.apache.kylin.rest.service.AclTCRService;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -56,6 +57,7 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 /**
  * created by lee
  **/
+@MetadataInfo
 public class OpenAclTCRControllerTest {
     @Mock
     private UserService userService;
@@ -74,7 +76,7 @@ public class OpenAclTCRControllerTest {
 
     private MockMvc mockMvc;
 
-    @Before
+    @BeforeEach
     public void setup() {
         FilterProvider filterProvider = new SimpleFilterProvider().addFilter("passwordFilter",
                 SimpleBeanPropertyFilter.serializeAllExcept("password", "defaultPassword"));

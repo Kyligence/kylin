@@ -32,11 +32,9 @@ import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.rest.controller.open.OpenAclTCRController;
 import org.apache.kylin.rest.request.AclTCRRequest;
 import org.apache.kylin.rest.service.AclTCRService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -73,12 +71,9 @@ public class OpenAclTCRControllerTest extends NLocalFileMetadataTestCase {
     @InjectMocks
     private OpenAclTCRController openAclTCRController = Mockito.spy(new OpenAclTCRController());
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     private static final String APPLICATION_JSON_PUBLIC = HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException {
         MockitoAnnotations.initMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(openAclTCRController).defaultRequest(MockMvcRequestBuilders.get("/"))
@@ -89,7 +84,7 @@ public class OpenAclTCRControllerTest extends NLocalFileMetadataTestCase {
         createTestMetadata();
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         cleanupTestMetadata();
     }

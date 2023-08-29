@@ -21,15 +21,14 @@ import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLI
 
 import java.util.List;
 
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.rest.constant.Constant;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import org.apache.kylin.rest.controller.v2.NUserGroupControllerV2;
 import org.apache.kylin.rest.service.NUserGroupService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -44,10 +43,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.accept.ContentNegotiationManager;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
+import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 
+@MetadataInfo(onlyProps = true)
 public class NUserGroupControllerV2Test {
 
     private MockMvc mockMvc;
@@ -55,15 +54,12 @@ public class NUserGroupControllerV2Test {
     @Mock
     private NUserGroupService userGroupService;
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @InjectMocks
     private NUserGroupControllerV2 nUserGroupControllerV2 = Mockito.spy(new NUserGroupControllerV2());
 
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
 
-    @Before
+    @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
         ContentNegotiationManager contentNegotiationManager = new ContentNegotiationManager();
@@ -73,7 +69,7 @@ public class NUserGroupControllerV2Test {
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
     }
 

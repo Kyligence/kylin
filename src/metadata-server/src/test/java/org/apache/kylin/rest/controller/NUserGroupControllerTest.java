@@ -18,29 +18,29 @@
 
 package org.apache.kylin.rest.controller;
 
+import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY;
 import static org.apache.kylin.rest.constant.Constant.ROLE_ADMIN;
-import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 
 import java.util.Arrays;
 import java.util.List;
 
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.rest.service.UserService;
-import io.kyligence.kap.metadata.user.ManagedUser;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.metadata.usergroup.UserGroup;
 import org.apache.kylin.rest.request.UpdateGroupRequest;
 import org.apache.kylin.rest.request.UserGroupRequest;
 import org.apache.kylin.rest.response.UserGroupResponseKI;
 import org.apache.kylin.rest.service.AclTCRService;
 import org.apache.kylin.rest.service.NUserGroupService;
-import org.junit.After;
+import org.apache.kylin.rest.service.UserService;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -61,10 +61,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
+import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 
+@MetadataInfo
 public class NUserGroupControllerTest {
 
     private MockMvc mockMvc;
@@ -78,15 +79,12 @@ public class NUserGroupControllerTest {
     @Mock
     private UserService userService;
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @InjectMocks
     private NUserGroupController nUserGroupController = Mockito.spy(new NUserGroupController());
 
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", ROLE_ADMIN);
 
-    @Before
+    @BeforeEach
     public void setup() {
         FilterProvider filterProvider = new SimpleFilterProvider().addFilter("passwordFilter",
                 SimpleBeanPropertyFilter.serializeAllExcept("password", "defaultPassword"));
@@ -101,7 +99,7 @@ public class NUserGroupControllerTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
     }
 
@@ -155,19 +153,19 @@ public class NUserGroupControllerTest {
     }
 
     @Test
-    public void testAddEmptyGroup() throws Exception {
-        thrown.expect(KylinException.class);
-        thrown.expectMessage(REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY.getMsg("group_name"));
-        UserGroupRequest request = new UserGroupRequest();
-        request.setGroupName("");
-        nUserGroupController.addUserGroup(request);
+    public void testAddEmptyGroup() {
+        Assertions.assertThrows(KylinException.class, () -> {
+            UserGroupRequest request = new UserGroupRequest();
+            request.setGroupName("");
+            nUserGroupController.addUserGroup(request);
+        }, REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY.getMsg("group_name"));
     }
 
-    @Test(expected = KylinException.class)
+    @Test
     public void testAddIllegalGroupName() throws Exception {
         UserGroupRequest request = new UserGroupRequest();
         request.setGroupName(".hhhh");
-        nUserGroupController.addUserGroup(request);
+        Assertions.assertThrows(KylinException.class, () -> nUserGroupController.addUserGroup(request));
     }
 
     @Test

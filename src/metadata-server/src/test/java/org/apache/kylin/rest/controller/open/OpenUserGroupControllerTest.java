@@ -25,15 +25,17 @@ import java.util.List;
 
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.rest.constant.Constant;
-import org.apache.kylin.rest.response.DataResult;
-import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.controller.NUserGroupController;
 import org.apache.kylin.rest.request.UpdateGroupRequest;
 import org.apache.kylin.rest.request.UserGroupRequest;
+import org.apache.kylin.rest.response.DataResult;
+import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.service.NUserGroupService;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -53,10 +55,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 
+@MetadataInfo(onlyProps = true)
 public class OpenUserGroupControllerTest {
     private MockMvc mockMvc;
 
@@ -71,7 +73,7 @@ public class OpenUserGroupControllerTest {
 
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
 
-    @Before
+    @BeforeEach
     public void setup() {
         FilterProvider filterProvider = new SimpleFilterProvider().addFilter("passwordFilter",
                 SimpleBeanPropertyFilter.serializeAllExcept("password", "defaultPassword"));

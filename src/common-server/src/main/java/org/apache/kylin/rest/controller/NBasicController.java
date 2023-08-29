@@ -128,7 +128,9 @@ import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.client.RequestCallback;
@@ -678,5 +680,11 @@ public class NBasicController {
                 throw new KylinException(LOW_LEVEL_LICENSE, msg.getLowLevelLicenseMessage());
             }
         }
+    }
+
+    @InitBinder
+    private void initBinder(WebDataBinder binder) {
+        int autoGrowCollectionLimit = KylinConfig.getInstanceFromEnv().getDataBinderAutoGrowCollectionLimit();
+        binder.setAutoGrowCollectionLimit(autoGrowCollectionLimit);
     }
 }

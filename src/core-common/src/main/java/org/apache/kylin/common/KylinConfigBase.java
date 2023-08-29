@@ -3047,6 +3047,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.web.session.jdbc-encode-enabled", FALSE));
     }
 
+    public int getDataBinderAutoGrowCollectionLimit() {
+        return Integer.parseInt(getOptional("kylin.web.data-binder.auto-grow-collection-limit", "256"));
+    }
+
     public String getSpringStoreType() {
         return getOptional("spring.session.store-type", "");
     }

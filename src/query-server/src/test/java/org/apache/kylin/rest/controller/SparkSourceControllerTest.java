@@ -21,13 +21,14 @@ package org.apache.kylin.rest.controller;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.DDLRequest;
 import org.apache.kylin.rest.request.ExportTableRequest;
 import org.apache.kylin.rest.service.SparkSourceService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -41,6 +42,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+@MetadataInfo(onlyProps = true)
 public class SparkSourceControllerTest {
     private MockMvc mockMvc;
 
@@ -52,7 +54,7 @@ public class SparkSourceControllerTest {
 
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
 
-    @Before
+    @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(sparkSourceController).defaultRequest(MockMvcRequestBuilders.get("/"))
@@ -60,7 +62,7 @@ public class SparkSourceControllerTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
     }
 

@@ -22,15 +22,14 @@ import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLI
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.controller.v2.NProjectControllerKylin;
 import org.apache.kylin.rest.service.ProjectService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -44,12 +43,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+@MetadataInfo(onlyProps = true)
 public class NProjectControllerKylinTest {
 
     private MockMvc mockMvc;
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
 
     @Mock
     private ProjectService projectService;
@@ -59,7 +56,7 @@ public class NProjectControllerKylinTest {
 
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
 
-    @Before
+    @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(nProjectControllerKylin)
@@ -68,7 +65,7 @@ public class NProjectControllerKylinTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
     }
 
