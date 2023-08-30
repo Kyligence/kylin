@@ -24,7 +24,12 @@ import org.apache.kylin.common.exception.CalciteNotSupportException;
 
 public class SparkMathUDF implements NotConstant {
 
-    public Object BROUND(@Parameter(name = "str1") Double exp1, @Parameter(name = "str2") Integer exp2)
+    public Object BROUND(@Parameter(name = "str1") Object exp1, @Parameter(name = "str2") Object exp2)
+            throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
+    public Object BROUND(@Parameter(name = "str1") Object exp1)
             throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }

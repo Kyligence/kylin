@@ -45,19 +45,20 @@ object ExpressionConverter {
     "explode"
   )
 
-  private val ternaryParameterFunc = mutable.HashSet("replace", "substring_index", "lpad", "rpad", "conv", "regexp_extract")
+  private val ternaryParameterFunc = mutable.HashSet("replace", "substring_index", "conv", "regexp_extract")
   private val binaryParameterFunc =
     mutable.HashSet("decode", "encode", "find_in_set", "levenshtein", "sha2",
       "trunc", "add_months", "date_add", "date_sub", "from_utc_timestamp", "to_utc_timestamp",
       // math function
-      "bround", "hypot", "log"
+      "hypot", "log"
     )
 
   private val noParameterFunc = mutable.HashSet("current_database", "input_file_block_length", "input_file_block_start",
     "input_file_name", "monotonically_increasing_id", "now", "spark_partition_id", "uuid"
   )
 
-  private val varArgsFunc = mutable.HashSet("months_between", "locate", "rtrim", "from_unixtime", "to_date", "to_timestamp", "split")
+  private val varArgsFunc = mutable.HashSet("months_between", "locate", "rtrim", "from_unixtime", "to_date",
+    "to_timestamp", "split", "bround", "lpad", "rpad", "round")
 
   private val bitmapUDF = mutable.HashSet("intersect_count_by_col", "subtract_bitmap_value", "subtract_bitmap_uuid");
 
@@ -205,24 +206,6 @@ object ExpressionConverter {
             abs(
               k_lit(children.head).cast(SparderTypeUtil
                 .convertSqlTypeToSparkType(relDataType)))
-          case "round" =>
-            var scale = children.apply(1)
-            if (scale.isInstanceOf[Column]) {
-              val extractConst = (scale: Column) => {
-                val extractCastValue = (child: Literal) => child.value
-                val reduceCast = (expr: Cast) => extractCastValue(expr.child.asInstanceOf[Literal])
-                scale.expr.getClass.getSimpleName match {
-                  case "Cast" =>
-                    reduceCast(scale.expr.asInstanceOf[Cast])
-                  case _ =>
-                    throw new UnsupportedOperationException(s"Scale parameter of round function doesn't support this expression " + scale.expr.toString())
-                }
-              }
-              scale = extractConst(scale.asInstanceOf[Column])
-            }
-            round(
-              k_lit(children.head),
-              scale.asInstanceOf[Int])
           case "truncate" =>
             if (children.size == 1) {
               k_truncate(k_lit(children.head), 0)

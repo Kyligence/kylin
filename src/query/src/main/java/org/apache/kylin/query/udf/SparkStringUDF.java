@@ -64,8 +64,13 @@ public class SparkStringUDF implements NotConstant {
         throw new CalciteNotSupportException();
     }
 
-    public String LPAD(@Parameter(name = "str1") String exp1, @Parameter(name = "num2") Integer exp2,
+    public String LPAD(@Parameter(name = "str1") String exp1, @Parameter(name = "num2") Object exp2,
             @Parameter(name = "str3") String exp3) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
+    public String LPAD(@Parameter(name = "str1") String exp1, @Parameter(name = "num2") Object exp2)
+            throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }
 
@@ -74,10 +79,16 @@ public class SparkStringUDF implements NotConstant {
         throw new CalciteNotSupportException();
     }
 
-    public String RPAD(@Parameter(name = "str1") String exp1, @Parameter(name = "num2") Integer exp2,
+    public String RPAD(@Parameter(name = "str1") String exp1, @Parameter(name = "num2") Object exp2,
             @Parameter(name = "str3") String exp3) throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }
+
+    public String RPAD(@Parameter(name = "str1") String exp1, @Parameter(name = "num2") Object exp2)
+            throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
 
     public String RTRIM(@Parameter(name = "str1") String exp1) throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
