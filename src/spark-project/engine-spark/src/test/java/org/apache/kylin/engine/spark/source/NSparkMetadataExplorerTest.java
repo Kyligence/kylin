@@ -47,9 +47,21 @@ public class NSparkMetadataExplorerTest extends NLocalWithSparkSessionTest {
 
     @Test
     public void testListTables() throws Exception {
+        String testProject = "default";
+        String testTableName = "DEFAULT.TEST_KYLIN_FACT";
+
         NSparkMetadataExplorer sparkMetadataExplorer = new NSparkMetadataExplorer();
-        List<String> tables = sparkMetadataExplorer.listTables("");
+        NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(getTestConfig(), testProject);
+        TableDesc fact = tableMgr.getTableDesc(testTableName);
+        sparkMetadataExplorer.createSampleTable(fact);
+
+        List<String> tables = sparkMetadataExplorer.listTables(testProject);
         Assert.assertTrue(tables != null && tables.size() > 0);
+
+        // test tableAccessCache, use only under Project Kerberos
+        boolean access = sparkMetadataExplorer.checkTableWithCache(false, "testUser", testTableName);
+        boolean cacheAccess = sparkMetadataExplorer.checkTableWithCache(true, "testUser", testTableName);
+        Assert.assertEquals(access, cacheAccess);
     }
 
     @Test

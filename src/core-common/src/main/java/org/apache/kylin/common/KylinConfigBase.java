@@ -2773,6 +2773,19 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.source.hive.table-access-filter-enabled", FALSE));
     }
 
+    public boolean getTableAccessCacheEnable() {
+        return Boolean.parseBoolean(getOptional("kylin.source.hive.table-access-cache-enabled", TRUE));
+    }
+
+    public long getTableAccessCacheSize() {
+        return Long.parseLong(getOptional("kylin.source.hive.table-access-cache-size", ONE_HUNDRED_THOUSAND));
+    }
+
+    public long getTableAccessCacheTTL() {
+        return TimeUtil.timeStringAs(getOptional("kylin.source.hive.table-access-cache-ttl", "7d"),
+                TimeUnit.MINUTES);
+    }
+
     public String[] getHiveDatabases() {
         return getOptionalStringArray("kylin.source.hive.databases", new String[0]);
     }

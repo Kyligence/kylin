@@ -32,6 +32,7 @@ import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
@@ -41,36 +42,27 @@ import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.ViewRequest;
 import org.apache.kylin.rest.response.LoadTableResponse;
 import org.apache.kylin.rest.response.LogicalViewResponse;
-
 import org.apache.spark.sql.LogicalViewLoader;
 import org.apache.spark.sql.SparderEnv;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.common.SparkDDLTestUtils;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
 public class SparkDDLTest extends NLocalFileMetadataTestCase {
-  @Autowired
-  private final SparkDDLService ddlService = Mockito.spy(new SparkDDLService());
-  @Autowired
-  private final TableExtService tableExtService = Mockito.spy(new TableExtService());
-  @Autowired
-  private final TableService tableService = Mockito.spy(new TableService());
-  @Autowired
-  private final IUserGroupService userGroupService = Mockito.spy(NUserGroupService.class);
-  private final Integer LOGICAL_VIEW_CATCHUP_INTERVAL = 3;
+  private SparkDDLService ddlService;
+  private TableExtService tableExtService;
+  private TableService tableService;
+  private IUserGroupService userGroupService;
+  private Integer LOGICAL_VIEW_CATCHUP_INTERVAL = 3;
 
   // Hive View
   private static final String CREATEVIEW_SQL1 =
@@ -122,6 +114,12 @@ public class SparkDDLTest extends NLocalFileMetadataTestCase {
   @Before
   public void setup() {
     createTestMetadata();
+
+    ddlService = Mockito.spy(new SparkDDLService());
+    tableExtService = Mockito.spy(new TableExtService());
+    tableService = Mockito.spy(new TableService());
+    userGroupService = Mockito.spy(NUserGroupService.class);
+
     Authentication authentication = new TestingAuthenticationToken("ADMIN",
         "ADMIN", Constant.ROLE_ADMIN);
     SecurityContextHolder.getContext().setAuthentication(authentication);

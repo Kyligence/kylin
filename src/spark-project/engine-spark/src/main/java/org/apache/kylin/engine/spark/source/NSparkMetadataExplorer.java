@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +43,8 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.cache.Cache;
+import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.ISourceAware;
@@ -67,6 +71,9 @@ import lombok.val;
 public class NSparkMetadataExplorer implements ISourceMetadataExplorer, ISampleDataDeployer, Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(NSparkMetadataExplorer.class);
+    private static Cache<String, Boolean> tableAccessCache = CacheBuilder.newBuilder()
+            .maximumSize(KylinConfig.getInstanceFromEnv().getTableAccessCacheSize())
+            .expireAfterWrite(KylinConfig.getInstanceFromEnv().getTableAccessCacheTTL(), TimeUnit.MINUTES).build();
 
     public static String generateCreateSchemaSql(String schemaName) {
         return String.format(Locale.ROOT, "CREATE DATABASE IF NOT EXISTS %s", schemaName);
@@ -122,7 +129,6 @@ public class NSparkMetadataExplorer implements ISourceMetadataExplorer, ISampleD
     public List<String> listTables(String database) throws Exception {
         val ugi = UserGroupInformation.getCurrentUser();
         val config = KylinConfig.getInstanceFromEnv();
-        val spark = SparderEnv.getSparkSession();
 
         List<String> tables = Lists.newArrayList();
         try {
@@ -136,9 +142,10 @@ public class NSparkMetadataExplorer implements ISourceMetadataExplorer, ISampleD
             if (config.getTableAccessFilterEnable() && config.getKerberosProjectLevelEnable()
                     && UserGroupInformation.isSecurityEnabled()) {
                 List<String> accessTables = Lists.newArrayList();
+                boolean cacheEnabled = config.getTableAccessCacheEnable();
                 for (String table : tables) {
                     val tableName = database + "." + table;
-                    if (checkTableAccess(tableName)) {
+                    if (checkTableWithCache(cacheEnabled, ugi.getUserName(), tableName)) {
                         accessTables.add(table);
                     }
                 }
@@ -149,6 +156,15 @@ public class NSparkMetadataExplorer implements ISourceMetadataExplorer, ISampleD
         }
 
         return tables;
+    }
+
+    public boolean checkTableWithCache(boolean cacheEnabled, String user, String tableName) throws ExecutionException {
+        if (cacheEnabled) {
+            String cacheKey = user + "#tableAccess#" + tableName;
+            return tableAccessCache.get(cacheKey, () -> checkTableAccess(tableName));
+        } else {
+            return checkTableAccess(tableName);
+        }
     }
 
     public boolean checkTableAccess(String tableName) {
@@ -257,7 +273,7 @@ public class NSparkMetadataExplorer implements ISourceMetadataExplorer, ISampleD
                 .orElseGet(Collections::emptyList).stream().map(field -> field.name) //
                 .collect(Collectors.toSet());
         int columnNumber = tableMeta.allColumns.size();
-        List<ColumnDesc> columns = new ArrayList<ColumnDesc>(columnNumber);
+        List<ColumnDesc> columns = new ArrayList<>(columnNumber);
         for (int i = 0; i < columnNumber; i++) {
             NSparkTableMeta.SparkTableColumnMeta field = tableMeta.allColumns.get(i);
             ColumnDesc cdesc = new ColumnDesc();

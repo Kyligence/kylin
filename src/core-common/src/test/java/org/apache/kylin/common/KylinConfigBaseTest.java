@@ -36,6 +36,7 @@
 
 package org.apache.kylin.common;
 
+import static org.apache.kylin.common.KylinConfigBase.FALSE;
 import static org.apache.kylin.common.KylinConfigBase.PATH_DELIMITER;
 import static org.apache.kylin.common.KylinConfigBase.WRITING_CLUSTER_WORKING_DIR;
 import static org.apache.kylin.common.constant.Constants.KYLIN_SOURCE_JDBC_SOURCE_ENABLE_KEY;
@@ -1493,6 +1494,27 @@ class KylinConfigBaseTest {
 
         config.setProperty("kylin.metadata.audit-log.max-size", "3000000");
         assertEquals(3000000, config.getMetadataAuditLogMaxSize());
+    }
+
+    @Test
+    void testGetTableAccessCache() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+
+        assertTrue(config.getTableAccessCacheEnable());
+        config.setProperty("kylin.source.hive.table-access-cache-enabled", FALSE);
+        assertFalse(config.getTableAccessCacheEnable());
+
+        assertEquals(100000, config.getTableAccessCacheSize());
+        config.setProperty("kylin.source.hive.table-access-cache-size", "200000");
+        assertEquals(200000, config.getTableAccessCacheSize());
+
+        assertEquals(10080, config.getTableAccessCacheTTL());
+        config.setProperty("kylin.source.hive.table-access-cache-ttl", "1m");
+        assertEquals(1, config.getTableAccessCacheTTL());
+        config.setProperty("kylin.source.hive.table-access-cache-ttl", "1h");
+        assertEquals(60, config.getTableAccessCacheTTL());
+        config.setProperty("kylin.source.hive.table-access-cache-ttl", "1d");
+        assertEquals(1440, config.getTableAccessCacheTTL());
     }
 }
 
