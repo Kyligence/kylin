@@ -24,7 +24,8 @@ public enum ErrorCodeTool implements ErrorCodeProducer {
             "KE-050040203"), PARAMETER_TIMESTAMP_COMPARE("KE-050040204"),
 
     // path & file
-    PATH_NOT_EXISTS("KE-050041201"), FILE_ALREADY_EXISTS("KE-050041202");
+    PATH_NOT_EXISTS("KE-050041201"), FILE_ALREADY_EXISTS("KE-050041202"),
+    MODEL_DUPLICATE_UUID_FAILED("KE-050041203");
 
     private final ErrorCode errorCode;
     private final ErrorMsg errorMsg;

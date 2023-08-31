@@ -19,6 +19,7 @@
 package org.apache.kylin.tool;
 
 import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.datasourceParameters;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -64,6 +65,7 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
+import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.helper.MetadataToolHelper;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -412,6 +414,61 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNotNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("ssb")).isNotNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("default")).isNotNull();
+    }
+
+    @Test
+    public void testRestoreDuplicateUuidModel() throws Exception {
+        val restoreFolder = temporaryFolder.newFolder();
+        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), restoreFolder, "/");
+
+        val tool = new MetadataTool(getTestConfig());
+        tool.execute(new String[] { "-restore", "-dir", restoreFolder.getAbsolutePath() });
+        NDataModelManager dataModelManager = NDataModelManager.getInstance(getTestConfig(), "default");
+
+        String modelId = "82fa7671-a935-45f5-8779-85703601f49a";
+        NDataModel dataModelDesc = dataModelManager.getDataModelDesc(modelId);
+        dataModelManager.dropModel(dataModelDesc.getUuid());
+        NDataModel nDataModel = dataModelManager.copyBySerialization(dataModelDesc);
+        nDataModel.setMvcc(-1);
+        nDataModel.setUuid(RandomUtil.randomUUIDStr());
+        dataModelManager.createDataModelDesc(nDataModel, nDataModel.getOwner());
+
+        String modelId2 = "a8ba3ff1-83bd-4066-ad54-d2fb3d1f0e94";
+        NDataModel dataModelDesc2 = dataModelManager.getDataModelDesc(modelId2);
+        dataModelManager.dropModel(dataModelDesc2.getUuid());
+        NDataModel nDataModel2 = dataModelManager.copyBySerialization(dataModelDesc2);
+        nDataModel2.setMvcc(-1);
+        nDataModel2.setUuid(RandomUtil.randomUUIDStr());
+        dataModelManager.createDataModelDesc(nDataModel2, nDataModel2.getOwner());
+
+        try {
+            tool.execute(new String[] { "-restore", "-dir", restoreFolder.getAbsolutePath() });
+        } catch (Exception e) {
+            assertTrue(e instanceof KylinException);
+            assertEquals(
+                    "KE-050041203: Please modify the model name and then restore:[project]:models: [default]:ut_inner_join_cube_partial,test_encoding",
+                    e.getCause().toString());
+        }
+        long start = System.currentTimeMillis() / 1000;
+        await().until(() -> start != (System.currentTimeMillis() / 1000));
+        try {
+            tool.execute(new String[] { "-restore", "-project", "default", "-dir", restoreFolder.getAbsolutePath() });
+        } catch (Exception e) {
+            assertTrue(e instanceof KylinException);
+            assertEquals(
+                    "KE-050041203: Please modify the model name and then restore:[project]:models: [default]:ut_inner_join_cube_partial,test_encoding",
+                    e.getCause().toString());
+        }
+
+        Assertions.assertThat(dataModelManager.getDataModelDesc(modelId)).isNull();
+        Assertions.assertThat(dataModelManager.getDataModelDesc(modelId2)).isNull();
+
+        long start2 = System.currentTimeMillis() / 1000;
+        await().until(() -> start2 != (System.currentTimeMillis() / 1000));
+        tool.execute(new String[] { "-restore", "-dir", restoreFolder.getAbsolutePath(), "--after-truncate" });
+
+        Assertions.assertThat(dataModelManager.getDataModelDesc(modelId)).isNotNull();
+        Assertions.assertThat(dataModelManager.getDataModelDesc(modelId2)).isNotNull();
     }
 
     @Test

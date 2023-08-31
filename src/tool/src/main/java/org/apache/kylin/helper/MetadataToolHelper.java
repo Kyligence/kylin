@@ -19,6 +19,7 @@
 package org.apache.kylin.helper;
 
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.FILE_ALREADY_EXISTS;
+import static org.apache.kylin.common.exception.code.ErrorCodeTool.MODEL_DUPLICATE_UUID_FAILED;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,8 +29,12 @@ import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Set;
@@ -53,8 +58,10 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.MetadataChecker;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.tool.HDFSMetadataTool;
 import org.apache.kylin.tool.constant.StringConstant;
@@ -282,6 +289,7 @@ public class MetadataToolHelper {
 
     public void restore(ResourceStore currentResourceStore, ResourceStore restoreResourceStore, String project,
             boolean delete) {
+        checkDuplicateUuidModel(currentResourceStore, restoreResourceStore, project, delete);
         if (StringUtils.isBlank(project)) {
             logger.info("start to restore all projects");
             var srcProjectFolders = restoreResourceStore.listResources("/");
@@ -332,6 +340,117 @@ public class MetadataToolHelper {
         }
 
         logger.info("restore successfully");
+    }
+
+    public void checkDuplicateUuidModel(ResourceStore currentResourceStore, ResourceStore restoreResourceStore,
+            String project, boolean delete) {
+        logger.info("start check duplicate uuid model");
+        if (delete) {
+            return;
+        }
+
+        Map<String, List<String>> duplicateUuidModelByProject = getDuplicateUuidModelByProject(currentResourceStore,
+                restoreResourceStore, project);
+
+        if (!duplicateUuidModelByProject.isEmpty()) {
+            String errorMsg = duplicateUuidModelByProject.entrySet().stream()
+                    .map(m -> "[" + m.getKey() + "]:" + String.join(",", m.getValue()))
+                    .collect(Collectors.joining(";"));
+            String info = String.format(
+                    "[UNEXPECTED_THINGS_HAPPENED] There will be models with the same name after recovery, please rename these models first:[project]:models: %s ",
+                    errorMsg);
+            logger.error(info);
+            System.out.println(StringConstant.ANSI_RED + info + StringConstant.ANSI_RESET);
+            throw new KylinException(MODEL_DUPLICATE_UUID_FAILED, errorMsg);
+        }
+        logger.info("end check duplicate uuid model");
+    }
+
+    private Map<String, List<String>> getDuplicateUuidModelByProject(ResourceStore currentResourceStore,
+            ResourceStore restoreResourceStore, String project) {
+        Map<String, List<String>> duplicateUuidModelByProject = Maps.newHashMap();
+        if (StringUtils.isBlank(project)) {
+            duplicateUuidModelByProject = getDuplicateUuidModelByAllProject(currentResourceStore, restoreResourceStore);
+        } else {
+            List<String> duplicateUuidModel = getDuplicateUuidModel(currentResourceStore, restoreResourceStore,
+                    project);
+            if (!duplicateUuidModel.isEmpty()) {
+                duplicateUuidModelByProject.put(project, duplicateUuidModel);
+            }
+        }
+        return duplicateUuidModelByProject;
+    }
+
+    private Map<String, List<String>> getDuplicateUuidModelByAllProject(ResourceStore currentResourceStore,
+            ResourceStore restoreResourceStore) {
+        var destProjectFolders = currentResourceStore.listResources("/");
+        var srcProjectFolders = restoreResourceStore.listResources("/");
+        destProjectFolders = destProjectFolders == null ? Sets.newTreeSet() : destProjectFolders;
+        srcProjectFolders = srcProjectFolders == null ? Sets.newTreeSet() : srcProjectFolders;
+        val projectFolders = Sets.union(srcProjectFolders, destProjectFolders);
+
+        Map<String, List<String>> duplicateUuidModelByProject = Maps.newHashMap();
+        for (String projectPath : projectFolders) {
+            if (projectPath.equals(ResourceStore.METASTORE_UUID_TAG)
+                    || projectPath.equals(ResourceStore.METASTORE_IMAGE)) {
+                continue;
+            }
+            val projectName = Paths.get(projectPath).getName(0).toString();
+            List<String> duplicateUuidModel = getDuplicateUuidModel(currentResourceStore, restoreResourceStore,
+                    projectName);
+            if (!duplicateUuidModel.isEmpty()) {
+                duplicateUuidModelByProject.put(projectName, duplicateUuidModel);
+            }
+        }
+        return duplicateUuidModelByProject;
+    }
+
+    private List<String> getDuplicateUuidModel(ResourceStore currentResourceStore, ResourceStore restoreResourceStore,
+            String projectName) {
+        String modelDescRootPath = File.separator + projectName + ResourceStore.DATA_MODEL_DESC_RESOURCE_ROOT;
+        Set<String> destModelResource = currentResourceStore.listResources(modelDescRootPath);
+        Set<String> srcModelResource = restoreResourceStore.listResources(modelDescRootPath);
+        destModelResource = destModelResource == null ? Collections.emptySet() : destModelResource;
+        srcModelResource = srcModelResource == null ? Collections.emptySet() : srcModelResource;
+
+        Sets.SetView<String> insertsModelResource = Sets.difference(srcModelResource, destModelResource);
+
+        List<NDataModel> allModels = new ArrayList<>(
+                getModelListFromResource(projectName, destModelResource, currentResourceStore));
+        List<NDataModel> insertsModels = getModelListFromResource(projectName, new HashSet<>(insertsModelResource),
+                restoreResourceStore);
+        allModels.addAll(insertsModels);
+
+        Map<String, Set<String>> nameUuids = Maps.newHashMap();
+        for (NDataModel model : allModels) {
+            String modelAlias = model.getAlias();
+            nameUuids.putIfAbsent(modelAlias, Sets.newHashSet());
+            nameUuids.get(modelAlias).add(model.getUuid());
+        }
+        return nameUuids.entrySet().stream().filter(m -> m.getValue().size() > 1).map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    public List<NDataModel> getModelListFromResource(String projectName, Set<String> modelResource,
+            ResourceStore resourceStore) {
+
+        if (modelResource == null) {
+            return new ArrayList<>();
+        }
+        List<NDataModel> models = new ArrayList<>();
+        for (String resource : modelResource) {
+            try {
+                NDataModel nDataModel = JsonUtil.readValue(resourceStore.getResource(resource).getByteSource().read(),
+                        NDataModel.class);
+                nDataModel.setProject(projectName);
+                models.add(nDataModel);
+            } catch (IOException e) {
+                if (!KylinConfig.getInstanceFromEnv().isUTEnv()) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        }
+        return models;
     }
 
     private int doRestore(ResourceStore currentResourceStore, ResourceStore restoreResourceStore,
