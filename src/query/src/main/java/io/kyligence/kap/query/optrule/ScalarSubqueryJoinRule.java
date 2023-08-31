@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.plan.RelOptRule;
@@ -47,6 +48,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.mapping.Mapping;
+import org.apache.calcite.util.mapping.MappingType;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
@@ -129,7 +131,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
     private class Transposer {
         // base variables
         private final RelOptRuleCall call;
-        private final AggregateElem aggregate;
+        private final AggregateUnit aggregate;
         private final Join join;
 
         // join sides
@@ -140,7 +142,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
         public Transposer(RelOptRuleCall ruleCall) {
             // call -> "{agg, join}"
             call = ruleCall;
-            aggregate = createAggregateElem(ruleCall);
+            aggregate = createAggregateUnit(ruleCall);
             join = ruleCall.rel(ruleCall.rels.length - 1);
 
             // join sides
@@ -171,8 +173,14 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             final RexNode newCondition = RexUtil.apply(aggJoinMapping, join.getCondition());
             relBuilder.push(left.getNewInput()).push(right.getNewInput()).join(join.getJoinType(), newCondition);
 
+            // agg-project mapping
+            final Mapping aggProjectMapping = getAggProjectMapping(relBuilder, aggJoinMapping);
+
             // aggregate above to sum up the sub-totals
-            final List<RexNode> projectList = getProjectList(relBuilder, rexBuilder, aggJoinMapping);
+            final List<RexNode> projectList = //
+                    Mappings.apply(aggProjectMapping, //
+                            Lists.newArrayList(rexBuilder.identityProjects(relBuilder.peek().getRowType())));
+
             final List<AggregateCall> aggCallList = Lists.newArrayList();
             aggregateAbove(projectList, aggCallList, relBuilder, rexBuilder);
 
@@ -181,43 +189,38 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
             // above aggregate
             // Maybe we can convert aggregate into projects when inner-join.
-            final RelBuilder.GroupKey groupKey = relBuilder.groupKey(//
-                    Mappings.apply(aggJoinMapping, aggregate.getGroupSet()), //
-                    Mappings.apply2(aggJoinMapping, aggregate.getGroupSets()));
+            final RelBuilder.GroupKey groupKey = //
+                    relBuilder.groupKey(Mappings.apply(aggProjectMapping, //
+                            Mappings.apply(aggJoinMapping, aggregate.getGroupSet())), //
+                            Mappings.apply2(aggProjectMapping, //
+                                    Mappings.apply2(aggJoinMapping, aggregate.getGroupSets())));
             relBuilder.aggregate(groupKey, aggCallList);
 
             return relBuilder.build();
         }
 
-        private List<RexNode> getProjectList(final RelBuilder relBuilder, // 
-                final RexBuilder rexBuilder, //
-                final Mapping mapping) {
-            // MappingType.INVERSE_SURJECTION
-            final List<RexNode> projectList = //
-                    Lists.newArrayList(rexBuilder.identityProjects(relBuilder.peek().getRowType()));
+        private Mapping getAggProjectMapping(final RelBuilder relBuilder, final Mapping aggJoinMapping) {
+            final List<Integer> fieldList = //
+                    IntStream.range(0, relBuilder.peek().getRowType().getFieldList().size()) //
+                            .boxed().collect(Collectors.toList());
             final List<Integer> groupList = //
-                    aggregate.getGroupList().stream().map(mapping::getTarget).collect(Collectors.toList());
+                    aggregate.getGroupList().stream().map(aggJoinMapping::getTarget).collect(Collectors.toList());
 
-            // find an more graceful implementation
-            // [i0, i1, i2, i3] -> [i1, i0, i2, i3]
-            final Map<Integer, RexNode> switchMap = Maps.newHashMap();
-            Ord.zip(projectList).forEach(o -> {
-                int i = groupList.indexOf(o.i);
-                if (i < 0) {
-                    return;
-                }
-                switchMap.put(i, projectList.get(i));
-                projectList.set(i, switchMap.getOrDefault(o.i, o.e));
-            });
+            // [i0, i1, i2, i3] -> [i1, i3, i0, i2]
+            final Mapping projectMapping = //
+                    Mappings.create(MappingType.BIJECTION, fieldList.size(), fieldList.size());
 
-            return projectList;
+            Ord.zip(fieldList).forEach(o -> projectMapping.set(o.i, o.e));
+            Ord.zip(groupList).forEach(o -> projectMapping.set(o.e, o.i));
+
+            return projectMapping;
         }
 
-        private AggregateElem createAggregateElem(RelOptRuleCall call) {
+        private AggregateUnit createAggregateUnit(RelOptRuleCall call) {
             if (call.rels.length > 2) {
                 return new AggregateProject(call.rel(0), call.rel(1));
             }
-            return new AggregateElem(call.rel(0));
+            return new AggregateUnit(call.rel(0));
         }
 
         private void aggregateAbove(final List<RexNode> projectList, //
@@ -286,14 +289,14 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
     } // end of Transposer
 
-    private static class AggregateElem {
+    private static class AggregateUnit {
         // base variables
         protected final KapAggregateRel aggregate;
 
         // immediate variables
         private RexBuilder rexBuilder;
 
-        public AggregateElem(KapAggregateRel aggregate) {
+        public AggregateUnit(KapAggregateRel aggregate) {
             this.aggregate = aggregate;
         }
 
@@ -328,9 +331,9 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return aggregate.getGroupSet().asList();
         }
 
-    } // end of AggregateElem
+    } // end of AggregateUnit
 
-    private static class AggregateProject extends AggregateElem {
+    private static class AggregateProject extends AggregateUnit {
         // base variables
         private final KapProjectRel project;
         private final Mappings.TargetMapping targetMapping;
@@ -433,7 +436,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return aggJoinMap;
         }
 
-        public void modifyAggregate(AggregateElem aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
+        public void modifyAggregate(AggregateUnit aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
             if (isAggregable()) {
                 newInput = convertSplit(aggregate, relBuilder, rexBuilder);
                 return;
@@ -504,7 +507,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return sideAggJoinSet;
         }
 
-        private RelNode convertSplit(AggregateElem aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
+        private RelNode convertSplit(AggregateUnit aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
             final ImmutableBitSet fields = getFieldSet();
             final int oldGroupSetCount = aggregate.getGroupCount();
             final int newGroupSetCount = getBelowAggGroupSet().cardinality();
@@ -554,7 +557,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
         }
 
-        private RelNode convertSingleton(AggregateElem aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
+        private RelNode convertSingleton(AggregateUnit aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
             relBuilder.push(input);
             final ImmutableBitSet fieldSet0 = getFieldSet();
             final List<RexNode> projectList = Lists.newArrayList();
