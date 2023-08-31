@@ -46,6 +46,7 @@ import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.model.DeriveInfo;
+import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.realization.CapabilityResult;
@@ -252,10 +253,14 @@ public class QueryLayoutChooser {
             return commonLayouts.values();
         }
 
+        val isMppOnTheFlyLayoutsEnabled = dataflow.getConfig().isMppOnTheFlyLayoutsEnabled();
+
         String segmentOnlineMode = projectConfig.getKylinEngineSegmentOnlineMode();
         for (int i = 0; i < segments.size(); i++) {
             val dataSegment = segments.get(i);
             var layoutIdMapToDataLayout = dataSegment.getLayoutsMap();
+            val isReadyEmptySeg = isMppOnTheFlyLayoutsEnabled
+                    && dataSegment.getStatus() == SegmentStatusEnum.READY && layoutIdMapToDataLayout.isEmpty();
             if (SegmentOnlineMode.ANY.toString().equalsIgnoreCase(segmentOnlineMode)
                     && MapUtils.isNotEmpty(chSegmentToLayoutsMap)) {
                 // Only the basic TableIndex is built in the CH storage
@@ -267,7 +272,7 @@ public class QueryLayoutChooser {
                 nDataLayoutMap.putAll(layoutIdMapToDataLayout);
                 layoutIdMapToDataLayout = nDataLayoutMap;
             }
-            if (i == 0) {
+            if (i == 0 || isReadyEmptySeg) { // ACCEPT empty & ready segments, they can be served by mpp on-the-fly
                 commonLayouts.putAll(layoutIdMapToDataLayout);
             } else {
                 commonLayouts.keySet().retainAll(layoutIdMapToDataLayout.keySet());

@@ -22,40 +22,28 @@ public class CacheFileSystemConstants {
     private CacheFileSystemConstants() {
     }
 
-    public static final String PARAMS_KEY_USE_CACHE =
-            "spark.kylin.local-cache.enabled";
-
+    public static final String PARAMS_KEY_USE_CACHE = "spark.kylin.local-cache.enabled";
     public static final boolean PARAMS_KEY_USE_CACHE_DEFAULT_VALUE = false;
 
-    public static final String PARAMS_KEY_USE_FILE_STATUS_CACHE =
-            "spark.kylin.file-status-cache.enabled";
-
+    public static final String PARAMS_KEY_USE_FILE_STATUS_CACHE = "spark.kylin.file-status-cache.enabled";
     public static final boolean PARAMS_KEY_USE_FILE_STATUS_CACHE_DEFAULT_VALUE = false;
 
     public static final String PARAMS_KEY_IO_FILE_BUFFER_SIZE = "io.file.buffer.size";
-
     public static final int PARAMS_KEY_IO_FILE_BUFFER_SIZE_DEFAULT_VALUE = 65536;
 
-    public static final String PARAMS_KEY_FILE_STATUS_CACHE_TTL =
-            "spark.kylin.local-cache.filestatus-cache-ttl";
+    public static final String PARAMS_KEY_FILE_STATUS_CACHE_TTL = "spark.kylin.local-cache.filestatus-cache-ttl";
+    public static final long PARAMS_KEY_FILE_STATUS_CACHE_TTL_DEFAULT_VALUE = 36000L;
 
-    public static final long PARAMS_KEY_FILE_STATUS_CACHE_TTL_DEFAULT_VALUE = 3600L;
-
-    public static final String PARAMS_KEY_FILE_STATUS_CACHE_MAX_SIZE =
-            "spark.kylin.local-cache.filestatus-cache-max-size";
-
+    public static final String PARAMS_KEY_FILE_STATUS_CACHE_MAX_SIZE = "spark.kylin.local-cache.filestatus-cache-max-size";
     public static final long PARAMS_KEY_FILE_STATUS_CACHE_MAX_SIZE_DEFAULT_VALUE = 10000L;
 
-    public static final String PARAMS_KEY_USE_LEGACY_FILE_INPUTSTREAM =
-            "spark.kylin.local-cache.use.legacy.file-input-stream";
-
+    public static final String PARAMS_KEY_USE_LEGACY_FILE_INPUTSTREAM = "spark.kylin.local-cache.use.legacy.file-input-stream";
     public static final boolean PARAMS_KEY_USE_LEGACY_FILE_INPUTSTREAM_DEFAULT_VALUE = false;
 
-    public static final String PARAMS_KEY_USE_BUFFER_FILE_INPUTSTREAM =
-            "spark.kylin.local-cache.use.buffer.file-input-stream";
-
+    public static final String PARAMS_KEY_USE_BUFFER_FILE_INPUTSTREAM = "spark.kylin.local-cache.use.buffer.file-input-stream";
     public static final boolean PARAMS_KEY_USE_BUFFER_FILE_INPUTSTREAM_DEFAULT_VALUE = false;
 
-    public static final String PARAMS_KEY_LOCAL_CACHE_FOR_CURRENT_FILES =
-            "spark.kylin.local-cache.for.current.files";
+    public static final String PARAMS_KEY_LOCAL_CACHE_FOR_CURRENT_FILES = "spark.kylin.local-cache.for.current.files";
+
+    public static final String PARAMS_KEY_ACCEPT_CACHE_TIME = "spark.kylin.local-cache.accept-cache-time";
 }

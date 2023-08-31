@@ -33,9 +33,12 @@ import java.text.SimpleDateFormat;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -57,6 +60,9 @@ import org.apache.kylin.common.persistence.transaction.StopQueryBroadcastEventNo
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.SegmentStatusEnum;
+import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryHistoryRequest;
 import org.apache.kylin.metadata.query.util.QueryHisTransformStandardUtil;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
@@ -70,6 +76,7 @@ import org.apache.kylin.rest.request.PrepareSqlRequest;
 import org.apache.kylin.rest.request.SQLFormatRequest;
 import org.apache.kylin.rest.request.SQLRequest;
 import org.apache.kylin.rest.request.SaveSqlRequest;
+import org.apache.kylin.rest.request.SyncFileSegmentsRequest;
 import org.apache.kylin.rest.response.DataResult;
 import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.QueryHistoryFiltersResponse;
@@ -77,6 +84,8 @@ import org.apache.kylin.rest.response.QueryStatisticsResponse;
 import org.apache.kylin.rest.response.SQLResponse;
 import org.apache.kylin.rest.response.ServerExtInfoResponse;
 import org.apache.kylin.rest.response.ServerInfoResponse;
+import org.apache.kylin.rest.response.SyncFileSegmentsResponse;
+import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.QueryCacheManager;
 import org.apache.kylin.rest.service.QueryHistoryService;
 import org.apache.kylin.rest.service.QueryService;
@@ -103,6 +112,8 @@ import org.supercsv.io.CsvListWriter;
 import org.supercsv.io.ICsvListWriter;
 import org.supercsv.prefs.CsvPreference;
 
+import io.kyligence.kap.fileseg.FileSegments;
+import io.kyligence.kap.fileseg.FileSegmentsDetector;
 import io.swagger.annotations.ApiOperation;
 import lombok.val;
 import redis.clients.jedis.exceptions.JedisException;
@@ -134,6 +145,9 @@ public class NQueryController extends NBasicController {
 
     @Autowired
     private AclEvaluate aclEvaluate;
+
+    @Autowired
+    private ModelService modelService;
 
     @Override
     protected Logger getLogger() {
@@ -179,9 +193,82 @@ public class NQueryController extends NBasicController {
         checkProjectName(sqlRequest.getProject());
         sqlRequest.setUserAgent(userAgent != null ? userAgent : "");
         QueryContext.current().record("end_http_proc");
-        SQLResponse sqlResponse = queryService.queryWithCache(sqlRequest);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, sqlResponse, "");
+
+        // take chance of push-down to detect and apply file segment changes
+        boolean detectFileSegments = sqlRequest.isForcedToPushDown();
+        if (detectFileSegments)
+            FileSegmentsDetector.startLocally(sqlRequest.getProject());
+
+        try {
+            SQLResponse sqlResponse = queryService.queryWithCache(sqlRequest);
+
+            if (detectFileSegments) {
+                FileSegmentsDetector.report(finding -> {
+                    if (FileSegments.isSyncFileSegSql(sqlRequest.getSql())) {
+                        // return modelIds to syncFileSegments()
+                        sqlResponse.addNativeRealizationIfNotExist(finding.modelId);
+                    }
+                    modelService.forceFileSegments(finding.project, finding.modelId,
+                            finding.storageLocation, Optional.of(finding.fileHashs), SegmentStatusEnum.NEW);
+                });
+            }
+
+            return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, sqlResponse, "");
+
+        } finally {
+            if (detectFileSegments)
+                FileSegmentsDetector.endLocally();
+        }
     }
+
+    @PostMapping(value = "/sync_file_segments")
+    @ResponseBody
+    public EnvelopeResponse<SyncFileSegmentsResponse> syncFileSegments(@RequestBody SyncFileSegmentsRequest req) {
+        String project = req.getProject();
+        checkProjectName(project);
+
+        String inputSql = req.getSql();
+        List<NDataModel> inputModels = FileSegments.findModelsOfFileSeg(project, req.getModelAliasOrFactTables());
+
+        StringBuilder probeSql = new StringBuilder();
+        if (!StringUtils.isBlank(inputSql)) {
+            probeSql.append(FileSegments.makeSyncFileSegSql(inputSql));
+        }
+        if (inputModels.size() > 0) {
+            if (probeSql.length() > 0)
+                probeSql.append("\n union all \n");
+
+            probeSql.append(FileSegments.makeSyncFileSegSql(inputModels));
+        }
+        if (probeSql.length() == 0) {
+            return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, null, "");
+        }
+
+        PrepareSqlRequest sqlRequest = new PrepareSqlRequest();
+        sqlRequest.setProject(project);
+        sqlRequest.setForcedToPushDown(true);
+        sqlRequest.setSql(probeSql.toString());
+
+        EnvelopeResponse<SQLResponse> probeResponse = query(sqlRequest, "");
+
+        Set<String> touchedModelIds = new HashSet<>();
+        for (NDataModel inputModel : inputModels) {
+            touchedModelIds.add(inputModel.getId());
+        }
+        if (probeResponse.getData() != null && probeResponse.getData().getNativeRealizations() != null) {
+            for (NativeQueryRealization real : probeResponse.getData().getNativeRealizations()) {
+                touchedModelIds.add(real.getModelId());
+            }
+        }
+
+        SyncFileSegmentsResponse resp = new SyncFileSegmentsResponse();
+        resp.setProject(project);
+        resp.setModels(touchedModelIds.stream()
+                .map(modelId -> FileSegments.getModelFileSegments(project, modelId))
+                .collect(Collectors.toList()));
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, resp, "");
+    }
+
 
     @ApiOperation(value = "cancelQuery", tags = { "QE" })
     @DeleteMapping(value = "/{id:.+}")
@@ -442,7 +529,7 @@ public class NQueryController extends NBasicController {
     @ApiOperation(value = "getServers", tags = { "QE" })
     @GetMapping(value = "/servers")
     @ResponseBody
-    public EnvelopeResponse<List> getServers(
+    public EnvelopeResponse<List<?>> getServers(
             @RequestParam(value = "ext", required = false, defaultValue = "false") boolean ext) {
         if (ext) {
             List<ServerExtInfoResponse> serverInfo =
@@ -470,10 +557,7 @@ public class NQueryController extends NBasicController {
         if (StringUtils.isEmpty(param1) && StringUtils.isEmpty(param2))
             return true;
 
-        if (StringUtils.isNotEmpty(param1) && StringUtils.isNotEmpty(param2))
-            return true;
-
-        return false;
+        return StringUtils.isNotEmpty(param1) && StringUtils.isNotEmpty(param2);
     }
 
     @PostMapping(value = "/format/{format:.+}", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
@@ -526,7 +610,7 @@ public class NQueryController extends NBasicController {
             logger.error("Download query result failed...", e);
             throw new InternalErrorException(e);
         } finally {
-            IOUtils.closeQuietly(csvWriter);
+            IOUtils.closeQuietly(csvWriter, null);
         }
     }
 

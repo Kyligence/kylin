@@ -18,7 +18,7 @@
 
 package io.kyligence.kap.softaffinity
 
-import io.kyligence.kap.cache.softaffinity.SoftAffinityConstants
+import io.kyligence.kap.cache.softaffinity.{SoftAffinityBookKeeping, SoftAffinityConstants}
 import io.kyligence.kap.softaffinity.strategy.SoftAffinityStrategy
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -49,6 +49,11 @@ object SoftAffinityManager extends Logging {
   lazy val usingSoftAffinity: Boolean = SparkEnv.get.conf.getBoolean(
     SoftAffinityConstants.PARAMS_KEY_SOFT_AFFINITY_ENABLED,
     SoftAffinityConstants.PARAMS_KEY_SOFT_AFFINITY_ENABLED_DEFAULT_VALUE
+  )
+
+  lazy val usingSoftAffinityForHivePushdown: Boolean = SparkEnv.get.conf.getBoolean(
+    SoftAffinityConstants.PARAMS_KEY_SOFT_AFFINITY_ENABLED_FOR_HIVE,
+    SoftAffinityConstants.PARAMS_KEY_SOFT_AFFINITY_ENABLED_FOR_HIVE_DEFAULT_VALUE
   )
 
   def totalExecutors(): Int = totalRegisteredExecutors.intValue()
@@ -132,16 +137,39 @@ object SoftAffinityManager extends Logging {
     }
   }
 
-  def askExecutors(file: String): Array[(String, String)] = {
+  def askExecutors(file: String): Array[String] = {
     resourceRWLock.readLock().lock()
     try {
       if (nodesExecutorsMap.size < 1) {
-        Array.empty
-      } else {
-        softAffinityAllocation.allocateExecs(file, fixedIdForExecutors)
+        return Array.empty
       }
+
+      val execIdAndHosts = softAffinityAllocation.allocateExecs(file, fixedIdForExecutors)
+
+      val ret = execIdAndHosts.map { p =>
+        if (p._1.equals("")) p._2
+        else s"executor_${p._2}_${p._1}"
+      }
+
+      if (log.isDebugEnabled()) {
+        SoftAffinityBookKeeping.recordAsk(file, ret)
+      }
+
+      ret
     } finally {
       resourceRWLock.readLock().unlock()
     }
   }
+
+  def auditAsks(): java.util.Map[String, String] = {
+    SoftAffinityBookKeeping.audit()
+  }
+
+  def logAuditAsks(): Unit = {
+    if (usingSoftAffinity && log.isDebugEnabled()) {
+      SoftAffinityBookKeeping.logAudits()
+    }
+  }
+
+
 }

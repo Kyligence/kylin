@@ -260,7 +260,7 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
     }
 
     val condition = descDRP.getPartitionConditionBuilder //
-      .buildDateRangeCondition(descDRP, null, segmentRange)
+      .buildDateRangeCondition(descDRP, tableDesc.getDataSegment, segmentRange)
     logInfo(s"Apply PARTITION-CONDITION $condition segment $segmentId")
     originDS.where(condition)
   }

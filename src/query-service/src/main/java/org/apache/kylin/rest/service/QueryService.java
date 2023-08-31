@@ -442,6 +442,9 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
 
         BloomFilterSkipCollector.logAndCleanStatus(QueryContext.current().getQueryId());
         ParquetPageFilterCollector.logParquetPages(QueryContext.current().getQueryId());
+
+        QueryContext.current().record("end");
+
         LogReport report = new LogReport().put(LogReport.QUERY_ID, QueryContext.current().getQueryId())
                 .put(LogReport.SQL, sql).put(LogReport.USER, user)
                 .put(LogReport.SUCCESS, null == response.getExceptionMessage()).put(LogReport.DURATION, duration)
@@ -459,6 +462,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                 .put(LogReport.HIT_EXCEPTION_CACHE, response.isHitExceptionCache())
                 .put(LogReport.STORAGE_CACHE_USED, response.isStorageCacheUsed())
                 .put(LogReport.STORAGE_CACHE_TYPE, response.getStorageCacheType())
+                .put(LogReport.DATA_FETCH_TIME, response.getDataFetchTime())
                 .put(LogReport.PUSH_DOWN, response.isQueryPushDown()).put(LogReport.IS_PREPARE, response.isPrepare())
                 .put(LogReport.TIMEOUT, response.isTimeout())
                 .put(LogReport.TIMELINE_SCHEMA, QueryContext.current().getSchema())
@@ -617,7 +621,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                 sqlResponse = searchCache(sqlRequest, kylinConfig);
             }
 
-            // real execution if required
+            // REAL EXECUTION, if required
             if (sqlResponse == null) {
                 try (QueryRequestLimits ignored = new QueryRequestLimits(project)) {
                     sqlResponse = queryAndUpdateCache(sqlRequest, kylinConfig);
@@ -1369,8 +1373,8 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         QueryContext queryContext = QueryContext.current();
 
         response.wrapResultOfQueryContext(queryContext);
-
         response.setNativeRealizations(OLAPContext.getNativeRealizations());
+        response.updateDataFetchTime(queryContext);
 
         if (!queryContext.getQueryTagInfo().isVacant()) {
             setAppMaterURL(response);
@@ -1496,6 +1500,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         static final String HIT_EXCEPTION_CACHE = "hit_exception_cache";
         static final String STORAGE_CACHE_USED = "storage_cache_used";
         static final String STORAGE_CACHE_TYPE = "storage_cache_type";
+        static final String DATA_FETCH_TIME = "data_fetch_time";
         static final String PUSH_DOWN = "push_down";
         static final String IS_PREPARE = "is_prepare";
         static final String TIMEOUT = "timeout";
@@ -1523,6 +1528,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                 .put(SHUFFLE_PARTITIONS, "Shuffle partitions: ").put(ACCEPT_PARTIAL, "Accept Partial: ")
                 .put(PARTIAL_RESULT, "Is Partial Result: ").put(HIT_EXCEPTION_CACHE, "Hit Exception Cache: ")
                 .put(STORAGE_CACHE_USED, "Storage Cache Used: ").put(STORAGE_CACHE_TYPE, "Storage Cache Type: ")
+                .put(DATA_FETCH_TIME, "Data Fetch Time: ")
                 .put(PUSH_DOWN, "Is Query Push-Down: ").put(IS_PREPARE, "Is Prepare: ").put(TIMEOUT, "Is Timeout: ")
                 .put(TRACE_URL, "Trace URL: ").put(TIMELINE_SCHEMA, "Time Line Schema: ").put(TIMELINE, "Time Line: ")
                 .put(ERROR_MSG, "Message: ").put(USER_TAG, "User Defined Tag: ")
@@ -1579,6 +1585,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                     + O2N.get(HIT_EXCEPTION_CACHE) + get(HIT_EXCEPTION_CACHE) + newLine //
                     + O2N.get(STORAGE_CACHE_USED) + get(STORAGE_CACHE_USED) + newLine //
                     + O2N.get(STORAGE_CACHE_TYPE) + get(STORAGE_CACHE_TYPE) + newLine //
+                    + O2N.get(DATA_FETCH_TIME) + get(DATA_FETCH_TIME) + newLine //
                     + O2N.get(PUSH_DOWN) + get(PUSH_DOWN) + newLine //
                     + O2N.get(IS_PREPARE) + get(IS_PREPARE) + newLine //
                     + O2N.get(TIMEOUT) + get(TIMEOUT) + newLine //

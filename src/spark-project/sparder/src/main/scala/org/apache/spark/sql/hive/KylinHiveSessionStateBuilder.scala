@@ -17,6 +17,8 @@
  */
 package org.apache.spark.sql.hive
 
+import io.kyligence.kap.softaffinity.SoftAffinityManager
+import org.apache.kylin.common.KylinConfig
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -27,13 +29,10 @@ import org.apache.spark.sql.internal.{BaseSessionStateBuilder, SQLConf, SessionS
 
 /**
  * hive session  hava some rule exp: find datasource table rule
- *
- * @param sparkSession
- * @param parentState
  */
 class KylinHiveSessionStateBuilder(sparkSession: SparkSession,
                                    parentState: Option[SessionState] = None)
-    extends HiveSessionStateBuilder(sparkSession, parentState) {
+  extends HiveSessionStateBuilder(sparkSession, parentState) {
 
   private def externalCatalog: HiveExternalCatalog =
     session.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog]
@@ -43,30 +42,61 @@ class KylinHiveSessionStateBuilder(sparkSession: SparkSession,
 
 }
 
-case class ReplaceLocationRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
+object Const {
+  val SoftAffinityInputFormatMap: Map[String, String] = Map(
+    "org.apache.hadoop.mapred.TextInputFormat" -> "io.kyligence.kap.cache.softaffinity.SoftAffinityTextInputFormat"
+  )
+  val SerDeMap: Map[String, String] = Map(
+    "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe" -> "io.kyligence.hive.serde2.lazy.LazyQuoteAwareSerDe"
+  )
+}
+
+case class HiveStorageRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
+
+  var forceDisableSoftAffinity = false
+
   override def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperators {
     case relation: HiveTableRelation
       if DDLUtils.isHiveTable(relation.tableMeta) =>
+
+      // replace file system
       val specFS = sparkSession.sessionState.conf.getConf(SQLConf.HIVE_SPECIFIC_FS_LOCATION)
-      val specCatalog = FSNamespaceUtils.replaceLocWithSpecPrefix(specFS,
-        relation.tableMeta.storage)
-      val specTableMeta = relation.tableMeta.copy(storage = specCatalog)
-      val specRelation = if (specFS != null && specCatalog.locationUri.isDefined) {
-        relation.copy(tableMeta = specTableMeta)
-      } else relation
+      var specStorage = FSNamespaceUtils.replaceLocWithSpecPrefix(specFS, relation.tableMeta.storage)
+
+      // replace input format, for soft affinity during hive pushdown
+      val softAffinityEnabled = !forceDisableSoftAffinity && SoftAffinityManager.usingSoftAffinity && SoftAffinityManager.usingSoftAffinityForHivePushdown
+      val oldInputFormat = relation.tableMeta.storage.inputFormat
+      val newInputFormat = if (oldInputFormat.isEmpty || !softAffinityEnabled) {
+        oldInputFormat
+      } else {
+        Option(Const.SoftAffinityInputFormatMap.getOrElse(oldInputFormat.get, oldInputFormat.get))
+      }
+
+      // replace serde, for CSV quote support
+      val oldSerDe = relation.tableMeta.storage.serde
+      val newSerDe = if (oldSerDe.isEmpty || !KylinConfig.getInstanceFromEnv.isSupportPushdownHiveCsvEnhancement) {
+        oldSerDe
+      } else {
+        Option(Const.SerDeMap.getOrElse(oldSerDe.get, oldSerDe.get))
+      }
+
+      specStorage = specStorage.copy(inputFormat = newInputFormat, serde = newSerDe)
+      val specTableMeta = relation.tableMeta.copy(storage = specStorage)
+      val specRelation = relation.copy(tableMeta = specTableMeta)
       specRelation
+  }
+
+  def setForceDisableSoftAffinity(value: Boolean): Unit = {
+    forceDisableSoftAffinity = value
   }
 }
 
 /**
  * use for no hive mode
- *
- * @param sparkSession
- * @param parentState
  */
 class KylinSessionStateBuilder(sparkSession: SparkSession,
                                parentState: Option[SessionState] = None)
-    extends BaseSessionStateBuilder(sparkSession, parentState) {
+  extends BaseSessionStateBuilder(sparkSession, parentState) {
 
   override protected def newBuilder: NewBuilder =
     new KylinSessionStateBuilder(_, _)

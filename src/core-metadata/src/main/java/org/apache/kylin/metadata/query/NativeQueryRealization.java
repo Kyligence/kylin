@@ -46,6 +46,9 @@ public class NativeQueryRealization implements Serializable {
     private boolean recommendSecondStorage = false;
     private boolean isStreamingLayout = false;
     private List<String> snapshots;
+    private long lastDataRefreshTime;
+    private boolean isLoadingData;
+    private boolean isBuildingIndex;
 
     @JsonUnwrapped
     @Getter

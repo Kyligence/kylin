@@ -19,6 +19,7 @@
 package org.apache.kylin.rest.response;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -99,6 +100,22 @@ public class SQLResponse implements Serializable {
     protected boolean storageCacheUsed = false;
 
     protected String storageCacheType;
+
+    /**
+     * The data fetching time of the datasets that contribute to the query result. The time stands for the data
+     * freshness of the query result.
+     * <ul>
+     *     <li>If 'dataFetchTime' = now(), meaning the query gets most fresh data from source, typically executed
+     *         by a pushdown engine, and bypasses all caches along the way, including query cache, cube segment cache,
+     *         soft affinity local cache etc..</li>
+     *     <li>Or otherwise, 'dataFetchTime' should be set to the cache build time, the time when the data is last
+     *         fetched from source and the cache is built.</li>
+     *     <li>If multiple datasets and multiple data caches are involved in a query, the LATEST data fetch time
+     *         among them is returned.</li>
+     * </ul>
+     */
+    @JsonProperty("dataFetchTime")
+    protected long dataFetchTime;
 
     @JsonProperty("pushDown")
     protected boolean queryPushDown = false;
@@ -191,9 +208,7 @@ public class SQLResponse implements Serializable {
         this.setQueryId(queryContext.getQueryId());
         this.setScanRows(queryContext.getMetrics().getScanRows());
         this.setScanBytes(queryContext.getMetrics().getScanBytes());
-
         this.setShufflePartitions(queryContext.getShufflePartitions());
-
         return this;
     }
 
@@ -213,5 +228,30 @@ public class SQLResponse implements Serializable {
         if (!(results instanceof Collection)) {
             results = ImmutableList.copyOf(results);
         }
+    }
+
+    public void updateDataFetchTime(QueryContext queryContext) {
+        // The dataFetchTime could come from:
+        // 1) from queryContext.getMetrics().getDataFetchTime(), in case of push-down, this is the time from local file cache (KylinCacheFileSystem)
+        // 2) from this.nativeRealizations, in case of index query, this is the time when segment is built
+        // We take the max of the above all.
+
+        dataFetchTime = queryContext.getMetrics().getDataFetchTime();
+
+        if (nativeRealizations != null) {
+            for (NativeQueryRealization real : nativeRealizations) {
+                dataFetchTime = Math.max(dataFetchTime, real.getLastDataRefreshTime());
+            }
+        }
+    }
+
+    public void addNativeRealizationIfNotExist(String modelId) {
+        if (nativeRealizations == null)
+            nativeRealizations = new ArrayList<>();
+
+        if (nativeRealizations.stream().anyMatch(real -> real.getModelId().equals(modelId)))
+            return;
+
+        nativeRealizations.add(new NativeQueryRealization(modelId, null, null));
     }
 }

@@ -31,25 +31,25 @@ import org.apache.kylin.common.exception.JobErrorCode;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.ClassUtil;
 import org.apache.kylin.common.util.DateFormat;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.metadata.datatype.DataType;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 import lombok.EqualsAndHashCode;
 
 /**
  */
-@SuppressWarnings("serial")
 @JsonAutoDetect(fieldVisibility = Visibility.NONE, getterVisibility = Visibility.NONE, isGetterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class PartitionDesc implements Serializable {
 
-    private static String and = " AND ";
+    private static final String SPACE_AND_SPACE = " AND ";
 
-    public static enum PartitionType implements Serializable {
+    public enum PartitionType implements Serializable {
+        FILE, // marks FILE based partition mode
         APPEND, //
         UPDATE_INSERT // not used since 0.7.1
     }
@@ -78,12 +78,14 @@ public class PartitionDesc implements Serializable {
     private IPartitionConditionBuilder partitionConditionBuilder;
 
     public void init(NDataModel model) {
-        if (StringUtils.isEmpty(partitionDateColumn))
-            return;
+        if (!StringUtils.isEmpty(partitionDateColumn)) {
+            partitionDateColumnRef = model.findColumn(partitionDateColumn);
+            partitionDateColumn = partitionDateColumnRef.getIdentity();
+        }
 
-        partitionDateColumnRef = model.findColumn(partitionDateColumn);
-        partitionDateColumn = partitionDateColumnRef.getIdentity();
-        partitionConditionBuilder = (IPartitionConditionBuilder) ClassUtil.newInstance(partitionConditionBuilderClz);
+        if (!StringUtils.isEmpty(partitionConditionBuilderClz)) {
+            partitionConditionBuilder = (IPartitionConditionBuilder) ClassUtil.newInstance(partitionConditionBuilderClz);
+        }
     }
 
     public boolean partitionColumnIsYmdInt() {
@@ -229,6 +231,7 @@ public class PartitionDesc implements Serializable {
 
     // ============================================================================
 
+    @SuppressWarnings("rawtypes")
     public interface IPartitionConditionBuilder {
         String buildDateRangeCondition(PartitionDesc partDesc, ISegment seg, SegmentRange segRange);
 
@@ -236,6 +239,7 @@ public class PartitionDesc implements Serializable {
                 final LinkedList<Long> partitionIds, final ISegment seg, final SegmentRange segRange);
     }
 
+    @SuppressWarnings("rawtypes")
     public static class DefaultPartitionConditionBuilder implements IPartitionConditionBuilder, Serializable {
 
         public DefaultPartitionConditionBuilder() {
@@ -310,7 +314,7 @@ public class PartitionDesc implements Serializable {
             String partitionColumnName = partitionColumn.getBackTickExp();
             builder.append(partitionColumnName).append(" >= ").append(String.format(Locale.ROOT, "to_date('%s', '%s')",
                     DateFormat.formatToDateStr(startInclusive, partitionColumnDateFormat), partitionColumnDateFormat));
-            builder.append(and);
+            builder.append(SPACE_AND_SPACE);
             builder.append(partitionColumnName).append(" < ").append(String.format(Locale.ROOT, "to_date('%s', '%s')",
                     DateFormat.formatToDateStr(endExclusive, partitionColumnDateFormat), partitionColumnDateFormat));
         }
@@ -319,7 +323,7 @@ public class PartitionDesc implements Serializable {
                 long startInclusive, long endExclusive) {
             String partitionColumnName = partitionColumn.getBackTickExp();
             builder.append(partitionColumnName).append(" >= ").append(startInclusive);
-            builder.append(and);
+            builder.append(SPACE_AND_SPACE);
             builder.append(partitionColumnName).append(" < ").append(endExclusive);
         }
 
@@ -328,7 +332,7 @@ public class PartitionDesc implements Serializable {
             String partitionColumnName = partitionColumn.getBackTickExp();
             builder.append(partitionColumnName).append(" >= ")
                     .append(DateFormat.formatToDateStr(startInclusive, DateFormat.COMPACT_MONTH_PATTERN));
-            builder.append(and);
+            builder.append(SPACE_AND_SPACE);
             builder.append(partitionColumnName).append(" < ")
                     .append(DateFormat.formatToDateStr(endExclusive, DateFormat.COMPACT_MONTH_PATTERN));
         }
@@ -338,7 +342,7 @@ public class PartitionDesc implements Serializable {
             String partitionColumnName = partitionColumn.getBackTickExp();
             builder.append(partitionColumnName).append(" >= ")
                     .append(DateFormat.formatToDateStr(startInclusive, DateFormat.COMPACT_DATE_PATTERN));
-            builder.append(and);
+            builder.append(SPACE_AND_SPACE);
             builder.append(partitionColumnName).append(" < ")
                     .append(DateFormat.formatToDateStr(endExclusive, DateFormat.COMPACT_DATE_PATTERN));
         }
@@ -352,8 +356,8 @@ public class PartitionDesc implements Serializable {
                 return;
             }
 
-            String startInc = null;
-            String endInc = null;
+            String startInc;
+            String endInc;
             if (StringUtils.isBlank(partitionColumnDateFormat)) {
                 startInc = String.valueOf(startInclusive);
                 endInc = String.valueOf(endExclusive);
@@ -363,7 +367,7 @@ public class PartitionDesc implements Serializable {
             }
 
             builder.append(partitionColumnName).append(" >= '").append(startInc).append("'");
-            builder.append(" AND ");
+            builder.append(SPACE_AND_SPACE);
             builder.append(partitionColumnName).append(" < '").append(endInc).append("'");
         }
     }

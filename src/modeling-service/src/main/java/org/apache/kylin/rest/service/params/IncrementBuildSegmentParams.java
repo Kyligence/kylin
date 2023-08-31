@@ -22,13 +22,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.MultiPartitionDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
+import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.rest.request.SegmentTimeRequest;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,6 +38,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class IncrementBuildSegmentParams extends FullBuildSegmentParams {
+    private SegmentRange<?> specifiedSegmentRange;
     private String start;
     private String end;
     private PartitionDesc partitionDesc;
@@ -46,6 +47,11 @@ public class IncrementBuildSegmentParams extends FullBuildSegmentParams {
     private String partitionColFormat;
     private List<String[]> multiPartitionValues;
     private boolean buildAllSubPartitions;
+
+    public IncrementBuildSegmentParams(String project, String modelId, SegmentRange<?> specifiedSegmentRange, boolean needBuild) {
+        super(project, modelId, needBuild);
+        this.specifiedSegmentRange = specifiedSegmentRange;
+    }
 
     public IncrementBuildSegmentParams(String project, String modelId, String start, String end,
             String partitionColFormat, boolean needBuild, List<String[]> multiPartitionValues) {

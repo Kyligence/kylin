@@ -62,6 +62,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.model.graph.JoinsGraph;
+import org.apache.kylin.metadata.model.PartitionDesc.PartitionType;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -1526,5 +1527,9 @@ public class NDataModel extends RootPersistentEntity {
     public Set<Integer> getEffectiveInternalMeasureIds() {
         return getEffectiveMeasures().values().stream().filter(m -> m.getType() == NDataModel.MeasureType.INTERNAL)
                 .map(NDataModel.Measure::getId).collect(Collectors.toSet());
+    }
+
+    public boolean isFilePartitioned() {
+        return partitionDesc != null && partitionDesc.getCubePartitionType() == PartitionType.FILE;
     }
 }

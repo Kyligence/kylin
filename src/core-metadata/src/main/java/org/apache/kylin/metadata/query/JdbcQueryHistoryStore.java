@@ -113,6 +113,14 @@ public class JdbcQueryHistoryStore {
         sqlSessionFactory = QueryHisStoreUtil.getSqlSessionFactory(dataSource, qhTableName, qhRealizationTableName);
     }
 
+    // for subclass NoopJdbcQueryHistoryStore
+    JdbcQueryHistoryStore() {
+        queryHistoryTable = null;
+        queryHistoryRealizationTable = null;
+        sqlSessionFactory = null;
+        dataSource = null;
+    }
+
     public void dropQueryHistoryTable() throws SQLException {
         try (Connection connection = dataSource.getConnection()) {
             ScriptRunner sr = new ScriptRunner(connection);

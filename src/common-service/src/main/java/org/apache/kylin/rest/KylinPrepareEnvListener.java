@@ -69,7 +69,8 @@ public class KylinPrepareEnvListener implements EnvironmentPostProcessor, Ordere
         } else if (env.acceptsProfiles(Profiles.of("dev"))) {
             if (env.getSystemEnvironment().containsKey(KylinConfig.KYLIN_CONF))
                 ClassUtil.addClasspath(env.getSystemEnvironment().get(KylinConfig.KYLIN_CONF).toString());
-            if (!StringUtils.equals("true", env.getProperty("dev.diag-meta")))
+            if (env.getProperty("dev.dont-load-test-metadata") == null
+                    && !StringUtils.equals("true", env.getProperty("dev.diag-meta")))
                 setLocalEnvs();
         }
         // enable CC check

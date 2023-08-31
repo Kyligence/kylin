@@ -50,6 +50,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.ReadFsSwitch;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.query.StructField;
@@ -74,9 +76,8 @@ import org.apache.kylin.query.util.RelAggPushDownUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
+import io.kyligence.kap.cache.kylin.KylinCacheFileSystem;
+import io.kyligence.kap.fileseg.FileSegments;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -169,6 +170,10 @@ public class QueryExec {
         QueryContext queryContext = QueryContext.current();
         try {
             beforeQuery();
+
+            // process cache hint like -- select * from xxx /*+ ACCEPT_CACHE_TIME(158176387682000) */
+            sql = processAcceptCacheTimeInSql(sql);
+
             QueryContext.currentTrace().startSpan(QueryTrace.SQL_PARSE_AND_OPTIMIZE);
             RelRoot relRoot = sqlConverter.convertSqlToRelNode(sql);
             queryContext.record("end_convert_to_relnode");
@@ -314,6 +319,8 @@ public class QueryExec {
     private void afterQuery() {
         Prepare.CatalogReader.THREAD_LOCAL.remove();
         KECalciteConfig.THREAD_LOCAL.remove();
+        FileSegments.clearFileSegFilterLocally();
+        clearAcceptCacheTimeLocally();
     }
 
     public void setContextVar(String name, Object val) {
@@ -494,5 +501,18 @@ public class QueryExec {
 
     private SQLException newSqlException(String sql, String msg, Throwable e) {
         return new SQLException("Error while executing SQL \"" + sql + "\": " + msg, e);
+    }
+
+    private String processAcceptCacheTimeInSql(String sql) {
+        if (kylinConfig.isKylinLocalCacheEnabled() && kylinConfig.isKylinFileStatusCacheEnabled()) {
+            return KylinCacheFileSystem.processAcceptCacheTimeInSql(sql);
+        }
+        return sql;
+    }
+
+    private void clearAcceptCacheTimeLocally() {
+        if (kylinConfig.isKylinLocalCacheEnabled() && kylinConfig.isKylinFileStatusCacheEnabled()) {
+            KylinCacheFileSystem.clearAcceptCacheTimeLocally();
+        }
     }
 }

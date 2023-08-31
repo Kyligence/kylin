@@ -22,19 +22,16 @@ public class SoftAffinityConstants {
     private SoftAffinityConstants() {
     }
 
-    public static final String PARAMS_KEY_SOFT_AFFINITY_ENABLED =
-            "spark.kylin.soft-affinity.enabled";
-
+    public static final String PARAMS_KEY_SOFT_AFFINITY_ENABLED = "spark.kylin.soft-affinity.enabled";
     public static final boolean PARAMS_KEY_SOFT_AFFINITY_ENABLED_DEFAULT_VALUE = false;
 
-    public static final String PARAMS_KEY_SOFT_AFFINITY_REPLICATIONS_NUM =
-            "spark.kylin.soft-affinity.replications.num";
+    public static final String PARAMS_KEY_SOFT_AFFINITY_ENABLED_FOR_HIVE = "spark.kylin.soft-affinity.enabled.for-hive";
+    public static final boolean PARAMS_KEY_SOFT_AFFINITY_ENABLED_FOR_HIVE_DEFAULT_VALUE = false;
 
+    public static final String PARAMS_KEY_SOFT_AFFINITY_REPLICATIONS_NUM = "spark.kylin.soft-affinity.replications.num";
     public static final int PARAMS_KEY_SOFT_AFFINITY_REPLICATIONS_NUM_DEFAULT_VALUE = 2;
 
     // For HDFS Replications
-    public static final String PARAMS_KEY_SOFT_AFFINITY_MIN_TARGET_HOSTS =
-            "spark.kylin.soft-affinity.min.target-hosts";
-
+    public static final String PARAMS_KEY_SOFT_AFFINITY_MIN_TARGET_HOSTS = "spark.kylin.soft-affinity.min.target-hosts";
     public static final int PARAMS_KEY_SOFT_AFFINITY_MIN_TARGET_HOSTS_DEFAULT_VALUE = 1;
 }

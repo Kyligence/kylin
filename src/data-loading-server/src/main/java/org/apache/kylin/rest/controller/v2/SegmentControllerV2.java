@@ -18,6 +18,7 @@
 
 package org.apache.kylin.rest.controller.v2;
 
+import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V2_JSON;
 import static org.apache.kylin.common.exception.CommonErrorCode.FAILED_PARSE_JSON;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.CUBE_NOT_EXIST;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_DELETE_SELECT_EMPTY;
@@ -26,13 +27,13 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_NOT
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_REFRESH_MORE_THAN_ONE;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_REFRESH_SELECT_EMPTY;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_SELECT_EMPTY;
-import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V2_JSON;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -41,13 +42,14 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.model.Segments;
 import org.apache.kylin.metadata.model.TimeRange;
-import org.apache.kylin.rest.response.EnvelopeResponse;
-import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.rest.controller.BaseController;
 import org.apache.kylin.rest.request.CubeRebuildRequest;
 import org.apache.kylin.rest.request.SegmentMgmtRequest;
+import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.JobInfoResponseV2;
 import org.apache.kylin.rest.response.NDataModelResponse;
 import org.apache.kylin.rest.response.NDataModelResponse3X;
@@ -68,14 +70,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
+import io.kyligence.kap.fileseg.FileSegments.ModelFileSegments;
 import io.swagger.annotations.ApiOperation;
 import lombok.val;
 
 @RestController
 @RequestMapping(value = "/api/cubes", produces = { HTTP_VND_APACHE_KYLIN_V2_JSON })
 public class SegmentControllerV2 extends BaseController {
+
+    private static final String ENABLE_FILE_SEGMENTS = "ENABLE_FILE_SEGMENTS";
 
     @Autowired
     @Qualifier("modelService")
@@ -88,14 +91,14 @@ public class SegmentControllerV2 extends BaseController {
     @ApiOperation(value = "getCubes", tags = { "AI" })
     @GetMapping(value = "")
     @ResponseBody
-    public EnvelopeResponse getCubes(@RequestParam(value = "projectName") String project,
+    public EnvelopeResponse<HashMap<String, Object>> getCubes(@RequestParam(value = "projectName") String project,
             @RequestParam(value = "modelName", required = false) String modelAlias,
             @RequestParam(value = "pageOffset", required = false, defaultValue = "0") Integer offset,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer limit) {
         checkProjectName(project);
         List<NDataModelResponse> modelsResponse = new ArrayList<>(modelService.getCubes(modelAlias, project));
 
-        List<NDataModelResponse3X> result = Lists.newArrayList();
+        List<NDataModelResponse3X> result = new ArrayList<>();
         try {
             for (NDataModelResponse response : modelsResponse) {
                 result.add(NDataModelResponse3X.convert(response));
@@ -111,7 +114,7 @@ public class SegmentControllerV2 extends BaseController {
     @ApiOperation(value = "getCube", tags = { "AI" })
     @GetMapping(value = "/{cubeName}")
     @ResponseBody
-    public EnvelopeResponse getCube(@PathVariable("cubeName") String modelAlias,
+    public EnvelopeResponse<NDataModelResponse3X> getCube(@PathVariable("cubeName") String modelAlias,
             @RequestParam(value = "project", required = false) String project) {
         NDataModelResponse dataModelResponse = modelService.getCube(modelAlias, project);
         if (Objects.isNull(dataModelResponse)) {
@@ -131,7 +134,7 @@ public class SegmentControllerV2 extends BaseController {
     @ApiOperation(value = "rebuild", tags = { "DW" })
     @PutMapping(value = "/{cubeName}/rebuild")
     @ResponseBody
-    public EnvelopeResponse rebuild(@PathVariable("cubeName") String modelAlias,
+    public EnvelopeResponse<JobInfoResponseV2> rebuild(@PathVariable("cubeName") String modelAlias,
             @RequestParam(value = "project", required = false) String project, @RequestBody CubeRebuildRequest request)
             throws Exception {
         String startTime = String.valueOf(request.getStartTime());
@@ -183,19 +186,39 @@ public class SegmentControllerV2 extends BaseController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, result, "");
     }
 
+    @ApiOperation(value = "getFileSegments", tags = { "DW" })
+    @GetMapping(value = "/{cubeName}/file_segments")
+    @ResponseBody
+    public EnvelopeResponse<?> getFileSegmentsStatus(@PathVariable("cubeName") String modelAlias,
+            @RequestParam(value = "project") String project) {
+        String projectChecked = checkProjectName(project);
+        ModelFileSegments ret = modelService.getModelFileSegments(projectChecked, modelAlias);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, ret, "done");
+    }
+
     @ApiOperation(value = "manageSegments", tags = { "DW" })
     @PutMapping(value = "/{cubeName}/segments")
     @ResponseBody
-    public EnvelopeResponse manageSegments(@PathVariable("cubeName") String modelAlias,
+    public EnvelopeResponse<?> manageSegments(@PathVariable("cubeName") String modelAlias,
             @RequestParam(value = "project", required = false) String project,
             @RequestBody SegmentMgmtRequest request) {
-        if (CollectionUtils.isEmpty(request.getSegments())) {
-            throw new KylinException(SEGMENT_SELECT_EMPTY);
-        }
 
         NDataModelResponse dataModelResponse = modelService.getCube(modelAlias, project);
         if (Objects.isNull(dataModelResponse)) {
             throw new KylinException(CUBE_NOT_EXIST);
+        }
+
+        if (ENABLE_FILE_SEGMENTS.equals(request.getBuildType())) {
+            Optional<List<String>> fileHashs = request.isForce() ? Optional.of(request.getSegments())
+                    : Optional.empty();
+            modelService.forceFileSegments(request.getProject(), dataModelResponse.getId(), // model ID
+                    request.getMpValues(), // storage location, like -- s3://maosha-public/liyang/cloud_billings
+                    fileHashs, SegmentStatusEnum.NEW);
+            return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "Enabled file segments successfully");
+        }
+
+        if (CollectionUtils.isEmpty(request.getSegments())) {
+            throw new KylinException(SEGMENT_SELECT_EMPTY);
         }
 
         List<NDataSegmentResponse> segList = dataModelResponse.getSegments().stream()
@@ -221,8 +244,9 @@ public class SegmentControllerV2 extends BaseController {
             if (CollectionUtils.isEmpty(idList)) {
                 throw new KylinException(SEGMENT_REFRESH_SELECT_EMPTY);
             }
-            val refreshResponse = modelBuildService.refreshSegmentById(new RefreshSegmentParams(
-                    dataModelResponse.getProject(), dataModelResponse.getId(), idList.toArray(new String[0])));
+            val refreshResponse = modelBuildService
+                    .refreshSegmentById(new RefreshSegmentParams(dataModelResponse.getProject(),
+                            dataModelResponse.getId(), idList.toArray(new String[0]), request.isForce()));
             return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, JobInfoResponseV2.convert(refreshResponse), "");
         case "DROP":
             if (CollectionUtils.isEmpty(idList)) {
@@ -239,14 +263,14 @@ public class SegmentControllerV2 extends BaseController {
     @ApiOperation(value = "getHoles", tags = { "DW" })
     @GetMapping(value = "/{cubeName}/holes")
     @ResponseBody
-    public EnvelopeResponse getHoles(@PathVariable("cubeName") String modelAlias,
+    public EnvelopeResponse<List<NDataSegment>> getHoles(@PathVariable("cubeName") String modelAlias,
             @RequestParam(value = "project", required = false) String project) {
         NDataModelResponse dataModelResponse = modelService.getCube(modelAlias, project);
         if (Objects.isNull(dataModelResponse)) {
             throw new KylinException(CUBE_NOT_EXIST);
         }
 
-        List<NDataSegment> holes = Lists.newArrayList();
+        List<NDataSegment> holes = new ArrayList<>();
         List<NDataSegmentResponse> segments = dataModelResponse.getSegments();
 
         Collections.sort(segments);
@@ -272,7 +296,7 @@ public class SegmentControllerV2 extends BaseController {
     @ApiOperation(value = "getSql", tags = { "AI" })
     @GetMapping(value = "/{cubeName}/sql")
     @ResponseBody
-    public EnvelopeResponse getSql(@PathVariable("cubeName") String modelAlias,
+    public EnvelopeResponse<Properties> getSql(@PathVariable("cubeName") String modelAlias,
             @RequestParam(value = "project", required = false) String project) {
         NDataModelResponse dataModelResponse = modelService.getCube(modelAlias, project);
         if (Objects.isNull(dataModelResponse)) {

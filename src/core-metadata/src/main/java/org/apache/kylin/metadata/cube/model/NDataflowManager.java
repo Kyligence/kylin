@@ -395,7 +395,6 @@ public class NDataflowManager implements IRealizationProvider {
     }
 
     public NDataSegment refreshSegment(NDataflow df, SegmentRange segRange) {
-
         NDataSegment newSegment = newSegment(df, segRange);
 
         NDataSegment toRefreshSeg = null;

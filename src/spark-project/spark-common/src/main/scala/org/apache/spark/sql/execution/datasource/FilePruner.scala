@@ -264,6 +264,10 @@ class FilePruner(val session: SparkSession,
     logInfo(s"Segment Num: Before filter: ${prunedSegmentDirs.size}, After time partition filter: " +
       s"$filteredSizeAfterTimePartition, After dimension filter: ${filteredSizeAfterDimensionFilter}, " +
       s"After derived dimension filter: ${selected.size}.")
+
+    selected = selected.filter( // tolerate for ready & empty segment
+      seg => dataflow.getSegment(seg.segmentID).getLayoutsMap.containsKey(layout.getId))
+
     selected = selected.par.map { e =>
       val logString = s"[fetch file status for Segment ID: ${e.segmentID}; Partition Num: ${e.partitions.size}]"
       logTime(logString, true) {

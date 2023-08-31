@@ -66,6 +66,7 @@ import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
+import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.metadata.realization.RoutingIndicatorException;
 import org.apache.kylin.query.exception.NoAuthorizedColsError;
 import org.apache.kylin.query.security.AccessDeniedException;
@@ -117,9 +118,14 @@ public class PushDownUtil {
             return null;
         }
         if (queryParams.isSelect()) {
-            logger.info("Query:[{}] failed to utilize pre-calculation, routing to other engines",
-                    QueryContext.current().getMetrics().getCorrectedSql(), queryParams.getSqlException());
-            if (!queryParams.isForcedToPushDown() && !isExpectedCause(queryParams.getSqlException())) {
+            SQLException sqlEx = queryParams.getSqlException();
+            if (ExceptionUtils.getRootCause(sqlEx) instanceof NoRealizationFoundException)
+                logger.info("Query has no match model, routing to other engines -- {}",
+                        QueryContext.current().getMetrics().getCorrectedSql());
+            else
+                logger.info("Query hit error utilizing pre-calculation, routing to other engines -- {}",
+                        QueryContext.current().getMetrics().getCorrectedSql(), sqlEx);
+            if (!queryParams.isForcedToPushDown() && !isExpectedCause(sqlEx)) {
                 logger.info("quit doPushDownQuery because prior exception thrown is unexpected");
                 return null;
             }
@@ -145,6 +151,7 @@ public class PushDownUtil {
             // on no authorized cols found, return empty result
             return PushdownResult.emptyResult();
         }
+        QueryContext.current().record("massage");
 
         QueryContext.currentTrace().startSpan(QueryTrace.PREPARE_AND_SUBMIT_JOB);
         if (queryParams.isSelect()) {
@@ -492,7 +499,7 @@ public class PushDownUtil {
             return true;
         }
 
-        return false;
+        return QueryContext.current().getQueryTagInfo().isWithoutSyntaxError();
     }
 
     public static String calcStart(String start, SegmentRange<?> coveredRange) {

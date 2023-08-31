@@ -57,6 +57,7 @@ import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.spark.sql.hive.utils.ResourceDetectUtils;
 import org.apache.spark.tracker.BuildContext;
 
+import io.kyligence.kap.fileseg.FileSegments;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
@@ -86,9 +87,9 @@ public class SegmentBuildJob extends SegmentJob {
     @Override
     protected final void doExecute() throws Exception {
 
-        log.info("Start sub stage {}" + REFRESH_SNAPSHOTS.name());
+        log.info("Start sub stage {}", REFRESH_SNAPSHOTS.name());
         REFRESH_SNAPSHOTS.create(this, null, null).toWork();
-        log.info("End sub stage {}" + REFRESH_SNAPSHOTS.name());
+        log.info("End sub stage {}", REFRESH_SNAPSHOTS.name());
 
         buildContext = new BuildContext(getSparkSession().sparkContext(), config);
         buildContext.appStatusTracker().startMonitorBuildResourceState();
@@ -146,6 +147,8 @@ public class SegmentBuildJob extends SegmentJob {
 
             } catch (IOException e) {
                 Throwables.propagate(e);
+            } finally {
+                FileSegments.clearFileSegFilterLocally();
             }
         });
     }

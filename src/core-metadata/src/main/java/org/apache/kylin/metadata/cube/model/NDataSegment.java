@@ -53,7 +53,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import lombok.Getter;
 import lombok.Setter;
 
-@SuppressWarnings("serial")
+@SuppressWarnings({"rawtypes", "FieldMayBeFinal"})
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class NDataSegment implements ISegment, Serializable {
 
@@ -160,6 +160,7 @@ public class NDataSegment implements ISegment, Serializable {
         layoutInfo = new LayoutInfo();
     }
 
+    @SuppressWarnings("CopyConstructorMissesField")
     public NDataSegment(NDataSegment other) {
         this.id = other.id;
         this.name = other.name;
@@ -178,7 +179,7 @@ public class NDataSegment implements ISegment, Serializable {
         layoutInfo = new LayoutInfo(other.getSegDetails());
     }
 
-    public <T extends Comparable> NDataSegment(NDataflow df, SegmentRange<T> segmentRange) {
+    public <T extends Comparable<?>> NDataSegment(NDataflow df, SegmentRange<T> segmentRange) {
         this.dataflow = df;
         this.segmentRange = segmentRange;
         this.name = Segments.makeSegmentName(segmentRange);
@@ -188,7 +189,7 @@ public class NDataSegment implements ISegment, Serializable {
         this.layoutInfo = new LayoutInfo();
     }
 
-    public <T extends Comparable> NDataSegment(NDataflow df, SegmentRange<T> segRange, String id) {
+    public <T extends Comparable<?>> NDataSegment(NDataflow df, SegmentRange<T> segRange, String id) {
         this(df, segRange);
         if (!StringUtils.isEmpty(id)) {
             this.id = id;

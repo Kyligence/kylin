@@ -50,6 +50,7 @@ import org.apache.kylin.rest.request.PrepareSqlRequest;
 import org.apache.kylin.rest.request.SQLRequest;
 import org.apache.kylin.rest.request.SaveSqlRequest;
 import org.apache.kylin.rest.response.QueryHistoryFiltersResponse;
+import org.apache.kylin.rest.response.SQLResponse;
 import org.apache.kylin.rest.response.ServerInfoResponse;
 import org.apache.kylin.rest.service.QueryCacheManager;
 import org.apache.kylin.rest.service.QueryHistoryService;
@@ -609,5 +610,31 @@ public class NQueryControllerTest extends NLocalFileMetadataTestCase {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/query/servers")
             .param("ext", "true").accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
             .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    public void testSqlResponseAddNativeRealization() {
+        final String modelId = "m123";
+
+        // add native realization
+        {
+            SQLResponse res = new SQLResponse();
+            res.addNativeRealizationIfNotExist(modelId);
+            List<NativeQueryRealization> reals = res.getNativeRealizations();
+            Assert.assertEquals(1, reals.size());
+            Assert.assertEquals(modelId, reals.get(0).getModelId());
+        }
+
+        // native realization already exists
+        {
+            SQLResponse res = new SQLResponse();
+            List<NativeQueryRealization> reals = new ArrayList<>();
+            reals.add(new NativeQueryRealization(modelId, null, null));
+            res.setNativeRealizations(reals);
+            res.addNativeRealizationIfNotExist(modelId);
+            List<NativeQueryRealization> realsGot = res.getNativeRealizations();
+            Assert.assertEquals(1, realsGot.size());
+            Assert.assertEquals(modelId, realsGot.get(0).getModelId());
+        }
     }
 }

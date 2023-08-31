@@ -407,7 +407,7 @@ abstract class BuildStage(private val jobContext: SegmentJob,
     (id, columns)
   }.toMap
 
-  private def columnsFromFlatTable(index: IndexEntity): Seq[String] = {
+  def columnsFromFlatTable(index: IndexEntity): Seq[String] = {
     val columns = mutable.Set[String]()
 
     // Dimension columns

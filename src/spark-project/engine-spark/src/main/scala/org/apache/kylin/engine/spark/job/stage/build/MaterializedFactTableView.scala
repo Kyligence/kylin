@@ -20,7 +20,12 @@ package org.apache.kylin.engine.spark.job.stage.build
 
 import org.apache.kylin.engine.spark.job.SegmentJob
 import org.apache.kylin.engine.spark.job.stage.BuildParam
-import org.apache.kylin.metadata.cube.model.NDataSegment
+import org.apache.kylin.engine.spark.model.SegmentFlatTableDesc
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet
+import org.apache.kylin.metadata.cube.cuboid.AdaptiveSpanningTree
+import org.apache.kylin.metadata.cube.cuboid.AdaptiveSpanningTree.AdaptiveTreeBuilder
+import org.apache.kylin.metadata.cube.model.{LayoutEntity, NDataSegment}
+import org.apache.spark.sql.{Dataset, Row}
 
 class MaterializedFactTableView(jobContext: SegmentJob, dataSegment: NDataSegment, buildParam: BuildParam)
   extends FlatTableAndDictBase(jobContext, dataSegment, buildParam) {
@@ -34,4 +39,29 @@ class MaterializedFactTableView(jobContext: SegmentJob, dataSegment: NDataSegmen
   }
 
   override def getStageName: String = "MaterializedFactTableView"
+
+  // just moved from 4.5.x, needs refactor...
+  def computeLayoutFromSourceAllInOne(layoutEntity: LayoutEntity): Dataset[Row] = {
+    val spanTree = new AdaptiveSpanningTree(config,
+      new AdaptiveTreeBuilder(dataSegment, ImmutableSet.of(layoutEntity)))
+    buildParam.setSpanningTree(spanTree)
+
+    val flatTableDesc = new SegmentFlatTableDesc(config, dataSegment, spanTree)
+    buildParam.setFlatTableDesc(flatTableDesc)
+
+    val factTableDS = newFastFactTableDS()
+    buildParam.setFactTableDS(factTableDS)
+
+    val dict = buildDictIfNeed()
+    buildParam.setDict(dict)
+
+    val flatTable = dict // YES, the 'dict' is actually 'flatTable'
+    buildParam.setFlatTable(flatTable)
+
+    // flat table ==> layout DS
+    val parentDS = flatTable.select(columnsFromFlatTable(layoutEntity.getIndex).map(org.apache.spark.sql.functions.col): _*)
+    val layoutDS = wrapLayoutDS(layoutEntity, parentDS)
+
+    layoutDS
+  }
 }

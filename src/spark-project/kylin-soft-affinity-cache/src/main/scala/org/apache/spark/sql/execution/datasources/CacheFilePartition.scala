@@ -31,10 +31,7 @@ import org.apache.spark.sql.connector.read.InputPartition
 case class CacheFilePartition(index: Int, files: Array[CachePartitionedFile])
   extends Partition with InputPartition {
   override def preferredLocations(): Array[String] = {
-    files.head.locations.map { p =>
-      if (p._1.equals("")) p._2
-      else ExecutorCacheTaskLocation(p._2, p._1).toString
-    }
+    files.head.locations
   }
 }
 
@@ -45,7 +42,7 @@ object CacheFilePartition extends Logging {
     val expectedTargets = filePartition.preferredLocations()
     val files = filePartition.files
 
-    var locations = Array.empty[(String, String)]
+    var locations = Array.empty[String]
     if (!files.isEmpty && SoftAffinityManager.usingSoftAffinity
       && !SoftAffinityManager.checkTargetHosts(expectedTargets)) {
       // if there is no host in the node list which are executors running on,
@@ -56,10 +53,10 @@ object CacheFilePartition extends Logging {
         logInfo(s"SAMetrics=File ${files.head.filePath} - " +
           s"the expected executors are ${locations.mkString("_")} ")
       } else {
-        locations = expectedTargets.map(("", _))
+        locations = expectedTargets
       }
     } else {
-      locations = expectedTargets.map(("", _))
+      locations = expectedTargets
     }
     CacheFilePartition(filePartition.index, filePartition.files.map(p => {
       CachePartitionedFile(p.partitionValues, p.filePath, p.start, p.length, locations)

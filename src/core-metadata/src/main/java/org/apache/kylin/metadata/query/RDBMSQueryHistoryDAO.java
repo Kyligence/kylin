@@ -64,7 +64,11 @@ public class RDBMSQueryHistoryDAO implements QueryHistoryDAO {
         String metadataIdentifier = StorageURL.replaceUrl(config.getMetadataUrl());
         this.queryMetricMeasurement = metadataIdentifier + "_" + QueryHistory.QUERY_MEASUREMENT_SURFIX;
         this.realizationMetricMeasurement = metadataIdentifier + "_" + QueryHistory.REALIZATION_MEASUREMENT_SURFIX;
-        jdbcQueryHisStore = new JdbcQueryHistoryStore(config);
+        if ("noop".equals(config.getQueryHistoryUrl().toString())) {
+            jdbcQueryHisStore = new NoopJdbcQueryHistoryStore();
+        } else {
+            jdbcQueryHisStore = new JdbcQueryHistoryStore(config);
+        }
     }
 
     @Override

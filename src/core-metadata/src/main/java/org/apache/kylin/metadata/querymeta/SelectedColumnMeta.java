@@ -25,7 +25,6 @@ import org.apache.kylin.common.KylinConfig;
 
 /**
  */
-@SuppressWarnings("serial")
 public class SelectedColumnMeta implements Serializable {
     public SelectedColumnMeta(boolean isAutoIncrement, boolean isCaseSensitive, boolean isSearchable,
             boolean isCurrency, int isNullalbe, boolean isSigned, int displaySize, String label, String name,

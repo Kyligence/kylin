@@ -26,6 +26,7 @@ import java.net.URLClassLoader;
 import java.net.URLDecoder;
 import java.util.Enumeration;
 
+import org.apache.commons.lang3.Validate;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -40,14 +41,34 @@ public class ClassUtil {
 
     public static void addToClasspath(String path, ClassLoader classLoader) {
         logger.info("Adding path " + path + " to class path");
-        File file = new File(path);
+        String[] paths = path.split("[,:]");
 
+        for (String p : paths) {
+            File file = new File(p);
+            if (file.exists()) {
+                _addToClasspath(file, classLoader);
+            } else {
+                File dir = file.getParentFile();
+                Validate.isTrue(dir.exists());
+                String match = file.getName();
+                Validate.isTrue(match.startsWith("*") && match.endsWith("*"));
+                match = match.substring(1, match.length() - 1);
+                for (File f : dir.listFiles()) {
+                    if (f.getName().contains(match) && f.getName().endsWith(".jar"))
+                        _addToClasspath(f, classLoader);
+                }
+            }
+        }
+    }
+
+    private static void _addToClasspath(File file, ClassLoader classLoader) {
         try {
             if (file.exists()) {
+                logger.info("Adding path {} to class path", file);
                 Class<URLClassLoader> urlClass = URLClassLoader.class;
                 Method method = urlClass.getDeclaredMethod("addURL", URL.class);
                 Unsafe.changeAccessibleObject(method, true);
-                method.invoke((URLClassLoader) classLoader, file.toURI().toURL());
+                method.invoke(classLoader, file.toURI().toURL());
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

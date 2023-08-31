@@ -17,9 +17,7 @@
  */
 package org.apache.kylin.query.runtime.plan
 
-import java.util.concurrent.ConcurrentHashMap
-import java.{lang, util}
-
+import org.apache.kylin.common.util.ClassUtil
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
 import org.apache.kylin.engine.spark.utils.{LogEx, LogUtils}
 import org.apache.kylin.guava30.shaded.common.base.Joiner
@@ -27,20 +25,24 @@ import org.apache.kylin.guava30.shaded.common.collect.{Lists, Sets}
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate
 import org.apache.kylin.metadata.cube.gridtable.NLayoutToGridTableMapping
 import org.apache.kylin.metadata.cube.model.{LayoutEntity, NDataSegment, NDataflow}
-import org.apache.kylin.metadata.model.{DeriveInfo, FunctionDesc, NTableMetadataManager, ParameterDesc, TblColRef}
+import org.apache.kylin.metadata.model._
 import org.apache.kylin.metadata.realization.HybridRealization
 import org.apache.kylin.metadata.tuple.TupleInfo
 import org.apache.kylin.query.implicits.sessionToQueryContext
+import org.apache.kylin.query.plugin.runtime.MppOnTheFlyProvider
 import org.apache.kylin.query.relnode.{KapRel, OLAPContext}
 import org.apache.kylin.query.util.{RuntimeHelper, SparderDerivedUtil}
+import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.dsl.plans.DslLogicalPlan
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project, Union}
 import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.manager.SparderLookupManager
-import org.apache.spark.sql.types.{ArrayType, DataTypes, DoubleType, StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.SparderTypeUtil
-import org.apache.spark.sql._
 
+import java.util.concurrent.ConcurrentHashMap
+import java.{lang, util}
 import scala.collection.JavaConverters._
 
 
@@ -165,8 +167,10 @@ object TableScanPlan extends LogEx {
     val mapping = new NLayoutToGridTableMapping(cuboidLayout)
     val columnNames = SchemaProcessor.buildGTSchema(cuboidLayout, mapping, tableName)
 
-    /////////////////////////////////////////////
     val kapConfig = KapConfig.wrap(dataflow.getConfig)
+    val mppOnTheFly = getMppOnTheFlyProvider(dataflow.getConfig)
+
+    /////////////////////////////////////////////
     val basePath = kapConfig.getReadParquetStoragePath(dataflow.getProject)
     if (prunedSegments == null || prunedSegments.size() == 0) {
       return tableScanEmptySegment(rel: KapRel)
@@ -195,13 +199,39 @@ object TableScanPlan extends LogEx {
         .isFastBitmapEnabled(olapContext.isExactlyFastBitmap)
         .bucketingEnabled(bucketEnabled(olapContext, cuboidLayout))
         .cuboidTable(dataflow, cuboidLayout, pruningInfo)
-      cachePlan.get().put(path, newPlan)
-      newPlan
+
+      val mppPlan = mppOnTheFly.computeMissingLayout(prunedSegments, cuboidLayout.getId, session)
+
+      val cuboidAndMppPlan =
+        if (mppPlan == null) newPlan
+        else newPlan.union(mppPlan)
+
+      cachePlan.get().put(path, cuboidAndMppPlan)
+      cuboidAndMppPlan
     }
 
     plan = SparkOperation.projectAsAlias(columnNames, plan)
     val (schema, newPlan) = buildSchema(plan, tableName, cuboidLayout, rel, olapContext, dataflow)
     SparkOperation.project(schema, newPlan)
+  }
+
+  private def getMppOnTheFlyProvider(config: KylinConfig): MppOnTheFlyProvider = {
+    var ret: MppOnTheFlyProvider = null
+    if (config.isMppOnTheFlyLayoutsEnabled) {
+      try {
+        ret = ClassUtil.newInstance(config.getMppOnTheFlyLayoutsProvider).asInstanceOf[MppOnTheFlyProvider]
+      } catch {
+        case e: Exception => logError("failed to instantiate MppOnTheFlyProvider", e)
+      }
+    }
+    if (ret == null)
+      new MppOnTheFlyProvider {
+        override def computeMissingLayout(prunedSegments: util.List[NDataSegment], layoutId: Long, ss: SparkSession): LogicalPlan = {
+          null
+        }
+      }
+    else
+      ret
   }
 
   def bucketEnabled(context: OLAPContext, layout: LayoutEntity): Boolean = {

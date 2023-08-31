@@ -18,8 +18,18 @@
 
 package org.apache.kylin.common.util;
 
+import java.io.File;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 public class ClassUtilTest {
 
@@ -29,6 +39,59 @@ public class ClassUtilTest {
                 .contains("commons-logging"));
         Assert.assertTrue(ClassUtil.findContainingJar(Class.forName("org.apache.commons.logging.LogFactory"), "slf4j")
                 .contains("jcl-over-slf4j"));
+    }
+
+    @Test
+    void testAddToClasspath() throws Exception {
+        // Prepare tmp dir & jars
+        File extraJarsDir = null;
+        try {
+            String tmpDir = System.getProperty("java.io.tmpdir");
+            extraJarsDir = new File(tmpDir, "class_util_test_jars");
+            extraJarsDir.mkdir();
+
+            List<File> jarFiles = Arrays.asList(new File(extraJarsDir, "hive-common-3.3.1.jar"),
+                    new File(extraJarsDir, "aws-java-sdk-core-1.11.901.jar"),
+                    new File(extraJarsDir, "hadoop-aws-3.3.1.jar"),
+                    new File(extraJarsDir, "hadoop-aws-3.3.1"),
+                    new File(extraJarsDir, "no-match-file.jar"));
+            for (File f : jarFiles) {
+                f.createNewFile();
+            }
+            File singleJarFile = new File(extraJarsDir, "a-single-file.jar");
+            singleJarFile.createNewFile();
+
+            // Load jars
+            ClassLoader loader = Thread.currentThread().getContextClassLoader();
+            ClassUtil.addToClasspath(String.format("%s/*hive*", extraJarsDir.getCanonicalPath()), loader);
+            ClassUtil.addToClasspath(String.format("%s/*aws*", extraJarsDir.getCanonicalPath()), loader);
+            try {
+                ClassUtil.addToClasspath(String.format("%s/*hive", extraJarsDir.getCanonicalPath()), loader);
+            } catch (Exception e) {
+                Assertions.assertTrue(e instanceof IllegalArgumentException);
+            }
+            try {
+                ClassUtil.addToClasspath(String.format("%s/hive*", extraJarsDir.getCanonicalPath()), loader);
+            } catch (Exception e) {
+                Assertions.assertTrue(e instanceof IllegalArgumentException);
+            }
+            ClassUtil.addToClasspath(singleJarFile.getCanonicalPath(), loader);
+
+            URL[] urls = (URL[]) ReflectionTestUtils.invokeMethod(loader, "getURLs");
+            List<URL> urlList = Stream.of(urls).filter(url -> {
+                for (File f : jarFiles) {
+                    if (url.getPath().contains(f.getName()) || url.getPath().contains(singleJarFile.getName())) {
+                        return true;
+                    }
+                }
+                return false;
+            }).collect(Collectors.toList());
+            Assertions.assertEquals(4, urlList.size());
+        } finally {
+            if (extraJarsDir != null) {
+                FileUtils.forceDeleteOnExit(extraJarsDir);
+            }
+        }
     }
 
 }

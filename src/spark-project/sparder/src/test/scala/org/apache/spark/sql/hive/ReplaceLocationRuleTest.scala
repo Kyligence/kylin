@@ -43,11 +43,11 @@ class ReplaceLocationRuleTest extends SparderBaseFunSuite with SharedSparkSessio
     )
 
     val relation = new HiveTableRelation(table, table.dataSchema.asNullable.toAttributes, table.partitionSchema.asNullable.toAttributes)
-    val afterRulePlan = ReplaceLocationRule.apply(spark).apply(relation)
+    val afterRulePlan = HiveStorageRule.apply(spark).apply(relation)
     assert(afterRulePlan.asInstanceOf[HiveTableRelation].tableMeta.storage.toString() == "Storage(Location: hdfs://hacluster)")
 
     spark.sessionState.conf.setLocalProperty("spark.sql.hive.specific.fs.location", "hdfs://writecluster")
-    val afterRulePlan1 = ReplaceLocationRule.apply(spark).apply(relation)
+    val afterRulePlan1 = HiveStorageRule.apply(spark).apply(relation)
     assert(afterRulePlan1.asInstanceOf[HiveTableRelation].tableMeta.storage.toString() == "Storage(Location: hdfs://writecluster)")
   }
 
@@ -64,7 +64,7 @@ class ReplaceLocationRuleTest extends SparderBaseFunSuite with SharedSparkSessio
     )
 
     val relation = new HiveTableRelation(table, table.dataSchema.asNullable.toAttributes, table.partitionSchema.asNullable.toAttributes)
-    val afterRulePlan = ReplaceLocationRule.apply(spark).apply(relation)
+    val afterRulePlan = HiveStorageRule.apply(spark).apply(relation)
     assert(afterRulePlan.asInstanceOf[HiveTableRelation].tableMeta.storage.toString() == "Storage(Location: hdfs://hacluster)")
 
     val table1 = CatalogTable(
@@ -78,11 +78,11 @@ class ReplaceLocationRuleTest extends SparderBaseFunSuite with SharedSparkSessio
     )
 
     val relation1 = new HiveTableRelation(table1, table1.dataSchema.asNullable.toAttributes, table1.partitionSchema.asNullable.toAttributes)
-    val afterRulePlan1 = ReplaceLocationRule.apply(spark).apply(relation1)
+    val afterRulePlan1 = HiveStorageRule.apply(spark).apply(relation1)
     assert(afterRulePlan1.asInstanceOf[HiveTableRelation].tableMeta.storage.toString() == "Storage()")
 
     try {
-      ReplaceLocationRule.apply(spark).apply(null)
+      HiveStorageRule.apply(spark).apply(null)
     } catch {
       case _: Exception =>
     }
@@ -90,7 +90,7 @@ class ReplaceLocationRuleTest extends SparderBaseFunSuite with SharedSparkSessio
     val localRelation = LocalRelation(
       Seq(AttributeReference("a", IntegerType, nullable = true)()), isStreaming = false)
     try {
-      ReplaceLocationRule.apply(spark).apply(localRelation)
+      HiveStorageRule.apply(spark).apply(localRelation)
     } catch {
       case _: Exception =>
     }

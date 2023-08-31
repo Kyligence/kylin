@@ -109,6 +109,11 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
 
     @Getter
     @Setter
+    @JsonProperty("last_data_refresh_time")
+    private long lastDataRefreshTime = 0L;
+
+    @Getter
+    @Setter
     @JsonProperty("layout_query_hit_count")
     private Map<Long, FrequencyMap> layoutHitCount = Maps.newHashMap();
 

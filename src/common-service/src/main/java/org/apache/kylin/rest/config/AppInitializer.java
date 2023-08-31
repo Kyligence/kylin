@@ -64,11 +64,15 @@ import org.apache.kylin.tool.garbage.PriorityExecutor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.security.web.FilterChainProxy;
+import org.springframework.security.web.firewall.DefaultHttpFirewall;
+import org.springframework.security.web.firewall.HttpFirewall;
 
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
@@ -172,6 +176,15 @@ public class AppInitializer {
         EventBusFactory.getInstance().register(new QueryMetricsListener(), false);
         EventBusFactory.getInstance().register(new UserAclListener(), true);
 
+        if (kylinConfig.isAllowNonAsciiCharInUrl()) {
+            // Note: DefaultHttpFirewall vs StrictHttpFirewall
+            // In order to allow Chinese chars on URL like "/{cubeName}/segments", we have to use DefaultHttpFirewall.
+            // If later we have to use StrictHttpFirewall, then StrictHttpFirewall.rejectNonPrintableAsciiCharactersInFieldName()
+            // must be overridden to allow Chinese chars on URL.
+            FilterChainProxy filterChainProxy = context.getBean(FilterChainProxy.class);
+            filterChainProxy.setFirewall(this.getHttpFirewall());
+        }
+
         postInit();
 
         log.info("Kylin initialization completed.");
@@ -241,4 +254,10 @@ public class AppInitializer {
             log.warn("set Fs URL stream handler factory failed", e);
         }
     }
+
+    @Bean
+    public HttpFirewall getHttpFirewall() {
+        return new DefaultHttpFirewall();
+    }
+
 }

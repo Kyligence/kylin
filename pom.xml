@@ -203,7 +203,17 @@
             **/org/apache/kylin/tool/garbage/IndexCleaner.java,
             **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java,
             **/org/apache/kylin/rest/service/AbstractModelService.java,
-            **/org/apache/spark/utils/SparkHadoopUtils.scala
+            **/org/apache/spark/utils/SparkHadoopUtils.scala,
+            **/io/kyligence/kap/fileseg/**,
+            **/org/apache/kylin/metadata/query/NoopJdbcQueryHistoryStore.java,
+            **/io/kyligence/kap/engine/spark/job/MppOnTheFlyImpl.java,
+            **/org/apache/kylin/tool/garbage/IndexCleaner.java,
+            **/io/kyligence/kap/cache/utils/Hadoop3CompaUtil.java,
+            **/io/kyligence/hive/serde2/lazy/LazyQuoteAwareSerDe.java,
+            **/org/apache/kylin/engine/spark/job/stage/build/MaterializedFactTableView.scala,
+            **/org/apache/spark/sql/hive/KylinHiveSessionStateBuilder.scala,
+            **/org/apache/kylin/rest/service/ModelService.java,
+            **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java
         </sonar.jacoco.excludes>
         <sonar.coverage.exclusions>
             **/org/apache/kylin/**/*Exception.java,
@@ -253,7 +263,17 @@
             **/org/apache/kylin/tool/garbage/IndexCleaner.java,
             **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java,
             **/org/apache/kylin/rest/service/AbstractModelService.java,
-            **/org/apache/spark/utils/SparkHadoopUtils.scala
+            **/org/apache/spark/utils/SparkHadoopUtils.scala,
+            **/io/kyligence/kap/fileseg/**,
+            **/org/apache/kylin/metadata/query/NoopJdbcQueryHistoryStore.java,
+            **/io/kyligence/kap/engine/spark/job/MppOnTheFlyImpl.java,
+            **/org/apache/kylin/tool/garbage/IndexCleaner.java,
+            **/io/kyligence/kap/cache/utils/Hadoop3CompaUtil.java,
+            **/io/kyligence/hive/serde2/lazy/LazyQuoteAwareSerDe.java,
+            **/org/apache/kylin/engine/spark/job/stage/build/MaterializedFactTableView.scala,
+            **/org/apache/spark/sql/hive/KylinHiveSessionStateBuilder.scala,
+            **/org/apache/kylin/rest/service/ModelService.java,
+            **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java
         </sonar.coverage.exclusions>
         <sonar.organization>kylin</sonar.organization>
         <!--suppress UnresolvedMavenProperty -->
@@ -2873,7 +2893,6 @@
                 <artifactId>netty</artifactId>
                 <version>${netty3.version}</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
@@ -3416,12 +3435,12 @@
                 <hadoop.cloud.version>3.3.1</hadoop.cloud.version>
                 <jetty.version>9.3.24.v20180605</jetty.version>
             </properties>
+            <modules>
+                <module>src/spark-project/kylin-soft-affinity-cache-hadoop3</module>
+            </modules>
         </profile>
         <profile>
             <id>clickhouse.native.jdbc</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <properties>
                 <clickhouse.group>com.github.housepower</clickhouse.group>
                 <clickhouse.artifact>clickhouse-native-jdbc</clickhouse.artifact>

@@ -282,6 +282,10 @@ public class QueryNodeFilter extends BaseFilter {
     }
 
     private boolean checkProcessLocal(KylinConfig kylinConfig, String project, String contentType) {
+        if (kylinConfig.isDevOrUT()) {
+            return true;
+        }
+
         if (kylinConfig.isQueryNodeOnly()) {
             return false;
         }

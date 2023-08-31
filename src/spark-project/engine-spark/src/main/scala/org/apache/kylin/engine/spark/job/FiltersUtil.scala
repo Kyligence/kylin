@@ -87,7 +87,7 @@ object FiltersUtil extends Logging {
           val segRange = flatTable.getSegmentRange
           if (segRange != null && !segRange.isInfinite) {
             var afterConvertPartition = partDesc.getPartitionConditionBuilder
-              .buildDateRangeCondition(partDesc, null, segRange)
+              .buildDateRangeCondition(partDesc, flatTable.getDataSegment, segRange)
             afterConvertPartition = CreateFlatTable.replaceDot(afterConvertPartition, model)
             logInfo(s"Partition filter $afterConvertPartition")
             afterFilter = afterFilter.where(afterConvertPartition)

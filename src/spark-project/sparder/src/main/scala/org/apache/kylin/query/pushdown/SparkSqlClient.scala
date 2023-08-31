@@ -23,7 +23,6 @@ import java.sql.Timestamp
 import java.util
 import java.util.concurrent.{Callable, Executors, TimeUnit, TimeoutException}
 import java.util.{UUID, List => JList}
-
 import org.apache.commons.lang3.StringUtils
 import org.apache.kylin.common.util.{DateFormat, HadoopUtil, Pair}
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
@@ -40,6 +39,10 @@ import org.apache.spark.sql.hive.utils.ResourceDetectUtils
 import org.apache.spark.sql.util.SparderTypeUtil
 import org.apache.spark.sql.{DataFrame, Row, SparderEnv, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
+
+import io.kyligence.kap.cache.kylin.KylinCacheFileSystem
+import io.kyligence.kap.fileseg.FileSegments
+import io.kyligence.kap.softaffinity.SoftAffinityManager
 
 import scala.collection.JavaConverters._
 import scala.collection.{immutable, mutable}
@@ -62,32 +65,47 @@ object SparkSqlClient {
   (java.lang.Iterable[JList[String]], Int, JList[StructField]) = {
     ss.sparkContext.setLocalProperty("spark.scheduler.pool", "query_pushdown")
     HadoopUtil.setCurrentConfiguration(ss.sparkContext.hadoopConfiguration)
-    val s = "Start to run sql with SparkSQL..."
     val queryId = QueryContext.current().getQueryId
     ss.sparkContext.setLocalProperty(QueryToExecutionIDCache.KYLIN_QUERY_ID_KEY, queryId)
-    logger.info(s)
+    logger.info("Start to run sql with SparkSQL...")
 
     try {
+      // process cache hint like -- select * from xxx /*+ ACCEPT_CACHE_TIME(158176387682000) */
+      val sqlToRun = KylinCacheFileSystem.processAcceptCacheTimeInSql(sql)
+
       val db = if (StringUtils.isNotBlank(project)) {
         NProjectManager.getInstance(KylinConfig.getInstanceFromEnv).getDefaultDatabase(project)
       } else {
         null
       }
       ss.sessionState.conf.setLocalProperty(DEFAULT_DB, db)
-      val df = QueryResultMasks.maskResult(ss.sql(sql))
+      val df = QueryResultMasks.maskResult(ss.sql(sqlToRun))
+      logger.info("SparkSQL returned result DataFrame")
+      QueryContext.current().record("to_spark_plan")
 
       autoSetShufflePartitions(df)
+      QueryContext.current().record("auto_set_parts")
 
-      val msg = "SparkSQL returned result DataFrame"
-      logger.info(msg)
-
-      dfToList(ss, sql, df)
+      val iter = if (FileSegments.isSyncFileSegSql(sqlToRun)) {
+        val nParts = df.rdd.getNumPartitions // trigger file scan, whose result will be captured by FileSegmentsDetector
+        (
+          ImmutableList.of(ImmutableList.of(nParts.toString).asInstanceOf[JList[String]]),
+          1,
+          ImmutableList.of(new StructField("CNT", -5, "BIGINT", 0, 0, false))
+        )
+      } else {
+        dfToList(ss, sqlToRun, df)
+      }
+      QueryContext.current().record("collect_result")
+      SoftAffinityManager.logAuditAsks()
+      iter
     } finally {
       ss.sessionState.conf.setLocalProperty(DEFAULT_DB, null)
+      KylinCacheFileSystem.clearAcceptCacheTimeLocally()
     }
   }
 
-  def autoSetShufflePartitions(df: DataFrame): Unit = {
+  private def autoSetShufflePartitions(df: DataFrame): Unit = {
     val config = KylinConfig.getInstanceFromEnv
     val oriShufflePartition = df.sparkSession.sessionState.conf.getConfString(SHUFFLE_PARTITION).toInt
     val isSkip = !config.isAutoSetPushDownPartitions || !ResourceDetectUtils.checkPartitionFilter(df.queryExecution.sparkPlan)
@@ -95,6 +113,15 @@ object SparkSqlClient {
       logger.info(s"Skip auto set $SHUFFLE_PARTITION, use origin value $oriShufflePartition")
       return
     }
+
+    val forced = config.autoSetPushDownPartitionsForced
+    if (forced > 0) {
+      df.sparkSession.sessionState.conf.setLocalProperty(SHUFFLE_PARTITION, forced.toString)
+      QueryContext.current().setShufflePartitions(forced)
+      logger.info(s"Auto force set forced spark.sql.shuffle.partitions $forced")
+      return
+    }
+
     val isConcurrency = config.isConcurrencyFetchDataSourceSize
     val executor = Executors.newSingleThreadExecutor()
     val timeOut = config.getAutoShufflePartitionTimeOut
@@ -151,6 +178,7 @@ object SparkSqlClient {
       QueryContext.currentTrace().endLastSpan()
       val jobTrace = new SparkJobTrace(jobGroup, QueryContext.currentTrace()
         , QueryContext.current().getQueryId, SparderEnv.getSparkSession.sparkContext)
+
       val results = df.toIterator()
       val resultRows = results._1
       val resultSize = results._2

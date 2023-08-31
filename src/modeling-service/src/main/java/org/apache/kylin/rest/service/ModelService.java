@@ -89,6 +89,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -276,6 +277,8 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import io.kyligence.kap.fileseg.FileSegments;
+import io.kyligence.kap.fileseg.FileSegments.ModelFileSegments;
 import io.kyligence.kap.secondstorage.SecondStorage;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
@@ -373,7 +376,8 @@ public class ModelService extends AbstractModelService implements TableModelSupp
     private void addOldSegmentParams(NDataModel model, NDataModelOldParams oldParams,
             List<AbstractExecutable> executables) {
         List<NDataSegmentResponse> segments = getSegmentsResponse(model.getId(), model.getProject(), "1",
-                String.valueOf(Long.MAX_VALUE - 1), null, executables, LAST_MODIFY, true, (model instanceof NDataModelLiteResponse));
+                String.valueOf(Long.MAX_VALUE - 1), null, executables, LAST_MODIFY, true,
+                (model instanceof NDataModelLiteResponse));
         calculateRecordSizeAndCount(segments, oldParams);
         if (model instanceof NDataModelResponse) {
             ((NDataModelResponse) model).setSegments(segments);
@@ -2865,6 +2869,41 @@ public class ModelService extends AbstractModelService implements TableModelSupp
         offlineModelIfNecessary(dataflowManager, model);
     }
 
+    public ModelFileSegments getModelFileSegments(String project, String modelAlias) {
+        aclEvaluate.checkProjectOperationPermission(project);
+        NDataflowManager dfManager = getManager(NDataflowManager.class, project);
+        NDataflow df = dfManager.getDataflowByModelAlias(modelAlias);
+        if (df == null || df.isBroken() || df.getModel().isBroken())
+            return ModelFileSegments.broken(project, modelAlias);
+
+        return FileSegments.getModelFileSegments(project, df.getModel().getId(), true);
+    }
+
+    @Transaction(project = 0)
+    public void forceFileSegments(String project, String modelId, String storageLocation,
+            Optional<List<String>> fileHashs, SegmentStatusEnum initStatus) {
+        aclEvaluate.checkProjectOperationPermission(project);
+        NDataflowManager dfManager = getManager(NDataflowManager.class, project);
+        FileSegments.forceFileSegments(project, modelId, storageLocation, fileHashs, (fileSegRangeToCreate) -> {
+            NDataSegment newSeg;
+            if (initStatus == SegmentStatusEnum.NEW) {
+                // normal new segment and kickoff build immediately
+                IncrementBuildSegmentParams incrParams = new IncrementBuildSegmentParams(project, modelId,
+                        fileSegRangeToCreate, true);
+                modelBuildService.constructIncrementBuild(incrParams);
+                newSeg = dfManager.getDataflow(modelId).getSegmentByName(fileSegRangeToCreate.proposeSegmentName());
+            } else {
+                // a new READY segment without immediate build
+                newSeg = dfManager.appendSegment(dfManager.getDataflow(modelId), fileSegRangeToCreate, initStatus,
+                        null);
+            }
+            return newSeg;
+        }, (segmentIdToDelete) -> {
+            deleteSegmentById(modelId, project, new String[] { segmentIdToDelete }, true);
+            return true;
+        });
+    }
+
     private void offlineModelIfNecessary(NDataflowManager dfManager, String modelId) {
         NDataflow df = dfManager.getDataflow(modelId);
         if (df.getSegments().isEmpty() && RealizationStatusEnum.ONLINE == df.getStatus()) {
@@ -3598,7 +3637,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
         validateFusionModelDimension(modelRequest);
         NDataModel model = semanticUpdater.convertToDataModel(modelRequest);
 
-        for(NDataModel.Measure measure : model.getAllMeasures()) {
+        for (NDataModel.Measure measure : model.getAllMeasures()) {
             measure.getFunction().init(model);
         }
 

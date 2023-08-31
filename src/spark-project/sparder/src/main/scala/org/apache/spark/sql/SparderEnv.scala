@@ -43,7 +43,7 @@ import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasource.{KylinSourceStrategy, LayoutFileSourceStrategy, RewriteInferFiltersFromConstraints}
 import org.apache.spark.sql.execution.ui.PostQueryExecutionForKylin
-import org.apache.spark.sql.hive.ReplaceLocationRule
+import org.apache.spark.sql.hive.HiveStorageRule
 import org.apache.spark.sql.udf.UdfManager
 import org.apache.spark.util.{ThreadUtils, Utils}
 import org.apache.spark.{ExecutorAllocationClient, SparkConf, SparkContext}
@@ -226,7 +226,7 @@ object SparderEnv extends Logging {
       val sparkSession = isLocalMode match {
         case true =>
           SparkSession.builder
-            .master("local")
+            .master("local[3]")
             .appName("sparder-local-sql-context")
             .enableHiveSupport()
             .getOrCreateKylinSession()
@@ -278,7 +278,7 @@ object SparderEnv extends Logging {
   def injectExtensions(sse: SparkSessionExtensions): Unit = {
     sse.injectPlannerStrategy(_ => KylinSourceStrategy)
     sse.injectPlannerStrategy(_ => LayoutFileSourceStrategy)
-    sse.injectPostHocResolutionRule(ReplaceLocationRule)
+    sse.injectPostHocResolutionRule(HiveStorageRule)
     sse.injectOptimizerRule(_ => new ConvertInnerJoinToSemiJoin())
     if (KapConfig.getInstanceFromEnv.isConstraintPropagationEnabled) {
       sse.injectOptimizerRule(_ => RewriteInferFiltersFromConstraints)

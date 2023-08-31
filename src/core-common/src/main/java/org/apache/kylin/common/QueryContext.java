@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
@@ -42,6 +43,7 @@ import lombok.Setter;
 /**
  * Holds per query information and statistics.
  */
+@Slf4j
 public class QueryContext implements Closeable {
 
     public static final String PUSHDOWN_RDBMS = "RDBMS";
@@ -121,7 +123,7 @@ public class QueryContext implements Closeable {
 
     // record second storage partition which used
     @Getter
-    private List<Integer> usedPartitionIndexes = new ArrayList<>();
+    private final List<Integer> usedPartitionIndexes = new ArrayList<>();
 
     // record second storage partition which used
     @Getter
@@ -185,7 +187,7 @@ public class QueryContext implements Closeable {
     public void record(String message) {
         long current = System.currentTimeMillis();
         long takeTime = current - recordMillis;
-        queryRecord.put(message, takeTime + "");
+        queryRecord.put(message, Long.toString(takeTime));
         recordMillis = current;
     }
 
@@ -221,7 +223,7 @@ public class QueryContext implements Closeable {
 
     // ============================================================================
     /**
-     * query metrics
+     * query metrics, spark execution related
      */
     @Getter
     @Setter
@@ -251,6 +253,7 @@ public class QueryContext implements Closeable {
         private long queryStageCount;
         private long queryTaskCount;
         private int retryTimes;
+        private long dataFetchTime; // see doc in SQLResponse.dataFetchTime
         private String queryExecutedPlan;
 
         // sourceScanXxx from Parquet
@@ -288,6 +291,10 @@ public class QueryContext implements Closeable {
             retryTimes += 1;
         }
 
+        public void addDataFetchTime(long dataFetchTime) {
+            this.dataFetchTime = Long.max(this.dataFetchTime, dataFetchTime);
+        }
+
         // scanXxx from SparkUI
         @Getter
         @Setter
@@ -313,7 +320,6 @@ public class QueryContext implements Closeable {
     }
 
     /**
-     * @param scanList
      * @return if scanList == null return default -1, else return sum of list
      */
     public static long calValueWithDefault(List<Long> scanList) {
@@ -376,8 +382,8 @@ public class QueryContext implements Closeable {
         private Long layoutId;
         private String indexType;
         private boolean isPartialMatchModel;
-        private boolean isValid = true;
-        private boolean isLayoutExist = true;
+        private boolean isValid;
+        private boolean isLayoutExist;
         private boolean isStreamingLayout;
         private List<String> snapshots;
     }

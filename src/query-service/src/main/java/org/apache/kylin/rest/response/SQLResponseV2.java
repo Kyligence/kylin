@@ -88,6 +88,24 @@ public class SQLResponseV2 implements Serializable {
 
     protected String storageCacheType;
 
+    /**
+     * The data fetching time of the datasets that contribute to the query result. The time stands for the data
+     * freshness of the query result.
+     * <ul>
+     *     <li>If 'dataFetchTime' = now(), meaning the query gets most fresh data from source, typically executed
+     *         by a pushdown engine, and bypasses all caches along the way, including query cache, cube segment cache,
+     *         soft affinity local cache etc..</li>
+     *     <li>Or otherwise, 'dataFetchTime' should be set to the cache build time, the time when the data is last
+     *         fetched from source and the cache is built.</li>
+     *     <li>If multiple datasets and multiple data caches are involved in a query, the LATEST data fetch time
+     *         among them is returned.</li>
+     *     TODO: As of March 2023, only the spark-sql pushdown engine reports its alluxio local cache time (soft affinity);
+     *           The cache time of query cache and cube cache is yet to be implemented.
+     * </ul>
+     */
+    @JsonProperty("dataFetchTime")
+    protected long dataFetchTime;
+
     @JsonProperty("pushDown")
     protected boolean queryPushDown = false;
 
@@ -144,6 +162,7 @@ public class SQLResponseV2 implements Serializable {
         this.hitExceptionCache = sqlResponse.isHitExceptionCache();
         this.storageCacheUsed = sqlResponse.isStorageCacheUsed();
         this.storageCacheType = sqlResponse.getStorageCacheType();
+        this.dataFetchTime = sqlResponse.getDataFetchTime();
         this.queryPushDown = sqlResponse.isQueryPushDown();
         this.isPrepare = sqlResponse.isPrepare();
         this.isTimeout = sqlResponse.isTimeout();

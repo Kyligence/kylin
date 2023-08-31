@@ -86,7 +86,7 @@ public class AlluxioHdfsFileInputStream extends InputStream
         int data = fileInStream.read();
         if (data != -1 && statistics != null) {
             statistics.incrementBytesRead(1);
-            logger.debug("Read one byte.");
+            logger.trace("Read one byte.");
         }
         return data;
     }
@@ -105,7 +105,7 @@ public class AlluxioHdfsFileInputStream extends InputStream
         int bytesRead = fileInStream.read(buffer, offset, length);
         if (bytesRead != -1 && statistics != null) {
             statistics.incrementBytesRead(bytesRead);
-            logger.debug("Read {} bytes.", bytesRead);
+            logger.trace("Read {} bytes.", bytesRead);
         }
         return bytesRead;
     }
@@ -136,7 +136,7 @@ public class AlluxioHdfsFileInputStream extends InputStream
         }
         if (bytesRead != -1 && statistics != null) {
             statistics.incrementBytesRead(bytesRead);
-            logger.debug("Read {} byte buffer {}.", bytesRead, buf.hasArray());
+            logger.trace("Read {} byte buffer {}.", bytesRead, buf.hasArray());
         }
         return bytesRead;
     }
@@ -150,7 +150,7 @@ public class AlluxioHdfsFileInputStream extends InputStream
         int bytesRead = fileInStream.positionedRead(position, buffer, offset, length);
         if (bytesRead != -1 && statistics != null) {
             statistics.incrementBytesRead(bytesRead);
-            logger.debug("Read {} {} byte buffer.", position, bytesRead);
+            logger.trace("Read {} {} byte buffer.", position, bytesRead);
         }
         return bytesRead;
     }
@@ -170,7 +170,7 @@ public class AlluxioHdfsFileInputStream extends InputStream
             }
             totalBytesRead += bytesRead;
         }
-        logger.info("Read fully {} {} byte buffer.", position, totalBytesRead);
+        logger.trace("Read fully {} {} byte buffer.", position, totalBytesRead);
     }
 
     @Override

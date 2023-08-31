@@ -111,9 +111,12 @@ public class HadoopUtil {
      * @return
      */
     public static Configuration getHadoopConfFromSparkEngine() {
-        val conf = new Configuration(false);
         val hadoopConfDir = getHadoopConfDir();
+        if (StringUtils.isBlank(hadoopConfDir)) {
+            return new Configuration();
+        }
 
+        val conf = new Configuration(false);
         conf.addResource(new Path(Paths.get(hadoopConfDir, "core-site.xml").toFile().getAbsolutePath()));
         conf.addResource(new Path(Paths.get(hadoopConfDir, "hdfs-site.xml").toFile().getAbsolutePath()));
         conf.addResource(new Path(Paths.get(hadoopConfDir, "yarn-site.xml").toFile().getAbsolutePath()));

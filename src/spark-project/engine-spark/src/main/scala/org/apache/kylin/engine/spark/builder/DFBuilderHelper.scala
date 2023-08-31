@@ -18,6 +18,7 @@
 
 package org.apache.kylin.engine.spark.builder
 
+import org.apache.commons.lang3.StringUtils
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.common.persistence.transaction.UnitOfWork
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil
@@ -84,6 +85,11 @@ object DFBuilderHelper extends Logging {
   }
 
   def checkPointSegment(readOnlySeg: NDataSegment, checkpointOps: NDataSegment => Unit): NDataSegment = {
+    // skip invalid or virtual segment
+    if (StringUtils.isEmpty(readOnlySeg.getId)) {
+      return readOnlySeg
+    }
+
     // read basic infos from the origin segment
     val segId = readOnlySeg.getId
     val dfId = readOnlySeg.getDataflow.getId

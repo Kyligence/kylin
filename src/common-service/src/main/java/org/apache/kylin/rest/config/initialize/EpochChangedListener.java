@@ -161,19 +161,23 @@ public class EpochChangedListener {
             if (!scheduler.hasStarted()) {
                 throw new KylinRuntimeException("Scheduler for " + project + " has not been started");
             }
+
             StreamingScheduler ss = StreamingScheduler.getInstance(project);
             ss.init();
             if (!ss.getHasStarted().get()) {
                 throw new KylinRuntimeException("Streaming Scheduler for " + project + " has not been started");
             }
-            QueryHistoryTaskScheduler qhAccelerateScheduler = QueryHistoryTaskScheduler.getInstance(project);
-            qhAccelerateScheduler.init();
 
-            if (!qhAccelerateScheduler.hasStarted()) {
-                throw new KylinRuntimeException(
-                        "Query history accelerate scheduler for " + project + " has not been started");
+            if (kylinConfig.getQueryHistoryAccelerateInterval() > 0) {
+                QueryHistoryTaskScheduler qhAccelerateScheduler = QueryHistoryTaskScheduler.getInstance(project);
+                qhAccelerateScheduler.init();
+
+                if (!qhAccelerateScheduler.hasStarted()) {
+                    throw new KylinRuntimeException(
+                            "Query history accelerate scheduler for " + project + " has not been started");
+                }
+                recommendationUpdateScheduler.addProject(project);
             }
-            recommendationUpdateScheduler.addProject(project);
             return 0;
         }, project, 1);
         scheduler.setHasFinishedTransactions(new AtomicBoolean(true));

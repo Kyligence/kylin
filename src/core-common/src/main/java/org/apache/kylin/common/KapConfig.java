@@ -760,5 +760,4 @@ public class KapConfig {
     public long getBigQueryThresholdUpdateIntervalSecond() {
         return Long.parseLong(config.getOptional("kylin.query.big-query-threshold-update-interval-second", "10800"));
     }
-
 }

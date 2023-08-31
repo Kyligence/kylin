@@ -371,16 +371,24 @@ public class ModelBuildService extends AbstractModelService implements ModelBuil
         TableDesc table = getManager(NTableMetadataManager.class, project)
                 .getTableDesc(modelDescInTransaction.getRootFactTableName());
         val df = getManager(NDataflowManager.class, project).getDataflow(modelId);
-        if (modelDescInTransaction.getPartitionDesc() == null
-                || StringUtils.isEmpty(modelDescInTransaction.getPartitionDesc().getPartitionDateColumn())) {
-            throw new IllegalArgumentException("Can not add a new segment on full build model.");
+
+        var segmentRangeToBuild = params.getSpecifiedSegmentRange();
+        if (segmentRangeToBuild == null) {
+            if (modelDescInTransaction.getPartitionDesc() == null
+                    || StringUtils.isEmpty(modelDescInTransaction.getPartitionDesc().getPartitionDateColumn())) {
+                throw new IllegalArgumentException("Can not add a new segment on full build model.");
+            }
+            Preconditions.checkArgument(!PushDownUtil.needPushdown(params.getStart(), params.getEnd()),
+                    "Load data must set start and end date");
+            segmentRangeToBuild = SourceFactory.getSource(table).getSegmentRange(params.getStart(), params.getEnd());
+            if (segmentRangeToBuild instanceof SegmentRange.BasicSegmentRange) {
+                List<NDataSegment> overlapSegments = modelService.checkSegmentToBuildOverlapsBuilt(project,
+                        modelDescInTransaction, (SegmentRange.BasicSegmentRange) segmentRangeToBuild,
+                        params.isNeedBuild(), params.getBatchIndexIds());
+                buildSegmentOverlapExceptionInfo(overlapSegments);
+            }
         }
-        Preconditions.checkArgument(!PushDownUtil.needPushdown(params.getStart(), params.getEnd()),
-                "Load data must set start and end date");
-        val segmentRangeToBuild = SourceFactory.getSource(table).getSegmentRange(params.getStart(), params.getEnd());
-        List<NDataSegment> overlapSegments = modelService.checkSegmentToBuildOverlapsBuilt(project,
-                modelDescInTransaction, segmentRangeToBuild, params.isNeedBuild(), params.getBatchIndexIds());
-        buildSegmentOverlapExceptionInfo(overlapSegments);
+
         modelService.saveDateFormatIfNotExist(project, modelId, params.getPartitionColFormat());
         checkMultiPartitionBuildParam(modelDescInTransaction, params);
         NDataSegment newSegment = getManager(NDataflowManager.class, project).appendSegment(df, segmentRangeToBuild,

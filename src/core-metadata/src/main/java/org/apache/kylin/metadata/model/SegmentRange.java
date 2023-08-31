@@ -45,45 +45,45 @@ import lombok.val;
 @SuppressWarnings("serial")
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
-abstract public class SegmentRange<T extends Comparable> implements Comparable<SegmentRange>, Serializable {
+public abstract class SegmentRange<T extends Comparable<?>> implements Comparable<SegmentRange<T>>, Serializable {
     protected T start;
     protected T end;
 
-    abstract public boolean isInfinite();
+    public abstract boolean isInfinite();
 
-    abstract public boolean contains(SegmentRange o);
+    public abstract boolean contains(SegmentRange<T> o);
 
-    abstract public boolean entireOverlaps(SegmentRange o);
+    public abstract boolean entireOverlaps(SegmentRange<T> o);
 
-    abstract public boolean overlaps(SegmentRange o);
+    public abstract boolean overlaps(SegmentRange<T> o);
 
-    abstract public boolean connects(SegmentRange o);
+    public abstract boolean connects(SegmentRange<T> o);
 
-    abstract public boolean apartBefore(SegmentRange o);
+    public abstract boolean apartBefore(SegmentRange<T> o);
 
-    abstract public boolean startStartMatch(SegmentRange o);
+    public abstract boolean startStartMatch(SegmentRange<T> o);
 
-    abstract public boolean endEndMatch(SegmentRange o);
+    public abstract boolean endEndMatch(SegmentRange<T> o);
 
-    abstract public boolean startEndMatch(SegmentRange o);
+    public abstract boolean startEndMatch(SegmentRange<T> o);
 
-    abstract public SegmentRange getStartDeviation(SegmentRange o);
+    public abstract SegmentRange<T> getStartDeviation(SegmentRange<T> o);
 
-    abstract public SegmentRange getEndDeviation(SegmentRange o);
+    public abstract SegmentRange<T> getEndDeviation(SegmentRange<T> o);
 
-    abstract public SegmentRange getOverlapRange(SegmentRange o);
+    public abstract SegmentRange<T> getOverlapRange(SegmentRange<T> o);
 
     /**
      * create a new SegmentRange which will start from this.start and end at o.end
      * caller should make sure this.start < o.end
      */
-    abstract public SegmentRange coverWith(SegmentRange o);
+    public abstract SegmentRange<T> coverWith(SegmentRange<T> o);
 
     /**
      * create a new SegmentRange which will start from this.end and end at o.start
      * caller should make sure this.end < o.start
      */
-    abstract public SegmentRange gapTill(SegmentRange o);
+    public abstract SegmentRange<T> gapTill(SegmentRange<T> o);
 
     public T getStart() {
         return start;
@@ -101,9 +101,13 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
         return end.toString();
     }
 
+    public String proposeSegmentName() {
+        return null;
+    }
+
     // ============================================================================
 
-    abstract public static class BasicSegmentRange extends SegmentRange<Long> {
+    public abstract static class BasicSegmentRange extends SegmentRange<Long> {
 
         BasicSegmentRange() {
         }
@@ -114,12 +118,12 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
             Preconditions.checkState(this.start <= this.end);
         }
 
-        private BasicSegmentRange convert(SegmentRange o) {
+        private BasicSegmentRange convert(SegmentRange<Long> o) {
             Preconditions.checkState(o instanceof BasicSegmentRange);
             return (BasicSegmentRange) o;
         }
 
-        private void checkSameType(SegmentRange o) {
+        protected void checkSameType(SegmentRange<Long> o) {
             Preconditions.checkNotNull(o);
             Preconditions.checkState(getClass() == o.getClass());
         }
@@ -130,55 +134,55 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
         }
 
         @Override
-        public boolean contains(SegmentRange o) {
+        public boolean contains(SegmentRange<Long> o) {
             checkSameType(o);
             BasicSegmentRange t = convert(o);
             return this.start <= t.start && t.end <= this.end;
         }
 
         @Override
-        public boolean entireOverlaps(SegmentRange o) {
+        public boolean entireOverlaps(SegmentRange<Long> o) {
             checkSameType(o);
             return this.contains(o) && o.contains(this);
         }
 
         @Override
-        public boolean overlaps(SegmentRange o) {
+        public boolean overlaps(SegmentRange<Long> o) {
             checkSameType(o);
             BasicSegmentRange t = convert(o);
             return this.start < t.end && t.start < this.end;
         }
 
         @Override
-        public boolean connects(SegmentRange o) {
+        public boolean connects(SegmentRange<Long> o) {
             checkSameType(o);
             BasicSegmentRange t = convert(o);
             return this.end.equals(t.start);
         }
 
         @Override
-        public boolean apartBefore(SegmentRange o) {
+        public boolean apartBefore(SegmentRange<Long> o) {
             checkSameType(o);
             BasicSegmentRange t = convert(o);
             return this.end < t.start;
         }
 
         @Override
-        public boolean startStartMatch(SegmentRange o) {
+        public boolean startStartMatch(SegmentRange<Long> o) {
             checkSameType(o);
             BasicSegmentRange t = convert(o);
             return this.start.equals(t.start);
         }
 
         @Override
-        public boolean endEndMatch(SegmentRange o) {
+        public boolean endEndMatch(SegmentRange<Long> o) {
             checkSameType(o);
             BasicSegmentRange t = convert(o);
             return this.end.equals(t.end);
         }
 
         @Override
-        public boolean startEndMatch(SegmentRange o) {
+        public boolean startEndMatch(SegmentRange<Long> o) {
             checkSameType(o);
             BasicSegmentRange t = convert(o);
             return this.start.equals(t.end);
@@ -205,7 +209,7 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
         }
 
         @Override
-        public int compareTo(SegmentRange o) {
+        public int compareTo(SegmentRange<Long> o) {
             BasicSegmentRange t = convert(o);
 
             int comp = Long.compare(this.start, t.start);
@@ -234,31 +238,31 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
             return new TimePartitionedSegmentRange(0L, Long.MAX_VALUE);
         }
 
-        private TimePartitionedSegmentRange convertToTimePartitioned(SegmentRange o) {
+        private TimePartitionedSegmentRange convertToTimePartitioned(SegmentRange<Long> o) {
             Preconditions.checkState(o instanceof TimePartitionedSegmentRange);
             return (TimePartitionedSegmentRange) o;
         }
 
         @Override
-        public SegmentRange coverWith(SegmentRange o) {
+        public SegmentRange<Long> coverWith(SegmentRange<Long> o) {
             TimePartitionedSegmentRange other = convertToTimePartitioned(o);
             return new TimePartitionedSegmentRange(this.start, other.end);
         }
 
         @Override
-        public SegmentRange getStartDeviation(SegmentRange o) {
+        public SegmentRange<Long> getStartDeviation(SegmentRange<Long> o) {
             TimePartitionedSegmentRange other = convertToTimePartitioned(o);
             return new TimePartitionedSegmentRange(this.start, other.start);
         }
 
         @Override
-        public SegmentRange getEndDeviation(SegmentRange o) {
+        public SegmentRange<Long> getEndDeviation(SegmentRange<Long> o) {
             TimePartitionedSegmentRange other = convertToTimePartitioned(o);
             return new TimePartitionedSegmentRange(this.end, other.end);
         }
 
         @Override
-        public SegmentRange getOverlapRange(SegmentRange o) {
+        public SegmentRange<Long> getOverlapRange(SegmentRange<Long> o) {
             TimePartitionedSegmentRange other = convertToTimePartitioned(o);
             if (!this.overlaps(o)) {
                 return null;
@@ -269,7 +273,7 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
         }
 
         @Override
-        public SegmentRange gapTill(SegmentRange o) {
+        public SegmentRange<Long> gapTill(SegmentRange<Long> o) {
             TimePartitionedSegmentRange other = convertToTimePartitioned(o);
             return new TimePartitionedSegmentRange(this.end, other.start);
         }
@@ -333,20 +337,20 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
                     : sourcePartitionOffsetEnd;
         }
 
-        private KafkaOffsetPartitionedSegmentRange convertToKafkaOffset(SegmentRange o) {
+        private KafkaOffsetPartitionedSegmentRange convertToKafkaOffset(SegmentRange<Long> o) {
             Preconditions.checkState(o instanceof KafkaOffsetPartitionedSegmentRange);
             return (KafkaOffsetPartitionedSegmentRange) o;
         }
 
         @Override
-        public boolean contains(SegmentRange o) {
+        public boolean contains(SegmentRange<Long> o) {
             KafkaOffsetPartitionedSegmentRange other = convertToKafkaOffset(o);
             return comparePartitionOffset(this.sourcePartitionOffsetStart, other.sourcePartitionOffsetStart) <= 0
                     && comparePartitionOffset(other.sourcePartitionOffsetEnd, this.sourcePartitionOffsetEnd) <= 0;
         }
 
         @Override
-        public SegmentRange coverWith(SegmentRange o) {
+        public SegmentRange<Long> coverWith(SegmentRange<Long> o) {
             KafkaOffsetPartitionedSegmentRange other = convertToKafkaOffset(o);
             val start = Math.min(this.start, other.start);
             val end = Math.max(this.end, other.end);
@@ -355,28 +359,28 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
         }
 
         @Override
-        public SegmentRange gapTill(SegmentRange o) {
+        public SegmentRange<Long> gapTill(SegmentRange<Long> o) {
             KafkaOffsetPartitionedSegmentRange other = convertToKafkaOffset(o);
             return new KafkaOffsetPartitionedSegmentRange(this.end, other.start, this.getSourcePartitionOffsetEnd(),
                     other.getSourcePartitionOffsetStart());
         }
 
         @Override
-        public SegmentRange getStartDeviation(SegmentRange o) {
+        public SegmentRange<Long> getStartDeviation(SegmentRange<Long> o) {
             KafkaOffsetPartitionedSegmentRange other = convertToKafkaOffset(o);
             return new KafkaOffsetPartitionedSegmentRange(this.start, other.start, this.getSourcePartitionOffsetStart(),
                     other.getSourcePartitionOffsetStart());
         }
 
         @Override
-        public SegmentRange getEndDeviation(SegmentRange o) {
+        public SegmentRange<Long> getEndDeviation(SegmentRange<Long> o) {
             KafkaOffsetPartitionedSegmentRange other = convertToKafkaOffset(o);
             return new KafkaOffsetPartitionedSegmentRange(this.end, other.end, this.getSourcePartitionOffsetEnd(),
                     other.getSourcePartitionOffsetEnd());
         }
 
         @Override
-        public boolean overlaps(SegmentRange o) {
+        public boolean overlaps(SegmentRange<Long> o) {
             super.checkSameType(o);
             KafkaOffsetPartitionedSegmentRange t = convertToKafkaOffset(o);
 
@@ -389,7 +393,7 @@ abstract public class SegmentRange<T extends Comparable> implements Comparable<S
         }
 
         @Override
-        public SegmentRange getOverlapRange(SegmentRange o) {
+        public SegmentRange<Long> getOverlapRange(SegmentRange<Long> o) {
             KafkaOffsetPartitionedSegmentRange other = convertToKafkaOffset(o);
             if (!this.overlaps(o)) {
                 return null;

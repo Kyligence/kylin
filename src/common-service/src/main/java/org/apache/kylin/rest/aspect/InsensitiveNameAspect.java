@@ -125,6 +125,9 @@ public class InsensitiveNameAspect {
         for (int i = 0; i < parameterNames.length; i++) {
             if (parameterTypes[i] == String.class && Objects.equals("project", parameterNames[i])) {
                 projectName = (String) args[i];
+                if (StringUtils.isBlank(projectName)) {
+                    continue;
+                }
                 NProjectManager projectManager = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
                 ProjectInstance projectInstance = projectManager.getProject(projectName);
                 if (projectInstance != null) {

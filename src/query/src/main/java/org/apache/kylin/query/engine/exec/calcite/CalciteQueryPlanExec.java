@@ -97,6 +97,9 @@ public class CalciteQueryPlanExec implements QueryPlanExec {
     // may induce some puzzle result
     private String rawQueryResultToString(Object object, RelDataType dataType) {
         String value = String.valueOf(object);
+        if (object == null) {
+            return value;
+        }
         switch (dataType.getSqlTypeName()) {
         case DATE:
             return DateFormat.formatDayToEpochToDateStr(Long.parseLong(value), TimeZone.getTimeZone("GMT"));

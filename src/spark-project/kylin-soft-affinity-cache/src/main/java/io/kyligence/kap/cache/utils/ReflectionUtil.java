@@ -21,6 +21,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,14 +81,16 @@ public class ReflectionUtil {
      *
      */
     public static Field getDeclaredField(Object object, String filedName) {
+        NoSuchFieldException noSuchFieldEx = null;
         for (Class<?> superClass = object.getClass(); superClass != Object.class; superClass = superClass
                 .getSuperclass()) {
             try {
                 return superClass.getDeclaredField(filedName);
             } catch (NoSuchFieldException e) {
-                LOG.error("Can not find field {}", filedName, e);
+                noSuchFieldEx = ObjectUtils.firstNonNull(noSuchFieldEx, e);
             }
         }
+        LOG.error("Can not find field '{}' in class {}", filedName, object.getClass().getName(), noSuchFieldEx);
         return null;
     }
 }

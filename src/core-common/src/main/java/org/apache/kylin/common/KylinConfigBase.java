@@ -346,6 +346,10 @@ public abstract class KylinConfigBase implements Serializable {
         return "UT".equals(getDeployEnv());
     }
 
+    /**
+     * @deprecated Use <code>isUTEnv()</code> or <code>isDevOrUT()</code> instead
+     */
+    @Deprecated // use isUTEnv() or isDevOrUT() instead
     public boolean isDevEnv() {
         return "DEV".equals(getDeployEnv());
     }
@@ -1905,6 +1909,14 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(this.getOptional("kylin.query.schema-cache-enabled", FALSE));
     }
 
+    public boolean isMppOnTheFlyLayoutsEnabled() {
+        return Boolean.parseBoolean(this.getOptional("kylin.query.mpp-on-the-fly-layouts-enabled", FALSE));
+    }
+
+    public String getMppOnTheFlyLayoutsProvider() {
+        return this.getOptional("kylin.query.mpp-on-the-fly-layouts-provider", "io.kyligence.kap.engine.spark.job.MppOnTheFlyImpl");
+    }
+
     public boolean enableReplaceDynamicParams() {
         return Boolean.parseBoolean(this.getOptional("kylin.query.replace-dynamic-params-enabled", FALSE));
     }
@@ -2140,6 +2152,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(this.getOptional("kylin.query.pushdown.auto-set-shuffle-partitions-enabled", TRUE));
     }
 
+    public int autoSetPushDownPartitionsForced() {
+        return Integer.parseInt(this.getOptional("kylin.query.pushdown.auto-set-shuffle-partitions-forced", "0"));
+    }
+
     public int getBaseShufflePartitionSize() {
         return Integer.parseInt(this.getOptional("kylin.query.pushdown.base-shuffle-partition-size", "48"));
     }
@@ -2345,6 +2361,10 @@ public abstract class KylinConfigBase implements Serializable {
         }
 
         return timeZone;
+    }
+
+    public boolean isAllowNonAsciiCharInUrl() {
+        return Boolean.parseBoolean(this.getOptional("kylin.web.allow-non-ascii-char-in-url", FALSE));
     }
 
     // ============================================================================
@@ -3978,4 +3998,19 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.query.round-decimal-zero", FALSE));
     }
 
+    public boolean isKylinLocalCacheEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.storage.columnar.spark-conf.spark.kylin.local-cache.enabled", FALSE));
+    }
+
+    public boolean isKylinFileStatusCacheEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.storage.columnar.spark-conf.spark.hadoop.spark.kylin.file-status-cache.enabled", FALSE));
+    }
+
+    public boolean isSupportPushdownHiveCsvEnhancement() {
+        return Boolean.parseBoolean(getOptional("kylin.query.pushdown.hive.csv.enhancement", FALSE));
+    }
+
+    public String getFileSegmentSuccessFile() {
+        return getOptional("kylin.fileseg.success-file", null);
+    }
 }

@@ -727,6 +727,10 @@ public class Segments<T extends ISegment> extends ArrayList<T> implements Serial
             return "FULL_BUILD";
         }
 
+        String proposedName = segRange.proposeSegmentName();
+        if (proposedName != null)
+            return proposedName;
+
         if (segRange instanceof SegmentRange.TimePartitionedSegmentRange) {
             // using time
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss",
