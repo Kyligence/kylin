@@ -77,6 +77,11 @@ import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.ShellException;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.ExecutablePO;
@@ -86,12 +91,6 @@ import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.val;
 
@@ -200,10 +199,11 @@ public class NExecutableManager {
     }
 
     public void addJob(ExecutablePO executablePO) {
-        addJobOutput(executablePO);
-        executableDao.addJob(executablePO);
+        ExecutablePO copy = executableDao.copyForWrite(executablePO);
+        addJobOutput(copy);
+        executableDao.addJob(copy);
 
-        String jobType = executablePO.getJobType() == null ? "" : executablePO.getJobType().name();
+        String jobType = copy.getJobType() == null ? "" : copy.getJobType().name();
         // dispatch job-created message out
         if (KylinConfig.getInstanceFromEnv().isUTEnv()) {
             EventBusFactory.getInstance().postAsync(new JobReadyNotifier(project));
@@ -1410,7 +1410,11 @@ public class NExecutableManager {
         val thread = scheduler.getContext().getRunningJobThread(executable);
         if (thread != null) {
             logger.info("Interrupt Job [{}] thread and remove in ExecutableContext", executable.getDisplayName());
-            thread.interrupt();
+            // workaround for https://olapio.atlassian.net/browse/KE-41836
+            if (Arrays.stream(thread.getStackTrace())
+                    .noneMatch(stack -> stack.getClassName().contains("FetcherRunner"))) {
+                thread.interrupt();
+            }
         }
     }
 

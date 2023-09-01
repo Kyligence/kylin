@@ -77,6 +77,12 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.SecondStorageCleanJobBuildParams;
 import org.apache.kylin.job.SecondStorageJobParamUtil;
 import org.apache.kylin.job.execution.AbstractExecutable;
@@ -169,10 +175,6 @@ import org.testcontainers.containers.JdbcDatabaseContainer;
 
 import com.amazonaws.util.EC2MetadataUtils;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
@@ -193,8 +195,6 @@ import io.kyligence.kap.clickhouse.job.S3TableSource;
 import io.kyligence.kap.clickhouse.management.ClickHouseConfigLoader;
 import io.kyligence.kap.clickhouse.parser.ShowDatabasesParser;
 import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.newten.clickhouse.ClickHouseSimpleITTestUtils;
 import io.kyligence.kap.newten.clickhouse.ClickHouseUtils;
@@ -232,6 +232,8 @@ import io.kyligence.kap.secondstorage.test.EnableScheduler;
 import io.kyligence.kap.secondstorage.test.EnableTestUser;
 import io.kyligence.kap.secondstorage.test.SharedSparkSession;
 import io.kyligence.kap.secondstorage.test.utils.JobWaiter;
+import io.kyligence.kap.secondstorage.test.utils.MockedModelService;
+import io.kyligence.kap.secondstorage.test.utils.MockedSecondStorageService;
 import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -268,10 +270,10 @@ public class SecondStorageLockTest implements JobWaiter {
     private final AclUtil aclUtil = Mockito.spy(AclUtil.class);
 
     @InjectMocks
-    private SecondStorageService secondStorageService = Mockito.spy(new SecondStorageService());
+    private SecondStorageService secondStorageService = Mockito.spy(new MockedSecondStorageService());
 
     @InjectMocks
-    private ModelService modelService = Mockito.spy(new ModelService());
+    private ModelService modelService = Mockito.spy(new MockedModelService());
 
     @Mock
     private SecondStorageEndpoint secondStorageEndpoint = new SecondStorageEndpoint();

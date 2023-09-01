@@ -24,16 +24,16 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.JsonSerializer;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.Serializer;
-import org.apache.kylin.metadata.MetadataConstants;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import io.kyligence.kap.metadata.epoch.EpochManager;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
-import org.apache.kylin.metadata.project.NProjectManager;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.metadata.MetadataConstants;
+import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -47,11 +47,13 @@ public class AsyncTaskManager {
     private final KylinConfig kylinConfig;
     private final ResourceStore resourceStore;
     private final String resourceRoot;
+    private final String project;
 
     private AsyncTaskManager(KylinConfig kylinConfig, String project) {
         if (!UnitOfWork.isAlreadyInTransaction())
             log.info("Initializing AccelerateTagManager with KylinConfig Id: {} for project {}",
                     System.identityHashCode(kylinConfig), project);
+        this.project = project;
         this.kylinConfig = kylinConfig;
         resourceStore = ResourceStore.getKylinMetaStore(this.kylinConfig);
         this.resourceRoot = "/" + project + ResourceStore.ASYNC_TASK;
@@ -75,6 +77,13 @@ public class AsyncTaskManager {
             resourceStore.checkAndPutResource(path(asyncTask.getUuid()), asyncTask, ASYNC_ACCELERATION_SERIALIZER);
         }
     }
+    
+    public AsyncAccelerationTask copyForWrite(AsyncAccelerationTask task) {
+        if (task.getProject() == null) {
+            task.setProject(project);
+        }
+        return CachedCrudAssist.copyForWrite(task, ASYNC_ACCELERATION_SERIALIZER, null, resourceStore);
+    }
 
     public AbstractAsyncTask get(String taskType) {
         List<AsyncAccelerationTask> asyncAccelerationTaskList = Lists.newArrayList();
@@ -90,11 +99,12 @@ public class AsyncTaskManager {
     public static void resetAccelerationTagMap(String project) {
         log.info("reset acceleration tag for project({})", project);
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            AsyncAccelerationTask asyncAcceleration = (AsyncAccelerationTask) getInstance(
-                    KylinConfig.getInstanceFromEnv(), project).get(ASYNC_ACCELERATION_TASK);
-            asyncAcceleration.setAlreadyRunning(false);
-            asyncAcceleration.setUserRefreshedTagMap(Maps.newHashMap());
-            getInstance(KylinConfig.getInstanceFromEnv(), project).save(asyncAcceleration);
+            AsyncTaskManager manager = getInstance(KylinConfig.getInstanceFromEnv(), project);
+            AsyncAccelerationTask asyncAcceleration = (AsyncAccelerationTask) manager.get(ASYNC_ACCELERATION_TASK);
+            AsyncAccelerationTask copied = manager.copyForWrite(asyncAcceleration);
+            copied.setAlreadyRunning(false);
+            copied.setUserRefreshedTagMap(Maps.newHashMap());
+            getInstance(KylinConfig.getInstanceFromEnv(), project).save(copied);
             return null;
         }, project);
         log.info("rest acceleration tag successfully for project({})", project);
@@ -114,10 +124,11 @@ public class AsyncTaskManager {
 
         log.info("start to clean acceleration tag by user");
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            AsyncAccelerationTask asyncAcceleration = (AsyncAccelerationTask) getInstance(
-                    KylinConfig.getInstanceFromEnv(), project).get(ASYNC_ACCELERATION_TASK);
-            asyncAcceleration.getUserRefreshedTagMap().put(userName, false);
-            getInstance(KylinConfig.getInstanceFromEnv(), project).save(asyncAcceleration);
+            AsyncTaskManager manager = getInstance(KylinConfig.getInstanceFromEnv(), project);
+            AsyncAccelerationTask asyncAcceleration = (AsyncAccelerationTask) manager.get(ASYNC_ACCELERATION_TASK);
+            AsyncAccelerationTask copied = manager.copyForWrite(asyncAcceleration);
+            copied.getUserRefreshedTagMap().put(userName, false);
+            getInstance(KylinConfig.getInstanceFromEnv(), project).save(copied);
             return null;
         }, project);
         log.info("clean acceleration tag successfully for project({}: by user {})", project, userName);

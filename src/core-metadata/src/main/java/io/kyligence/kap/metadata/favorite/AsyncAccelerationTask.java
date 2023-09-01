@@ -20,13 +20,14 @@ package io.kyligence.kap.metadata.favorite;
 
 import java.util.Map;
 
+import org.apache.kylin.common.annotation.Clarification;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.apache.kylin.common.annotation.Clarification;
 
 @Getter
 @Setter

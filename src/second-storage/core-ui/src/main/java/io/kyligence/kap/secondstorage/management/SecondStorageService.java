@@ -669,6 +669,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
     public String triggerSegmentsClean(String project, String model, Set<String> segIds) {
         SecondStorageUtil.validateProjectLock(project, Arrays.asList(LockTypeEnum.LOAD.name()));
         SecondStorageJobUtil.validateSegment(project, model, Lists.newArrayList(segIds));
+        UnitOfWork.get()
+                .doBeforeUpdate(() -> SecondStorageJobUtil.validateSegment(project, model, Lists.newArrayList(segIds)));
         Preconditions.checkState(SecondStorageUtil.isModelEnable(project, model));
         SecondStorageUtil.cleanSegments(project, model, segIds);
         val jobHandler = new SecondStorageSegmentCleanJobHandler();

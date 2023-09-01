@@ -31,12 +31,15 @@ import java.util.stream.IntStream;
 
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.util.CompressionUtils;
 import org.apache.kylin.common.persistence.event.Event;
 import org.apache.kylin.common.persistence.event.ResourceCreateOrUpdateEvent;
+import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.common.persistence.metadata.jdbc.RawResourceRowMapper;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.CompressionUtils;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.junit.annotation.OverwriteProp;
 import org.junit.Assert;
@@ -46,8 +49,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.val;
 
 @MetadataInfo(onlyProps = true)
@@ -66,6 +67,10 @@ public class JdbcMetadataStoreTest {
     public void testBasic() throws IOException {
         UnitOfWork.doInTransactionWithRetry(() -> {
             val store = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
+            MemoryLockUtils.lockAndRecord("/p1/abc", null, false);
+            MemoryLockUtils.lockAndRecord("/p1/abc2", null, false);
+            MemoryLockUtils.lockAndRecord("/p1/abc3", null, false);
+            MemoryLockUtils.lockAndRecord("/p1/abc4", null, false);
             store.checkAndPutResource("/p1/abc", ByteSource.wrap("abc".getBytes(DEFAULT_CHARSET)), -1);
             store.checkAndPutResource("/p1/abc2", ByteSource.wrap("abc".getBytes(DEFAULT_CHARSET)), -1);
             store.checkAndPutResource("/p1/abc3", ByteSource.wrap("abc".getBytes(DEFAULT_CHARSET)), -1);
@@ -100,6 +105,7 @@ public class JdbcMetadataStoreTest {
     public void testReload() throws Exception {
         UnitOfWork.doInTransactionWithRetry(() -> {
             val store = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
+            MemoryLockUtils.lockAndRecord("/_global/abc", null, false);
             store.checkAndPutResource("/_global/abc", ByteSource.wrap("abc".getBytes(DEFAULT_CHARSET)), -1);
             return 0;
         }, "_global");
@@ -159,6 +165,7 @@ public class JdbcMetadataStoreTest {
     public void testDuplicate() {
         UnitOfWork.doInTransactionWithRetry(() -> {
             val store = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
+            MemoryLockUtils.lockAndRecord("/p1/abc", null, false);
             store.checkAndPutResource("/p1/abc", ByteSource.wrap("abc".getBytes(DEFAULT_CHARSET)), -1);
             store.checkAndPutResource("/p1/abc", ByteSource.wrap("abc".getBytes(DEFAULT_CHARSET)), 0);
             return 0;
@@ -175,6 +182,7 @@ public class JdbcMetadataStoreTest {
 
         UnitOfWork.doInTransactionWithRetry(() -> {
             val store = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
+            MemoryLockUtils.lockAndRecord("/p1/abc", null, false);
             store.checkAndPutResource("/p1/abc", ByteSource.wrap("abc".getBytes(DEFAULT_CHARSET)), 1);
             return 0;
         }, "p1");

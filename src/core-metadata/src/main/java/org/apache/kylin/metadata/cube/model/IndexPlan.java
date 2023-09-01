@@ -364,6 +364,11 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
                 .append("/").append(name).append(MetadataConstants.FILE_SURFIX).toString();
     }
 
+    @Override
+    public List<String> getLockPaths(String ignored) {
+        return getModel().getLockPaths();
+    }
+
     public String getProject() {
         return project;
     }
@@ -582,6 +587,9 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
     public void setRuleBasedIndex(RuleBasedIndex ruleBasedIndex, Set<LayoutEntity> reloadLayouts, boolean reuseStartId,
             boolean markToBeDeleted, boolean restoreDeletedIndex) {
+        if (ruleBasedIndex == null) {
+            return;
+        }
         checkIsNotCachedAndShared();
         ruleBasedIndex.adjustMeasures();
         if (CollectionUtils.isEmpty(ruleBasedIndex.getMeasures())) {

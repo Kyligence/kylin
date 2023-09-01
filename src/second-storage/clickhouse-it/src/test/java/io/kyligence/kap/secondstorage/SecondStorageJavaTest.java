@@ -30,11 +30,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import io.kyligence.kap.secondstorage.test.utils.MockedModelService;
+import io.kyligence.kap.secondstorage.test.utils.MockedSecondStorageService;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
+import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.RandomUtil;
@@ -55,6 +59,7 @@ import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.response.NDataSegmentResponse;
 import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.util.AclEvaluate;
@@ -68,6 +73,8 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
@@ -117,9 +124,9 @@ public class SecondStorageJavaTest implements JobWaiter {
             Collections.singletonList(modelId), "src/test/resources/ut_meta");
     @Rule
     public TestRule rule = RuleChain.outerRule(enableTestUser).around(test);
-    private ModelService modelService = new ModelService();
+    private ModelService modelService = new MockedModelService();
     private SecondStorageScheduleService secondStorageScheduleService = new SecondStorageScheduleService();
-    private SecondStorageService secondStorageService = new SecondStorageService();
+    private SecondStorageService secondStorageService = new MockedSecondStorageService();
     private SecondStorageEndpoint secondStorageEndpoint = new SecondStorageEndpoint();
     private OpenSecondStorageEndpoint openSecondStorageEndpoint = new OpenSecondStorageEndpoint();
     private AclEvaluate aclEvaluate = Mockito.mock(AclEvaluate.class);
@@ -258,11 +265,42 @@ public class SecondStorageJavaTest implements JobWaiter {
         request.setModel(modelId);
         try {
             secondStorageEndpoint.cleanStorage(request, segs);
-        } catch (KylinException e) {
-            Assert.assertEquals(SECOND_STORAGE_JOB_EXISTS.toErrorCode(), e.getErrorCode());
+        } catch (TransactionException e) {
+            KylinException exception = (KylinException) e.getCause();
+            Assert.assertEquals(SECOND_STORAGE_JOB_EXISTS.toErrorCode(), exception.getErrorCode());
             return;
         }
         Assert.fail();
+    }
+
+    @Test
+    public void testParallelCleanSegment() throws Exception {
+        buildModel();
+        val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val dataflow = dataflowManager.getDataflow(modelId);
+        val segs = dataflow.getQueryableSegments().stream().map(NDataSegment::getId).collect(Collectors.toList());
+        val request = new StorageRequest();
+        request.setProject(project);
+        request.setModel(modelId);
+        AtomicInteger exceptionCnt = new AtomicInteger(0);
+        Runnable runner = () -> {
+            SecurityContextHolder.getContext()
+                    .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
+            try {
+                secondStorageEndpoint.cleanStorage(request, segs);
+            } catch (TransactionException e) {
+                if (SECOND_STORAGE_JOB_EXISTS.toErrorCode() == ((KylinException) e.getCause()).getErrorCode()) {
+                    exceptionCnt.getAndIncrement();
+                }
+            }
+        };
+        Thread t1 = new Thread(runner);
+        Thread t2 = new Thread(runner);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        Assert.assertEquals(1, exceptionCnt.get());
     }
 
     @Test(expected = KylinException.class)

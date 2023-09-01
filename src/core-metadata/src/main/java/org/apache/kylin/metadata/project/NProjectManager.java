@@ -31,15 +31,14 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.hystrix.NCircuitBreaker;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
 import org.apache.kylin.metadata.model.MeasureDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.realization.IRealization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.val;
 
@@ -111,7 +110,7 @@ public class NProjectManager {
             //circuit breaker
             NCircuitBreaker.verifyProjectCreation(listAllProjects().size());
 
-            currentProject = ProjectInstance.create(projectName, owner, description, overrideProps);
+            currentProject = copyForWrite(ProjectInstance.create(projectName, owner, description, overrideProps));
             currentProject.initConfig(config);
         } else {
             throw new IllegalStateException("The project named " + projectName + "already exists");
@@ -166,7 +165,7 @@ public class NProjectManager {
         });
     }
 
-    public ProjectInstance updateProject(ProjectInstance project) {
+    private ProjectInstance updateProject(ProjectInstance project) {
         if (getProject(project.getName()) == null) {
             throw new IllegalArgumentException("Project '" + project.getName() + "' does not exist!");
         }

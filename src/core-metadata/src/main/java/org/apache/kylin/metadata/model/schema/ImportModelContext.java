@@ -44,6 +44,10 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.cube.model.SelectRule;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
@@ -60,10 +64,6 @@ import org.apache.kylin.metadata.project.ProjectInstance;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
 import io.kyligence.kap.metadata.recommendation.entity.DimensionRecItemV2;
 import io.kyligence.kap.metadata.recommendation.entity.LayoutRecItemV2;
@@ -151,7 +151,7 @@ public class ImportModelContext implements AutoCloseable {
 
         List<TableDesc> tables = importTableMetadataManager.listAllTables();
         for (TableDesc tableDesc : tables) {
-            TableDesc newTable = targetTableMetadataManager.copyForWrite(tableDesc);
+            TableDesc newTable = targetTableMetadataManager.copy(tableDesc);
             TableDesc originalTable = targetTableMetadataManager.getTableDesc(newTable.getIdentity());
             newTable.setLastModified(System.currentTimeMillis());
             if (Objects.isNull(originalTable)) {

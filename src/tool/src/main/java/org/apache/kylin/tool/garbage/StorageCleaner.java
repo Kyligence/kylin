@@ -51,6 +51,7 @@ import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.persistence.TrashRecord;
+import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.CliCommandExecutor.CliCmdExecResult;
@@ -307,6 +308,9 @@ public class StorageCleaner implements GarbageCleaner {
                     ResourceStore threadViewRS = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
                     RawResource raw = resourceStore.getResource(ResourceStore.METASTORE_TRASH_RECORD);
                     long mvcc = raw == null ? -1 : raw.getMvcc();
+                    // TrashRecord doesn't extend RootPersistentEntity. Let's manually lock it's resource path.
+                    MemoryLockUtils.doWithLock(ResourceStore.METASTORE_TRASH_RECORD, false, threadViewRS,
+                            () -> null);
                     threadViewRS.checkAndPutResource(ResourceStore.METASTORE_TRASH_RECORD,
                             ByteSource.wrap(JsonUtil.writeValueAsBytes(new TrashRecord(trashRecord))), mvcc);
                     return 0;

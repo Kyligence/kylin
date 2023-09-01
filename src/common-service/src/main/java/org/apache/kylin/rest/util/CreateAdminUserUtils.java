@@ -31,7 +31,6 @@ import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.service.UserService;
 import org.apache.kylin.util.PasswordEncodeFactory;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import org.springframework.core.env.Environment;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -40,6 +39,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
+import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 

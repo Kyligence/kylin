@@ -25,10 +25,13 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -56,9 +59,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-
 import io.kyligence.kap.secondstorage.management.SecondStorageEndpoint;
 import io.kyligence.kap.secondstorage.management.SecondStorageService;
 import io.kyligence.kap.secondstorage.management.request.ProjectLoadRequest;
@@ -69,6 +69,8 @@ import io.kyligence.kap.secondstorage.test.EnableClickHouseJob;
 import io.kyligence.kap.secondstorage.test.EnableTestUser;
 import io.kyligence.kap.secondstorage.test.SharedSparkSession;
 import io.kyligence.kap.secondstorage.test.utils.JobWaiter;
+import io.kyligence.kap.secondstorage.test.utils.MockedModelService;
+import io.kyligence.kap.secondstorage.test.utils.MockedSecondStorageService;
 import lombok.val;
 
 public class IncrementalTest implements JobWaiter {
@@ -92,12 +94,12 @@ public class IncrementalTest implements JobWaiter {
             Collections.singletonList(modelId), "src/test/resources/ut_meta");
     @Rule
     public TestRule rule = RuleChain.outerRule(enableTestUser).around(test);
-    private SecondStorageService secondStorageService = new SecondStorageService();
+    private SecondStorageService secondStorageService = new MockedSecondStorageService();
     private SecondStorageEndpoint secondStorageEndpoint = new SecondStorageEndpoint();
     private IndexDataConstructor indexDataConstructor;
 
     @InjectMocks
-    private ModelService modelService = Mockito.spy(new ModelService());
+    private ModelService modelService = Mockito.spy(new MockedModelService());
 
     @Mock
     private final AclEvaluate aclEvaluate = Mockito.spy(AclEvaluate.class);
@@ -207,8 +209,10 @@ public class IncrementalTest implements JobWaiter {
         // clean first segment
         val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
 
+        List<Long> toRemoveLayouts = dataflowManager.getDataflow(modelId).getFirstSegment().getSegDetails()
+                .getAllLayouts().stream().map(NDataLayout::getLayoutId).collect(Collectors.toList());
         dataflowManager.updateDataflowDetailsLayouts(dataflowManager.getDataflow(modelId).getFirstSegment(),
-                Collections.emptyList());
+                toRemoveLayouts, Collections.emptyList());
 
         val request = new ProjectLoadRequest();
         request.setProjects(ImmutableList.of(project));
@@ -223,7 +227,11 @@ public class IncrementalTest implements JobWaiter {
         response.getData().forEach(res -> res.getJobs().forEach(job -> waitJobEnd(getProject(), job.getJobId())));
 
         dataflowManager.getDataflow(modelId).getSegments()
-                .forEach(segment -> dataflowManager.updateDataflowDetailsLayouts(segment, Collections.emptyList()));
+                .forEach(segment -> {
+                    List<Long> toRemove = segment.getSegDetails().getAllLayouts().stream().map(NDataLayout::getLayoutId)
+                            .collect(Collectors.toList());
+                    dataflowManager.updateDataflowDetailsLayouts(segment, toRemove, Collections.emptyList());
+                });
         response = secondStorageEndpoint.projectLoad(request);
         Assert.assertEquals("000", response.getCode());
         Assert.assertNotNull(response.getData());

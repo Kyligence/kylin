@@ -17,10 +17,10 @@
  */
 package org.apache.kylin.rest.service.task;
 
-import static org.apache.commons.lang3.time.DateUtils.MILLIS_PER_DAY;
 import static io.kyligence.kap.metadata.epoch.EpochManager.GLOBAL;
 import static io.kyligence.kap.metadata.favorite.AsyncTaskManager.ASYNC_ACCELERATION_TASK;
 import static io.kyligence.kap.metadata.favorite.AsyncTaskManager.getInstance;
+import static org.apache.commons.lang3.time.DateUtils.MILLIS_PER_DAY;
 
 import java.time.LocalTime;
 import java.util.Map;
@@ -29,24 +29,25 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.metrics.MetricsCategory;
+import org.apache.kylin.common.metrics.MetricsGroup;
+import org.apache.kylin.common.metrics.MetricsName;
 import org.apache.kylin.common.util.ExecutorServiceUtil;
 import org.apache.kylin.common.util.NamedThreadFactory;
 import org.apache.kylin.common.util.SetThreadName;
 import org.apache.kylin.common.util.TimeUtil;
-import org.apache.kylin.common.metrics.MetricsCategory;
-import org.apache.kylin.common.metrics.MetricsGroup;
-import org.apache.kylin.common.metrics.MetricsName;
-import io.kyligence.kap.metadata.favorite.AsyncAccelerationTask;
-import io.kyligence.kap.metadata.favorite.FavoriteRule;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.service.ProjectSmartSupporter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import io.kyligence.kap.metadata.favorite.AsyncAccelerationTask;
+import io.kyligence.kap.metadata.favorite.AsyncTaskManager;
+import io.kyligence.kap.metadata.favorite.FavoriteRule;
+import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -146,10 +147,11 @@ public class RecommendationTopNUpdateScheduler {
     public void saveTaskTime(String project) {
         long currentTime = System.currentTimeMillis();
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            AsyncAccelerationTask asyncAcceleration = (AsyncAccelerationTask) getInstance(
-                    KylinConfig.getInstanceFromEnv(), project).get(ASYNC_ACCELERATION_TASK);
-            asyncAcceleration.setLastUpdateTonNTime(currentTime);
-            getInstance(KylinConfig.getInstanceFromEnv(), project).save(asyncAcceleration);
+            AsyncTaskManager manager = getInstance(KylinConfig.getInstanceFromEnv(), project);
+            AsyncAccelerationTask asyncAcceleration = (AsyncAccelerationTask) manager.get(ASYNC_ACCELERATION_TASK);
+            AsyncAccelerationTask copied = manager.copyForWrite(asyncAcceleration);
+            copied.setLastUpdateTonNTime(currentTime);
+            getInstance(KylinConfig.getInstanceFromEnv(), project).save(copied);
             return null;
         }, project);
     }
