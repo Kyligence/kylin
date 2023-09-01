@@ -3441,6 +3441,9 @@
         </profile>
         <profile>
             <id>clickhouse.native.jdbc</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <clickhouse.group>com.github.housepower</clickhouse.group>
                 <clickhouse.artifact>clickhouse-native-jdbc</clickhouse.artifact>
