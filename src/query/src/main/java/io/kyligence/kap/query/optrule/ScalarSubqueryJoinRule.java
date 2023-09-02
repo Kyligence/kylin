@@ -154,6 +154,10 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
         }
 
         public boolean isTransposable() {
+            if (!aggregate.canTranspose()) {
+                return false;
+            }
+
             return left.isAggregable() || right.isAggregable();
         }
 
@@ -300,6 +304,10 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             this.aggregate = aggregate;
         }
 
+        public boolean canTranspose() {
+            return true;
+        }
+
         public RexBuilder getRexBuilder() {
             if (Objects.isNull(rexBuilder)) {
                 rexBuilder = aggregate.getCluster().getRexBuilder();
@@ -347,6 +355,16 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             super(aggregate);
             this.project = project;
             this.targetMapping = createTargetMapping();
+        }
+
+        @Override
+        public boolean canTranspose() {
+            final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
+            project.getProjects().forEach(p -> builder.addAll(RelOptUtil.InputFinder.bits(p)));
+            ImmutableBitSet projectSet = builder.build();
+
+            // Avoid re-entry of rule.
+            return project.getProjects().size() <= projectSet.cardinality();
         }
 
         @Override

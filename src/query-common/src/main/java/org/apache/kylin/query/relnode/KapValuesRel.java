@@ -18,17 +18,15 @@
 
 package org.apache.kylin.query.relnode;
 
+import java.util.List;
 import java.util.Set;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.rel.RelDistributionTraitDef;
-import org.apache.calcite.rel.metadata.RelMdCollation;
-import org.apache.calcite.rel.metadata.RelMdDistribution;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.query.util.ICutContextStrategy;
 
@@ -37,18 +35,15 @@ import com.google.common.collect.ImmutableList;
 public class KapValuesRel extends OLAPValuesRel implements KapRel {
     private Set<OLAPContext> subContexts = Sets.newHashSet();
 
-    private KapValuesRel(RelOptCluster cluster, RelDataType rowType, ImmutableList<ImmutableList<RexLiteral>> tuples,
+    public KapValuesRel(RelOptCluster cluster, RelDataType rowType, ImmutableList<ImmutableList<RexLiteral>> tuples,
             RelTraitSet traitSet) {
         super(cluster, rowType, tuples, traitSet);
     }
 
-    public static KapValuesRel create(RelOptCluster cluster, final RelDataType rowType,
-            final ImmutableList<ImmutableList<RexLiteral>> tuples) {
-        final RelMetadataQuery mq = cluster.getMetadataQuery();
-        final RelTraitSet traitSet = cluster.traitSetOf(OLAPRel.CONVENTION)
-                .replaceIfs(RelCollationTraitDef.INSTANCE, () -> RelMdCollation.values(mq, rowType, tuples))
-                .replaceIf(RelDistributionTraitDef.INSTANCE, () -> RelMdDistribution.values(rowType, tuples));
-        return new KapValuesRel(cluster, rowType, tuples, traitSet);
+    @Override
+    public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+        Preconditions.checkArgument(inputs.isEmpty());
+        return new KapValuesRel(getCluster(), rowType, tuples, replaceTraitSet(getCluster(), rowType, tuples));
     }
 
     @Override

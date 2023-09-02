@@ -18,11 +18,15 @@
 package io.kyligence.kap.query.optrule;
 
 import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Values;
-import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.kylin.query.relnode.KapValuesRel;
+import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.kylin.query.relnode.OLAPValuesRel;
 
 public class KAPValuesRule extends ConverterRule {
     public static final KAPValuesRule INSTANCE = new KAPValuesRule();
@@ -34,6 +38,9 @@ public class KAPValuesRule extends ConverterRule {
     @Override
     public RelNode convert(RelNode rel) {
         Values values = (Values) rel;
-        return KapValuesRel.create(values.getCluster(), values.getRowType(), values.getTuples());
+        RelOptCluster cluster = values.getCluster();
+        RelDataType rowType = values.getRowType();
+        RelTraitSet relTraits = OLAPValuesRel.replaceTraitSet(cluster, rowType, values.getTuples());
+        return new KapValuesRel(cluster, rowType, values.getTuples(), relTraits);
     }
 }

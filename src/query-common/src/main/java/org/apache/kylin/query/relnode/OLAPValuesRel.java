@@ -38,6 +38,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.TblColRef;
 
@@ -69,8 +70,8 @@ public class OLAPValuesRel extends Values implements OLAPRel {
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        assert inputs.isEmpty();
-        return create(getCluster(), rowType, tuples);
+        Preconditions.checkArgument(inputs.isEmpty());
+        return new OLAPValuesRel(getCluster(), rowType, tuples, replaceTraitSet(getCluster(), rowType, tuples));
     }
 
     @Override
@@ -118,5 +119,13 @@ public class OLAPValuesRel extends Values implements OLAPRel {
     @Override
     public EnumerableRel implementEnumerable(List<EnumerableRel> inputs) {
         return EnumerableValues.create(getCluster(), getRowType(), getTuples());
+    }
+
+    public static RelTraitSet replaceTraitSet(RelOptCluster cluster, RelDataType rowType, //
+            ImmutableList<ImmutableList<RexLiteral>> tuples) {
+        final RelMetadataQuery mq = cluster.getMetadataQuery();
+        return cluster.traitSetOf(OLAPRel.CONVENTION)
+                .replaceIfs(RelCollationTraitDef.INSTANCE, () -> RelMdCollation.values(mq, rowType, tuples))
+                .replaceIf(RelDistributionTraitDef.INSTANCE, () -> RelMdDistribution.values(rowType, tuples));
     }
 }
