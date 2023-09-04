@@ -118,7 +118,15 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return false;
         }
 
-        return !(call.rel(1) instanceof KapProjectRel) || canApplyRule(call.rel(1));
+        if (call.rel(1) instanceof KapProjectRel) {
+            final KapProjectRel project = call.rel(1);
+            final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
+            project.getProjects().forEach(p -> builder.addAll(RelOptUtil.InputFinder.bits(p)));
+            // Avoid re-entry of rule.
+            return project.getProjects().size() <= builder.build().cardinality();
+        }
+
+        return true;
     }
 
     @Override
