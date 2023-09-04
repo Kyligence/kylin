@@ -101,6 +101,8 @@ public class ScalarSubqueryJoinRuleTest extends CalciteRuleTestBase {
                 AggregateProjectMergeRule.INSTANCE, //
                 AggregateProjectReduceRule.INSTANCE, // */
                 // target rules
-                ScalarSubqueryJoinRule.AGG_JOIN, ScalarSubqueryJoinRule.AGG_PRJ_JOIN);
+                ScalarSubqueryJoinRule.AGG_JOIN, //
+                ScalarSubqueryJoinRule.AGG_PRJ_JOIN, //
+                ScalarSubqueryJoinRule.AGG_PRJ_FLT_JOIN);
     }
 }

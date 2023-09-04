@@ -103,7 +103,8 @@ public class HepUtils {
             KapProjectRule.INSTANCE, //
             KapJoinRule.INSTANCE, //
             ScalarSubqueryJoinRule.AGG_JOIN, //
-            ScalarSubqueryJoinRule.AGG_PRJ_JOIN
+            ScalarSubqueryJoinRule.AGG_PRJ_JOIN, //
+            ScalarSubqueryJoinRule.AGG_PRJ_FLT_JOIN
     );
 
     public static final ImmutableList<RelOptRule> CountDistinctExprRules = ImmutableList.of(

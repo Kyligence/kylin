@@ -55,6 +55,7 @@ import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.query.relnode.KapAggregateRel;
+import org.apache.kylin.query.relnode.KapFilterRel;
 import org.apache.kylin.query.relnode.KapJoinRel;
 import org.apache.kylin.query.relnode.KapNonEquiJoinRel;
 import org.apache.kylin.query.relnode.KapProjectRel;
@@ -76,6 +77,15 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
                             operand(Join.class, //
                                     null, j -> j instanceof KapJoinRel || j instanceof KapNonEquiJoinRel, any()))),
             RelFactories.LOGICAL_BUILDER, "ScalarSubqueryJoinRule:AGG_PRJ_JOIN");
+
+    public static final ScalarSubqueryJoinRule AGG_PRJ_FLT_JOIN = new ScalarSubqueryJoinRule(//
+            operand(KapAggregateRel.class, //
+                    operand(KapProjectRel.class, //
+                            operand(KapFilterRel.class, //
+                                    operand(Join.class, //
+                                            null, //
+                                            j -> j instanceof KapJoinRel || j instanceof KapNonEquiJoinRel, any())))), //
+            RelFactories.LOGICAL_BUILDER, "ScalarSubqueryJoinRule:AGG_PRJ_FLT_JOIN");
 
     public ScalarSubqueryJoinRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory, String description) {
         super(operand, relBuilderFactory, description);
@@ -99,17 +109,29 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
         // If any aggregate functions do not support splitting, bail outer
         // If any aggregate call has a filter or is distinct, bail out.
-        // Count-distinct is currently not supported,
+        // To-do: Count-distinct is currently not supported,
         //  but this can be achieved in case of scalar-subquery with distinct values.
-        return aggregate.getAggCallList().stream().noneMatch(a -> a.hasFilter() //
+        if (aggregate.getAggCallList().stream().anyMatch(a -> a.hasFilter() //
                 || a.isDistinct() //
-                || Objects.isNull(a.getAggregation().unwrap(SqlSplittableAggFunction.class)));
+                || Objects.isNull(a.getAggregation().unwrap(SqlSplittableAggFunction.class)))) {
+            return false;
+        }
+
+        if (call.rel(1) instanceof KapProjectRel) {
+            final KapProjectRel project = call.rel(1);
+            final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
+            project.getProjects().forEach(p -> builder.addAll(RelOptUtil.InputFinder.bits(p)));
+            // Avoid re-entry of rule.
+            return project.getProjects().size() <= builder.build().cardinality();
+        }
+
+        return true;
     }
 
     @Override
     public void onMatch(RelOptRuleCall call) {
         Transposer transposer = new Transposer(call);
-        if (!transposer.isTransposable()) {
+        if (!transposer.canTranspose()) {
             return;
         }
 
@@ -131,7 +153,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
     private class Transposer {
         // base variables
         private final RelOptRuleCall call;
-        private final AggregateUnit aggregate;
+        private final AggregateUnit aggUnit;
         private final Join join;
 
         // join sides
@@ -140,49 +162,57 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
         // maintainer
         public Transposer(RelOptRuleCall ruleCall) {
-            // call -> "{agg, join}"
+            // call -> "aggunit, join"
             call = ruleCall;
-            aggregate = createAggregateUnit(ruleCall);
+            aggUnit = createAggUnit(ruleCall);
             join = ruleCall.rel(ruleCall.rels.length - 1);
 
             // join sides
             RelMetadataQuery mq = call.getMetadataQuery();
             ImmutableBitSet joinCondSet = RelOptUtil.InputFinder.bits(join.getCondition());
-            ImmutableBitSet aggJoinSet = aggregate.getGroupSet().union(joinCondSet);
-            left = new LeftSide(join.getLeft(), join.getInput(0), mq, aggJoinSet);
-            right = new RightSide(left, join.getRight(), join.getInput(1), mq, aggJoinSet);
+            ImmutableBitSet aggUnitJoinSet = aggUnit.getUnitSet().union(joinCondSet);
+            left = new LeftSide(join.getLeft(), join.getInput(0), mq, aggUnitJoinSet);
+            right = new RightSide(left, join.getRight(), join.getInput(1), mq, aggUnitJoinSet);
         }
 
-        public boolean isTransposable() {
-            if (!aggregate.canTranspose()) {
-                return false;
+        public boolean canTranspose() {
+            if (left.hasRelValues() && right.isAggregable()) {
+                return true;
             }
 
-            return left.isAggregable() || right.isAggregable();
+            return right.hasRelValues() && left.isAggregable();
         }
 
         public RelNode getTransposedRel() {
             // builders
             final RelBuilder relBuilder = call.builder();
-            final RexBuilder rexBuilder = aggregate.getRexBuilder();
+            final RexBuilder rexBuilder = aggUnit.getRexBuilder();
 
-            // modify aggregate
-            left.modifyAggregate(aggregate, relBuilder, rexBuilder);
-            right.modifyAggregate(aggregate, relBuilder, rexBuilder);
+            // below aggregate
+            left.modifyAggregate(aggUnit, relBuilder, rexBuilder);
+            right.modifyAggregate(aggUnit, relBuilder, rexBuilder);
 
-            // agg-join mapping
-            final Mapping aggJoinMapping = getAggJoinMapping();
+            // aggunit-join mapping
+            final Mapping aggUnitJoinMapping = getAggUnitJoinMapping();
 
             // create new join
-            final RexNode newCondition = RexUtil.apply(aggJoinMapping, join.getCondition());
-            relBuilder.push(left.getNewInput()).push(right.getNewInput()).join(join.getJoinType(), newCondition);
+            final RexNode joinCond = RexUtil.apply(aggUnitJoinMapping, join.getCondition());
+            relBuilder.push(left.getNewInput()).push(right.getNewInput()).join(join.getJoinType(), joinCond);
+
+            if (aggUnit instanceof AggregateProjectFilter) {
+                // create new filter
+                // To-do: maybe we could also push down the relative filter.
+                final RexNode filterCond = RexUtil.apply(aggUnitJoinMapping, //
+                        ((AggregateProjectFilter) aggUnit).getFilterCond());
+                relBuilder.filter(filterCond);
+            }
 
             // agg-project mapping
-            final Mapping aggProjectMapping = getAggProjectMapping(relBuilder, aggJoinMapping);
+            final Mapping projectMapping = getProjectMapping(relBuilder, aggUnitJoinMapping);
 
             // aggregate above to sum up the sub-totals
             final List<RexNode> projectList = //
-                    Mappings.apply(aggProjectMapping, //
+                    Mappings.apply(projectMapping, //
                             Lists.newArrayList(rexBuilder.identityProjects(relBuilder.peek().getRowType())));
 
             final List<AggregateCall> aggCallList = Lists.newArrayList();
@@ -192,25 +222,25 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             relBuilder.project(projectList);
 
             // above aggregate
-            // Maybe we can convert aggregate into projects when inner-join.
+            // To-do: maybe we could convert aggregate into projects when inner-join.
             final RelBuilder.GroupKey groupKey = //
-                    relBuilder.groupKey(Mappings.apply(aggProjectMapping, //
-                            Mappings.apply(aggJoinMapping, aggregate.getGroupSet())), //
-                            Mappings.apply2(aggProjectMapping, //
-                                    Mappings.apply2(aggJoinMapping, aggregate.getGroupSets())));
+                    relBuilder.groupKey(Mappings.apply(projectMapping, //
+                            Mappings.apply(aggUnitJoinMapping, aggUnit.getGroupSet())), //
+                            Mappings.apply2(projectMapping, //
+                                    Mappings.apply2(aggUnitJoinMapping, aggUnit.getGroupSets())));
             relBuilder.aggregate(groupKey, aggCallList);
 
             return relBuilder.build();
         }
 
-        private Mapping getAggProjectMapping(final RelBuilder relBuilder, final Mapping aggJoinMapping) {
+        private Mapping getProjectMapping(final RelBuilder relBuilder, final Mapping aggMapping) {
             final List<Integer> fieldList = //
                     IntStream.range(0, relBuilder.peek().getRowType().getFieldList().size()) //
                             .boxed().collect(Collectors.toList());
             final List<Integer> groupList = //
-                    aggregate.getGroupList().stream().map(aggJoinMapping::getTarget).collect(Collectors.toList());
+                    aggUnit.getGroupList().stream().map(aggMapping::getTarget).collect(Collectors.toList());
 
-            // [i0, i1, i2, i3] -> [i1, i3, i0, i2]
+            // [i0, i1, i2, i3, i4] -> [i1, i3, i0, i2, i4]
             final Mapping projectMapping = //
                     Mappings.create(MappingType.BIJECTION, fieldList.size(), fieldList.size());
 
@@ -220,7 +250,10 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return projectMapping;
         }
 
-        private AggregateUnit createAggregateUnit(RelOptRuleCall call) {
+        private AggregateUnit createAggUnit(RelOptRuleCall call) {
+            if (call.rels.length > 3) {
+                return new AggregateProjectFilter(call.rel(0), call.rel(1), call.rel(2));
+            }
             if (call.rels.length > 2) {
                 return new AggregateProject(call.rel(0), call.rel(1));
             }
@@ -232,9 +265,9 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
                 final RelBuilder relBuilder, //
                 final RexBuilder rexBuilder) {
             final int newLeftWidth = left.getNewInputFieldCount();
-            final int groupIndicatorCount = aggregate.getGroupIndicatorCount();
+            final int groupIndicatorCount = aggUnit.getGroupIndicatorCount();
             final SqlSplittableAggFunction.Registry<RexNode> projectRegistry = createRegistry(projectList);
-            Ord.zip(aggregate.getAggCallList()).forEach(aggCallOrd -> {
+            Ord.zip(aggUnit.getAggCallList()).forEach(aggCallOrd -> {
                 // No need to care about args' mapping.
                 AggregateCall aggCall = aggCallOrd.e;
                 SqlAggFunction aggFunc = aggCall.getAggregation();
@@ -282,10 +315,10 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             });
         }
 
-        private Mapping getAggJoinMapping() {
+        private Mapping getAggUnitJoinMapping() {
             final Map<Integer, Integer> map = Maps.newHashMap();
-            map.putAll(left.getAggJoinMap());
-            map.putAll(right.getAggJoinMap());
+            map.putAll(left.getAggUnitJoinMap());
+            map.putAll(right.getAggUnitJoinMap());
             final int sourceCount = join.getRowType().getFieldCount();
             final int targetCount = left.getNewInputFieldCount() + right.getNewInputFieldCount();
             return (Mapping) Mappings.target(map::get, sourceCount, targetCount);
@@ -304,15 +337,15 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             this.aggregate = aggregate;
         }
 
-        public boolean canTranspose() {
-            return true;
-        }
-
         public RexBuilder getRexBuilder() {
             if (Objects.isNull(rexBuilder)) {
                 rexBuilder = aggregate.getCluster().getRexBuilder();
             }
             return rexBuilder;
+        }
+
+        public ImmutableBitSet getUnitSet() {
+            return getGroupSet();
         }
 
         public ImmutableBitSet getGroupSet() {
@@ -358,16 +391,6 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
         }
 
         @Override
-        public boolean canTranspose() {
-            final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
-            project.getProjects().forEach(p -> builder.addAll(RelOptUtil.InputFinder.bits(p)));
-            ImmutableBitSet projectSet = builder.build();
-
-            // Avoid re-entry of rule.
-            return project.getProjects().size() <= projectSet.cardinality();
-        }
-
-        @Override
         public ImmutableBitSet getGroupSet() {
             if (Objects.isNull(groupSet)) {
                 groupSet = Mappings.apply((Mapping) targetMapping, aggregate.getGroupSet());
@@ -410,14 +433,37 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
     } // end of AggregateProject
 
+    private static class AggregateProjectFilter extends AggregateProject {
+
+        private final KapFilterRel filter;
+
+        public AggregateProjectFilter(KapAggregateRel aggregate, KapProjectRel project, KapFilterRel filter) {
+            super(aggregate, project);
+            this.filter = filter;
+        }
+
+        @Override
+        public ImmutableBitSet getUnitSet() {
+            ImmutableBitSet filterSet = RelOptUtil.InputFinder.bits(filter.getCondition());
+            return getGroupSet().union(filterSet);
+        }
+
+        public RexNode getFilterCond() {
+            return filter.getCondition();
+        }
+
+    } // end of AggregateProjectFilter
+
     private abstract class JoinSide {
         // base variables
+        private final boolean isRelValues;
+        private final boolean hasRelValues;
         private final RelNode input;
-        private final ImmutableBitSet aggJoinSet;
+        private final ImmutableBitSet aggUnitJoinSet;
 
         // util variables
         protected ImmutableBitSet fieldSet;
-        protected ImmutableBitSet sideAggJoinSet;
+        protected ImmutableBitSet sideAggUnitJoinSet;
         protected ImmutableBitSet belowAggGroupSet;
 
         // immediate variables
@@ -427,11 +473,21 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
         private RelNode newInput;
 
-        private Map<Integer, Integer> aggJoinMap;
+        private Map<Integer, Integer> aggUnitJoinMap;
 
-        public JoinSide(RelNode input, ImmutableBitSet aggJoinSet) {
+        public JoinSide(RelNode relNode, RelNode input, ImmutableBitSet aggUnitJoinSet) {
+            this.isRelValues = isRelValues(relNode);
+            this.hasRelValues = hasRelValues(relNode);
             this.input = input;
-            this.aggJoinSet = aggJoinSet;
+            this.aggUnitJoinSet = aggUnitJoinSet;
+        }
+
+        public boolean hasRelValues() {
+            return hasRelValues;
+        }
+
+        public boolean isRelValues() {
+            return isRelValues;
         }
 
         public abstract boolean isAggregable();
@@ -444,29 +500,59 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return getAggOrdinalMap().get(i);
         }
 
-        public Map<Integer, Integer> getAggJoinMap() {
-            if (Objects.isNull(aggJoinMap)) {
+        public Map<Integer, Integer> getAggUnitJoinMap() {
+            if (Objects.isNull(aggUnitJoinMap)) {
                 final int belowOffset = getBelowOffset();
                 final Map<Integer, Integer> map = Maps.newHashMap();
-                Ord.zip(getSideAggJoinSet()).forEach(o -> map.put(o.e, belowOffset + o.i));
-                aggJoinMap = map;
+                Ord.zip(getSideAggUnitJoinSet()).forEach(o -> map.put(o.e, belowOffset + o.i));
+                aggUnitJoinMap = map;
             }
-            return aggJoinMap;
+            return aggUnitJoinMap;
         }
 
-        public void modifyAggregate(AggregateUnit aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
-            if (isAggregable()) {
-                newInput = convertSplit(aggregate, relBuilder, rexBuilder);
+        public void modifyAggregate(AggregateUnit aggUnit, RelBuilder relBuilder, RexBuilder rexBuilder) {
+            if (isRelValues()) {
+                newInput = convertSingleton(aggUnit, relBuilder, rexBuilder);
                 return;
             }
-            newInput = convertSingleton(aggregate, relBuilder, rexBuilder);
-        }
 
-        protected final boolean isAggregable(RelNode relNode, RelNode input, RelMetadataQuery mq) {
-            if (isRelValues(relNode)) {
-                return false;
+            if (isAggregable()) {
+                newInput = convertSplit(aggUnit, relBuilder, rexBuilder);
+                return;
             }
 
+            newInput = convertSingleton(aggUnit, relBuilder, rexBuilder);
+        }
+
+        protected final boolean hasRelValues(RelNode node) {
+            if (node instanceof HepRelVertex) {
+                RelNode current = ((HepRelVertex) node).getCurrentRel();
+                if (current instanceof Join) {
+                    final Join join = (Join) current;
+                    return isRelValues(join.getLeft()) || isRelValues(join.getRight());
+                }
+                return isRelValues(node);
+            }
+            return false;
+        }
+
+        protected final boolean isRelValues(RelNode node) {
+            if (node instanceof HepRelVertex) {
+                RelNode current = ((HepRelVertex) node).getCurrentRel();
+                if (current instanceof KapValuesRel) {
+                    return true;
+                }
+
+                if (current.getInputs().isEmpty()) {
+                    return false;
+                }
+
+                return current.getInputs().stream().allMatch(this::isRelValues);
+            }
+            return false;
+        }
+
+        protected final boolean isAggregable(RelNode input, RelMetadataQuery mq) {
             // No need to do aggregation. There is nothing to be gained by this rule.
             Boolean unique = mq.areColumnsUnique(input, getBelowAggGroupSet());
             return Objects.isNull(unique) || !unique;
@@ -512,24 +598,24 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
         private ImmutableBitSet getBelowAggGroupSet() {
             if (Objects.isNull(belowAggGroupSet)) {
                 int offset = getOffset();
-                belowAggGroupSet = getSideAggJoinSet().shift(-offset);
+                belowAggGroupSet = getSideAggUnitJoinSet().shift(-offset);
             }
             return belowAggGroupSet;
         }
 
-        private ImmutableBitSet getSideAggJoinSet() {
-            if (Objects.isNull(sideAggJoinSet)) {
+        private ImmutableBitSet getSideAggUnitJoinSet() {
+            if (Objects.isNull(sideAggUnitJoinSet)) {
                 ImmutableBitSet fieldSet0 = getFieldSet();
-                sideAggJoinSet = Preconditions.checkNotNull(aggJoinSet).intersect(fieldSet0);
+                sideAggUnitJoinSet = Preconditions.checkNotNull(aggUnitJoinSet).intersect(fieldSet0);
             }
-            return sideAggJoinSet;
+            return sideAggUnitJoinSet;
         }
 
-        private RelNode convertSplit(AggregateUnit aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
+        private RelNode convertSplit(AggregateUnit aggUnit, RelBuilder relBuilder, RexBuilder rexBuilder) {
             final ImmutableBitSet fields = getFieldSet();
-            final int oldGroupSetCount = aggregate.getGroupCount();
+            final int oldGroupSetCount = aggUnit.getGroupCount();
             final int newGroupSetCount = getBelowAggGroupSet().cardinality();
-            Ord.zip(aggregate.getAggCallList()).forEach(aggCallOrd -> {
+            Ord.zip(aggUnit.getAggCallList()).forEach(aggCallOrd -> {
                 AggregateCall aggCall = aggCallOrd.e;
                 SqlAggFunction aggFunc = aggCall.getAggregation();
                 SqlSplittableAggFunction splitAggFunc = Preconditions
@@ -575,12 +661,12 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
         }
 
-        private RelNode convertSingleton(AggregateUnit aggregate, RelBuilder relBuilder, RexBuilder rexBuilder) {
+        private RelNode convertSingleton(AggregateUnit aggUnit, RelBuilder relBuilder, RexBuilder rexBuilder) {
             relBuilder.push(input);
             final ImmutableBitSet fieldSet0 = getFieldSet();
             final List<RexNode> projectList = Lists.newArrayList();
             getBelowAggGroupSet().forEach(i -> projectList.add(relBuilder.field(i)));
-            Ord.zip(aggregate.getAggCallList()).forEach(aggCallOrd -> {
+            Ord.zip(aggUnit.getAggCallList()).forEach(aggCallOrd -> {
                 AggregateCall aggCall = aggCallOrd.e;
                 SqlAggFunction aggFunc = aggCall.getAggregation();
                 SqlSplittableAggFunction splitAggFunc = Preconditions
@@ -610,22 +696,6 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return relBuilder.build();
         }
 
-        private boolean isRelValues(RelNode node) {
-            if (node instanceof HepRelVertex) {
-                RelNode current = ((HepRelVertex) node).getCurrentRel();
-                if (current instanceof KapValuesRel) {
-                    return true;
-                }
-
-                if (current.getInputs().isEmpty()) {
-                    return false;
-                }
-
-                return current.getInputs().stream().allMatch(this::isRelValues);
-            }
-            return false;
-        }
-
         private int registry(AggregateCall aggCall) {
             if (Objects.isNull(belowAggCallRegistry)) {
                 if (Objects.isNull(belowAggCallList)) {
@@ -644,9 +714,9 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
         private final Mappings.TargetMapping targetMapping;
 
-        public LeftSide(RelNode relNode, RelNode input, RelMetadataQuery mq, ImmutableBitSet aggJoinSet) {
-            super(input, aggJoinSet);
-            this.isAggregable = isAggregable(relNode, input, mq);
+        public LeftSide(RelNode relNode, RelNode input, RelMetadataQuery mq, ImmutableBitSet aggUnitJoinSet) {
+            super(relNode, input, aggUnitJoinSet);
+            this.isAggregable = isAggregable(input, mq);
             this.targetMapping = createTargetMapping();
         }
 
@@ -687,10 +757,10 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
         public RightSide(LeftSide left, //
                 RelNode relNode, RelNode input, //
-                RelMetadataQuery mq, ImmutableBitSet aggJoinSet) {
-            super(input, aggJoinSet);
+                RelMetadataQuery mq, ImmutableBitSet aggUnitJoinSet) {
+            super(relNode, input, aggUnitJoinSet);
             this.left = left;
-            this.isAggregable = isAggregable(relNode, input, mq);
+            this.isAggregable = isAggregable(input, mq);
             this.targetMapping = createTargetMapping();
         }
 
