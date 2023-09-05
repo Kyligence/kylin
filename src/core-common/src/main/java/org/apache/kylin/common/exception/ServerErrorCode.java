@@ -281,6 +281,7 @@ public enum ServerErrorCode implements ErrorCodeSupplier {
     SPARK_FAILURE("KE-010038002"), //
     CONFIG_NONEXIST_PROJECT("KE-010038003"), //
     CONFIG_NONEXIST_MODEL("KE-010038004"), //
+    INVALID_DATA_BINDER_AUTO_GROW_COLLECTION_LIMIT("KE-010038005"), //
 
     // 10039XXX jdbc source
 

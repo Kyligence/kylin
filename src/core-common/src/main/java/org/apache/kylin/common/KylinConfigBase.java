@@ -53,6 +53,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -3118,7 +3119,17 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     public int getDataBinderAutoGrowCollectionLimit() {
-        return Integer.parseInt(getOptional("kylin.web.data-binder.auto-grow-collection-limit", "256"));
+        String defaultValue = "256";
+        String value = getOptional("kylin.web.data-binder.auto-grow-collection-limit", defaultValue);
+
+        if (!NumberUtils.isDigits(value)) {
+            return Integer.parseInt(defaultValue);
+        }
+        int intValue = Integer.parseInt(value);
+        if (intValue <= 0) {
+            return Integer.parseInt(defaultValue);
+        }
+        return intValue;
     }
 
     public String getSpringStoreType() {

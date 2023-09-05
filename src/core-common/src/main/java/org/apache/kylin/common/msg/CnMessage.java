@@ -1833,6 +1833,11 @@ public class CnMessage extends Message {
     }
 
     @Override
+    public String getInvalidDataBinderAutoGrowCollectionLimit() {
+        return "操作失败，请调大参数 kylin.web.data-binder.auto-grow-collection-limit 的值后再试。";
+    }
+
+    @Override
     public String getRedisInitFailed() {
         return "Redis初始化失败";
     }

@@ -24,6 +24,7 @@ import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_PROJECT_NA
 import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_CONNECT_CATALOG;
 import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_DOWNLOAD_FILE;
 import static org.apache.kylin.common.exception.ServerErrorCode.INCORRECT_PROJECT_MODE;
+import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_DATA_BINDER_AUTO_GROW_COLLECTION_LIMIT;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.LOW_LEVEL_LICENSE;
 import static org.apache.kylin.common.exception.ServerErrorCode.UNSUPPORTED_STREAMING_OPERATION;
@@ -110,6 +111,7 @@ import org.apache.kylin.rest.util.PagingUtil;
 import org.apache.kylin.util.DataRangeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.InvalidPropertyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
@@ -185,6 +187,10 @@ public class NBasicController {
         while (cause != null && cause.getCause() != null) {
             if (cause instanceof CannotCreateTransactionException) {
                 kylinException = new KylinException(FAILED_CONNECT_CATALOG, msg.getConnectDatabaseError(), false);
+            }
+            if (cause instanceof InvalidPropertyException && cause.getCause() instanceof IndexOutOfBoundsException) {
+                kylinException = new KylinException(INVALID_DATA_BINDER_AUTO_GROW_COLLECTION_LIMIT,
+                        msg.getInvalidDataBinderAutoGrowCollectionLimit(), false);
             }
             if (cause instanceof KylinException) {
                 kylinException = (KylinException) cause;
