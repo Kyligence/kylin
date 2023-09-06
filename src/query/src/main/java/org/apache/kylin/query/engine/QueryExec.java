@@ -73,6 +73,7 @@ import org.apache.kylin.query.util.HepUtils;
 import org.apache.kylin.query.util.QueryInterruptChecker;
 import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.query.util.RelAggPushDownUtil;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -248,7 +249,7 @@ public class QueryExec {
             postOptRules.addAll(HepUtils.AggPushDownRules);
         }
 
-        if(kylinConfig.isScalarSubqueryJoinEnabled()) {
+        if (kylinConfig.isScalarSubqueryJoinEnabled()) {
             postOptRules.addAll(HepUtils.ScalarSubqueryJoinRules);
         }
 
@@ -504,14 +505,16 @@ public class QueryExec {
     }
 
     private String processAcceptCacheTimeInSql(String sql) {
-        if (kylinConfig.isKylinLocalCacheEnabled() && kylinConfig.isKylinFileStatusCacheEnabled()) {
+        if (kylinConfig.isKylinLocalCacheEnabled() && kylinConfig.isKylinFileStatusCacheEnabled()
+                && SparkSession.getDefaultSession().isDefined()) {
             return KylinCacheFileSystem.processAcceptCacheTimeInSql(sql);
         }
         return sql;
     }
 
     private void clearAcceptCacheTimeLocally() {
-        if (kylinConfig.isKylinLocalCacheEnabled() && kylinConfig.isKylinFileStatusCacheEnabled()) {
+        if (kylinConfig.isKylinLocalCacheEnabled() && kylinConfig.isKylinFileStatusCacheEnabled()
+                && SparkSession.getDefaultSession().isDefined()) {
             KylinCacheFileSystem.clearAcceptCacheTimeLocally();
         }
     }
