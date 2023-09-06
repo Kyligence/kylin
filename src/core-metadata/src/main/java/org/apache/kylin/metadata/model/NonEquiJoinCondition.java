@@ -19,17 +19,23 @@
 package org.apache.kylin.metadata.model;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.TimeString;
+import org.apache.calcite.util.TimestampString;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.metadata.model.tool.NonEquiJoinConditionComparator;
-import org.apache.kylin.metadata.model.tool.TypedLiteralConverter;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
@@ -39,10 +45,29 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("serial")
+@Slf4j
 @JsonAutoDetect(fieldVisibility = Visibility.NONE, getterVisibility = Visibility.NONE, isGetterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE)
 public class NonEquiJoinCondition implements Serializable {
+
+    private static final Map<SqlKind, TruthTable.Operator> OP_TRUTH_MAPPING = ImmutableMap.<SqlKind, TruthTable.Operator> builder()
+            .put(SqlKind.AND, TruthTable.Operator.AND) //
+            .put(SqlKind.OR, TruthTable.Operator.OR) //
+            .put(SqlKind.NOT, TruthTable.Operator.NOT) //
+            .build();
+
+    private static final Map<SqlKind, SqlKind> OP_INVERSE_MAPPING = ImmutableMap.<SqlKind, SqlKind> builder()
+            .put(SqlKind.NOT_EQUALS, SqlKind.EQUALS) //
+            .put(SqlKind.NOT_IN, SqlKind.IN) //
+            .put(SqlKind.IS_NOT_NULL, SqlKind.IS_NULL) //
+            .put(SqlKind.IS_NOT_FALSE, SqlKind.IS_FALSE) //
+            .put(SqlKind.IS_NOT_TRUE, SqlKind.IS_TRUE) //
+            .put(SqlKind.IS_NOT_DISTINCT_FROM, SqlKind.IS_DISTINCT_FROM) //
+            .put(SqlKind.LESS_THAN, SqlKind.GREATER_THAN_OR_EQUAL) //
+            .put(SqlKind.LESS_THAN_OR_EQUAL, SqlKind.GREATER_THAN) //
+            .build();
 
     @Getter
     @Setter
@@ -150,6 +175,67 @@ public class NonEquiJoinCondition implements Serializable {
         }
     }
 
+    private TruthTable<NonEquiJoinCondition> createTruthTable() {
+        TruthTable.ExprBuilder<NonEquiJoinCondition> builder = new TruthTable.ExprBuilder<>(
+                new NeqCondOperandComparator());
+        this.accept(builder);
+        TruthTable.Expr<NonEquiJoinCondition> builtExpr = builder.build();
+        return new TruthTable<>(new ArrayList<>(builder.allOperandSet), builtExpr);
+    }
+
+    private void accept(TruthTable.ExprBuilder<NonEquiJoinCondition> builder) {
+        switch (op) {
+        case AND:
+        case NOT:
+        case OR:
+            builder.compositeStart(OP_TRUTH_MAPPING.get(op));
+            for (NonEquiJoinCondition operand : operands) {
+                operand.accept(builder);
+            }
+            builder.compositeEnd();
+            break;
+        default:
+            this.addOperand(builder);
+            break;
+        }
+    }
+
+    private void addOperand(TruthTable.ExprBuilder<NonEquiJoinCondition> builder) {
+        NonEquiJoinCondition copied = this.copy();
+        if (inverseCondOperator(copied)) {
+            builder.compositeStart(TruthTable.Operator.NOT);
+            normalizedCondOperandOrderings(copied);
+            builder.addExpr(copied);
+            builder.compositeEnd();
+        } else {
+            normalizedCondOperandOrderings(copied);
+            builder.addExpr(copied);
+        }
+    }
+
+    private boolean inverseCondOperator(NonEquiJoinCondition neqJoinCond) {
+        if (OP_INVERSE_MAPPING.containsKey(neqJoinCond.getOp())) {
+            neqJoinCond.setOp(OP_INVERSE_MAPPING.get(neqJoinCond.getOp()));
+            neqJoinCond.setOpName(neqJoinCond.getOp().sql);
+            return true;
+        }
+        return false;
+    }
+
+    private void normalizedCondOperandOrderings(NonEquiJoinCondition neqJoinCond) {
+        // if operands ordering does not matter, sort by operands' digest
+        // case =, <>
+        if (neqJoinCond.getOp() == SqlKind.EQUALS) {
+            Arrays.sort(neqJoinCond.getOperands(), Comparator.comparing(NonEquiJoinCondition::toString));
+        }
+
+        // sort IN args
+        if (neqJoinCond.getOp() == SqlKind.IN) {
+            Arrays.sort(neqJoinCond.getOperands(), 1, neqJoinCond.getOperands().length,
+                    Comparator.comparing(NonEquiJoinCondition::toString));
+        }
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -175,8 +261,18 @@ public class NonEquiJoinCondition implements Serializable {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof NonEquiJoinCondition
-                && NonEquiJoinConditionComparator.equals(this, (NonEquiJoinCondition) obj);
+        if (!(obj instanceof NonEquiJoinCondition)) {
+            return false;
+        }
+
+        NonEquiJoinCondition neqJoinCond = (NonEquiJoinCondition) obj;
+        try {
+            return Objects.equals(this.createTruthTable(), neqJoinCond.createTruthTable());
+        } catch (Exception e) {
+            log.error("Error on comparing condition({}), condition({}). Error Msg: {}", this, neqJoinCond,
+                    e.getMessage());
+            return false;
+        }
     }
 
     @Override
@@ -245,6 +341,125 @@ public class NonEquiJoinCondition implements Serializable {
 
         public String displaySql() {
             return fk.getDoubleQuoteExp() + " " + op.sql + " " + pk.getDoubleQuoteExp();
+        }
+    }
+
+    static class NeqCondOperandComparator implements Comparator<NonEquiJoinCondition> {
+        @Override
+        public int compare(NonEquiJoinCondition cond1, NonEquiJoinCondition cond2) {
+            if (!(Objects.equals(cond1.getOp(), cond2.getOp())
+                    && cond1.getOperands().length == cond2.getOperands().length
+                    && Objects.equals(cond1.getType(), cond2.getType())
+                    && Objects.equals(cond1.getDataType(), cond2.getDataType()))) {
+                return 1;
+            }
+
+            // compare opName on for SqlKind OTHER
+            if (cond1.getOp() == SqlKind.OTHER || cond1.getOp() == SqlKind.OTHER_FUNCTION
+                    && (!Objects.equals(cond1.getOpName(), cond2.getOpName()))) {
+                return 1;
+            }
+
+            if (cond1.getType() == NonEquiJoinConditionType.LITERAL) {
+                return Objects.equals(cond1.getValue(), cond2.getValue()) ? 0 : 1;
+            } else if (cond1.getType() == NonEquiJoinConditionType.COLUMN) {
+                return Objects.equals(cond1.getColRef().getColumnDesc(), cond2.getColRef().getColumnDesc()) ? 0 : 1;
+            }
+            NonEquiJoinCondition[] sorted1 = cond1.getSortedOperands();
+            NonEquiJoinCondition[] sorted2 = cond2.getSortedOperands();
+            for (int i = 0; i < sorted1.length; i++) {
+                if (compare(sorted1[i], sorted2[i]) != 0) {
+                    return 1;
+                }
+            }
+            return 0;
+        }
+    }
+
+    public interface NeqConditionVisitor {
+
+        default NonEquiJoinCondition visit(NonEquiJoinCondition neqJoinCond) {
+            if (neqJoinCond == null) {
+                return null;
+            }
+
+            if (neqJoinCond.getType() == NonEquiJoinConditionType.LITERAL) {
+                return visitLiteral(neqJoinCond);
+            } else if (neqJoinCond.getType() == NonEquiJoinConditionType.COLUMN) {
+                return visitColumn(neqJoinCond);
+            } else if (neqJoinCond.getType() == NonEquiJoinConditionType.EXPRESSION) {
+                return visitExpression(neqJoinCond);
+            } else {
+                return visit(neqJoinCond);
+            }
+        }
+
+        default NonEquiJoinCondition visitExpression(NonEquiJoinCondition neqJoinCond) {
+            NonEquiJoinCondition[] ops = new NonEquiJoinCondition[neqJoinCond.getOperands().length];
+            for (int i = 0; i < neqJoinCond.getOperands().length; i++) {
+                ops[i] = visit(neqJoinCond.getOperands()[i]);
+            }
+            neqJoinCond.setOperands(ops);
+            return neqJoinCond;
+        }
+
+        default NonEquiJoinCondition visitColumn(NonEquiJoinCondition neqJoinCond) {
+            return neqJoinCond;
+        }
+
+        default NonEquiJoinCondition visitLiteral(NonEquiJoinCondition neqJoinCond) {
+            return neqJoinCond;
+        }
+    }
+
+    public static class TypedLiteralConverter {
+        private TypedLiteralConverter() {
+        }
+
+        static final String NULL = "KY_LITERAL_NULL";
+
+        public static Object stringValueToTypedValue(String value, DataType dataType) {
+            if (value.equals(NULL)) {
+                return null;
+            }
+            switch (dataType.getTypeName()) {
+            case DECIMAL:
+                return new BigDecimal(value);
+            case BIGINT:
+                return Long.parseLong(value);
+            case SMALLINT:
+                return Short.parseShort(value);
+            case TINYINT:
+                return Byte.parseByte(value);
+            case INTEGER:
+                return Integer.parseInt(value);
+            case DOUBLE:
+                return Double.parseDouble(value);
+            case FLOAT:
+            case REAL:
+                return Float.parseFloat(value);
+            case DATE:
+                return DateString.fromDaysSinceEpoch(Integer.parseInt(value));
+            case TIME:
+            case TIME_WITH_LOCAL_TIME_ZONE:
+                return TimeString.fromMillisOfDay(Integer.parseInt(value));
+            case TIMESTAMP:
+            case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+                return TimestampString.fromMillisSinceEpoch(Long.parseLong(value));
+            case BOOLEAN:
+                return Boolean.parseBoolean(value);
+            case CHAR:
+            case VARCHAR:
+            default:
+                return value;
+            }
+        }
+
+        public static String typedLiteralToString(RexLiteral literal) {
+            if (literal.getValue3() == null) {
+                return NULL;
+            }
+            return String.valueOf(literal.getValue3());
         }
     }
 }

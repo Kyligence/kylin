@@ -29,7 +29,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class SimplifiedJoinDesc extends JoinDesc {
+public class SimplifiedJoinDesc extends JoinDesc.NonEquivJoinDesc {
 
     private static final long serialVersionUID = 3422512377209976139L;
 

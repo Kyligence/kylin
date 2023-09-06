@@ -92,8 +92,6 @@ import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.UpdateImpact;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
-import org.apache.kylin.metadata.model.tool.JoinDescNonEquiCompBean;
-import org.apache.kylin.metadata.model.tool.NonEquiJoinConditionVisitor;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.model.util.scd2.SCD2CondChecker;
@@ -250,7 +248,7 @@ public class ModelSemanticHelper extends BasicService {
             return;
         }
 
-        HashSet<JoinDescNonEquiCompBean> scd2NonEquiCondSets = new HashSet<>();
+        Set<JoinDesc> nonEquivJoins = new HashSet<>();
 
         String project = dataModel.getProject();
         val projectKylinConfig = NProjectManager.getProjectConfig(project);
@@ -278,7 +276,7 @@ public class ModelSemanticHelper extends BasicService {
                     requestJoinDesc.getSimplifiedNonEquiJoinConditions());
             final JoinDesc analyzedJoin = deriveJoins(queryExec, scd2Sql);
             // restore table alias in non-equi conditions
-            final NonEquiJoinCondition nonEquiCondWithAliasRestored = new NonEquiJoinConditionVisitor() {
+            final NonEquiJoinCondition nonEquiCondWithAliasRestored = new NonEquiJoinCondition.NeqConditionVisitor() {
                 @Override
                 public NonEquiJoinCondition visitColumn(NonEquiJoinCondition cond) {
                     TableRef originalTableRef;
@@ -319,10 +317,10 @@ public class ModelSemanticHelper extends BasicService {
             }
 
             //5. check same join conditions
-            if (scd2NonEquiCondSets.contains(new JoinDescNonEquiCompBean(requestJoinDesc))) {
+            if (nonEquivJoins.contains(requestJoinDesc)) {
                 throw new KylinException(ErrorCodeServer.DUPLICATE_MODEL_JOIN_CONDITIONS);
             } else {
-                scd2NonEquiCondSets.add(new JoinDescNonEquiCompBean(requestJoinDesc));
+                nonEquivJoins.add(requestJoinDesc);
             }
         }
     }
