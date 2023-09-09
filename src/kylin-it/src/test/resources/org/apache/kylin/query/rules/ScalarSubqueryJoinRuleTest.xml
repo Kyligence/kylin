@@ -32,8 +32,8 @@ KapOLAPToEnumerableConverter
         <Resource name="query01.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapAggregateRel(group-set=[[0, 1]], groups=[null], TOTAL=[SUM($2)], ctx=[])
-    KapProjectRel(D_DATEKEY=[$1], DATE_TIME=[$0], TOTAL=[$2], ctx=[])
+  KapProjectRel(D_DATEKEY=[$1], DATE_TIME=[$0], TOTAL=[$2], ctx=[])
+    KapAggregateRel(group-set=[[0, 1]], groups=[null], TOTAL=[SUM($2)], ctx=[])
       KapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
         KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
           KapValuesRel(tuples=[[{ 0 }]])
@@ -61,8 +61,8 @@ KapOLAPToEnumerableConverter
         <Resource name="query02.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapAggregateRel(group-set=[[0, 1]], groups=[null], TOTAL=[SUM($2)], ctx=[])
-    KapProjectRel(D_DATEKEY=[$1], DATE_TIME=[$0], TOTAL=[$2], ctx=[])
+  KapProjectRel(D_DATEKEY=[$1], DATE_TIME=[$0], TOTAL=[$2], ctx=[])
+    KapAggregateRel(group-set=[[0, 1]], groups=[null], TOTAL=[SUM($2)], ctx=[])
       KapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
         KapUnionRel(all=[true], ctx=[], all=[true])
           KapUnionRel(all=[true], ctx=[], all=[true])
@@ -96,19 +96,20 @@ KapOLAPToEnumerableConverter
         <Resource name="query03.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$2=[$SUM0($2)], SY=[SUM($3)], ctx=[])
-    KapProjectRel(D_DATE=[$1], DATE_TIME=[$0], $f2=[CASE(IS NULL($2), CAST(1):BIGINT, $2)], SY=[$3], ctx=[])
-      KapNonEquiJoinRel(condition=[AND(<=($1, $0), >=($1, CONCAT(SUBSTRING($0, 1, 8), '01')))], joinType=[left], ctx=[])
-        KapUnionRel(all=[true], ctx=[], all=[true])
+  KapProjectRel(D_DATE=[$1], DATE_TIME=[$0], EXPR$2=[$2], SY=[$3], ctx=[])
+    KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$2=[$SUM0($2)], SY=[SUM($3)], ctx=[])
+      KapProjectRel(DATE_TIME=[$0], D_DATE=[$1], $f2=[CASE(IS NULL($2), CAST(1):BIGINT, $2)], SY=[$3], ctx=[])
+        KapNonEquiJoinRel(condition=[AND(<=($1, $0), >=($1, CONCAT(SUBSTRING($0, 1, 8), '01')))], joinType=[left], ctx=[])
           KapUnionRel(all=[true], ctx=[], all=[true])
-            KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
+            KapUnionRel(all=[true], ctx=[], all=[true])
+              KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
+                KapValuesRel(tuples=[[{ 0 }]])
+              KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
+                KapValuesRel(tuples=[[{ 0 }]])
+            KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
               KapValuesRel(tuples=[[{ 0 }]])
-            KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
-              KapValuesRel(tuples=[[{ 0 }]])
-          KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
-            KapValuesRel(tuples=[[{ 0 }]])
-        KapAggregateRel(group-set=[[1]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($4)], ctx=[])
-          KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+          KapAggregateRel(group-set=[[1]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($4)], ctx=[])
+            KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
 ]]>
         </Resource>
         <Resource name="query04.planBefore">
@@ -126,14 +127,13 @@ KapOLAPToEnumerableConverter
         <Resource name="query04.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapProjectRel(D_DATEKEY=[$0], TOTAL=[$2], ctx=[])
+  KapProjectRel(D_DATEKEY=[$1], TOTAL=[$2], ctx=[])
     KapAggregateRel(group-set=[[0, 1]], groups=[null], TOTAL=[SUM($2)], ctx=[])
-      KapProjectRel(D_DATEKEY=[$1], DATE_TIME=[$0], TOTAL=[$2], ctx=[])
-        KapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
-          KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
-            KapValuesRel(tuples=[[{ 0 }]])
-          KapAggregateRel(group-set=[[0]], groups=[null], TOTAL=[SUM($4)], ctx=[])
-            KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+      KapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
+        KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
+          KapValuesRel(tuples=[[{ 0 }]])
+        KapAggregateRel(group-set=[[0]], groups=[null], TOTAL=[SUM($4)], ctx=[])
+          KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
 ]]>
         </Resource>
         <Resource name="query05.planBefore">
@@ -159,9 +159,9 @@ KapOLAPToEnumerableConverter
         <Resource name="query05.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapProjectRel(SD=[$3], D_DATE=[$0], EXPR$2=[$4], DATE_TIME=[$1], SY=[$5], SR=[$6], LO_ORDERDATE=[$2], ctx=[])
+  KapProjectRel(SD=[$3], D_DATE=[$1], EXPR$2=[$4], DATE_TIME=[$0], SY=[$5], SR=[$6], LO_ORDERDATE=[$2], ctx=[])
     KapAggregateRel(group-set=[[0, 1, 2]], groups=[null], SD=[SUM($8)], EXPR$2=[$SUM0($9)], SY=[SUM($10)], SR=[SUM($11)], ctx=[])
-      KapProjectRel(D_DATE=[$1], DATE_TIME=[$0], LO_ORDERDATE=[$5], EXPR$2=[$3], SY=[$4], SD=[$2], $f1=[$6], SR=[$7], $f8=[CAST(*($2, $6)):BIGINT], $f9=[*($3, $6)], $f10=[CAST(*($4, $6)):BIGINT], $f11=[CAST(*($3, $7)):BIGINT], ctx=[])
+      KapProjectRel(DATE_TIME=[$0], D_DATE=[$1], LO_ORDERDATE=[$5], EXPR$2=[$3], SY=[$4], SD=[$2], $f1=[$6], SR=[$7], $f8=[CAST(*($2, $6)):BIGINT], $f9=[*($3, $6)], $f10=[CAST(*($4, $6)):BIGINT], $f11=[CAST(*($3, $7)):BIGINT], ctx=[])
         KapJoinRel(condition=[=($0, $5)], joinType=[inner], ctx=[])
           KapAggregateRel(group-set=[[0, 1]], groups=[null], SD=[SUM($2)], EXPR$2=[$SUM0($3)], SY=[SUM($4)], ctx=[])
             KapProjectRel(DATE_TIME=[$0], D_DATE=[$1], SD=[$2], $f3=[CASE(IS NULL($3), CAST(1):BIGINT, $3)], SY=[$4], ctx=[])
@@ -201,19 +201,19 @@ KapOLAPToEnumerableConverter
         <Resource name="query06.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$2=[$SUM0($2)], SY=[SUM($3)], ctx=[])
-    KapProjectRel(D_DATE=[$1], DATE_TIME=[$0], $f2=[CASE(IS NULL($2), CAST(1):BIGINT, $2)], SY=[$3], ctx=[])
-      KapNonEquiJoinRel(condition=[AND(<=($1, $0), >=($1, CONCAT(SUBSTRING($0, 1, 8), '01')))], joinType=[left], ctx=[])
-        KapUnionRel(all=[true], ctx=[], all=[true])
+  KapProjectRel(D_DATE=[$1], DATE_TIME=[$0], EXPR$2=[$2], SY=[$3], ctx=[])
+    KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$2=[$SUM0($2)], SY=[SUM($3)], ctx=[])
+      KapProjectRel(DATE_TIME=[$0], D_DATE=[$1], $f2=[CASE(IS NULL($2), CAST(1):BIGINT, $2)], SY=[$3], ctx=[])
+        KapNonEquiJoinRel(condition=[AND(<=($1, $0), >=($1, CONCAT(SUBSTRING($0, 1, 8), '01')))], joinType=[left], ctx=[])
           KapUnionRel(all=[true], ctx=[], all=[true])
-            KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
+            KapUnionRel(all=[true], ctx=[], all=[true])
+              KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
+                KapValuesRel(tuples=[[{ 0 }]])
+              KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
+                KapValuesRel(tuples=[[{ 0 }]])
+            KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
               KapValuesRel(tuples=[[{ 0 }]])
-            KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
-              KapValuesRel(tuples=[[{ 0 }]])
-          KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
-            KapValuesRel(tuples=[[{ 0 }]])
-        KapAggregateRel(group-set=[[3]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($1)], ctx=[])
-          KapProjectRel(D_DATEKEY=[$0], D_YEAR=[$4], D_HOLIDAYFL=[$15], D_DATE=[$1], ctx=[])
+          KapAggregateRel(group-set=[[1]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($4)], ctx=[])
             KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
 ]]>
         </Resource>
@@ -237,19 +237,18 @@ KapOLAPToEnumerableConverter
         <Resource name="query07.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$2=[$SUM0($3)], SY=[SUM($2)], ctx=[])
-    KapProjectRel(D_DATE=[$0], DATE_TIME=[$3], SY=[$2], EXPR$2=[$1], ctx=[])
-      KapNonEquiJoinRel(condition=[AND(<=($0, $3), >=($0, CONCAT(SUBSTRING($3, 1, 8), '01')))], joinType=[left], ctx=[])
-        KapAggregateRel(group-set=[[1]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($4)], ctx=[])
-          KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+  KapAggregateRel(group-set=[[0, 3]], groups=[null], EXPR$2=[$SUM0($1)], SY=[SUM($2)], ctx=[])
+    KapNonEquiJoinRel(condition=[AND(<=($0, $3), >=($0, CONCAT(SUBSTRING($3, 1, 8), '01')))], joinType=[left], ctx=[])
+      KapAggregateRel(group-set=[[1]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($4)], ctx=[])
+        KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+      KapUnionRel(all=[true], ctx=[], all=[true])
         KapUnionRel(all=[true], ctx=[], all=[true])
-          KapUnionRel(all=[true], ctx=[], all=[true])
-            KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
-              KapValuesRel(tuples=[[{ 0 }]])
-            KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
-              KapValuesRel(tuples=[[{ 0 }]])
-          KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
+          KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
             KapValuesRel(tuples=[[{ 0 }]])
+          KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
+            KapValuesRel(tuples=[[{ 0 }]])
+        KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
+          KapValuesRel(tuples=[[{ 0 }]])
 ]]>
         </Resource>
         <Resource name="query08.planBefore">
@@ -273,20 +272,18 @@ KapOLAPToEnumerableConverter
         <Resource name="query08.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$2=[$SUM0($3)], SY=[SUM($2)], ctx=[])
-    KapProjectRel(D_DATE=[$0], DATE_TIME=[$3], SY=[$2], EXPR$2=[$1], ctx=[])
-      KapNonEquiJoinRel(condition=[AND(<=($0, $3), >=($0, CONCAT(SUBSTRING($3, 1, 8), '01')))], joinType=[left], ctx=[])
-        KapAggregateRel(group-set=[[3]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($1)], ctx=[])
-          KapProjectRel(D_DATEKEY=[$0], D_YEAR=[$4], D_HOLIDAYFL=[$15], D_DATE=[$1], ctx=[])
-            KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+  KapAggregateRel(group-set=[[0, 3]], groups=[null], EXPR$2=[$SUM0($1)], SY=[SUM($2)], ctx=[])
+    KapNonEquiJoinRel(condition=[AND(<=($0, $3), >=($0, CONCAT(SUBSTRING($3, 1, 8), '01')))], joinType=[left], ctx=[])
+      KapAggregateRel(group-set=[[1]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($4)], ctx=[])
+        KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+      KapUnionRel(all=[true], ctx=[], all=[true])
         KapUnionRel(all=[true], ctx=[], all=[true])
-          KapUnionRel(all=[true], ctx=[], all=[true])
-            KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
-              KapValuesRel(tuples=[[{ 0 }]])
-            KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
-              KapValuesRel(tuples=[[{ 0 }]])
-          KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
+          KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
             KapValuesRel(tuples=[[{ 0 }]])
+          KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
+            KapValuesRel(tuples=[[{ 0 }]])
+        KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
+          KapValuesRel(tuples=[[{ 0 }]])
 ]]>
         </Resource>
         <Resource name="query09.planBefore">
@@ -312,22 +309,21 @@ KapOLAPToEnumerableConverter
         <Resource name="query09.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$2=[$SUM0($2)], SY=[SUM($3)], ctx=[])
-    KapProjectRel(D_DATE=[$1], DATE_TIME=[$0], $f2=[CASE(IS NULL($2), CAST(1):BIGINT, $2)], SY=[$3], ctx=[])
-      KapNonEquiJoinRel(condition=[AND(<=($1, $0), >=($1, CONCAT(SUBSTRING($0, 1, 8), '01')))], joinType=[left], ctx=[])
-        KapUnionRel(all=[true], ctx=[], all=[true])
+  KapProjectRel(D_DATE=[$1], DATE_TIME=[$0], EXPR$2=[$2], SY=[$3], ctx=[])
+    KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$2=[$SUM0($2)], SY=[SUM($3)], ctx=[])
+      KapProjectRel(DATE_TIME=[$0], D_DATE=[$1], $f2=[CASE(IS NULL($2), CAST(1):BIGINT, $2)], SY=[$3], ctx=[])
+        KapNonEquiJoinRel(condition=[AND(<=($1, $0), >=($1, CONCAT(SUBSTRING($0, 1, 8), '01')))], joinType=[left], ctx=[])
           KapUnionRel(all=[true], ctx=[], all=[true])
-            KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
+            KapUnionRel(all=[true], ctx=[], all=[true])
+              KapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
+                KapValuesRel(tuples=[[{ 0 }]])
+              KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
+                KapValuesRel(tuples=[[{ 0 }]])
+            KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
               KapValuesRel(tuples=[[{ 0 }]])
-            KapProjectRel(DATE_TIME=['1995-03-02'], ctx=[])
-              KapValuesRel(tuples=[[{ 0 }]])
-          KapProjectRel(DATE_TIME=['1995-03-03'], ctx=[])
-            KapValuesRel(tuples=[[{ 0 }]])
-        KapAggregateRel(group-set=[[3]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($2)], ctx=[])
-          KapProjectRel(D_DATEKEY=[$0], EXPR$1=[$3], D_YEAR=[$2], D_DATE=[$1], ctx=[])
-            KapAggregateRel(group-set=[[0, 1, 2]], groups=[null], EXPR$1=[SUM($2)], ctx=[])
-              KapProjectRel(D_DATEKEY=[$0], D_DATE=[$1], D_YEAR=[$4], ctx=[])
-                KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+          KapAggregateRel(group-set=[[1]], groups=[null], EXPR$2=[COUNT()], SY=[SUM($2)], ctx=[])
+            KapAggregateRel(group-set=[[0, 1, 4]], groups=[null], EXPR$1=[SUM($4)], ctx=[])
+              KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
 ]]>
         </Resource>
         <Resource name="query10.planBefore">
@@ -509,26 +505,25 @@ KapOLAPToEnumerableConverter
         <Resource name="query13.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapProjectRel(D_DATEKEY=[$2], MIN_DAYOFWEEK=[$3], DATE_TIME=[$1], D_DATE=[$0], ctx=[])
-    KapAggregateRel(group-set=[[0, 1, 2]], groups=[null], MIN_DAYOFWEEK=[$SUM0($3)], ctx=[])
-      KapProjectRel(D_DATE=[$1], DATE_TIME=[$3], D_DATEKEY=[$0], MIN_DAYOFWEEK=[$2], ctx=[])
-        KapJoinRel(condition=[=($0, $3)], joinType=[inner], ctx=[])
-          KapAggregateRel(group-set=[[0, 1]], groups=[null], MIN_DAYOFWEEK=[COUNT($2)], ctx=[])
-            KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+  KapProjectRel(D_DATEKEY=[$0], MIN_DAYOFWEEK=[$3], DATE_TIME=[$2], D_DATE=[$1], ctx=[])
+    KapAggregateRel(group-set=[[0, 1, 3]], groups=[null], MIN_DAYOFWEEK=[$SUM0($2)], ctx=[])
+      KapJoinRel(condition=[=($0, $3)], joinType=[inner], ctx=[])
+        KapAggregateRel(group-set=[[0, 1]], groups=[null], MIN_DAYOFWEEK=[COUNT($2)], ctx=[])
+          KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+        KapUnionRel(all=[true], ctx=[], all=[true])
           KapUnionRel(all=[true], ctx=[], all=[true])
             KapUnionRel(all=[true], ctx=[], all=[true])
-              KapUnionRel(all=[true], ctx=[], all=[true])
-                KapUnionRel(all=[false], ctx=[], all=[false])
-                  KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
-                    KapValuesRel(tuples=[[{ 0 }]])
-                  KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
-                    KapValuesRel(tuples=[[{ 0 }]])
+              KapUnionRel(all=[false], ctx=[], all=[false])
                 KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
                   KapValuesRel(tuples=[[{ 0 }]])
-              KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
+                KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
+                  KapValuesRel(tuples=[[{ 0 }]])
+              KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
                 KapValuesRel(tuples=[[{ 0 }]])
-            KapProjectRel(DATE_TIME=['1995-05-17'], ctx=[])
+            KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
               KapValuesRel(tuples=[[{ 0 }]])
+          KapProjectRel(DATE_TIME=['1995-05-17'], ctx=[])
+            KapValuesRel(tuples=[[{ 0 }]])
 ]]>
         </Resource>
         <Resource name="query14.planBefore">
@@ -594,12 +589,11 @@ KapOLAPToEnumerableConverter
         <Resource name="query15.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapProjectRel(C_NAME=[$0], COUNT_ORDER=[$2], LO_ORDERDATE=[$1], SUM_CUSTKEY=[$3], ctx=[])
-    KapAggregateRel(group-set=[[0, 1]], groups=[null], COUNT_ORDER=[COUNT($2)], SUM_CUSTKEY=[SUM($3)], ctx=[])
-      KapProjectRel(C_NAME=[$22], LO_ORDERDATE=[$5], LO_ORDERKEY=[$0], C_CUSTKEY=[$21], ctx=[])
-        KapJoinRel(condition=[=($2, $21)], joinType=[inner], ctx=[])
-          KapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
-          KapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
+  KapProjectRel(C_NAME=[$1], COUNT_ORDER=[$2], LO_ORDERDATE=[$0], SUM_CUSTKEY=[$3], ctx=[])
+    KapAggregateRel(group-set=[[5, 22]], groups=[null], COUNT_ORDER=[COUNT($0)], SUM_CUSTKEY=[SUM($21)], ctx=[])
+      KapJoinRel(condition=[=($2, $21)], joinType=[inner], ctx=[])
+        KapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
+        KapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
 ]]>
         </Resource>
         <Resource name="query16.planBefore">
@@ -631,26 +625,24 @@ KapOLAPToEnumerableConverter
             <![CDATA[
 KapOLAPToEnumerableConverter
   KapProjectRel(D_DATEKEY=[$1], COUNT_YEAR=[$2], DATE_TIME=[$0], ctx=[])
-    KapAggregateRel(group-set=[[0, 1]], groups=[null], COUNT_YEAR=[$SUM0($3)], ctx=[])
-      KapProjectRel(DATE_TIME=[$0], D_DATEKEY=[$1], D_MONTH=[$2], $f3=[CASE(IS NULL($3), CAST(0):BIGINT, $3)], ctx=[])
-        LogicalFilter(condition=[=($2, 'May')])
-          KapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
+    KapAggregateRel(group-set=[[0, 1]], groups=[null], COUNT_YEAR=[COUNT($5)], ctx=[])
+      KapFilterRel(condition=[=($4, 'May')], ctx=[])
+        KapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
+          KapUnionRel(all=[true], ctx=[], all=[true])
             KapUnionRel(all=[true], ctx=[], all=[true])
               KapUnionRel(all=[true], ctx=[], all=[true])
-                KapUnionRel(all=[true], ctx=[], all=[true])
-                  KapUnionRel(all=[false], ctx=[], all=[false])
-                    KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
-                      KapValuesRel(tuples=[[{ 0 }]])
-                    KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
-                      KapValuesRel(tuples=[[{ 0 }]])
+                KapUnionRel(all=[false], ctx=[], all=[false])
                   KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
                     KapValuesRel(tuples=[[{ 0 }]])
-                KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
+                  KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
+                    KapValuesRel(tuples=[[{ 0 }]])
+                KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
                   KapValuesRel(tuples=[[{ 0 }]])
-              KapProjectRel(DATE_TIME=['1995-05-17'], ctx=[])
+              KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
                 KapValuesRel(tuples=[[{ 0 }]])
-            KapAggregateRel(group-set=[[0, 3]], groups=[null], COUNT_YEAR=[COUNT($4)], ctx=[])
-              KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+            KapProjectRel(DATE_TIME=['1995-05-17'], ctx=[])
+              KapValuesRel(tuples=[[{ 0 }]])
+          KapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
 ]]>
         </Resource>
         <Resource name="query17.planBefore">
@@ -670,15 +662,114 @@ KapOLAPToEnumerableConverter
         <Resource name="query17.planAfter">
             <![CDATA[
 KapOLAPToEnumerableConverter
-  KapProjectRel(C_NAME=[$0], COUNT_ORDER=[$3], LO_ORDERDATE=[$1], DATE_TIME=[$2], SUM_CUSTKEY=[$4], ctx=[])
-    KapAggregateRel(group-set=[[0, 1, 2]], groups=[null], COUNT_ORDER=[$SUM0($4)], SUM_CUSTKEY=[SUM($3)], ctx=[])
-      KapProjectRel(C_NAME=[$1], LO_ORDERDATE=[$0], DATE_TIME=[$4], SUM_CUSTKEY=[$3], COUNT_ORDER=[$2], ctx=[])
-        KapJoinRel(condition=[=($0, $4)], joinType=[inner], ctx=[])
-          KapAggregateRel(group-set=[[5, 22]], groups=[null], COUNT_ORDER=[COUNT($0)], SUM_CUSTKEY=[SUM($21)], ctx=[])
-            KapJoinRel(condition=[=($2, $21)], joinType=[inner], ctx=[])
-              KapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
-              KapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
+  KapProjectRel(C_NAME=[$1], COUNT_ORDER=[$3], LO_ORDERDATE=[$0], DATE_TIME=[$2], SUM_CUSTKEY=[$4], ctx=[])
+    KapAggregateRel(group-set=[[0, 1, 4]], groups=[null], COUNT_ORDER=[$SUM0($2)], SUM_CUSTKEY=[SUM($3)], ctx=[])
+      KapJoinRel(condition=[=($0, $4)], joinType=[inner], ctx=[])
+        KapAggregateRel(group-set=[[5, 22]], groups=[null], COUNT_ORDER=[COUNT($0)], SUM_CUSTKEY=[SUM($21)], ctx=[])
+          KapJoinRel(condition=[=($2, $21)], joinType=[inner], ctx=[])
+            KapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
+            KapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
+        KapProjectRel(DATE_TIME=['1996-01-02'], ctx=[])
+          KapValuesRel(tuples=[[{ 0 }]])
+]]>
+        </Resource>
+        <Resource name="query18.planBefore">
+            <![CDATA[
+KapOLAPToEnumerableConverter
+  KapProjectRel(C_NAME=[$0], COUNT_ORDER=[$4], LO_ORDERDATE=[$1], DATE_TIME=[$2], DATE_TIME0=[$3], SUM_CUSTKEY=[$5], ctx=[])
+    KapAggregateRel(group-set=[[0, 1, 2, 3]], groups=[null], COUNT_ORDER=[COUNT($4)], SUM_CUSTKEY=[SUM($5)], ctx=[])
+      KapProjectRel(C_NAME=[$3], LO_ORDERDATE=[$1], DATE_TIME=[$0], $f3=[$5], LO_ORDERKEY=[$2], C_CUSTKEY=[$4], ctx=[])
+        KapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
           KapProjectRel(DATE_TIME=['1996-01-02'], ctx=[])
+            KapValuesRel(tuples=[[{ 0 }]])
+          KapProjectRel(LO_ORDERDATE=[$0], LO_ORDERKEY=[$1], C_NAME=[$2], C_CUSTKEY=[$3], DATE_TIME=[$4], ctx=[])
+            KapProjectRel(LO_ORDERDATE=[$0], LO_ORDERKEY=[$1], C_NAME=[$2], C_CUSTKEY=[$3], DATE_TIME=[$5], ctx=[])
+              KapJoinRel(condition=[=($0, $5)], joinType=[inner], ctx=[])
+                KapProjectRel(LO_ORDERDATE=[$5], LO_ORDERKEY=[$0], C_NAME=[$22], C_CUSTKEY=[$21], DATE_TIME=[$29], ctx=[])
+                  KapJoinRel(condition=[=($5, $29)], joinType=[inner], ctx=[])
+                    KapJoinRel(condition=[=($2, $21)], joinType=[inner], ctx=[])
+                      KapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
+                      KapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
+                    KapUnionRel(all=[false], ctx=[], all=[false])
+                      KapUnionRel(all=[true], ctx=[], all=[true])
+                        KapUnionRel(all=[true], ctx=[], all=[true])
+                          KapUnionRel(all=[true], ctx=[], all=[true])
+                            KapUnionRel(all=[false], ctx=[], all=[false])
+                              KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
+                                KapValuesRel(tuples=[[{ 0 }]])
+                              KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
+                                KapValuesRel(tuples=[[{ 0 }]])
+                            KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
+                              KapValuesRel(tuples=[[{ 0 }]])
+                          KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
+                            KapValuesRel(tuples=[[{ 0 }]])
+                        KapProjectRel(DATE_TIME=['1996-01-02'], ctx=[])
+                          KapValuesRel(tuples=[[{ 0 }]])
+                      KapProjectRel(DATE_TIME=['1995-06-01'], ctx=[])
+                        KapValuesRel(tuples=[[{ 0 }]])
+                KapProjectRel(DATE_TIME=['1996-01-02'], ctx=[])
+                  KapValuesRel(tuples=[[{ 0 }]])
+]]>
+        </Resource>
+        <Resource name="query18.planAfter">
+            <![CDATA[
+KapOLAPToEnumerableConverter
+  KapProjectRel(C_NAME=[$2], COUNT_ORDER=[$4], LO_ORDERDATE=[$1], DATE_TIME=[$0], DATE_TIME0=[$3], SUM_CUSTKEY=[$5], ctx=[])
+    KapAggregateRel(group-set=[[0, 1, 2, 3]], groups=[null], COUNT_ORDER=[$SUM0($4)], SUM_CUSTKEY=[SUM($5)], ctx=[])
+      KapProjectRel(DATE_TIME=[$0], LO_ORDERDATE=[$1], C_NAME=[$2], DATE_TIME0=[$3], $f4=[CASE(IS NULL($4), CAST(0):BIGINT, $4)], SUM_CUSTKEY=[$5], ctx=[])
+        KapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
+          KapProjectRel(DATE_TIME=['1996-01-02'], ctx=[])
+            KapValuesRel(tuples=[[{ 0 }]])
+          KapAggregateRel(group-set=[[0, 1, 4]], groups=[null], COUNT_ORDER=[$SUM0($2)], SUM_CUSTKEY=[SUM($3)], ctx=[])
+            KapJoinRel(condition=[=($0, $4)], joinType=[inner], ctx=[])
+              KapAggregateRel(group-set=[[0, 1]], groups=[null], COUNT_ORDER=[$SUM0($2)], SUM_CUSTKEY=[SUM($3)], ctx=[])
+                KapJoinRel(condition=[=($0, $4)], joinType=[inner], ctx=[])
+                  KapAggregateRel(group-set=[[5, 22]], groups=[null], COUNT_ORDER=[COUNT($0)], SUM_CUSTKEY=[SUM($21)], ctx=[])
+                    KapJoinRel(condition=[=($2, $21)], joinType=[inner], ctx=[])
+                      KapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
+                      KapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
+                  KapUnionRel(all=[false], ctx=[], all=[false])
+                    KapUnionRel(all=[true], ctx=[], all=[true])
+                      KapUnionRel(all=[true], ctx=[], all=[true])
+                        KapUnionRel(all=[true], ctx=[], all=[true])
+                          KapUnionRel(all=[false], ctx=[], all=[false])
+                            KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
+                              KapValuesRel(tuples=[[{ 0 }]])
+                            KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
+                              KapValuesRel(tuples=[[{ 0 }]])
+                          KapProjectRel(DATE_TIME=['1995-03-29'], ctx=[])
+                            KapValuesRel(tuples=[[{ 0 }]])
+                        KapProjectRel(DATE_TIME=['1995-04-01'], ctx=[])
+                          KapValuesRel(tuples=[[{ 0 }]])
+                      KapProjectRel(DATE_TIME=['1996-01-02'], ctx=[])
+                        KapValuesRel(tuples=[[{ 0 }]])
+                    KapProjectRel(DATE_TIME=['1995-06-01'], ctx=[])
+                      KapValuesRel(tuples=[[{ 0 }]])
+              KapProjectRel(DATE_TIME=['1996-01-02'], ctx=[])
+                KapValuesRel(tuples=[[{ 0 }]])
+]]>
+        </Resource>
+        <Resource name="query19.planBefore">
+            <![CDATA[
+KapOLAPToEnumerableConverter
+  KapProjectRel(EXPR$0=[$2], LO_ORDERDATE=[$0], DATE_TIME=[$1], ctx=[])
+    KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$0=[SUM($2)], ctx=[])
+      KapProjectRel(LO_ORDERDATE=[$5], DATE_TIME=[$18], $f2=[*($9, 3)], ctx=[])
+        KapJoinRel(condition=[=($5, $18)], joinType=[inner], ctx=[])
+          KapTableScan(table=[[SSB, P_LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]])
+          KapProjectRel(DATE_TIME=[19931014], ctx=[])
+            KapValuesRel(tuples=[[{ 0 }]])
+]]>
+        </Resource>
+        <Resource name="query19.planAfter">
+            <![CDATA[
+KapOLAPToEnumerableConverter
+  KapProjectRel(EXPR$0=[$2], LO_ORDERDATE=[$0], DATE_TIME=[$1], ctx=[])
+    KapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$0=[SUM($2)], ctx=[])
+      KapProjectRel(LO_ORDERDATE=[$5], DATE_TIME=[$18], $f2=[*($9, 3)], ctx=[])
+        KapJoinRel(condition=[=($5, $18)], joinType=[inner], ctx=[])
+          KapTableScan(table=[[SSB, P_LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]])
+          KapProjectRel(DATE_TIME=[19931014], ctx=[])
             KapValuesRel(tuples=[[{ 0 }]])
 ]]>
         </Resource>

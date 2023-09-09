@@ -38,6 +38,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
@@ -117,15 +118,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return false;
         }
 
-        if (call.rel(1) instanceof KapProjectRel) {
-            final KapProjectRel project = call.rel(1);
-            final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
-            project.getProjects().forEach(p -> builder.addAll(RelOptUtil.InputFinder.bits(p)));
-            // Avoid re-entry of rule.
-            return project.getProjects().size() <= builder.build().cardinality();
-        }
-
-        return true;
+        return !(call.rel(1) instanceof KapProjectRel) || canApplyRule(call.rel(1));
     }
 
     @Override
@@ -137,6 +130,17 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
         RelNode relNode = transposer.getTransposedRel();
         call.transformTo(relNode);
+    }
+
+    private boolean canApplyRule(KapProjectRel project) {
+        if (project.getProjects().stream().anyMatch(RexCall.class::isInstance)) {
+            // to-do: maybe we should support this.
+            return false;
+        }
+        final ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
+        project.getProjects().forEach(p -> builder.addAll(RelOptUtil.InputFinder.bits(p)));
+        // Avoid re-entry of rule.
+        return project.getProjects().size() <= builder.build().cardinality();
     }
 
     private <E> SqlSplittableAggFunction.Registry<E> createRegistry(final List<E> list) {
