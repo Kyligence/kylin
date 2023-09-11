@@ -115,9 +115,18 @@ public class MemoryLockUtils {
     public static RawResource doWithLock(String resPath, boolean readonly, ResourceStore store,
             Action<RawResource> action) {
         if (!isNoNeedToLock(readonly, store)) {
-            MemoryLockUtils.lockAndRecord(resPath, null, readonly);
+            lockAndRecord(resPath, null, readonly);
         }
         return action.run();
+    }
+
+    public static void manuallyLockModule(String project, ModuleLockEnum module, ResourceStore store) {
+        if (isNoNeedToLock(false, store)) {
+            return;
+        }
+        List<TransactionLock> moduleLocks = getModuleLocks(project, module);
+        assert moduleLocks.size() == 1;
+        batchLock(moduleLocks.get(0).transactionUnit(), moduleLocks, false);
     }
 
     public static void lockAndRecord(String resPath, List<String> specifiedPath, boolean readonly){

@@ -35,6 +35,8 @@ import org.apache.kylin.common.hystrix.NCircuitBreaker;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.Serializer;
+import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
+import org.apache.kylin.common.persistence.lock.ModuleLockEnum;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.ClassUtil;
@@ -240,6 +242,7 @@ public class NDataModelManager {
     public NDataModel createDataModelDesc(NDataModel model, String owner) {
         NDataModel copy = copyForWrite(model);
 
+        MemoryLockUtils.manuallyLockModule(project, ModuleLockEnum.MODEL, getStore());
         checkDuplicateModel(model);
 
         //check model count

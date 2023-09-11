@@ -30,6 +30,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.hystrix.NCircuitBreaker;
 import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
+import org.apache.kylin.common.persistence.lock.ModuleLockEnum;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -107,6 +109,7 @@ public class NProjectManager {
 
         ProjectInstance currentProject = getProject(projectName);
         if (currentProject == null) {
+            MemoryLockUtils.manuallyLockModule("_global", ModuleLockEnum.PROJECT, getStore());
             //circuit breaker
             NCircuitBreaker.verifyProjectCreation(listAllProjects().size());
 
