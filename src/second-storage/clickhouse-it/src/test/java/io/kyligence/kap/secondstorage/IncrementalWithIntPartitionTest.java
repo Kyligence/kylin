@@ -77,7 +77,6 @@ import io.kyligence.kap.secondstorage.test.EnableClickHouseJob;
 import io.kyligence.kap.secondstorage.test.EnableTestUser;
 import io.kyligence.kap.secondstorage.test.SharedSparkSession;
 import io.kyligence.kap.secondstorage.test.utils.JobWaiter;
-import io.kyligence.kap.secondstorage.test.utils.MockedSecondStorageService;
 import lombok.val;
 
 public class IncrementalWithIntPartitionTest implements JobWaiter {
@@ -100,7 +99,7 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
             Collections.singletonList(modelId), "src/test/resources/ut_meta");
     @Rule
     public TestRule rule = RuleChain.outerRule(enableTestUser).around(test);
-    private SecondStorageService secondStorageService = new MockedSecondStorageService();
+    private SecondStorageService secondStorageService = new SecondStorageService();
     private SecondStorageEndpoint secondStorageEndpoint = new SecondStorageEndpoint();
     private IndexDataConstructor indexDataConstructor;
 
@@ -168,7 +167,8 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         val request = new StorageRequest();
         request.setProject(project);
         request.setModel(modelId);
-        secondStorageEndpoint.cleanStorage(request, segs.subList(0, 1));
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                () -> secondStorageEndpoint.cleanStorage(request, segs.subList(0, 1)), project);
 
         val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         val jobs = executableManager.listExecByModelAndStatus(modelId, ExecutableState::isRunning, null);
@@ -231,7 +231,8 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         val request = new StorageRequest();
         request.setProject(project);
         request.setModel(modelId);
-        secondStorageEndpoint.cleanStorage(request, segs.subList(0, 1));
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                () -> secondStorageEndpoint.cleanStorage(request, segs.subList(0, 1)), project);
 
         val jobs2 = executableManager.listExecByModelAndStatus(modelId, ExecutableState::isRunning, null);
         jobs2.forEach(job -> waitJobFinish(getProject(), job.getId()));
@@ -340,7 +341,8 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val dataflow = dataflowManager.getDataflow(modelId);
         val segs = dataflow.getQueryableSegments().stream().map(NDataSegment::getId).collect(Collectors.toList());
-        val jobId = secondStorageService.triggerSegmentsClean(project, modelId, Sets.newHashSet(segs));
+        val jobId = EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                () -> secondStorageService.triggerSegmentsClean(project, modelId, Sets.newHashSet(segs)), project);
         waitJobFinish(project, jobId);
     }
 
@@ -357,7 +359,8 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val dataflow = dataflowManager.getDataflow(modelId);
         val segs = dataflow.getQueryableSegments().stream().map(NDataSegment::getId).collect(Collectors.toList());
-        val jobId = secondStorageService.triggerSegmentsClean(project, modelId, Sets.newHashSet(segs));
+        val jobId = EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                () -> secondStorageService.triggerSegmentsClean(project, modelId, Sets.newHashSet(segs)), project);
         waitJobFinish(project, jobId);
     }
 
@@ -379,7 +382,8 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         request.setProject(project);
         request.setModel(modelId);
         request.setSegmentIds(segs);
-        secondStorageEndpoint.cleanStorage(request, segs);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> secondStorageEndpoint.cleanStorage(request, segs),
+                project);
         val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val job = manager.getAllExecutables().stream().filter(ClickHouseSegmentCleanJob.class::isInstance).findFirst();
         Assert.assertTrue(job.isPresent());

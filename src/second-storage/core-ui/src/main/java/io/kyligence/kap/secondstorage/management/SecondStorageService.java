@@ -608,7 +608,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         });
         Map<String, Map<String, String>> resultMap = new HashMap<>();
         for (String project : projects) {
-            resultMap.put(project, triggerProjectSegmentClean(project));
+            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                    () -> resultMap.put(project, triggerProjectSegmentClean(project)), project);
         }
         return resultMap;
     }
