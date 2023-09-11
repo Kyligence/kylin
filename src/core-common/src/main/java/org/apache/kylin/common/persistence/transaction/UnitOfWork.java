@@ -343,7 +343,7 @@ public class UnitOfWork {
             retry = params.getMaxRetry();
         }
         if (throwable instanceof DeadLockException) {
-            log.info("DeadLock found in this transaction, will retry");
+            log.debug("DeadLock found in this transaction, will retry");
         }
         if (throwable instanceof QuitTxnRightNow) {
             retry = params.getMaxRetry();
