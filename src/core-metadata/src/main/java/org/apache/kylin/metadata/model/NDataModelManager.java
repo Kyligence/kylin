@@ -118,6 +118,7 @@ public class NDataModelManager {
                     model.setJoinTables(entity.getJoinTables());
                     model.setDependencies(model.calcDependencies());
                     model.setModelType(entity.getModelType());
+                    model.setLastModified(entity.getLastModified());
 
                     postModelBrokenEvent(entity);
                 }
