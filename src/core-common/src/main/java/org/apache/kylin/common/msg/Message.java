@@ -1661,4 +1661,8 @@ public class Message {
 
     }
 
+    public String getRedisInitFailed() {
+        return "Redis init failed";
+    }
+
 }

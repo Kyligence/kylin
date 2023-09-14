@@ -35,6 +35,7 @@ import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.rest.cache.KylinCache;
 import org.apache.kylin.rest.cache.KylinEhCache;
 import org.apache.kylin.rest.cache.RedisCache;
+import org.apache.kylin.rest.cache.RedisCacheV2;
 import org.apache.kylin.rest.request.SQLRequest;
 import org.apache.kylin.rest.response.SQLResponse;
 import org.apache.kylin.rest.response.TableMetaCacheResult;
@@ -72,7 +73,11 @@ public class QueryCacheManager implements CommonQueryCacheSupporter {
     public void init() {
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         if (kylinConfig.isRedisEnabled()) {
-            kylinCache = RedisCache.getInstance();
+            if (kylinConfig.isRedisSentinelEnabled()) {
+                kylinCache = RedisCacheV2.getInstance();
+            } else {
+                kylinCache = RedisCache.getInstance();
+            }
         } else {
             kylinCache = KylinEhCache.getInstance();
         }
@@ -328,7 +333,12 @@ public class QueryCacheManager implements CommonQueryCacheSupporter {
     public void recoverCache() {
         boolean isRedisEnabled = KylinConfig.getInstanceFromEnv().isRedisEnabled();
         if (isRedisEnabled) {
-            RedisCache.recoverInstance();
+            if (kylinCache instanceof RedisCache) {
+                RedisCache.recoverInstance();
+            }
+            if (kylinCache instanceof RedisCacheV2) {
+                kylinCache = ((RedisCacheV2) kylinCache).recoverInstance();
+            }
             logger.info("[query cache log] Redis client recover successfully.");
         }
     }
