@@ -115,14 +115,16 @@ public class MemoryLockGraph {
             trace.add(currentNode);
             currentNode.getDependencies().forEach(id -> {
                 ThreadNode node = nodeMap.get(id);
-                findCycles(node, trace, cycles, finishedNode);
+                if (node != null) {
+                    findCycles(node, trace, cycles, finishedNode);
+                }
             });
             trace.remove(trace.size() - 1);
         }
     }
 
     public Set<Long> getKeyNodes(List<List<Long>> cycles) {
-        Map<Long, Integer> cycleCntMap = Maps.newConcurrentMap();
+        Map<Long, Integer> cycleCntMap = Maps.newHashMap();
         cycles.stream().flatMap(List::stream).forEach(threadId -> {
             int cnt = cycleCntMap.getOrDefault(threadId, 0);
             cycleCntMap.put(threadId, cnt + 1);
@@ -141,6 +143,10 @@ public class MemoryLockGraph {
 
     public boolean isThreadWaitForLock(long threadId) {
         return nodeMap.get(threadId).getRequiredLock() == null;
+    }
+
+    public int getThreadNodeCount() {
+        return nodeMap.size();
     }
 
     @Data

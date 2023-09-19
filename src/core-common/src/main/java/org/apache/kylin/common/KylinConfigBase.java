@@ -715,7 +715,7 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     public long getLockCheckIntervalSeconds() {
-        return Long.parseLong(getOptional("kylin.env.dead-lock-check-interval", "60"));
+        return Long.parseLong(getOptional("kylin.env.dead-lock-check-interval", "3"));
     }
 
     public int getLockRemoveMaxSize() {

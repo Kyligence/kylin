@@ -44,6 +44,7 @@ import org.apache.kylin.common.persistence.event.ResourceDeleteEvent;
 import org.apache.kylin.common.persistence.event.ResourceRelatedEvent;
 import org.apache.kylin.common.persistence.event.StartUnit;
 import org.apache.kylin.common.persistence.lock.DeadLockException;
+import org.apache.kylin.common.persistence.lock.LockInterruptException;
 import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
 import org.apache.kylin.common.persistence.lock.TempLock;
 import org.apache.kylin.common.persistence.lock.TransactionLock;
@@ -344,6 +345,11 @@ public class UnitOfWork {
         }
         if (throwable instanceof DeadLockException) {
             log.debug("DeadLock found in this transaction, will retry");
+        }
+        if (throwable instanceof LockInterruptException) {
+            // Just remove the interrupted flag.
+            Thread.interrupted();
+            log.debug("DeadLock is found by TransactionDeadLockHandler, will retry");
         }
         if (throwable instanceof QuitTxnRightNow) {
             retry = params.getMaxRetry();

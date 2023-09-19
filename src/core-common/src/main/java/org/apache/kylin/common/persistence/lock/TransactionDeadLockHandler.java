@@ -70,18 +70,22 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
 
     @Override
     public void run() {
-        log.info("Start deadlock detection");
-        Set<ThreadInfo> threadInfoSet = getThreadsToBeKill();
-        if (CollectionUtils.isEmpty(threadInfoSet)) {
-            return;
-        }
+        try {
+            log.info("Start deadlock detection");
+            Set<ThreadInfo> threadInfoSet = getThreadsToBeKill();
+            if (CollectionUtils.isEmpty(threadInfoSet)) {
+                return;
+            }
 
-        for (ThreadInfo threadInfo : threadInfoSet) {
-            log.warn("Deadlock thread detail:\n{}", threadInfo);
+            for (ThreadInfo threadInfo : threadInfoSet) {
+                log.warn("Deadlock thread detail:\n{}", threadInfo);
+            }
+            Set<Long> threadIdSet = threadInfoSet.stream().map(ThreadInfo::getThreadId).collect(Collectors.toSet());
+            killThreadsById(threadIdSet);
+            log.info("End deadlock detection");
+        } catch (Throwable throwable) {
+            log.info("Deadlock detection failed. Wait for next execution ...", throwable);
         }
-        Set<Long> threadIdSet = threadInfoSet.stream().map(ThreadInfo::getThreadId).collect(Collectors.toSet());
-        killThreadsById(threadIdSet);
-        log.info("End deadlock detection");
     }
 
     @Override
@@ -99,7 +103,8 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
             log.info("No transaction deadlock threads");
             return Collections.emptySet();
         }
-        log.info("Found transaction deadlock thread, size {}", threadInfoSet.size());
+        log.info("Found transaction deadlock thread, size {}, total transaction size: {}", threadInfoSet.size(),
+                MemoryLockUtils.getTransactionSize());
         return threadInfoSet;
     }
 

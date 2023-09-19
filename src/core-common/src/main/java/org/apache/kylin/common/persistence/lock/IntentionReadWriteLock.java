@@ -21,6 +21,7 @@ import static java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -66,7 +67,7 @@ public class IntentionReadWriteLock implements IntentionLock, ReadWriteLock, Mem
     }
 
     private static class InnerReentrantLock extends ReentrantReadWriteLock {
-        private final Set<Long> readLockOwners = new HashSet<>();
+        private final Set<Long> readLockOwners = new ConcurrentSkipListSet<>();
 
         public InnerReentrantLock() {
             super(true);

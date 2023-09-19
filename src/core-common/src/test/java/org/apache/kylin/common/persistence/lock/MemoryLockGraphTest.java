@@ -27,14 +27,81 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.InMemResourceStore;
+import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.common.persistence.ThreadViewResourceStore;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 @MetadataInfo(onlyProps = true)
 class MemoryLockGraphTest {
+
+    @Test
+    void deadLockWithParallelThreadTest() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        InMemResourceStore inMemResourceStore = (InMemResourceStore) ResourceStore.getKylinMetaStore(config);
+        ThreadViewResourceStore store = new ThreadViewResourceStore(inMemResourceStore, config);
+        AtomicBoolean shouldContinue = new AtomicBoolean(true);
+        Runnable suggest = () -> {
+            while(shouldContinue.get()) {
+                try {
+                    UnitOfWork.doInTransactionWithRetry(() -> {
+                        MemoryLockUtils.doWithLock("/default/model_desc/mDrop", true, store, () -> null);
+                        MemoryLockUtils.manuallyLockModule("default", ModuleLockEnum.MODEL, store);
+                        System.out.println("Suggest transaction succeed");
+                        return null;
+                    }, "default");
+                } catch (Exception e) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        // do nothing.
+                    }
+                    System.out.println("Suggest transaction failed");
+                }
+            }
+        };
+        Runnable drop = () -> {
+            while(shouldContinue.get()) {
+                try {
+                    UnitOfWork.doInTransactionWithRetry(() -> {
+                        MemoryLockUtils.doWithLock("/default/model_desc/mDrop", true, store, () -> null);
+                        MemoryLockUtils.doWithLock("/default/model_desc/mDrop", false, store, () -> null);
+                        System.out.println("Drop transaction succeed");
+                        return null;
+                    }, "default");
+                } catch (Exception e) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        // do nothing.
+                    }
+                    System.out.println("Drop transaction failed");
+                }
+            }
+        };
+
+        List<Thread> threads = new ArrayList<>();
+        threads.add(new Thread(suggest));
+        threads.add(new Thread(suggest));
+        threads.add(new Thread(suggest));
+        threads.add(new Thread(suggest));
+        threads.add(new Thread(suggest));
+        threads.add(new Thread(drop));
+
+
+        config.setProperty("kylin.env.dead-lock-check-interval", "3");
+        TransactionDeadLockHandler.getInstance().start();
+
+        threads.forEach(Thread::start);
+
+        await().atMost(60, TimeUnit.SECONDS).until(() -> threads.stream().allMatch(t -> t.getState() == Thread.State.TIMED_WAITING));
+        await().atMost(4, TimeUnit.SECONDS).until(() -> threads.stream().anyMatch(t -> t.getState() != Thread.State.TIMED_WAITING));
+
+        shouldContinue.set(false);
+    }
 
     @Test
     void deadLockCheckTest() throws InterruptedException {

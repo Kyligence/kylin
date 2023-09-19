@@ -196,6 +196,10 @@ public class MemoryLockUtils {
         MEMORY_LOCK_GRAPH.deleteThreadNode(Thread.currentThread().getId());
     }
 
+    public static int getTransactionSize() {
+        return MEMORY_LOCK_GRAPH.getThreadNodeCount();
+    }
+
     public interface Action<T> {
         T run();
     }

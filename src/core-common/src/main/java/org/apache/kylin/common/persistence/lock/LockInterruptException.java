@@ -17,9 +17,7 @@
  */
 package org.apache.kylin.common.persistence.lock;
 
-import org.apache.kylin.common.persistence.transaction.QuitTxnRightNow;
-
-public class LockInterruptException extends RuntimeException implements QuitTxnRightNow {
+public class LockInterruptException extends RuntimeException {
     public LockInterruptException(Throwable throwable) {
         super(throwable);
     }
