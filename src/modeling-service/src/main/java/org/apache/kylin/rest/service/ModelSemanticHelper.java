@@ -95,8 +95,8 @@ import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.model.util.scd2.SCD2CondChecker;
-import org.apache.kylin.metadata.model.util.scd2.SCD2NonEquiCondSimplification;
 import org.apache.kylin.metadata.model.util.scd2.SCD2SqlConverter;
+import org.apache.kylin.metadata.model.util.scd2.Scd2Simplifier;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinDesc;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -303,7 +303,7 @@ public class ModelSemanticHelper extends BasicService {
 
             //4. update dataModel
             try {
-                SCD2NonEquiCondSimplification.INSTANCE.convertToSimplifiedSCD2Cond(analyzedJoin);
+                Scd2Simplifier.INSTANCE.simplifyScd2Conditions(analyzedJoin);
                 joinWithoutNonEquivInfo.setNonEquiJoinCondition(analyzedJoin.getNonEquiJoinCondition());
                 joinWithoutNonEquivInfo.setForeignTable(analyzedJoin.getForeignTable());
                 joinWithoutNonEquivInfo.setPrimaryTable(analyzedJoin.getPrimaryTable());

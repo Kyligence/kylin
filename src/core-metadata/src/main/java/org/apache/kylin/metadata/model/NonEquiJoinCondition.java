@@ -72,7 +72,7 @@ public class NonEquiJoinCondition implements Serializable {
     @Getter
     @Setter
     @JsonProperty("type")
-    private NonEquiJoinConditionType type;
+    private Type type;
 
     @Getter
     @Setter
@@ -130,20 +130,20 @@ public class NonEquiJoinCondition implements Serializable {
         this.opName = opName;
         this.op = op;
         this.operands = operands;
-        this.type = NonEquiJoinConditionType.EXPRESSION;
+        this.type = Type.EXPRESSION;
         this.dataType = dataType;
     }
 
     public NonEquiJoinCondition(String value, DataType dataType) {
         this.op = SqlKind.LITERAL;
-        this.type = NonEquiJoinConditionType.LITERAL;
+        this.type = Type.LITERAL;
         this.value = value;
         this.dataType = dataType;
     }
 
     public NonEquiJoinCondition(TblColRef tblColRef, DataType dataType) {
         this.op = SqlKind.INPUT_REF;
-        this.type = NonEquiJoinConditionType.COLUMN;
+        this.type = Type.COLUMN;
         this.value = tblColRef.getIdentity();
         this.colRef = tblColRef;
         this.dataType = dataType;
@@ -246,9 +246,9 @@ public class NonEquiJoinCondition implements Serializable {
             sb.append(input.toString());
             sb.append(", ");
         }
-        if (type == NonEquiJoinConditionType.LITERAL) {
+        if (type == Type.LITERAL) {
             sb.append(value);
-        } else if (type == NonEquiJoinConditionType.COLUMN) {
+        } else if (type == Type.COLUMN) {
             if (colRef != null) {
                 sb.append(colRef.getColumnWithTableAndSchema());
             } else {
@@ -290,9 +290,9 @@ public class NonEquiJoinCondition implements Serializable {
             result = prime * result + operand.hashCode();
         }
 
-        if (type == NonEquiJoinConditionType.LITERAL) {
+        if (type == Type.LITERAL) {
             result = prime * result + value.hashCode();
-        } else if (type == NonEquiJoinConditionType.COLUMN) {
+        } else if (type == Type.COLUMN) {
             if (colRef != null) {
                 result = prime * result + colRef.hashCode();
             } else {
@@ -305,7 +305,7 @@ public class NonEquiJoinCondition implements Serializable {
     @Setter
     @Getter
     @NoArgsConstructor
-    public static final class SimplifiedNonEquiJoinCondition implements Serializable {
+    public static final class SimplifiedJoinCondition implements Serializable {
 
         private static final long serialVersionUID = -1577556052145832500L;
 
@@ -318,14 +318,13 @@ public class NonEquiJoinCondition implements Serializable {
         @JsonProperty("op")
         private SqlKind op;
 
-        public SimplifiedNonEquiJoinCondition(String foreignKey, String primaryKey, SqlKind op) {
+        public SimplifiedJoinCondition(String foreignKey, String primaryKey, SqlKind op) {
             this.foreignKey = foreignKey;
             this.primaryKey = primaryKey;
             this.op = op;
         }
 
-        public SimplifiedNonEquiJoinCondition(String foreignKey, TblColRef fk, String primaryKey, TblColRef pk,
-                SqlKind op) {
+        public SimplifiedJoinCondition(String foreignKey, TblColRef fk, String primaryKey, TblColRef pk, SqlKind op) {
             this.foreignKey = foreignKey;
             this.primaryKey = primaryKey;
             this.op = op;
@@ -360,9 +359,9 @@ public class NonEquiJoinCondition implements Serializable {
                 return 1;
             }
 
-            if (cond1.getType() == NonEquiJoinConditionType.LITERAL) {
+            if (cond1.getType() == Type.LITERAL) {
                 return Objects.equals(cond1.getValue(), cond2.getValue()) ? 0 : 1;
-            } else if (cond1.getType() == NonEquiJoinConditionType.COLUMN) {
+            } else if (cond1.getType() == Type.COLUMN) {
                 return Objects.equals(cond1.getColRef().getColumnDesc(), cond2.getColRef().getColumnDesc()) ? 0 : 1;
             }
             NonEquiJoinCondition[] sorted1 = cond1.getSortedOperands();
@@ -383,11 +382,11 @@ public class NonEquiJoinCondition implements Serializable {
                 return null;
             }
 
-            if (neqJoinCond.getType() == NonEquiJoinConditionType.LITERAL) {
+            if (neqJoinCond.getType() == Type.LITERAL) {
                 return visitLiteral(neqJoinCond);
-            } else if (neqJoinCond.getType() == NonEquiJoinConditionType.COLUMN) {
+            } else if (neqJoinCond.getType() == Type.COLUMN) {
                 return visitColumn(neqJoinCond);
-            } else if (neqJoinCond.getType() == NonEquiJoinConditionType.EXPRESSION) {
+            } else if (neqJoinCond.getType() == Type.EXPRESSION) {
                 return visitExpression(neqJoinCond);
             } else {
                 return visit(neqJoinCond);
@@ -461,5 +460,20 @@ public class NonEquiJoinCondition implements Serializable {
             }
             return String.valueOf(literal.getValue3());
         }
+    }
+
+    public enum Type {
+        /**
+         * A sub NonEquiJoinCondition expression.
+         */
+        EXPRESSION,
+        /**
+         * A column.
+         */
+        COLUMN,
+        /**
+         * A literal, unlikely type for scd2 join condition.
+         */
+        LITERAL
     }
 }

@@ -115,32 +115,66 @@ public class KapJoinRule extends ConverterRule {
         // usually non-equiv-join can not be converted to equiv-join + filter
         // keep KapNonEquiJoinRel and cut to small OlapContexts in the class of KapNonEquiJoinRel
         try {
-            RexNode cnfCondition = RexUtil.toCnf(join.getCluster().getRexBuilder(), join.getCondition());
+            RexBuilder rexBuilder = join.getCluster().getRexBuilder();
+            RexNode cnfCondition = RexUtil.toCnf(rexBuilder, join.getCondition());
             info = JoinInfo.of(left, right, cnfCondition);
             if (!info.isEqui()) {
-                boolean isScd2Rel = isScd2Enabled && isScd2JoinCondition(info, join);
+                List<RexInputRef> scd2Refs = Lists.newArrayList();
+                boolean isScd2Rel = isScd2Enabled && isScd2JoinCondition(info, join, scd2Refs);
                 if (join.getJoinType() == JoinRelType.INNER && !isScd2Rel
                         && hasEqualJoinPart(left, right, join.getCondition())) {
                     KapJoinRel joinRel = new KapJoinRel(join.getCluster(), traitSet, left, right,
-                            info.getEquiCondition(left, right, join.getCluster().getRexBuilder()), info.leftKeys,
-                            info.rightKeys, join.getVariablesSet(), join.getJoinType());
+                            info.getEquiCondition(left, right, rexBuilder), info.leftKeys, info.rightKeys,
+                            join.getVariablesSet(), join.getJoinType());
                     joinRel.setJoinCondEqualNullSafe(joinCondEqualNullSafe);
-                    RexNode rexNode = info.getRemaining(join.getCluster().getRexBuilder());
+                    RexNode rexNode = info.getRemaining(rexBuilder);
                     return rexNode.isAlwaysTrue() ? joinRel
                             : new KapFilterRel(join.getCluster(), joinRel.getTraitSet(), joinRel, rexNode);
                 }
-                return new KapNonEquiJoinRel(join.getCluster(), traitSet, left, right, join.getCondition(),
+
+                // cnf is better, but conflict with transformJoinCondition, need optimize
+                RexNode joinCondition = normalizeCondition(rexBuilder, join.getCondition(), scd2Refs);
+                return new KapNonEquiJoinRel(join.getCluster(), traitSet, left, right, joinCondition,
                         join.getVariablesSet(), join.getJoinType(), isScd2Rel);
             } else {
                 KapJoinRel joinRel = new KapJoinRel(join.getCluster(), traitSet, left, right,
-                        info.getEquiCondition(left, right, join.getCluster().getRexBuilder()), info.leftKeys,
-                        info.rightKeys, join.getVariablesSet(), join.getJoinType());
+                        info.getEquiCondition(left, right, rexBuilder), info.leftKeys, info.rightKeys,
+                        join.getVariablesSet(), join.getJoinType());
                 joinRel.setJoinCondEqualNullSafe(joinCondEqualNullSafe);
                 return joinRel;
             }
         } catch (InvalidRelException e) {
             throw new AssertionError(e);
         }
+    }
+
+    private RexNode normalizeCondition(RexBuilder rexBuilder, RexNode cnfCondition, List<RexInputRef> scd2Refs) {
+        if (scd2Refs.isEmpty() || !(cnfCondition instanceof RexCall)) {
+            return cnfCondition;
+        }
+
+        List<RexNode> newNodes = Lists.newArrayList();
+        List<RexNode> oriNodes = ((RexCall) cnfCondition).getOperands();
+        for (RexNode rexNode : oriNodes) {
+            RexNode invert = rexNode;
+            if (SCD2_KINDS.contains(rexNode.getKind())) {
+                RexNode left = ((RexCall) invert).getOperands().get(0);
+                RexInputRef rexInputRef = extractInputRef(left);
+                if (!scd2Refs.contains(rexInputRef)) {
+                    invert = RexUtil.invert(rexBuilder, (RexCall) rexNode);
+                }
+            } else {
+                invert = normalizeCondition(rexBuilder, rexNode, scd2Refs);
+            }
+            if (invert == null) {
+                invert = rexNode;
+            }
+            newNodes.add(invert);
+        }
+        if (!newNodes.equals(oriNodes)) {
+            return rexBuilder.makeCall(cnfCondition.getType(), ((RexCall) cnfCondition).getOperator(), newNodes);
+        }
+        return cnfCondition;
     }
 
     private boolean hasEqualJoinPart(RelNode left, RelNode right, RexNode condition) {
@@ -311,7 +345,7 @@ public class KapJoinRule extends ConverterRule {
         return call.operands.get(ordinal) instanceof RexCall;
     }
 
-    private boolean isScd2JoinCondition(JoinInfo joinInfo, LogicalJoin join) {
+    private boolean isScd2JoinCondition(JoinInfo joinInfo, LogicalJoin join, List<RexInputRef> scd2Refs) {
         if (joinInfo.isEqui() || !isScd2Enabled) {
             return false;
         }
@@ -355,7 +389,11 @@ public class KapJoinRule extends ConverterRule {
                 allSize.getAndAdd(2);
             }
         });
-        return allSize.get() == nodeList.size();
+        boolean isScd2 = allSize.get() == nodeList.size();
+        if (isScd2) {
+            scd2Refs.addAll(refOpMap.keySet());
+        }
+        return isScd2;
     }
 
     private RexInputRef extractInputRef(RexNode node) {

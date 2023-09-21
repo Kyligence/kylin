@@ -17,7 +17,7 @@
  */
 package org.apache.kylin.metadata.model.util.scd2;
 
-import static org.apache.kylin.metadata.model.NonEquiJoinCondition.SimplifiedNonEquiJoinCondition;
+import static org.apache.kylin.metadata.model.NonEquiJoinCondition.SimplifiedJoinCondition;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -58,17 +58,17 @@ public class SCD2CondChecker {
             return false;
         }
 
-        return nDataModel.getJoinTables().stream().filter(joinTableDesc -> joinTableDesc.getJoin().isNonEquiJoin())
-                .allMatch(joinTableDesc -> SCD2NonEquiCondSimplification.INSTANCE
-                        .simplifiedSCD2CondConvertChecker(joinTableDesc.getJoin()));
+        return nDataModel.getJoinTables().stream() //
+                .filter(joinTableDesc -> joinTableDesc.getJoin().isNonEquiJoin())
+                .allMatch(joinTableDesc -> Scd2Simplifier.INSTANCE.isValidScd2JoinDesc(joinTableDesc.getJoin()));
     }
 
     public boolean checkFkPkPairUnique(SimplifiedJoinDesc joinDesc) {
-        return checkFkPkPairUnique(SCD2NonEquiCondSimplification.INSTANCE.simplifyFksPks(joinDesc.getForeignKey(),
-                joinDesc.getPrimaryKey()), joinDesc.getSimplifiedNonEquiJoinConditions());
+        return checkFkPkPairUnique(Scd2Simplifier.INSTANCE.buildAndCheckEqualConditions(joinDesc),
+                joinDesc.getSimplifiedNonEquiJoinConditions());
     }
 
-    public boolean checkSCD2NonEquiJoinCondPair(final List<SimplifiedNonEquiJoinCondition> simplified) {
+    public boolean checkSCD2NonEquiJoinCondPair(final List<SimplifiedJoinCondition> simplified) {
         if (CollectionUtils.isEmpty(simplified)) {
             return false;
         }
@@ -80,7 +80,7 @@ public class SCD2CondChecker {
         }
 
         Map<String, List<SqlKind>> mapping = Maps.newHashMap();
-        for (SimplifiedNonEquiJoinCondition cond : simplified) {
+        for (SimplifiedJoinCondition cond : simplified) {
             if (!checkSCD2SqlOp(cond.getOp())) {
                 return false;
             }
@@ -95,7 +95,7 @@ public class SCD2CondChecker {
         return mapping.values().stream().allMatch(this::isValidOperatorPair);
     }
 
-    private SqlKind inverse(SqlKind kind) {
+    public static SqlKind inverse(SqlKind kind) {
         switch (kind) {
         case GREATER_THAN:
             return SqlKind.LESS_THAN;
@@ -117,14 +117,13 @@ public class SCD2CondChecker {
         return SCD_2_JOIN_PAIRS.contains(Sets.newHashSet(ops));
     }
 
-    boolean checkFkPkPairUnique(List<SimplifiedNonEquiJoinCondition> equiFkPks,
-            List<SimplifiedNonEquiJoinCondition> nonEquiFkPks) {
-        List<SimplifiedNonEquiJoinCondition> allFkPks = new ArrayList<>();
+    boolean checkFkPkPairUnique(List<SimplifiedJoinCondition> equiFkPks, List<SimplifiedJoinCondition> nonEquiFkPks) {
+        List<SimplifiedJoinCondition> allFkPks = new ArrayList<>();
         allFkPks.addAll(equiFkPks);
         allFkPks.addAll(nonEquiFkPks);
 
         Set<String> pairSet = new HashSet<>();
-        for (SimplifiedNonEquiJoinCondition allFkPk : allFkPks) {
+        for (SimplifiedJoinCondition allFkPk : allFkPks) {
             String[] joinKeys = new String[] { allFkPk.getPrimaryKey(), allFkPk.getForeignKey() };
             Arrays.sort(joinKeys);
             String key = String.join(",", joinKeys);

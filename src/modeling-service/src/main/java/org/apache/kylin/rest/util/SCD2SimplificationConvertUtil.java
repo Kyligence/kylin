@@ -18,6 +18,7 @@
 package org.apache.kylin.rest.util;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,11 +30,13 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.JoinTableDesc;
-import org.apache.kylin.metadata.model.util.scd2.SCD2NonEquiCondSimplification;
+import org.apache.kylin.metadata.model.util.scd2.Scd2Simplifier;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinDesc;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
 
 public class SCD2SimplificationConvertUtil {
+    private SCD2SimplificationConvertUtil() {
+    }
 
     /**
      * fill simplified cond according to joinTables
@@ -55,9 +58,7 @@ public class SCD2SimplificationConvertUtil {
             }
 
             try {
-                SimplifiedJoinDesc convertedJoinDesc = SCD2NonEquiCondSimplification.INSTANCE
-                        .convertToSimplifiedSCD2Cond(joinDesc);
-
+                SimplifiedJoinDesc convertedJoinDesc = Scd2Simplifier.INSTANCE.simplifyScd2Conditions(joinDesc);
                 SimplifiedJoinDesc responseJoinDesc = simplifiedJoinTableDescs.get(i).getSimplifiedJoinDesc();
                 responseJoinDesc
                         .setSimplifiedNonEquiJoinConditions(convertedJoinDesc.getSimplifiedNonEquiJoinConditions());
@@ -78,7 +79,7 @@ public class SCD2SimplificationConvertUtil {
      */
     public static List<SimplifiedJoinTableDesc> simplifiedJoinTablesConvert(List<JoinTableDesc> joinTables) {
         if (Objects.isNull(joinTables)) {
-            return null;
+            return Collections.emptyList();
         }
 
         List<SimplifiedJoinTableDesc> simplifiedJoinTableDescs;
@@ -86,7 +87,7 @@ public class SCD2SimplificationConvertUtil {
             simplifiedJoinTableDescs = Arrays.asList(
                     JsonUtil.readValue(JsonUtil.writeValueAsString(joinTables), SimplifiedJoinTableDesc[].class));
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
 
         fillSimplifiedCond(simplifiedJoinTableDescs, joinTables);
@@ -103,14 +104,14 @@ public class SCD2SimplificationConvertUtil {
     public static List<JoinTableDesc> convertSimplified2JoinTables(
             List<SimplifiedJoinTableDesc> simplifiedJoinTableDescs) {
         if (Objects.isNull(simplifiedJoinTableDescs)) {
-            return null;
+            return Collections.emptyList();
         }
         List<JoinTableDesc> joinTableDescs;
         try {
             joinTableDescs = Arrays.asList(
                     JsonUtil.readValue(JsonUtil.writeValueAsString(simplifiedJoinTableDescs), JoinTableDesc[].class));
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
 
         return joinTableDescs;

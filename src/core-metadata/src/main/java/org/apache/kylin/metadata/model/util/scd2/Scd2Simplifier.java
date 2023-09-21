@@ -17,7 +17,7 @@
  */
 package org.apache.kylin.metadata.model.util.scd2;
 
-import static org.apache.kylin.metadata.model.NonEquiJoinCondition.SimplifiedNonEquiJoinCondition;
+import static org.apache.kylin.metadata.model.NonEquiJoinCondition.SimplifiedJoinCondition;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,15 +37,14 @@ import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.NonEquiJoinCondition;
-import org.apache.kylin.metadata.model.NonEquiJoinConditionType;
 import org.apache.kylin.metadata.model.TblColRef;
 
 /**
  * simplify non-equi-join
  */
-public class SCD2NonEquiCondSimplification {
+public class Scd2Simplifier {
 
-    public static final SCD2NonEquiCondSimplification INSTANCE = new SCD2NonEquiCondSimplification();
+    public static final Scd2Simplifier INSTANCE = new Scd2Simplifier();
 
     /**
      * convert cond from origin model.
@@ -55,127 +54,90 @@ public class SCD2NonEquiCondSimplification {
      * @param joinDesc
      * @return
      */
-    public SimplifiedJoinDesc convertToSimplifiedSCD2Cond(@Nullable JoinDesc joinDesc) {
-
+    public SimplifiedJoinDesc simplifyScd2Conditions(@Nullable JoinDesc joinDesc) {
         if (Objects.isNull(joinDesc)) {
             return null;
         }
 
+        List<SimplifiedJoinCondition> equalJoinPairs = buildAndCheckEqualConditions(joinDesc);
+        List<SimplifiedJoinCondition> nonEqualJoinPairs = buildAndCheckNeqConditions(joinDesc);
+
+        // check all the join-condition paris are unique
+        SCD2CondChecker.INSTANCE.checkFkPkPairUnique(equalJoinPairs, nonEqualJoinPairs);
+        SimplifiedJoinDesc convertedJoinDesc = new SimplifiedJoinDesc();
+        convertedJoinDesc.setSimplifiedNonEquiJoinConditions(nonEqualJoinPairs);
+        convertedJoinDesc.simplifyEqualJoinPairs(equalJoinPairs);
+        return convertedJoinDesc;
+    }
+
+    private List<SimplifiedJoinCondition> buildAndCheckNeqConditions(JoinDesc joinDesc) {
         NonEquiJoinCondition nonEquiJoinCondition = joinDesc.getNonEquiJoinCondition();
         //null, or is not `and` cond
         if (Objects.isNull(nonEquiJoinCondition) || nonEquiJoinCondition.getOp() != SqlKind.AND) {
             throw new KylinException(ErrorCodeServer.SCD2_MODEL_CAN_ONLY_CONNECT_BY_AND);
         }
-
-        SimplifiedJoinDesc convertedJoinDesc = new SimplifiedJoinDesc();
-
-        List<SimplifiedNonEquiJoinCondition> nonEquiJoinConds = Lists.newArrayList();
-        List<SimplifiedNonEquiJoinCondition> equiJoinConds = simplifyFksPks(joinDesc.getForeignKey(),
-                joinDesc.getPrimaryKey());
-
-        NonEquiJoinCondition[] nonEquiJoinConditions = nonEquiJoinCondition.getOperands();
-
-        for (NonEquiJoinCondition nonEquivCond : nonEquiJoinConditions) {
-            SimplifiedNonEquiJoinCondition scd2Cond = simplifySCD2ChildCond(nonEquivCond);
-
-            //any child is illegal, return null
+        List<SimplifiedJoinCondition> nonEqualJoinPairs = Lists.newArrayList();
+        for (NonEquiJoinCondition nonEquivCond : nonEquiJoinCondition.getOperands()) {
+            SimplifiedJoinCondition scd2Cond = simplifySCD2ChildCond(nonEquivCond, joinDesc);
             if (Objects.isNull(scd2Cond)) {
                 throw new KylinException(ErrorCodeServer.SCD2_MODEL_CONTAINS_ILLEGAL_EXPRESSIONS);
             }
-            nonEquiJoinConds.add(scd2Cond);
+            nonEqualJoinPairs.add(scd2Cond);
         }
 
-        //check >=,< pair match
-        //check = join , fk and pk
-
-        if (!SCD2CondChecker.INSTANCE.checkSCD2NonEquiJoinCondPair(nonEquiJoinConds)) {
+        if (!SCD2CondChecker.INSTANCE.checkSCD2NonEquiJoinCondPair(nonEqualJoinPairs)) {
             throw new KylinException(ErrorCodeServer.SCD2_CONDITION_MUST_APPEAR_IN_PAIRS);
         }
 
-        if (CollectionUtils.isEmpty(equiJoinConds)) {
+        if (CollectionUtils.isEmpty(nonEqualJoinPairs)) {
+            throw new KylinException(ErrorCodeServer.SCD2_MODEL_REQUIRES_AT_LEAST_ONE_NON_EQUAL_CONDITION);
+        }
+        return nonEqualJoinPairs;
+    }
+
+    List<SimplifiedJoinCondition> buildAndCheckEqualConditions(JoinDesc joinDesc) {
+        String[] fks = joinDesc.getForeignKey();
+        String[] pks = joinDesc.getPrimaryKey();
+        List<SimplifiedJoinCondition> simplifiedFksPks = new ArrayList<>();
+        for (int i = 0; i < fks.length; i++) {
+            simplifiedFksPks.add(new SimplifiedJoinCondition(fks[i], pks[i], SqlKind.EQUALS));
+        }
+        if (CollectionUtils.isEmpty(simplifiedFksPks)) {
             throw new KylinException(ErrorCodeServer.SCD2_MODEL_REQUIRES_AT_LEAST_ONE_EQUAL_CONDITION);
         }
 
-        if (CollectionUtils.isEmpty(nonEquiJoinConds)) {
-            throw new KylinException(ErrorCodeServer.SCD2_MODEL_REQUIRES_AT_LEAST_ONE_NON_EQUAL_CONDITION);
-        }
-
-        //check unique
-        SCD2CondChecker.INSTANCE.checkFkPkPairUnique(equiJoinConds, nonEquiJoinConds);
-
-        convertedJoinDesc.setSimplifiedNonEquiJoinConditions(nonEquiJoinConds);
-
-        //extract fk\pk from non-equi cond
-        simplifyFksPks(equiJoinConds, convertedJoinDesc);
-
-        return convertedJoinDesc;
-
-    }
-
-    List<SimplifiedNonEquiJoinCondition> simplifyFksPks(String[] fks, String[] pks) {
-
-        List<SimplifiedNonEquiJoinCondition> simplifiedFksPks = new ArrayList<>();
-
-        for (int i = 0; i < fks.length; i++) {
-            simplifiedFksPks.add(new SimplifiedNonEquiJoinCondition(fks[i], pks[i], SqlKind.EQUALS));
-        }
-
         return simplifiedFksPks;
-
     }
 
-    public TblColRef[] extractFksFromNonEquiJoinDesc(@Nonnull JoinDesc joinDesc) {
+    public TblColRef[] extractNeqFks(@Nonnull JoinDesc joinDesc) {
         Preconditions.checkNotNull(joinDesc, "joinDesc is null");
 
-        List<TblColRef> fkList = convertToSimplifiedSCD2Cond(joinDesc).getSimplifiedNonEquiJoinConditions().stream()
-                .map(SimplifiedNonEquiJoinCondition::getFk).distinct().collect(Collectors.toList());
+        List<TblColRef> fkList = simplifyScd2Conditions(joinDesc).getSimplifiedNonEquiJoinConditions().stream()
+                .map(SimplifiedJoinCondition::getFk).distinct().collect(Collectors.toList());
 
         TblColRef[] fks = new TblColRef[fkList.size()];
         fkList.toArray(fks);
         return fks;
     }
 
-    boolean simplifiedSCD2CondConvertChecker(@Nullable JoinDesc joinDesc) {
+    boolean isValidScd2JoinDesc(@Nullable JoinDesc joinDesc) {
         try {
-            return convertToSimplifiedSCD2Cond(joinDesc) != null;
+            return simplifyScd2Conditions(joinDesc) != null;
         } catch (Exception e) {
             return false;
         }
     }
 
     /**
-     * non-equi join condition to fks,pks
-     * @param equiJoinConds
-     * @param joinDesc
-     */
-    private void simplifyFksPks(List<SimplifiedNonEquiJoinCondition> equiJoinConds, JoinDesc joinDesc) {
-
-        int len = equiJoinConds.size();
-
-        String[] fks = new String[len];
-        String[] pks = new String[len];
-
-        for (int i = 0; i < len; i++) {
-            fks[i] = equiJoinConds.get(i).getForeignKey();
-            pks[i] = equiJoinConds.get(i).getPrimaryKey();
-        }
-
-        joinDesc.setForeignKey(fks);
-        joinDesc.setPrimaryKey(pks);
-
-    }
-
-    /**
      * Simplify child condition, for example:
      * {@code (a>=b) and (a<c) } will be transformed to {@code {"a","b",">="}, {"a","c","<"}}
      */
-    public SimplifiedNonEquiJoinCondition simplifySCD2ChildCond(NonEquiJoinCondition nonEquiJoinCondition) {
-        if (nonEquiJoinCondition.getType() != NonEquiJoinConditionType.EXPRESSION
-                || nonEquiJoinCondition.getOperands().length != 2) {
+    public SimplifiedJoinCondition simplifySCD2ChildCond(NonEquiJoinCondition neqCondition, JoinDesc joinDesc) {
+        if (neqCondition.getType() != NonEquiJoinCondition.Type.EXPRESSION || neqCondition.getOperands().length != 2) {
             return null;
         }
 
-        List<Pair<String, TblColRef>> fkPk = Arrays.stream(nonEquiJoinCondition.getOperands())
+        List<Pair<String, TblColRef>> scd2Pairs = Arrays.stream(neqCondition.getOperands())
                 .map(nonEquiJoinConditionChild -> {
                     if (nonEquiJoinConditionChild.getOp() == SqlKind.CAST
                             && nonEquiJoinConditionChild.getOperands().length == 1) {
@@ -183,17 +145,23 @@ public class SCD2NonEquiCondSimplification {
                     } else {
                         return nonEquiJoinConditionChild;
                     }
-                }).collect(Collectors.toList()).stream()
+                })
                 .filter(nonEquiJoinConditionChild -> nonEquiJoinConditionChild.getOperands().length == 0
-                        || nonEquiJoinConditionChild.getType() == NonEquiJoinConditionType.COLUMN)
+                        || nonEquiJoinConditionChild.getType() == NonEquiJoinCondition.Type.COLUMN)
                 .map(nonEquiJoinCondition1 -> new Pair<>(nonEquiJoinCondition1.getValue(),
                         nonEquiJoinCondition1.getColRef()))
                 .collect(Collectors.toList());
-        if (CollectionUtils.isEmpty(fkPk) || fkPk.size() != 2) {
+        if (CollectionUtils.isEmpty(scd2Pairs) || scd2Pairs.size() != 2) {
             return null;
         }
 
-        return new SimplifiedNonEquiJoinCondition(fkPk.get(0).getFirst(), fkPk.get(0).getSecond(),
-                fkPk.get(1).getFirst(), fkPk.get(1).getSecond(), nonEquiJoinCondition.getOp());
+        // pk-fk should be consistent with the join table, just for display
+        Pair<String, TblColRef> left = scd2Pairs.get(0);
+        Pair<String, TblColRef> right = scd2Pairs.get(1);
+        return left.getSecond().getTable().equalsIgnoreCase(joinDesc.getForeignTable())
+                ? new SimplifiedJoinCondition(left.getKey(), left.getValue(), right.getKey(), right.getValue(),
+                        neqCondition.getOp())
+                : new SimplifiedJoinCondition(right.getKey(), right.getValue(), left.getKey(), left.getValue(),
+                        SCD2CondChecker.inverse(neqCondition.getOp()));
     }
 }

@@ -69,7 +69,7 @@ import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.metadata.model.util.scd2.SCD2NonEquiCondSimplification;
+import org.apache.kylin.metadata.model.util.scd2.Scd2Simplifier;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
@@ -319,7 +319,7 @@ public class PushDownUtil {
                 NonEquiJoinCondition[] operands = join.getNonEquiJoinCondition().getOperands();
                 for (NonEquiJoinCondition operand : operands) {
                     sql.append(" AND ");
-                    String cond = SCD2NonEquiCondSimplification.INSTANCE.simplifySCD2ChildCond(operand).displaySql();
+                    String cond = Scd2Simplifier.INSTANCE.simplifySCD2ChildCond(operand, join).displaySql();
                     sql.append(cond).append(sep);
                 }
             }
