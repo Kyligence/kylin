@@ -368,6 +368,7 @@ public class QueryContext implements Closeable {
         private boolean isRefused;
         private boolean includeHeader;
         private boolean isVacant;
+        private boolean isQueryDetect;
     }
 
     @Getter
