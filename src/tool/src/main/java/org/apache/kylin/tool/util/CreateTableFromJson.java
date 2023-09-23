@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -52,17 +53,17 @@ public class CreateTableFromJson {
         String pathDir = args[0];
         Map<String, List<String>> map = createDbAndTables(pathDir);
 
-        map.forEach((k, v) -> {
-            System.out.println(k);
-            v.forEach(System.out::println);
+        map.forEach((db, tables) -> {
+            for (String s : db.split("\n")) {
+                log.info(s);
+            }
+            tables.forEach(log::info);
         });
-
-        System.out.println("\n\n");
     }
 
     // the path is /{metadata_backup_path}/{project_name}/table/
     private static Map<String, List<String>> createDbAndTables(String pathDir) throws IOException {
-        Map<String, List<String>> map = new HashMap<>();
+        Map<String, List<String>> map = new LinkedHashMap<>();
         File file = new File(pathDir).getAbsoluteFile();
         File[] files = file.listFiles();
 
