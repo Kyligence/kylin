@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 
 import org.apache.calcite.sql.SqlKind;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.code.ErrorCodeServer;
 import org.apache.kylin.common.util.Pair;
@@ -158,7 +159,13 @@ public class Scd2Simplifier {
         // pk-fk should be consistent with the join table, just for display
         Pair<String, TblColRef> left = scd2Pairs.get(0);
         Pair<String, TblColRef> right = scd2Pairs.get(1);
-        return left.getSecond().getTable().equalsIgnoreCase(joinDesc.getForeignTable())
+        String[] fks = joinDesc.getForeignKey();
+        if (fks.length == 0) {
+            throw new KylinException(ErrorCodeServer.SCD2_MODEL_REQUIRES_AT_LEAST_ONE_NON_EQUAL_CONDITION);
+        }
+        String fkTableAlias = StringUtils.split(fks[0], '.')[0];
+        String fkTableAliasOfNeqCondition = StringUtils.split(left.getFirst(), '.')[0];
+        return fkTableAliasOfNeqCondition.equalsIgnoreCase(fkTableAlias)
                 ? new SimplifiedJoinCondition(left.getKey(), left.getValue(), right.getKey(), right.getValue(),
                         neqCondition.getOp())
                 : new SimplifiedJoinCondition(right.getKey(), right.getValue(), left.getKey(), left.getValue(),
