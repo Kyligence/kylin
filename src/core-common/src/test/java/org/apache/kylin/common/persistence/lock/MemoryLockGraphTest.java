@@ -37,12 +37,14 @@ import org.apache.kylin.common.persistence.ThreadViewResourceStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @MetadataInfo(onlyProps = true)
 class MemoryLockGraphTest {
 
     @Test
+    @Disabled("A simulation of long running. When the number of CPU cores is small, it mat fail.")
     void deadLockWithParallelThreadTest() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         InMemResourceStore inMemResourceStore = (InMemResourceStore) ResourceStore.getKylinMetaStore(config);
