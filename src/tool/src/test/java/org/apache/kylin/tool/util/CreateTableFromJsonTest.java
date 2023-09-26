@@ -33,6 +33,7 @@ class CreateTableFromJsonTest {
     String path = "src/test/resources/table_cc_cleanup/metadata/AL_4144/table/";
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private PrintStream originPrintStream;
+    private static final String REGEX = "util.CreateTableFromJson :";
 
     @BeforeEach
     void setUpStreams() {
@@ -51,6 +52,13 @@ class CreateTableFromJsonTest {
         String result = outContent.toString();
         if (StringUtils.isBlank(result)) {
             Assertions.assertTrue(true);
+        } else if ("true".equals(System.getProperty("junit.run.local"))) {
+            // with -Djunit.run.local=true, this branch is more convenient for dev
+            String[] splits = result.split("\n");
+            for (String str : splits) {
+                String s = str.split(REGEX)[1];
+                originPrintStream.println(s);
+            }
         } else {
             String[] splits = result.split("\n");
             Assertions.assertTrue(splits[0].contains("create database `CAP`;"));
