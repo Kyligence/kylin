@@ -31,7 +31,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.zip.DataFormatException;
 
-import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.CompressionUtils;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -151,7 +150,10 @@ class RedisCacheV2Test {
     void testGetInstance() {
         Unsafe.overwriteSystemProp(Maps.newHashMap(), "kylin.cache.redis.sentinel-enabled", "TRUE");
         Unsafe.overwriteSystemProp(Maps.newHashMap(), "kylin.cache.redis.sentinel-master", "default-master");
-        Assertions.assertThrows(KylinException.class, RedisCacheV2::getInstance);
+
+        KylinCache kylinCache = RedisCacheV2.getInstance();
+        assertNull(kylinCache);
+
         Unsafe.clearProperty("kylin.cache.redis.sentinel-enabled");
         Unsafe.clearProperty("kylin.cache.redis.sentinel-master");
     }
@@ -176,7 +178,10 @@ class RedisCacheV2Test {
     @Test
     void testRedisHostsError() {
         Unsafe.overwriteSystemProp(Maps.newHashMap(), "kylin.cache.redis.hosts", " ");
-        Assertions.assertThrows(KylinException.class, RedisCacheV2::getInstance);
+
+        KylinCache kylinCache = RedisCacheV2.getInstance();
+        assertNull(kylinCache);
+
         Unsafe.clearProperty("kylin.cache.redis.hosts");
     }
 

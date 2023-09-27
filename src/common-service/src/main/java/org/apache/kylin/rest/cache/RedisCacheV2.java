@@ -18,7 +18,6 @@
 
 package org.apache.kylin.rest.cache;
 
-import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.REDIS_INIT_FAILED;
 import static org.apache.kylin.rest.cache.CacheConstant.NX;
 import static org.apache.kylin.rest.cache.CacheConstant.PREFIX;
@@ -35,7 +34,6 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.Singletons;
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.EncryptUtil;
 
 import io.lettuce.core.KeyScanCursor;
@@ -64,16 +62,16 @@ public class RedisCacheV2 extends AbstractKylinCache implements KylinCache {
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         loadConfigurations(kylinConfig);
         createRedisClient(kylinConfig);
-        log.info("lettuce init success.");
+        log.info("Redis init success.");
     }
 
     public static KylinCache getInstance() {
         try {
             return Singletons.getInstance(RedisCacheV2.class);
         } catch (Exception e) {
-            log.error("Lettuce init failed:{} ", ExceptionUtils.getStackTrace(e));
-            throw new KylinException(REDIS_INIT_FAILED, MsgPicker.getMsg().getRedisInitFailed());
+            log.error("Redis init failed:{} ", ExceptionUtils.getStackTrace(e));
         }
+        return null;
     }
 
     @Override
@@ -169,7 +167,7 @@ public class RedisCacheV2 extends AbstractKylinCache implements KylinCache {
         String redisHosts = kylinConfig.getRedisHosts().trim();
         String[] hostAndPorts = redisHosts.split(",");
         if (Arrays.stream(hostAndPorts).anyMatch(StringUtils::isBlank)) {
-            throw new KylinException(INVALID_PARAMETER, "redis client init failed because there are "
+            throw new KylinException(REDIS_INIT_FAILED, "Redis client init failed because there are "
                     + "some errors in kylin.properties for 'kylin.cache.redis.hosts'");
         }
 
@@ -195,16 +193,25 @@ public class RedisCacheV2 extends AbstractKylinCache implements KylinCache {
         log.info("The 'kylin.cache.redis.sentinel-enabled' is {}", kylinConfig.isRedisSentinelEnabled());
         if (kylinConfig.isRedisSentinelEnabled()) {
             log.info("kylin will use redis sentinel");
-            HostAndPort hostAndPort = hostAndPorts.get(0);
-            RedisURI redisURI = RedisURI.builder().withSentinelMasterId(kylinConfig.getRedisSentinelMasterId())
-                    .withSentinel(hostAndPort.getHostText(), hostAndPort.getPort()).withPassword(redisPassword)
-                    .withTimeout(Duration.ofMillis(kylinConfig.getRedisConnectionTimeout())).build();
+            RedisURI redisURI = buildRedisURI(kylinConfig, hostAndPorts, redisPassword);
             RedisClient redisClient = RedisClient.create();
             redisConnection = MasterReplica.connect(redisClient, ByteArrayCodec.INSTANCE, redisURI);
             redisConnection.setReadFrom(ReadFrom.REPLICA_PREFERRED);
             syncCommands = redisConnection.sync();
-            log.info("lettuce sentinel ping:{}", syncCommands.ping());
+            log.info("Lettuce sentinel ping:{}", syncCommands.ping());
         }
+    }
+
+    private RedisURI buildRedisURI(KylinConfig kylinConfig, List<HostAndPort> hostAndPorts, char[] redisPassword) {
+        RedisURI.Builder redisUriBuilder = RedisURI.builder()
+                .withSentinelMasterId(kylinConfig.getRedisSentinelMasterId()).withPassword(redisPassword)
+                .withTimeout(Duration.ofMillis(kylinConfig.getRedisConnectionTimeout()));
+        for (HostAndPort hostAndPort : hostAndPorts) {
+            redisUriBuilder.withSentinel(hostAndPort.getHostText(), hostAndPort.getPort());
+        }
+        RedisURI redisURI = redisUriBuilder.build();
+        log.info("Redis uri:{}", redisURI);
+        return redisURI;
     }
 
     private SetArgs createSetArgs(String ifExist, String expireTimeUnit, Long expireTime) {

@@ -18,7 +18,11 @@
 
 package org.apache.kylin.rest.service;
 
-import org.apache.kylin.common.exception.KylinException;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.rest.cache.KylinCache;
 import org.apache.kylin.rest.cache.RedisCache;
@@ -68,7 +72,7 @@ class QueryCacheManagerTest {
         System.setProperty("kylin.cache.redis.sentinel-enabled", "true");
         System.setProperty("kylin.cache.redis.sentinel-master", "master");
 
-        Assertions.assertThrows(KylinException.class, () -> queryCacheManager.init());
+        assertDoesNotThrow(() -> queryCacheManager.init());
 
         System.clearProperty("kylin.cache.redis.enabled");
         System.clearProperty("kylin.cache.redis.sentinel-enabled");
@@ -76,18 +80,17 @@ class QueryCacheManagerTest {
     }
 
     @Test
-    void testRecoverCache() {
-        System.setProperty("kylin.cache.redis.enabled", "true");
-        try {
-            queryCacheManager.recoverCache();
-        } catch (Exception e) {
-            Assertions.fail();
-        }
+    void testRecoverCacheWhenNoNeedToRecover() {
+        System.setProperty("kylin.cache.redis.enabled", "false");
+
+        boolean recoverResult = queryCacheManager.recoverCache();
+        assertFalse(recoverResult);
+
         System.clearProperty("kylin.cache.redis.enabled");
     }
 
     @Test
-    void testRecoverCacheRedisCache() {
+    void testRecoverCacheWhenCluster() {
         System.setProperty("kylin.cache.redis.enabled", "true");
         kylinCache = Mockito.mock(RedisCache.class);
         ReflectionTestUtils.setField(queryCacheManager, "kylinCache", kylinCache);
@@ -102,17 +105,86 @@ class QueryCacheManagerTest {
     }
 
     @Test
-    void testRecoverCacheRedisCacheV2() {
+    void testRecoverCacheWhenSentinelRecoverTrue() {
         System.setProperty("kylin.cache.redis.enabled", "true");
+        System.setProperty("kylin.cache.redis.sentinel-enabled", "true");
+        kylinCache = Mockito.mock(RedisCacheV2.class);
+        ReflectionTestUtils.setField(queryCacheManager, "kylinCache", kylinCache);
+        Mockito.when(((RedisCacheV2) kylinCache).recoverInstance()).thenReturn(kylinCache);
+
+        boolean recoverResult = queryCacheManager.recoverCache();
+        assertTrue(recoverResult);
+
+        System.clearProperty("kylin.cache.redis.enabled");
+        System.clearProperty("kylin.cache.redis.sentinel-enabled");
+    }
+
+    @Test
+    void testRecoverCacheWhenSentinelRecoverFailed() {
+        System.setProperty("kylin.cache.redis.enabled", "true");
+        System.setProperty("kylin.cache.redis.sentinel-enabled", "true");
         kylinCache = Mockito.mock(RedisCacheV2.class);
         ReflectionTestUtils.setField(queryCacheManager, "kylinCache", kylinCache);
 
-        try {
-            queryCacheManager.recoverCache();
-        } catch (Exception e) {
-            Assertions.fail();
-        }
+        boolean recoverResult = queryCacheManager.recoverCache();
+        assertFalse(recoverResult);
 
         System.clearProperty("kylin.cache.redis.enabled");
+        System.clearProperty("kylin.cache.redis.sentinel-enabled");
     }
+
+    @Test
+    void testGetCacheException() {
+        Mockito.when(kylinCache.get("type", "project", "key")).thenThrow(new RuntimeException());
+
+        Object value = queryCacheManager.getCache("type", "project", "key");
+
+        assertNull(value);
+    }
+
+    @Test
+    void testPutCacheException() {
+        Mockito.doThrow(new RuntimeException()).when(kylinCache).put("type", "project", "key", "value");
+
+        assertDoesNotThrow(() -> queryCacheManager.putCache("type", "project", "key", "value"));
+    }
+
+    @Test
+    void testRemoveCacheException() {
+        Mockito.doThrow(new RuntimeException()).when(kylinCache).remove("type", "project", "key");
+
+        boolean value = queryCacheManager.removeCache("type", "project", "key");
+
+        assertFalse(value);
+    }
+
+    @Test
+    void testClearAllCacheException() {
+        Mockito.doThrow(new RuntimeException()).when(kylinCache).clearAll();
+
+        assertDoesNotThrow(() -> queryCacheManager.clearAllCache());
+    }
+
+    @Test
+    void testClearCacheByTypeException() {
+        Mockito.doThrow(new RuntimeException()).when(kylinCache).clearByType("type", "project");
+
+        assertDoesNotThrow(() -> queryCacheManager.clearCacheByType("type", "project"));
+    }
+
+    @Test
+    void testClearSchemaCacheV2() {
+        assertDoesNotThrow(() -> queryCacheManager.clearSchemaCacheV2("project", "userName"));
+    }
+
+    @Test
+    void testClearSchemaCache() {
+        assertDoesNotThrow(() -> queryCacheManager.clearSchemaCache("project", "userName"));
+    }
+
+    @Test
+    void testOnClearSchemaCache() {
+        assertDoesNotThrow(() -> queryCacheManager.onClearProjectCache("project"));
+    }
+
 }
