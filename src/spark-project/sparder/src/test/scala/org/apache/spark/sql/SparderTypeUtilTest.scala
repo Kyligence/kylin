@@ -26,7 +26,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.guava30.shaded.common.io.Files
 import org.apache.kylin.metadata.datatype.DataType
-import org.apache.kylin.query.schema.OLAPTable
+import org.apache.kylin.query.schema.OlapTable
 import org.apache.spark.sql.common.SparderBaseFunSuite
 import org.apache.spark.sql.types.{DataTypes, StructField}
 import org.apache.spark.sql.util.SparderTypeUtil
@@ -83,7 +83,7 @@ class SparderTypeUtilTest extends SparderBaseFunSuite {
     kylinConfig
     val typeFactory = new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT)
     dataTypes.map(dt => {
-      val relDataType = OLAPTable.createSqlType(typeFactory, dt, true)
+      val relDataType = OlapTable.createSqlType(typeFactory, dt, true)
       SparderTypeUtil.convertSqlTypeToSparkType(relDataType)
     })
   }
@@ -100,7 +100,7 @@ class SparderTypeUtilTest extends SparderBaseFunSuite {
     kylinConfig
     val typeFactory = new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT)
     dataTypes.map(dt => {
-      val relDataType = OLAPTable.createSqlType(typeFactory, dt, true)
+      val relDataType = OlapTable.createSqlType(typeFactory, dt, true)
       val structField = SparderTypeUtil.convertSparkFieldToJavaField(
         StructField("foo", SparderTypeUtil.convertSqlTypeToSparkType(relDataType))
       )

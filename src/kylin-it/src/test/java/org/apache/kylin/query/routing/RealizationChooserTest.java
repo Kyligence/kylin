@@ -28,8 +28,8 @@ import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
-import org.apache.kylin.query.relnode.KapSortRel;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
+import org.apache.kylin.query.relnode.OlapSortRel;
 import org.apache.kylin.util.OlapContextTestUtil;
 import org.junit.After;
 import org.junit.Assert;
@@ -61,7 +61,7 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
         for (String filter : filters) {
             String sql = "select a.NAME from TEST_BANK_INCOME a left join TEST_BANK_LOCATION b \n"
                     + " on a.COUNTRY = b.COUNTRY where " + filter;
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
             Assert.assertFalse(sqlAlias2ModelName.isEmpty());
         }
@@ -76,7 +76,7 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
         overwriteSystemProp("kylin.query.join-match-optimization-enabled", "true");
         String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b on a.COUNTRY = b.COUNTRY";
         NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), project).getDataflow(modelId);
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(project, sql, true).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(project, sql, true).get(0);
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         Assert.assertTrue(sqlAlias2ModelName.isEmpty());
     }
@@ -93,7 +93,7 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
         for (String filter : filters) {
             String sql = "select CAL_DT from test_kylin_fact a inner join EDW.test_sites b \n"
                     + " on a.LSTG_SITE_ID = b.SITE_ID where " + filter;
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
             Assert.assertTrue(sqlAlias2ModelName.isEmpty());
         }
@@ -106,10 +106,10 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
         String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b on a.COUNTRY = b.COUNTRY\n"
                 + "order by a.INCOME nulls last";
         RelNode relNode = OlapContextTestUtil.cutOlapContextsAndReturnRelNode(project, sql);
-        KapSortRel sortRel = null;
+        OlapSortRel sortRel = null;
         while (relNode != null) {
-            if (relNode instanceof KapSortRel) {
-                sortRel = (KapSortRel) relNode;
+            if (relNode instanceof OlapSortRel) {
+                sortRel = (OlapSortRel) relNode;
                 break;
             }
             relNode = relNode.getInput(0);
@@ -130,7 +130,7 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
         for (String filter : filters) {
             String sql = "select a.NAME from TEST_BANK_INCOME a left join TEST_BANK_LOCATION b \n"
                     + " on a.COUNTRY = b.COUNTRY where " + filter;
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
             Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
             Assert.assertFalse(sqlAlias2ModelName.isEmpty());
         }
@@ -147,7 +147,7 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
         for (String filter : filters) {
             String sql = "select a.NAME from TEST_BANK_INCOME a left join TEST_BANK_LOCATION b \n"
                     + " on a.COUNTRY = b.COUNTRY where " + filter;
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             Assert.assertTrue(sqlAlias2ModelNameMap.isEmpty());

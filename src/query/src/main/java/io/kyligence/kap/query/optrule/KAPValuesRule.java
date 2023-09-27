@@ -24,15 +24,14 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.kylin.query.relnode.KapValuesRel;
-import org.apache.kylin.query.relnode.OLAPRel;
-import org.apache.kylin.query.relnode.OLAPValuesRel;
+import org.apache.kylin.query.relnode.OlapRel;
+import org.apache.kylin.query.relnode.OlapValuesRel;
 
 public class KAPValuesRule extends ConverterRule {
     public static final KAPValuesRule INSTANCE = new KAPValuesRule();
 
     KAPValuesRule() {
-        super(Values.class, Convention.NONE, OLAPRel.CONVENTION, "KapValuesRule");
+        super(Values.class, Convention.NONE, OlapRel.CONVENTION, "KapValuesRule");
     }
 
     @Override
@@ -40,7 +39,7 @@ public class KAPValuesRule extends ConverterRule {
         Values values = (Values) rel;
         RelOptCluster cluster = values.getCluster();
         RelDataType rowType = values.getRowType();
-        RelTraitSet relTraits = OLAPValuesRel.replaceTraitSet(cluster, rowType, values.getTuples());
-        return new KapValuesRel(cluster, rowType, values.getTuples(), relTraits);
+        RelTraitSet relTraits = OlapValuesRel.replaceTraitSet(cluster, rowType, values.getTuples());
+        return new OlapValuesRel(cluster, rowType, values.getTuples(), relTraits);
     }
 }

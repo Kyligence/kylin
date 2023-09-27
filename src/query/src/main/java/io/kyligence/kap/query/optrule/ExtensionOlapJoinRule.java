@@ -38,9 +38,9 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.query.relnode.OLAPFilterRel;
-import org.apache.kylin.query.relnode.OLAPJoinRel;
-import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapRel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +50,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
     public static final ConverterRule INSTANCE = new ExtensionOlapJoinRule();
 
     public ExtensionOlapJoinRule() {
-        super(LogicalJoin.class, Convention.NONE, OLAPRel.CONVENTION, "KapJoinRule");
+        super(LogicalJoin.class, Convention.NONE, OlapRel.CONVENTION, "KapJoinRule");
     }
 
     @Override
@@ -59,7 +59,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
         RelNode left = join.getInput(0);
         RelNode right = join.getInput(1);
 
-        RelTraitSet traitSet = join.getTraitSet().replace(OLAPRel.CONVENTION);
+        RelTraitSet traitSet = join.getTraitSet().replace(OlapRel.CONVENTION);
         left = convert(left, traitSet);
         right = convert(right, traitSet);
 
@@ -67,7 +67,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
 
         // handle powerbi inner join, see https://github.com/Kyligence/KAP/issues/1823
         Join tmpJoin = transformJoinCondition(join, info, traitSet, left, right);
-        if (tmpJoin instanceof OLAPJoinRel) {
+        if (tmpJoin instanceof OlapJoinRel) {
             return tmpJoin;
         }
 
@@ -80,7 +80,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
         RelNode newRel;
         RelOptCluster cluster = join.getCluster();
         try {
-            newRel = new OLAPJoinRel(cluster, traitSet, left, right, //
+            newRel = new OlapJoinRel(cluster, traitSet, left, right, //
                     info.getEquiCondition(left, right, cluster.getRexBuilder()), //
                     info.leftKeys, info.rightKeys, join.getVariablesSet(), join.getJoinType());
         } catch (InvalidRelException e) {
@@ -90,7 +90,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
             // return null;
         }
         if (!info.isEqui()) {
-            newRel = new OLAPFilterRel(cluster, newRel.getTraitSet(), newRel,
+            newRel = new OlapFilterRel(cluster, newRel.getTraitSet(), newRel,
                     info.getRemaining(cluster.getRexBuilder()));
         }
         return newRel;
@@ -113,7 +113,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
 
         JoinInfo newInfo = JoinInfo.of(ImmutableIntList.of(leftIndex), ImmutableIntList.of(rightIndex));
         try {
-            return new OLAPJoinRel(cluster, traitSet, left, right,
+            return new OlapJoinRel(cluster, traitSet, left, right,
                     newInfo.getEquiCondition(left, right, cluster.getRexBuilder()), newInfo.leftKeys, newInfo.rightKeys,
                     join.getVariablesSet(), join.getJoinType());
         } catch (InvalidRelException e) {

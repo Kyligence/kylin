@@ -26,8 +26,8 @@ import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalFilter;
-import org.apache.kylin.query.relnode.KapFilterRel;
-import org.apache.kylin.query.relnode.KapRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 /**
  */
@@ -36,18 +36,18 @@ public class KapFilterRule extends ConverterRule {
     public static final RelOptRule INSTANCE = new KapFilterRule();
 
     public KapFilterRule() {
-        super(LogicalFilter.class, RelOptUtil.FILTER_PREDICATE, Convention.NONE, KapRel.CONVENTION, "KapFilterRule");
+        super(LogicalFilter.class, RelOptUtil.FILTER_PREDICATE, Convention.NONE, OlapRel.CONVENTION, "KapFilterRule");
     }
 
     @Override
     public RelNode convert(RelNode call) {
         LogicalFilter filter = (LogicalFilter) call;
         RelTraitSet origTraitSet = filter.getTraitSet();
-        RelTraitSet traitSet = origTraitSet.replace(KapRel.CONVENTION).simplify();
+        RelTraitSet traitSet = origTraitSet.replace(OlapRel.CONVENTION).simplify();
 
         RelNode convertedInput = filter.getInput() instanceof HepRelVertex ? filter.getInput()
-                : convert(filter.getInput(), KapRel.CONVENTION);
-        return new KapFilterRel(filter.getCluster(), traitSet, convertedInput, filter.getCondition());
+                : convert(filter.getInput(), OlapRel.CONVENTION);
+        return new OlapFilterRel(filter.getCluster(), traitSet, convertedInput, filter.getCondition());
     }
 
 }

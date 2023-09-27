@@ -54,8 +54,8 @@ import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.Util;
 import org.apache.kylin.measure.bitmap.BitmapCountAggFunc;
 import org.apache.kylin.metadata.model.FunctionDesc;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.AggExpressionUtil;
 import org.apache.kylin.query.util.AggExpressionUtil.AggExpression;
 import org.apache.kylin.query.util.RuleUtils;
@@ -82,7 +82,7 @@ import org.apache.kylin.query.util.RuleUtils;
 public class CountDistinctCaseWhenFunctionRule extends AbstractAggCaseWhenFunctionRule {
 
     public static final CountDistinctCaseWhenFunctionRule INSTANCE = new CountDistinctCaseWhenFunctionRule(
-            operand(KapAggregateRel.class, operand(KapProjectRel.class, null,
+            operand(OlapAggregateRel.class, operand(OlapProjectRel.class, null,
                     input -> !AggExpressionUtil.hasAggInput(input), RelOptRule.any())),
             RelFactories.LOGICAL_BUILDER, "CountDistinctCaseWhenFunctionRule");
 

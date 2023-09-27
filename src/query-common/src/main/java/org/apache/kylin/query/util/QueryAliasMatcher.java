@@ -65,8 +65,8 @@ import org.apache.kylin.metadata.model.graph.JoinsGraph;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.relnode.ColumnRowType;
-import org.apache.kylin.query.schema.KapOLAPSchema;
-import org.apache.kylin.query.schema.OLAPTable;
+import org.apache.kylin.query.schema.OlapSchema;
+import org.apache.kylin.query.schema.OlapTable;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -81,8 +81,8 @@ public class QueryAliasMatcher {
 
     private final String project;
     private final String defaultSchema;
-    private final Map<String, KapOLAPSchema> schemaMap = Maps.newHashMap();
-    private final Map<String, Map<String, OLAPTable>> schemaTables = Maps.newHashMap();
+    private final Map<String, OlapSchema> schemaMap = Maps.newHashMap();
+    private final Map<String, Map<String, OlapTable>> schemaTables = Maps.newHashMap();
 
     @Getter
     private final ColExcludedChecker checker;
@@ -413,7 +413,7 @@ public class QueryAliasMatcher {
         }
 
         private ColumnRowType buildColumnRowType(String alias, String schemaName, String tableName) {
-            OLAPTable olapTable = getTable(schemaName.toUpperCase(Locale.ROOT), tableName);
+            OlapTable olapTable = getTable(schemaName.toUpperCase(Locale.ROOT), tableName);
 
             // check if it is the model view
             if (olapTable == null && (schemaName.equalsIgnoreCase(project) && tableName.equalsIgnoreCase(modelName))) {
@@ -433,24 +433,24 @@ public class QueryAliasMatcher {
             return new ColumnRowType(columns);
         }
 
-        private OLAPTable getTable(String schemaName, String tableName) {
-            Map<String, OLAPTable> localTables = schemaTables.get(schemaName);
+        private OlapTable getTable(String schemaName, String tableName) {
+            Map<String, OlapTable> localTables = schemaTables.get(schemaName);
             if (localTables == null) {
-                KapOLAPSchema olapSchema = getSchema(schemaName);
+                OlapSchema olapSchema = getSchema(schemaName);
                 if (!olapSchema.hasTables()) {
                     return null;
                 }
                 localTables = Maps.newHashMap();
                 for (Map.Entry<String, Table> entry : olapSchema.getTableMap().entrySet()) {
-                    localTables.put(entry.getKey(), (OLAPTable) entry.getValue());
+                    localTables.put(entry.getKey(), (OlapTable) entry.getValue());
                 }
                 schemaTables.put(schemaName, localTables);
             }
             return localTables.get(tableName);
         }
 
-        private KapOLAPSchema getSchema(String name) {
-            return schemaMap.computeIfAbsent(name, schemaName -> new KapOLAPSchema(project, schemaName,
+        private OlapSchema getSchema(String name) {
+            return schemaMap.computeIfAbsent(name, schemaName -> new OlapSchema(project, schemaName,
                     NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
                             .listTablesGroupBySchema().get(schemaName),
                     NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getModelsGroupbyTable()));

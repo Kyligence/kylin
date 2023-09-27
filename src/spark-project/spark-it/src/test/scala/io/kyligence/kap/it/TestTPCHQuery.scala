@@ -23,7 +23,7 @@
 package io.kyligence.kap.it
 
 import org.apache.kylin.common.util.Unsafe
-import org.apache.kylin.query.relnode.OLAPContext
+import org.apache.kylin.query.relnode.ContextUtil
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparderEnv
 import org.apache.spark.sql.common.{LocalMetadata, SharedSparkSession, SparderBaseFunSuite, SparderQueryTest}
@@ -71,10 +71,10 @@ class TestTPCHQuery
         val start = System.currentTimeMillis()
         Range.apply(0, 1).foreach(_ => df.count())
         System.currentTimeMillis() - start
-        OLAPContext.getThreadLocalContexts.asScala
-          .map(_.realization.getUuid)
-          .zip(OLAPContext.getThreadLocalContexts.asScala.map(
-            _.storageContext.getLayoutId))
+        ContextUtil.getThreadLocalContexts.asScala
+          .map(_.getRealization.getUuid)
+          .zip(ContextUtil.getThreadLocalContexts.asScala.map(
+            _.getStorageContext.getLayoutId))
           .mkString(",")
       }
 

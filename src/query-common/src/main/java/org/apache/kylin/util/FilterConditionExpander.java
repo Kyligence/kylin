@@ -41,9 +41,10 @@ import org.apache.calcite.util.NlsString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.query.relnode.OLAPContext;
-import org.apache.kylin.query.relnode.OLAPRel;
-import org.apache.kylin.query.relnode.OLAPTableScan;
+import org.apache.kylin.query.relnode.ContextUtil;
+import org.apache.kylin.query.relnode.OlapContext;
+import org.apache.kylin.query.relnode.OlapRel;
+import org.apache.kylin.query.relnode.OlapTableScan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,11 +57,11 @@ public class FilterConditionExpander {
     private static final String DATE = "date";
     private static final String TIMESTAMP = "timestamp";
 
-    private final OLAPContext context;
+    private final OlapContext context;
     private final RelNode currentRel;
     private final RexBuilder rexBuilder;
 
-    public FilterConditionExpander(OLAPContext context, RelNode currentRel) {
+    public FilterConditionExpander(OlapContext context, RelNode currentRel) {
         this.context = context;
         this.currentRel = currentRel;
         this.rexBuilder = currentRel.getCluster().getRexBuilder();
@@ -198,13 +199,13 @@ public class FilterConditionExpander {
         } catch (Exception ex) {
             logger.warn("transform Date/Timestamp RexLiteral for filterRel failed", ex);
         }
-
         return operand2;
     }
 
     private RexInputRef convertInputRef(RexInputRef rexInputRef, RelNode relNode) {
         if (relNode instanceof TableScan) {
-            return context.createUniqueInputRefContextTables((OLAPTableScan) relNode, rexInputRef.getIndex());
+            return ContextUtil.createUniqueInputRefAmongTables((OlapTableScan) relNode, rexInputRef.getIndex(),
+                    context.getAllTableScans());
         }
 
         if (relNode instanceof Project) {
@@ -227,7 +228,7 @@ public class FilterConditionExpander {
                 }
             }
 
-            val child = (OLAPRel) relNode.getInput(i);
+            val child = (OlapRel) relNode.getInput(i);
             val childRowTypeSize = child.getColumnRowType().size();
             if (index < currentSize + childRowTypeSize) {
                 return convertInputRef(RexInputRef.of(index - currentSize, child.getRowType()), child);

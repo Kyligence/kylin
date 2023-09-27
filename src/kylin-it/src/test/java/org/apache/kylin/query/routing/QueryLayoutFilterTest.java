@@ -36,7 +36,8 @@ import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.engine.TypeSystem;
 import org.apache.kylin.query.engine.meta.SimpleDataContext;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.ContextUtil;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.util.OlapContextTestUtil;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparderEnv;
@@ -102,19 +103,19 @@ public class QueryLayoutFilterTest extends NLocalWithSparkSessionTest {
                 + "and TEST_BANK_INCOME.DT = '2021-11-02'\n" //
                 + "and TEST_BANK_INCOME.COUNTRY in ('INDONESIA')\n" //
                 + "and TEST_BANK_INCOME.COUNTRY in ('KENYA')";
-        List<OLAPContext> contexts = OlapContextTestUtil.getOlapContexts(project, sql);
-        OLAPContext context = contexts.get(0);
+        List<OlapContext> contexts = OlapContextTestUtil.getOlapContexts(project, sql);
+        OlapContext context = contexts.get(0);
 
         CalciteSchema rootSchema = new QueryExec(project, kylinConfig).getRootSchema();
         SimpleDataContext dataContext = new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(),
                 kylinConfig);
-        context.firstTableScan.getCluster().getPlanner().setExecutor(new RexExecutorImpl(dataContext));
+        context.getFirstTableScan().getCluster().getPlanner().setExecutor(new RexExecutorImpl(dataContext));
         List<NDataSegment> segments = new SegmentPruningRule().pruneSegments(dataflow, context);
         Assert.assertTrue(segments.isEmpty());
-        context.storageContext.setEmptyLayout(true);
-        context.realization = dataflow;
-        OLAPContext.registerContext(context);
-        List<NativeQueryRealization> realizations = OLAPContext.getNativeRealizations();
+        context.getStorageContext().setEmptyLayout(true);
+        context.setRealization(dataflow);
+        ContextUtil.registerContext(context);
+        List<NativeQueryRealization> realizations = ContextUtil.getNativeRealizations();
         Assert.assertEquals(1, realizations.size());
         Assert.assertEquals(QueryMetrics.FILTER_CONFLICT, realizations.get(0).getIndexType());
         Assert.assertEquals(Long.valueOf(-1), realizations.get(0).getLayoutId());

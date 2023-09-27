@@ -101,7 +101,7 @@ import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinDesc;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.engine.QueryExec;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.rest.request.ModelRequest;
@@ -326,7 +326,7 @@ public class ModelSemanticHelper extends BasicService {
     }
 
     private JoinDesc deriveJoins(QueryExec queryExec, String sql) {
-        List<OLAPContext> contexts = queryExec.deriveOlapContexts(sql);
+        List<OlapContext> contexts = queryExec.deriveOlapContexts(sql);
         Optional<KylinException> th;
         if (contexts.isEmpty()) {
             th = Optional.of(new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
@@ -335,9 +335,9 @@ public class ModelSemanticHelper extends BasicService {
             th = Optional.of(new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
                     "Small sub-queries were split from the input sql: " + sql));
         } else {
-            OLAPContext ctx = contexts.get(0);
-            if (ctx.joins.size() == 1) {
-                return ctx.joins.get(0);
+            OlapContext ctx = contexts.get(0);
+            if (ctx.getJoins().size() == 1) {
+                return ctx.getJoins().get(0);
             }
             th = Optional.of(new KylinException(ErrorCodeServer.SCD2_MODEL_UNKNOWN_EXCEPTION,
                     "Non-equiv-join conditions were split. the input sql is: " + sql));

@@ -47,8 +47,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.AggExpressionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,7 +84,7 @@ import org.slf4j.LoggerFactory;
 public class KapAggSumCastRule extends RelOptRule {
 
     public static final KapAggSumCastRule INSTANCE = new KapAggSumCastRule(
-            operand(KapAggregateRel.class, operand(KapProjectRel.class, null,
+            operand(OlapAggregateRel.class, operand(OlapProjectRel.class, null,
                     input -> !AggExpressionUtil.hasAggInput(input), RelOptRule.any())),
             RelFactories.LOGICAL_BUILDER, "KapAggSumCastRule");
     private static final Logger logger = LoggerFactory.getLogger(KapAggSumCastRule.class);

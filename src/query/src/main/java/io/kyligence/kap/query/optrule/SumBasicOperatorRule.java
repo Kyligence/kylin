@@ -45,8 +45,8 @@ import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.exception.SumExprUnSupportException;
 import org.apache.kylin.query.relnode.ContextUtil;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.AggExpressionUtil;
 import org.apache.kylin.query.util.AggExpressionUtil.AggExpression;
 import org.apache.kylin.query.util.AggExpressionUtil.GroupExpression;
@@ -82,7 +82,7 @@ public class SumBasicOperatorRule extends RelOptRule {
     private static final Logger logger = LoggerFactory.getLogger(SumBasicOperatorRule.class);
 
     public static final SumBasicOperatorRule INSTANCE = new SumBasicOperatorRule(
-            operand(KapAggregateRel.class, operand(KapProjectRel.class, null,
+            operand(OlapAggregateRel.class, operand(OlapProjectRel.class, null,
                     input -> !AggExpressionUtil.hasAggInput(input), RelOptRule.any())),
             RelFactories.LOGICAL_BUILDER, "SumBasicOperatorRule");
 

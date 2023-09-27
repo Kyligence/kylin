@@ -27,8 +27,8 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlAvgAggFunction;
-import org.apache.kylin.query.relnode.OLAPAggregateRel;
-import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 /**
  */
@@ -37,7 +37,7 @@ public class OLAPAggregateRule extends ConverterRule {
     public static final ConverterRule INSTANCE = new OLAPAggregateRule();
 
     public OLAPAggregateRule() {
-        super(LogicalAggregate.class, Convention.NONE, OLAPRel.CONVENTION, "OLAPAggregateRule");
+        super(LogicalAggregate.class, Convention.NONE, OlapRel.CONVENTION, "OLAPAggregateRule");
     }
 
     @Override
@@ -50,9 +50,9 @@ public class OLAPAggregateRule extends ConverterRule {
             return null;
         }
 
-        RelTraitSet traitSet = agg.getTraitSet().replace(OLAPRel.CONVENTION);
+        RelTraitSet traitSet = agg.getTraitSet().replace(OlapRel.CONVENTION);
         try {
-            return new OLAPAggregateRel(agg.getCluster(), traitSet, convert(agg.getInput(), OLAPRel.CONVENTION),
+            return new OlapAggregateRel(agg.getCluster(), traitSet, convert(agg.getInput(), OlapRel.CONVENTION),
                     agg.indicator, agg.getGroupSet(), agg.getGroupSets(), agg.getAggCallList());
         } catch (InvalidRelException e) {
             throw new IllegalStateException("Can't create OLAPAggregateRel!", e);

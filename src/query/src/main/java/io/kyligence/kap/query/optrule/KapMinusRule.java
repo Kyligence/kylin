@@ -25,8 +25,8 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Minus;
-import org.apache.kylin.query.relnode.KapMinusRel;
-import org.apache.kylin.query.relnode.KapRel;
+import org.apache.kylin.query.relnode.OlapMinusRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 /**
  */
@@ -35,14 +35,14 @@ public class KapMinusRule extends ConverterRule {
     public static final KapMinusRule INSTANCE = new KapMinusRule();
 
     public KapMinusRule() {
-        super(Minus.class, Convention.NONE, KapRel.CONVENTION, "KapMinusRule");
+        super(Minus.class, Convention.NONE, OlapRel.CONVENTION, "KapMinusRule");
     }
 
     @Override
     public RelNode convert(RelNode rel) {
         final Minus minus = (Minus) rel;
-        final RelTraitSet traitSet = minus.getTraitSet().replace(KapRel.CONVENTION);
+        final RelTraitSet traitSet = minus.getTraitSet().replace(OlapRel.CONVENTION);
         final List<RelNode> inputs = minus.getInputs();
-        return new KapMinusRel(rel.getCluster(), traitSet, convertList(inputs, KapRel.CONVENTION), minus.all);
+        return new OlapMinusRel(rel.getCluster(), traitSet, convertList(inputs, OlapRel.CONVENTION), minus.all);
     }
 }

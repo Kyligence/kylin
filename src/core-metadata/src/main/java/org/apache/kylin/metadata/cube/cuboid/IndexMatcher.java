@@ -160,7 +160,9 @@ public abstract class IndexMatcher {
     }
 
     private boolean needJoinSnapshot(JoinDesc join) {
-        List<JoinDesc> sqlDigestJoins = sqlDigest.joinDescs == null ? Lists.newArrayList() : sqlDigest.joinDescs;
+        List<JoinDesc> sqlDigestJoins = sqlDigest.getJoinDescs() == null //
+                ? Lists.newArrayList()
+                : sqlDigest.getJoinDescs();
         for (JoinDesc digestJoin : sqlDigestJoins) {
             Set<TblColRef> digestPKs = Sets.newHashSet(digestJoin.getPrimaryKeyColumns());
             Set<TblColRef> digestFKs = Sets.newHashSet(digestJoin.getForeignKeyColumns());

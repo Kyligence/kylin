@@ -27,9 +27,9 @@ import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.logical.LogicalJoin;
-import org.apache.kylin.query.relnode.OLAPFilterRel;
-import org.apache.kylin.query.relnode.OLAPJoinRel;
-import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 /**
  */
@@ -38,7 +38,7 @@ public class OLAPJoinRule extends ConverterRule {
     public static final ConverterRule INSTANCE = new OLAPJoinRule();
 
     public OLAPJoinRule() {
-        super(LogicalJoin.class, Convention.NONE, OLAPRel.CONVENTION, "OLAPJoinRule");
+        super(LogicalJoin.class, Convention.NONE, OlapRel.CONVENTION, "OLAPJoinRule");
     }
 
     @Override
@@ -47,9 +47,9 @@ public class OLAPJoinRule extends ConverterRule {
         RelNode left = join.getInput(0);
         RelNode right = join.getInput(1);
 
-        RelTraitSet traitSet = join.getTraitSet().replace(OLAPRel.CONVENTION);
-        left = convert(left, left.getTraitSet().replace(OLAPRel.CONVENTION));
-        right = convert(right, right.getTraitSet().replace(OLAPRel.CONVENTION));
+        RelTraitSet traitSet = join.getTraitSet().replace(OlapRel.CONVENTION);
+        left = convert(left, left.getTraitSet().replace(OlapRel.CONVENTION));
+        right = convert(right, right.getTraitSet().replace(OlapRel.CONVENTION));
 
         final JoinInfo info = JoinInfo.of(left, right, join.getCondition());
         if (!info.isEqui() && join.getJoinType() != JoinRelType.INNER) {
@@ -61,7 +61,7 @@ public class OLAPJoinRule extends ConverterRule {
         RelOptCluster cluster = join.getCluster();
         RelNode newRel;
         try {
-            newRel = new OLAPJoinRel(cluster, traitSet, left, right, //
+            newRel = new OlapJoinRel(cluster, traitSet, left, right, //
                     info.getEquiCondition(left, right, cluster.getRexBuilder()), //
                     info.leftKeys, info.rightKeys, join.getVariablesSet(), join.getJoinType());
         } catch (InvalidRelException e) {
@@ -71,7 +71,7 @@ public class OLAPJoinRule extends ConverterRule {
             // return null;
         }
         if (!info.isEqui()) {
-            newRel = new OLAPFilterRel(cluster, newRel.getTraitSet(), newRel,
+            newRel = new OlapFilterRel(cluster, newRel.getTraitSet(), newRel,
                     info.getRemaining(cluster.getRexBuilder()));
         }
         return newRel;

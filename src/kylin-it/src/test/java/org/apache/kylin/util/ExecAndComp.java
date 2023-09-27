@@ -51,7 +51,8 @@ import org.apache.kylin.metadata.query.StructField;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.engine.data.QueryResult;
 import org.apache.kylin.query.pushdown.SparkSqlClient;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.ContextUtil;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.query.util.QueryParams;
 import org.apache.kylin.query.util.QueryUtil;
@@ -347,8 +348,8 @@ public class ExecAndComp {
     public static EnhancedQueryResult queryModelWithOlapContext(String prj, String joinType, String sql,
             List<String> parameters) {
         QueryResult queryResult = queryModelWithMassage(prj, changeJoinType(sql, joinType), parameters);
-        val ctxs = OLAPContext.getThreadLocalContexts();
-        OLAPContext.clearThreadLocalContexts();
+        val ctxs = ContextUtil.getThreadLocalContexts();
+        ContextUtil.clearThreadLocalContexts();
         return new EnhancedQueryResult(queryResult, ctxs);
     }
 
@@ -492,7 +493,7 @@ public class ExecAndComp {
         @Delegate
         QueryResult queryResult;
 
-        public Collection<OLAPContext> olapContexts;
+        public Collection<OlapContext> olapContexts;
 
         public QueryResult getQueryResult() {
             return queryResult;

@@ -50,10 +50,10 @@ import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.query.relnode.KapFilterRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
-import org.apache.kylin.query.relnode.KapNonEquiJoinRel;
-import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapNonEquiJoinRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 public class KapJoinRule extends ConverterRule {
 
@@ -89,7 +89,7 @@ public class KapJoinRule extends ConverterRule {
     }
 
     public KapJoinRule(boolean isScd2Enabled, boolean joinCondEqualNullSafe) {
-        super(LogicalJoin.class, Convention.NONE, OLAPRel.CONVENTION, "KapJoinRule");
+        super(LogicalJoin.class, Convention.NONE, OlapRel.CONVENTION, "KapJoinRule");
         this.isScd2Enabled = isScd2Enabled;
         this.joinCondEqualNullSafe = joinCondEqualNullSafe;
     }
@@ -100,15 +100,15 @@ public class KapJoinRule extends ConverterRule {
         RelNode left = join.getInput(0);
         RelNode right = join.getInput(1);
 
-        RelTraitSet traitSet = join.getTraitSet().replace(OLAPRel.CONVENTION);
-        left = left instanceof HepRelVertex ? left : convert(left, left.getTraitSet().replace(OLAPRel.CONVENTION));
-        right = right instanceof HepRelVertex ? right : convert(right, right.getTraitSet().replace(OLAPRel.CONVENTION));
+        RelTraitSet traitSet = join.getTraitSet().replace(OlapRel.CONVENTION);
+        left = left instanceof HepRelVertex ? left : convert(left, left.getTraitSet().replace(OlapRel.CONVENTION));
+        right = right instanceof HepRelVertex ? right : convert(right, right.getTraitSet().replace(OlapRel.CONVENTION));
 
         JoinInfo info = JoinInfo.of(left, right, join.getCondition());
 
         // handle powerbi inner join, see https://github.com/Kyligence/KAP/issues/1823
         Join tmpJoin = transformJoinCondition(join, info, traitSet, left, right);
-        if (tmpJoin instanceof KapJoinRel) {
+        if (tmpJoin instanceof OlapJoinRel) {
             return tmpJoin;
         }
 
@@ -123,21 +123,21 @@ public class KapJoinRule extends ConverterRule {
                 boolean isScd2Rel = isScd2Enabled && isScd2JoinCondition(info, join, scd2Refs);
                 if (join.getJoinType() == JoinRelType.INNER && !isScd2Rel
                         && hasEqualJoinPart(left, right, join.getCondition())) {
-                    KapJoinRel joinRel = new KapJoinRel(join.getCluster(), traitSet, left, right,
+                    OlapJoinRel joinRel = new OlapJoinRel(join.getCluster(), traitSet, left, right,
                             info.getEquiCondition(left, right, rexBuilder), info.leftKeys, info.rightKeys,
                             join.getVariablesSet(), join.getJoinType());
                     joinRel.setJoinCondEqualNullSafe(joinCondEqualNullSafe);
                     RexNode rexNode = info.getRemaining(rexBuilder);
                     return rexNode.isAlwaysTrue() ? joinRel
-                            : new KapFilterRel(join.getCluster(), joinRel.getTraitSet(), joinRel, rexNode);
+                            : new OlapFilterRel(join.getCluster(), joinRel.getTraitSet(), joinRel, rexNode);
                 }
 
                 // cnf is better, but conflict with transformJoinCondition, need optimize
                 RexNode joinCondition = normalizeCondition(rexBuilder, join.getCondition(), scd2Refs);
-                return new KapNonEquiJoinRel(join.getCluster(), traitSet, left, right, joinCondition,
+                return new OlapNonEquiJoinRel(join.getCluster(), traitSet, left, right, joinCondition,
                         join.getVariablesSet(), join.getJoinType(), isScd2Rel);
             } else {
-                KapJoinRel joinRel = new KapJoinRel(join.getCluster(), traitSet, left, right,
+                OlapJoinRel joinRel = new OlapJoinRel(join.getCluster(), traitSet, left, right,
                         info.getEquiCondition(left, right, rexBuilder), info.leftKeys, info.rightKeys,
                         join.getVariablesSet(), join.getJoinType());
                 joinRel.setJoinCondEqualNullSafe(joinCondEqualNullSafe);
@@ -202,7 +202,7 @@ public class KapJoinRule extends ConverterRule {
 
         JoinInfo newInfo = JoinInfo.of(ImmutableIntList.of(leftIndex), ImmutableIntList.of(rightIndex));
         try {
-            return new KapJoinRel(cluster, traitSet, left, right,
+            return new OlapJoinRel(cluster, traitSet, left, right,
                     newInfo.getEquiCondition(left, right, cluster.getRexBuilder()), newInfo.leftKeys, newInfo.rightKeys,
                     join.getVariablesSet(), join.getJoinType());
         } catch (InvalidRelException e) {

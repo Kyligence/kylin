@@ -18,7 +18,7 @@
 
 package io.kyligence.kap.query.optrule;
 
-import static org.apache.kylin.query.relnode.OLAPRel.CONVENTION;
+import static org.apache.kylin.query.relnode.OlapRel.CONVENTION;
 
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelTraitSet;
@@ -30,7 +30,7 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlAvgAggFunction;
-import org.apache.kylin.query.relnode.KapAggregateRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
 
 /**
  */
@@ -56,7 +56,7 @@ public class KapAggregateRule extends ConverterRule {
         RelNode convertedInput = agg.getInput() instanceof HepRelVertex ? agg.getInput()
                 : convert(agg.getInput(), CONVENTION);
         try {
-            return new KapAggregateRel(agg.getCluster(), traitSet, convertedInput, agg.indicator, agg.getGroupSet(),
+            return new OlapAggregateRel(agg.getCluster(), traitSet, convertedInput, agg.indicator, agg.getGroupSet(),
                     agg.getGroupSets(), agg.getAggCallList());
         } catch (InvalidRelException e) {
             throw new IllegalStateException("Can't create OLAPAggregateRel!", e);

@@ -18,7 +18,6 @@
 
 package org.apache.kylin.measure.dim;
 
-import java.util.List;
 import java.util.Map;
 
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
@@ -28,8 +27,6 @@ import org.apache.kylin.measure.MeasureType;
 import org.apache.kylin.measure.MeasureTypeFactory;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.metadata.model.FunctionDesc;
-import org.apache.kylin.metadata.model.MeasureDesc;
-import org.apache.kylin.metadata.realization.SQLDigest;
 
 public class DimCountDistinctMeasureType extends MeasureType<Object> {
     public static final String DATATYPE_DIM_DC = "dim_dc";
@@ -84,12 +81,5 @@ public class DimCountDistinctMeasureType extends MeasureType<Object> {
     @Override
     public Map<String, Class<?>> getRewriteCalciteAggrFunctions() {
         return UDAF_MAP;
-    }
-
-    public void adjustSqlDigest(List<MeasureDesc> measureDescs, SQLDigest sqlDigest) {
-        for (MeasureDesc measureDesc : measureDescs) {
-            sqlDigest.groupbyColumns.addAll(measureDesc.getFunction().getColRefs());
-            sqlDigest.aggregations.remove(measureDesc.getFunction());
-        }
     }
 }

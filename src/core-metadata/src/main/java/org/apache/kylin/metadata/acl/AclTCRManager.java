@@ -33,18 +33,9 @@ import java.util.stream.Stream;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang.text.StrBuilder;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
-import org.apache.kylin.metadata.model.ColumnDesc;
-import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.metadata.model.NTableMetadataManager;
-import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.kylin.guava30.shaded.common.base.Joiner;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.ArrayListMultimap;
@@ -53,6 +44,13 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Multimap;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
+import org.apache.kylin.metadata.model.ColumnDesc;
+import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import lombok.val;
 
@@ -401,13 +399,12 @@ public class AclTCRManager {
         final ColumnToConds columnConditions = new ColumnToConds();
         principalRF.getRowSets().stream().filter(r -> columnType.containsKey(r.getColumnName()))
                 .forEach(r -> columnConditions.put(r.getColumnName(),
-                        r.getValues().stream()
-                                .map(v -> new ColumnToConds.Cond(v, ColumnToConds.Cond.IntervalType.CLOSED))
+                        r.getValues().stream().map(v -> new ColumnToConds.Cond(v, ColumnToConds.IntervalType.CLOSED))
                                 .collect(Collectors.toList())));
         final ColumnToConds columnLikeConditions = new ColumnToConds();
         principalRF.getLikeRowSets().stream().filter(r -> columnType.containsKey(r.getColumnName()))
                 .forEach(r -> columnLikeConditions.put(r.getColumnName(),
-                        r.getValues().stream().map(v -> new ColumnToConds.Cond(v, ColumnToConds.Cond.IntervalType.LIKE))
+                        r.getValues().stream().map(v -> new ColumnToConds.Cond(v, ColumnToConds.IntervalType.LIKE))
                                 .collect(Collectors.toList())));
         return ColumnToConds.concatConds(columnConditions, columnLikeConditions, columnType);
     }
@@ -423,11 +420,11 @@ public class AclTCRManager {
             return null;
         }
 
-        StrBuilder result = new StrBuilder();
+        StringBuilder result = new StringBuilder();
         result.append("(");
         principalRF.getRowFilter().stream().filter(filterGroup -> MapUtils.isNotEmpty(filterGroup.getFilters()))
                 .forEach(filterGroup -> {
-                    if (result.endsWith(")")) {
+                    if (result.charAt(result.length() - 1) == ')') {
                         result.append(" ").append(filterGroup.getType()).append(" ");
                     }
 
@@ -439,7 +436,7 @@ public class AclTCRManager {
                                 String columnName = entry.getKey();
                                 AclTCR.FilterItems filterItems = entry.getValue();
 
-                                if (result.endsWith(")")) {
+                                if (result.charAt(result.length() - 1) == ')') {
                                     result.append(" ").append(filterItems.getType()).append(" ");
                                 }
 
@@ -456,7 +453,7 @@ public class AclTCRManager {
                                 }
 
                                 if (CollectionUtils.isNotEmpty(filterItems.getLikeItems())) {
-                                    if (result.endsWith(")")) {
+                                    if (result.charAt(result.length() - 1) == ')') {
                                         result.append(" OR ");
                                     }
 

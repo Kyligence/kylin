@@ -47,10 +47,10 @@ import org.apache.calcite.util.mapping.Mappings;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapFilterRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.RuleUtils;
 
 /**
@@ -59,12 +59,12 @@ import org.apache.kylin.query.util.RuleUtils;
  */
 public class KapAggProjectTransposeRule extends RelOptRule {
     public static final KapAggProjectTransposeRule AGG_PROJECT_FILTER_JOIN = new KapAggProjectTransposeRule(
-            operand(KapAggregateRel.class,
-                    operand(KapProjectRel.class, operand(KapFilterRel.class, operand(KapJoinRel.class, any())))),
+            operand(OlapAggregateRel.class,
+                    operand(OlapProjectRel.class, operand(OlapFilterRel.class, operand(OlapJoinRel.class, any())))),
             RelFactories.LOGICAL_BUILDER, "KapAggProjectTransposeRule:agg-project-filter-join");
 
     public static final KapAggProjectTransposeRule AGG_PROJECT_JOIN = new KapAggProjectTransposeRule(
-            operand(KapAggregateRel.class, operand(KapProjectRel.class, operand(KapJoinRel.class, any()))),
+            operand(OlapAggregateRel.class, operand(OlapProjectRel.class, operand(OlapJoinRel.class, any()))),
             RelFactories.LOGICAL_BUILDER, "KapAggProjectTransposeRule:agg-project-join");
 
     public KapAggProjectTransposeRule(RelOptRuleOperand operand) {
@@ -82,10 +82,10 @@ public class KapAggProjectTransposeRule extends RelOptRule {
 
     @Override
     public boolean matches(RelOptRuleCall call) {
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapProjectRel project = call.rel(1);
-        final KapJoinRel joinRel;
-        if (call.rel(2) instanceof KapFilterRel) {
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapProjectRel project = call.rel(1);
+        final OlapJoinRel joinRel;
+        if (call.rel(2) instanceof OlapFilterRel) {
             joinRel = call.rel(3);
         } else {
             joinRel = call.rel(2);
@@ -122,8 +122,8 @@ public class KapAggProjectTransposeRule extends RelOptRule {
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapProjectRel project = call.rel(1);
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapProjectRel project = call.rel(1);
 
         // Do the columns used by the project appear in the output of the aggregate
         ImmutableBitSet.Builder builder = ImmutableBitSet.builder();
@@ -213,7 +213,7 @@ public class KapAggProjectTransposeRule extends RelOptRule {
         call.transformTo(topAggregate);
     }
 
-    private void processAggCalls(KapAggregateRel aggregate, KapProjectRel project,
+    private void processAggCalls(OlapAggregateRel aggregate, OlapProjectRel project,
             ImmutableList.Builder<AggregateCall> aggCalls, ImmutableList.Builder<AggregateCall> topAggCalls,
             Map<Integer, RelDataType> countArgMap, List<RexNode> newProjects) {
         int startIndex = 0;

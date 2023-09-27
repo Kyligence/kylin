@@ -39,11 +39,11 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
-import org.apache.kylin.query.relnode.KapFilterRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
 
 public class FilterSimplifyRule extends RelOptRule {
 
-    public static final FilterSimplifyRule INSTANCE = new FilterSimplifyRule(operand(KapFilterRel.class, any()),
+    public static final FilterSimplifyRule INSTANCE = new FilterSimplifyRule(operand(OlapFilterRel.class, any()),
             RelFactories.LOGICAL_BUILDER, "FilterSimpifyRule");
 
     public FilterSimplifyRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory, String description) {

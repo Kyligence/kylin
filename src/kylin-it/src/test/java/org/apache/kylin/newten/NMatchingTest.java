@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.newten;
 
 import java.util.ArrayList;
@@ -25,6 +24,7 @@ import java.util.List;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
@@ -75,9 +75,8 @@ public class NMatchingTest extends NLocalWithSparkSessionTest {
             ExecAndComp.execAndCompare(query, getProject(), CompareLevel.SAME, "left");
             Assert.fail();
         } catch (Exception e) {
-            Assert.assertTrue(e.getCause().getCause().getCause().getMessage().contains("No realization found for OLAPContext"));
+            Assert.assertTrue(Throwables.getRootCause(e).getMessage().contains("No realization found for OlapContext"));
         }
-
     }
 
     @Test

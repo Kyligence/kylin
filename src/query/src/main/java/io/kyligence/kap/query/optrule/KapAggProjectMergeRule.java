@@ -36,22 +36,22 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapFilterRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.RuleUtils;
 
 import com.google.common.collect.ImmutableList;
 
 public class KapAggProjectMergeRule extends RelOptRule {
     public static final KapAggProjectMergeRule AGG_PROJECT_JOIN = new KapAggProjectMergeRule(
-            operand(KapAggregateRel.class, operand(KapProjectRel.class, operand(KapJoinRel.class, any()))),
+            operand(OlapAggregateRel.class, operand(OlapProjectRel.class, operand(OlapJoinRel.class, any()))),
             RelFactories.LOGICAL_BUILDER, "KapAggProjectMergeRule:agg-project-join");
 
     public static final KapAggProjectMergeRule AGG_PROJECT_FILTER_JOIN = new KapAggProjectMergeRule(
-            operand(KapAggregateRel.class,
-                    operand(KapProjectRel.class, operand(KapFilterRel.class, operand(KapJoinRel.class, any())))),
+            operand(OlapAggregateRel.class,
+                    operand(OlapProjectRel.class, operand(OlapFilterRel.class, operand(OlapJoinRel.class, any())))),
             RelFactories.LOGICAL_BUILDER, "KapAggProjectMergeRule:agg-project-filter-join");
 
     public KapAggProjectMergeRule(RelOptRuleOperand operand) {
@@ -68,7 +68,7 @@ public class KapAggProjectMergeRule extends RelOptRule {
 
     @Override
     public boolean matches(RelOptRuleCall call) {
-        final KapJoinRel joinRel = call.rel(2) instanceof KapFilterRel //
+        final OlapJoinRel joinRel = call.rel(2) instanceof OlapFilterRel //
                 ? call.rel(3)
                 : call.rel(2);
         //Only one agg child of join is accepted
@@ -76,8 +76,8 @@ public class KapAggProjectMergeRule extends RelOptRule {
             return false;
         }
 
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapProjectRel project = call.rel(1);
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapProjectRel project = call.rel(1);
         ImmutableBitSet.Builder immutableBitSetBuilder = ImmutableBitSet.builder();
         immutableBitSetBuilder.addAll(aggregate.getGroupSet());
         aggregate.getAggCallList().forEach(aggregateCall -> {
@@ -98,8 +98,8 @@ public class KapAggProjectMergeRule extends RelOptRule {
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapProjectRel project = call.rel(1);
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapProjectRel project = call.rel(1);
         RelNode x = apply(call, aggregate, project);
         if (x != null) {
             call.transformTo(x);

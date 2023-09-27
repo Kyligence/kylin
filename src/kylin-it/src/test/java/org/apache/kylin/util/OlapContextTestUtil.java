@@ -32,17 +32,18 @@ import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.metadata.realization.NoStreamingRealizationFoundException;
 import org.apache.kylin.query.engine.QueryExec;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.ContextUtil;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.routing.RealizationChooser;
 import org.apache.kylin.query.util.QueryContextCutter;
 
 public class OlapContextTestUtil {
 
-    public static List<OLAPContext> getOlapContexts(String project, String sql) throws SqlParseException {
+    public static List<OlapContext> getOlapContexts(String project, String sql) throws SqlParseException {
         return getOlapContexts(project, sql, false);
     }
 
-    public static List<OLAPContext> getOlapContexts(String project, String sql, boolean reCutBanned)
+    public static List<OlapContext> getOlapContexts(String project, String sql, boolean reCutBanned)
             throws SqlParseException {
         QueryExec queryExec = new QueryExec(project, KylinConfig.getInstanceFromEnv());
         try {
@@ -69,7 +70,7 @@ public class OlapContextTestUtil {
         return rel;
     }
 
-    public static List<OLAPContext> getOlapContexts(String project, String sql, boolean reCutBanned,
+    public static List<OlapContext> getOlapContexts(String project, String sql, boolean reCutBanned,
             Consumer<NoRealizationFoundException> consumer) throws SqlParseException {
         QueryExec queryExec = new QueryExec(project, KylinConfig.getInstanceFromEnv());
         try {
@@ -81,11 +82,11 @@ public class OlapContextTestUtil {
         return getOlapContexts();
     }
 
-    public static List<OLAPContext> getHepRulesOptimizedOlapContexts(String project, String sql, boolean reCutBanned)
+    public static List<OlapContext> getHepRulesOptimizedOlapContexts(String project, String sql, boolean reCutBanned)
             throws SqlParseException {
         QueryExec queryExec = new QueryExec(project, KylinConfig.getInstanceFromEnv());
         RelNode rel = queryExec.parseAndOptimize(sql);
-        List<OLAPContext> olapContexts = Lists.newArrayList();
+        List<OlapContext> olapContexts = Lists.newArrayList();
         try {
             List<RelNode> relNodes = queryExec.postOptimize(rel);
             relNodes.forEach(relNode -> {
@@ -100,22 +101,20 @@ public class OlapContextTestUtil {
         return olapContexts;
     }
 
-    private static List<OLAPContext> getOlapContexts() {
-        List<OLAPContext> result = Lists.newArrayList();
-        Collection<OLAPContext> contexts = OLAPContext.getThreadLocalContexts();
-        if (contexts != null) {
-            result.addAll(contexts);
-            result.forEach(olap -> {
-                if (olap.isFixedModel()) {
-                    olap.unfixModel();
-                }
-            });
-        }
+    private static List<OlapContext> getOlapContexts() {
+        List<OlapContext> result = Lists.newArrayList();
+        Collection<OlapContext> contexts = ContextUtil.getThreadLocalContexts();
+        result.addAll(contexts);
+        result.forEach(olap -> {
+            if (olap.isFixedModel()) {
+                olap.unfixModel();
+            }
+        });
         return result;
     }
 
-    public static Map<String, String> matchJoins(NDataModel model, OLAPContext ctx) {
-        KylinConfig projectConfig = NProjectManager.getProjectConfig(ctx.olapSchema.getProjectName());
+    public static Map<String, String> matchJoins(NDataModel model, OlapContext ctx) {
+        KylinConfig projectConfig = NProjectManager.getProjectConfig(ctx.getOlapSchema().getProjectName());
         boolean isPartialInnerJoin = projectConfig.isQueryMatchPartialInnerJoinModel();
         boolean isPartialNonEquiJoin = projectConfig.partialMatchNonEquiJoins();
         return RealizationChooser.matchJoins(model, ctx, isPartialInnerJoin, isPartialNonEquiJoin);

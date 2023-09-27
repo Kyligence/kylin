@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.rest.controller;
 
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
@@ -29,6 +28,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,7 +69,8 @@ public class NQueryControllerTest extends AbstractMVCIntegrationTestCase {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        userService.createUser(new ManagedUser("ADMIN", "KYLIN", false, Arrays.asList(new UserGrantedAuthority("ROLE_ADMIN"))));
+        userService.createUser(new ManagedUser("ADMIN", "KYLIN", false,
+                Collections.singletonList(new UserGrantedAuthority("ROLE_ADMIN"))));
     }
 
     @Test
@@ -93,7 +94,7 @@ public class NQueryControllerTest extends AbstractMVCIntegrationTestCase {
 
         final String exceptionMsg = JsonPath.compile("$.data.exceptionMessage")
                 .read(result.getResponse().getContentAsString());
-        Assert.assertTrue(StringUtils.contains(exceptionMsg, "No realization found for OLAPContext"));
+        Assert.assertTrue(StringUtils.contains(exceptionMsg, "No realization found for OlapContext"));
     }
 
     @Test
@@ -204,7 +205,6 @@ public class NQueryControllerTest extends AbstractMVCIntegrationTestCase {
         int allProjectsSize = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).listAllProjects().size();
         Assert.assertEquals(allProjectsSize, actualProjects.size());
     }
-
 
     @Test
     public void testDownloadQueryResultWithQueryException() throws Exception {

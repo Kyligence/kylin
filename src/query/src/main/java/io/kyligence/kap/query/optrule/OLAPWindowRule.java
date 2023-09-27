@@ -23,8 +23,8 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Window;
-import org.apache.kylin.query.relnode.OLAPRel;
-import org.apache.kylin.query.relnode.OLAPWindowRel;
+import org.apache.kylin.query.relnode.OlapRel;
+import org.apache.kylin.query.relnode.OlapWindowRel;
 
 /**
  */
@@ -33,15 +33,15 @@ public class OLAPWindowRule extends ConverterRule {
     public static final OLAPWindowRule INSTANCE = new OLAPWindowRule();
 
     public OLAPWindowRule() {
-        super(Window.class, Convention.NONE, OLAPRel.CONVENTION, "OLAPWindowRule");
+        super(Window.class, Convention.NONE, OlapRel.CONVENTION, "OLAPWindowRule");
     }
 
     @Override
     public RelNode convert(RelNode rel) {
         final Window window = (Window) rel;
-        final RelTraitSet traitSet = window.getTraitSet().replace(OLAPRel.CONVENTION);
+        final RelTraitSet traitSet = window.getTraitSet().replace(OlapRel.CONVENTION);
         final RelNode input = window.getInput();
-        return new OLAPWindowRel(rel.getCluster(), traitSet, convert(input, OLAPRel.CONVENTION), window.constants,
+        return new OlapWindowRel(rel.getCluster(), traitSet, convert(input, OlapRel.CONVENTION), window.constants,
                 window.getRowType(), window.groups);
     }
 }

@@ -23,8 +23,8 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Sort;
-import org.apache.kylin.query.relnode.OLAPLimitRel;
-import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.kylin.query.relnode.OlapLimitRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 /**
  */
@@ -44,15 +44,15 @@ public class OLAPLimitRule extends RelOptRule {
         }
 
         RelTraitSet origTraitSet = sort.getTraitSet();
-        RelTraitSet traitSet = origTraitSet.replace(OLAPRel.CONVENTION).simplify();
+        RelTraitSet traitSet = origTraitSet.replace(OlapRel.CONVENTION).simplify();
 
         RelNode input = sort.getInput();
         if (!sort.getCollation().getFieldCollations().isEmpty()) {
             // Create a sort with the same sort key, but no offset or fetch.
             input = sort.copy(sort.getTraitSet(), input, sort.getCollation(), null, null);
         }
-        RelNode x = convert(input, input.getTraitSet().replace(OLAPRel.CONVENTION));
-        call.transformTo(new OLAPLimitRel(sort.getCluster(), traitSet, x, sort.offset, sort.fetch));
+        RelNode x = convert(input, input.getTraitSet().replace(OlapRel.CONVENTION));
+        call.transformTo(new OlapLimitRel(sort.getCluster(), traitSet, x, sort.offset, sort.fetch));
     }
 
 }

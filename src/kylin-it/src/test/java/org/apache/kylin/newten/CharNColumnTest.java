@@ -60,7 +60,7 @@ public class CharNColumnTest extends NLocalWithSparkSessionTest {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         populateSSWithCSVData(config, getProject(), SparderEnv.getSparkSession());
         String query1 = "select AGE, CITY, " + "intersect_count(USER_ID, TAG, array['rich','tall','handsome']) "
-                + "from TEST_CHAR_N where city=\'Beijing  \' group by AGE, CITY ";
+                + "from TEST_CHAR_N where city='Beijing  ' group by AGE, CITY ";
         List<String> r1 = ExecAndComp.queryModel(getProject(), query1).collectAsList().stream()
                 .map(row -> row.toSeq().mkString(",")).collect(Collectors.toList());
 

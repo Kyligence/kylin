@@ -46,7 +46,7 @@ import org.apache.kylin.metadata.model.Segments;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.metadata.realization.QueryableSeg;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.util.MetadataTestUtils;
 import org.apache.kylin.util.OlapContextTestUtil;
 import org.junit.Assert;
@@ -62,7 +62,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         NDataflow dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
                 .getDataflow("abe3bf1a-c4bc-458d-8278-7ea8b00f5e96");
         String sql = "SELECT seller_ID FROM TEST_KYLIN_FACT LEFT JOIN TEST_ACCOUNT ON SELLER_ID = ACCOUNT_ID";
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
         Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
@@ -80,7 +80,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
             String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b \n"
                     + " on a.COUNTRY = b.COUNTRY group by a.Name ";
             NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -96,7 +96,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
             String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b \n"
                     + " on a.COUNTRY = b.COUNTRY";
             NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -131,7 +131,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
             String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b \n"
                     + " on a.COUNTRY = b.COUNTRY";
             NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -158,7 +158,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
             String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b \n"
                     + " on a.COUNTRY = b.COUNTRY";
             NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -197,7 +197,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b \n"
                 + " on a.COUNTRY = b.COUNTRY";
         NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
         Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
@@ -238,7 +238,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b \n"
                 + " on a.COUNTRY = b.COUNTRY";
         NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
         Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
@@ -278,7 +278,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b \n"
                 + " on a.COUNTRY = b.COUNTRY";
         NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
         Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
@@ -319,7 +319,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         String sql = "select a.NAME from TEST_BANK_INCOME a inner join TEST_BANK_LOCATION b \n"
                 + " on a.COUNTRY = b.COUNTRY";
         NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql, true).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
         Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
@@ -420,7 +420,7 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         // case 1. raw-query answered by Lookup
         {
             String sql = "select SITE_ID from EDW.TEST_SITES";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -428,14 +428,14 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
             CapabilityResult result = DataflowCapabilityChecker.check(dataflow, candidate, olapContext.getSQLDigest());
             Assert.assertNotNull(result);
             Assert.assertTrue(result.getSelectedCandidate() instanceof NLookupCandidate);
-            Assert.assertFalse(olapContext.getSQLDigest().allColumns.isEmpty());
-            Assert.assertEquals(1, olapContext.getSQLDigest().allColumns.size());
+            Assert.assertFalse(olapContext.getSQLDigest().getAllColumns().isEmpty());
+            Assert.assertEquals(1, olapContext.getSQLDigest().getAllColumns().size());
         }
 
         // case 2. aggregate-query answered by lookup
         {
             String sql = "select sum(SITE_ID) from EDW.TEST_SITES";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -443,14 +443,14 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
             CapabilityResult result = DataflowCapabilityChecker.check(dataflow, candidate, olapContext.getSQLDigest());
             Assert.assertNotNull(result);
             Assert.assertTrue(result.getSelectedCandidate() instanceof NLookupCandidate);
-            Assert.assertFalse(olapContext.getSQLDigest().allColumns.isEmpty());
-            Assert.assertEquals(1, olapContext.getSQLDigest().allColumns.size());
+            Assert.assertFalse(olapContext.getSQLDigest().getAllColumns().isEmpty());
+            Assert.assertEquals(1, olapContext.getSQLDigest().getAllColumns().size());
         }
 
         {
             // case 3. cannot answer when there are no ready segment
             String sql = "select sum(SITE_ID) from EDW.TEST_SITES";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             removeAllSegments(dataflow);
             dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
                     .getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa");

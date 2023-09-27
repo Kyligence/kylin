@@ -23,8 +23,8 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Window;
-import org.apache.kylin.query.relnode.KapRel;
-import org.apache.kylin.query.relnode.KapWindowRel;
+import org.apache.kylin.query.relnode.OlapRel;
+import org.apache.kylin.query.relnode.OlapWindowRel;
 
 /**
  */
@@ -33,16 +33,16 @@ public class KapWindowRule extends ConverterRule {
     public static final KapWindowRule INSTANCE = new KapWindowRule();
 
     public KapWindowRule() {
-        super(Window.class, Convention.NONE, KapRel.CONVENTION, "KapWindowRule");
+        super(Window.class, Convention.NONE, OlapRel.CONVENTION, "KapWindowRule");
     }
 
     @Override
     public RelNode convert(RelNode rel) {
         final Window window = (Window) rel;
-        final RelTraitSet traitSet = window.getTraitSet().replace(KapRel.CONVENTION);
+        final RelTraitSet traitSet = window.getTraitSet().replace(OlapRel.CONVENTION);
         final RelNode input = window.getInput();
-        return new KapWindowRel(rel.getCluster(), traitSet,
-                convert(input, input.getTraitSet().replace(KapRel.CONVENTION)), window.constants, window.getRowType(),
+        return new OlapWindowRel(rel.getCluster(), traitSet,
+                convert(input, input.getTraitSet().replace(OlapRel.CONVENTION)), window.constants, window.getRowType(),
                 window.groups);
     }
 }

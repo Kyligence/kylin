@@ -34,8 +34,8 @@ import org.apache.kylin.metadata.model.Segments;
 import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.metadata.realization.IRealization;
 import org.apache.kylin.metadata.realization.QueryableSeg;
-import org.apache.kylin.query.relnode.OLAPContext;
-import org.apache.kylin.query.relnode.OLAPContextProp;
+import org.apache.kylin.query.relnode.OlapContext;
+import org.apache.kylin.query.relnode.OlapContextProp;
 
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.Getter;
@@ -47,12 +47,12 @@ public class Candidate {
     // ============================================================================
 
     IRealization realization;
-    OLAPContext ctx;
+    OlapContext ctx;
 
     @Setter
     CapabilityResult capability;
     @Setter
-    OLAPContextProp rewrittenCtx;
+    OlapContextProp rewrittenCtx;
     @Setter
     Map<String, String> matchedJoinsGraphAliasMap;
 
@@ -96,7 +96,7 @@ public class Candidate {
         queryableSeg.setChSegToLayoutsMap(secondStorageSegmentLayoutMap);
     }
 
-    public Candidate(IRealization realization, OLAPContext ctx, Map<String, String> matchedJoinsGraphAliasMap) {
+    public Candidate(IRealization realization, OlapContext ctx, Map<String, String> matchedJoinsGraphAliasMap) {
         this.realization = realization;
         this.ctx = ctx;
         this.matchedJoinsGraphAliasMap = matchedJoinsGraphAliasMap;

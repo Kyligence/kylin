@@ -44,7 +44,7 @@ import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.realization.CapabilityResult;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.util.MetadataTestUtils;
 import org.apache.kylin.util.OlapContextTestUtil;
 import org.junit.After;
@@ -70,7 +70,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         NDataflowManager dataflowManager = NDataflowManager.getInstance(getTestConfig(), getProject());
         {
             String sql = "select distinct DEAL_AMOUNT from test_kylin_fact \n";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
 
             // model with computedColumns
             String modelWithCCId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
@@ -90,7 +90,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         // match aggIndex - null in agg col
         {
             String sql = "select sum(DEAL_AMOUNT) from test_kylin_fact \n";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
 
             // model with computedColumns
             String modelWithCCId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
@@ -110,7 +110,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         // match tableIndex
         {
             String sql = "select DEAL_AMOUNT from test_kylin_fact \n";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
 
             // model with computedColumns
             String modelWithCCId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
@@ -150,7 +150,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         {
             String sql = "select CAL_DT, count(price) as GMV from test_kylin_fact \n"
                     + " where CAL_DT='2012-01-10' group by CAL_DT ";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -165,7 +165,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         // 2. tableIndex match
         {
             String sql = "select CAL_DT from test_kylin_fact where CAL_DT='2012-01-10'";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -190,7 +190,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         {
             String sql = "select CAL_DT, TRANS_ID, count(*) as GMV from test_kylin_fact \n"
                     + " where CAL_DT='2012-01-10' and TRANS_ID > 10000 group by CAL_DT, TRANS_ID ";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -203,7 +203,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         {
             String sql = "select CAL_DT, TRANS_ID, count(*) as GMV from test_kylin_fact \n"
                     + " where CAL_DT > '2012-01-10' and TRANS_ID = 10000 group by CAL_DT, TRANS_ID ";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -218,7 +218,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
             String sql = "select CAL_DT, TRANS_ID, count(*) as GMV from test_kylin_fact \n"
                     + " where CAL_DT = '2012-01-10' and TRANS_ID = 10000 group by CAL_DT, TRANS_ID ";
             mockTableStats();
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -296,7 +296,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
                 + "AND test_kylin_fact.lstg_site_id = test_category_groupings.site_id\n"
                 + " left JOIN edw.test_sites as test_sites ON test_kylin_fact.lstg_site_id = test_sites.site_id\n"
                 + " group by test_kylin_fact.lstg_format_name, META_CATEG_NAME";
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -364,7 +364,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         String sql = "select b.ACCOUNT_BUYER_LEVEL from \"DEFAULT\".\"TEST_KYLIN_FACT\" a\n"
                 + "left join \"DEFAULT\".\"TEST_ACCOUNT\" b on a.SELLER_ID = b.ACCOUNT_ID";
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -389,10 +389,10 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
                 + "group by  1.1000000000000001\n";
 
         getTestConfig().setProperty("kylin.query.calcite.aggregate-pushdown-enabled", "true");
-        List<OLAPContext> olapContexts = OlapContextTestUtil.getHepRulesOptimizedOlapContexts(getProject(), sql, false);
+        List<OlapContext> olapContexts = OlapContextTestUtil.getHepRulesOptimizedOlapContexts(getProject(), sql, false);
 
         // validate the first
-        OLAPContext oneOlapContext = olapContexts.get(0);
+        OlapContext oneOlapContext = olapContexts.get(0);
         Map<String, String> oneMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), oneOlapContext);
         oneOlapContext.fixModel(dataflow.getModel(), oneMap);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -401,7 +401,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         Assert.assertEquals(1L, layoutCandidate.getLayoutEntity().getId());
 
         // validate the second
-        OLAPContext anotherOlapContext = olapContexts.get(1);
+        OlapContext anotherOlapContext = olapContexts.get(1);
         Map<String, String> anotherMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), anotherOlapContext);
         anotherOlapContext.fixModel(dataflow.getModel(), anotherMap);
         NLayoutCandidate anotherCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -427,10 +427,10 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
                 + "group by  1.1000000000000001\n";
 
         getTestConfig().setProperty("kylin.query.calcite.aggregate-pushdown-enabled", "false");
-        List<OLAPContext> olapContexts = OlapContextTestUtil.getHepRulesOptimizedOlapContexts(getProject(), sql, false);
+        List<OlapContext> olapContexts = OlapContextTestUtil.getHepRulesOptimizedOlapContexts(getProject(), sql, false);
 
         // validate the first
-        OLAPContext oneOlapContext = olapContexts.get(0);
+        OlapContext oneOlapContext = olapContexts.get(0);
         Map<String, String> oneMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), oneOlapContext);
         oneOlapContext.fixModel(dataflow.getModel(), oneMap);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -439,7 +439,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         Assert.assertEquals(1L, layoutCandidate.getLayoutEntity().getId());
 
         // validate the second
-        OLAPContext anotherOlapContext = olapContexts.get(1);
+        OlapContext anotherOlapContext = olapContexts.get(1);
         Map<String, String> anotherMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), anotherOlapContext);
         anotherOlapContext.fixModel(dataflow.getModel(), anotherMap);
         NLayoutCandidate anotherCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -465,7 +465,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         {
             String sql = "select CAL_DT, TRANS_ID, count(*) as GMV from test_kylin_fact \n"
                     + " where CAL_DT = '2012-01-10' and TRANS_ID = 10000 group by CAL_DT, TRANS_ID ";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -484,7 +484,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         {
             String sql = "select CAL_DT, TRANS_ID, count(*) as GMV from test_kylin_fact \n"
                     + " where CAL_DT = '2012-01-10' and TRANS_ID > 10000 group by CAL_DT, TRANS_ID ";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -544,7 +544,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         String modelId = "abe3bf1a-c4bc-458d-8278-7ea8b00f5e96";
         NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(modelId);
         String sql = "select avg(TEST_KYLIN_FACT.ITEM_COUNT) from TEST_KYLIN_FACT";
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -570,7 +570,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             String sql = "select sum(ORDER_ID) from TEST_KYLIN_FACT";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -582,7 +582,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             String sql = "select max(ORDER_ID) from TEST_KYLIN_FACT";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -594,7 +594,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             String sql = "select min(ORDER_ID) from TEST_KYLIN_FACT";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -606,7 +606,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             String sql = "select count(ORDER_ID) from TEST_KYLIN_FACT";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -618,7 +618,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             String sql = "select count(distinct ORDER_ID) from TEST_KYLIN_FACT";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -630,7 +630,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             String sql = "select collect_set(ORDER_ID) from TEST_KYLIN_FACT";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -642,7 +642,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         {
             getTestConfig().setProperty("kylin.engine.segment-online-mode", "ANY");
             String sql = "select max(PRICE)from TEST_KYLIN_FACT";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -679,7 +679,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         String sql = "select LSTG_FORMAT_NAME,count(*) from TEST_KYLIN_FACT group by LSTG_FORMAT_NAME";
 
         {
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> tableAlias2ModelAliasMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), tableAlias2ModelAliasMap);
@@ -691,7 +691,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             overwriteSystemProp("kylin.query.layout.prefer-aggindex", "false");
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> tableAlias2ModelAliasMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), tableAlias2ModelAliasMap);
@@ -707,7 +707,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         String project = "table_index";
         MetadataTestUtils.updateProjectConfig(project, "kylin.query.use-tableindex-answer-non-raw-query", "true");
         String sql = "select max(PRICE)from TEST_KYLIN_FACT";
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
 
         String modelId = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
         NDataflow dataflow = NDataflowManager.getInstance(getTestConfig(), project).getDataflow(modelId);
@@ -732,7 +732,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
             copyForWrite.setOverrideProps(props);
         });
         String sql = "select max(PRICE) from TEST_KYLIN_FACT";
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
 
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -759,7 +759,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
         for (String filter : filters) {
             String sql = "select CAL_DT from test_kylin_fact a inner join EDW.test_sites b \n"
                     + " on a.LSTG_SITE_ID = b.SITE_ID where " + filter;
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
             Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelName);
             NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -782,7 +782,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             String sql = "select max(BIG_REGION_NAME) max1, max(case when 1=1 then BIG_REGION_NAME end) max2 from TEST_DIM_AS_MEASURE";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -797,7 +797,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
 
         {
             String sql = "select max(REGION_NAME) max1, max(case when 1=1 then BIG_REGION_NAME end) max2 from TEST_DIM_AS_MEASURE";
-            OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(emptyProject, sql).get(0);
             Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
                     olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
@@ -838,7 +838,7 @@ public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
                 + "GROUP BY \"TEST_KYLIN_FACT\".\"TRANS_ID\"";
         NDataflow dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
                 .getDataflow("741ca86a-1f13-46da-a59f-95fb68615e3a");
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,

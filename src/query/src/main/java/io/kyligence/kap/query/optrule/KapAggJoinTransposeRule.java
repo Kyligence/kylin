@@ -58,8 +58,8 @@ import org.apache.calcite.util.mapping.Mappings;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
 import org.apache.kylin.query.util.RuleUtils;
 
 import com.google.common.collect.ImmutableList;
@@ -69,7 +69,7 @@ public class KapAggJoinTransposeRule extends RelOptRule {
     private static final String STAR_TOKEN = "*";
 
     public static final KapAggJoinTransposeRule INSTANCE_JOIN_RIGHT_AGG = new KapAggJoinTransposeRule(
-            operand(KapAggregateRel.class, operand(KapJoinRel.class, any())), RelFactories.LOGICAL_BUILDER,
+            operand(OlapAggregateRel.class, operand(OlapJoinRel.class, any())), RelFactories.LOGICAL_BUILDER,
             "KapAggJoinTransposeRule:agg-join-rightAgg");
 
     public KapAggJoinTransposeRule(RelOptRuleOperand operand) {
@@ -86,16 +86,16 @@ public class KapAggJoinTransposeRule extends RelOptRule {
 
     @Override
     public boolean matches(RelOptRuleCall call) {
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapJoinRel joinRel = call.rel(1);
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapJoinRel joinRel = call.rel(1);
         //Only one agg child of join is accepted
         return !aggregate.isContainCountDistinct() && RuleUtils.isJoinOnlyOneAggChild(joinRel);
     }
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapJoinRel join = call.rel(1);
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapJoinRel join = call.rel(1);
         final RelBuilder relBuilder = call.builder();
 
         // If any aggregate functions do not support splitting, bail out
@@ -140,7 +140,7 @@ public class KapAggJoinTransposeRule extends RelOptRule {
         call.transformTo(relBuilder.build());
     }
 
-    private void aggPushDown(KapAggregateRel aggregate, KapJoinRel join, ImmutableBitSet belowAggregateColumns,
+    private void aggPushDown(OlapAggregateRel aggregate, OlapJoinRel join, ImmutableBitSet belowAggregateColumns,
             RelMetadataQuery mq, RelBuilder relBuilder, boolean allColumnsInAggregate) {
         final Map<Integer, Integer> map = new HashMap<>();
         final List<Side> sides = new ArrayList<>();
@@ -182,7 +182,7 @@ public class KapAggJoinTransposeRule extends RelOptRule {
         updateCondition(sides, map, aggregate, join, belowOffset, relBuilder, allColumnsInAggregate);
     }
 
-    private void processUnique(Side side, RelBuilder relBuilder, RelNode joinInput, KapAggregateRel aggregate,
+    private void processUnique(Side side, RelBuilder relBuilder, RelNode joinInput, OlapAggregateRel aggregate,
             ImmutableBitSet fieldSet, Mappings.TargetMapping mapping, ImmutableBitSet belowAggregateKey) {
         final RexBuilder rexBuilder = aggregate.getCluster().getRexBuilder();
         side.aggregate = false;
@@ -210,7 +210,7 @@ public class KapAggJoinTransposeRule extends RelOptRule {
         side.newInput = relBuilder.build();
     }
 
-    private void processUnUnique(Side side, KapAggregateRel aggregate, RelBuilder relBuilder, RelNode joinInput,
+    private void processUnUnique(Side side, OlapAggregateRel aggregate, RelBuilder relBuilder, RelNode joinInput,
             ImmutableBitSet fieldSet, Mappings.TargetMapping mapping, ImmutableBitSet belowAggregateKey) {
         side.aggregate = true;
         final RexBuilder rexBuilder = aggregate.getCluster().getRexBuilder();
@@ -238,8 +238,8 @@ public class KapAggJoinTransposeRule extends RelOptRule {
                 .aggregate(relBuilder.groupKey(belowAggregateKey, null), belowAggCalls).build();
     }
 
-    private static void updateCondition(List<Side> sides, Map<Integer, Integer> map, KapAggregateRel aggregate,
-            KapJoinRel join, int belowOffset, RelBuilder relBuilder, boolean allColumnsInAggregate) {
+    private static void updateCondition(List<Side> sides, Map<Integer, Integer> map, OlapAggregateRel aggregate,
+            OlapJoinRel join, int belowOffset, RelBuilder relBuilder, boolean allColumnsInAggregate) {
         final Mapping mapping = (Mapping) Mappings.target(map::get, join.getRowType().getFieldCount(), belowOffset);
         final RexBuilder rexBuilder = aggregate.getCluster().getRexBuilder();
         final RexNode newCondition = RexUtil.apply(mapping, join.getCondition());
@@ -380,7 +380,7 @@ public class KapAggJoinTransposeRule extends RelOptRule {
         return rexCall.getOperator().getName().equals(STAR_TOKEN) && rexCall.getOperands().size() == 2;
     }
 
-    private static boolean isLeftAgg(AggregateCall aggregateCall, KapJoinRel joinRel) {
+    private static boolean isLeftAgg(AggregateCall aggregateCall, OlapJoinRel joinRel) {
         List<Integer> argList = aggregateCall.getArgList();
         if (argList.isEmpty()) {
             return true;

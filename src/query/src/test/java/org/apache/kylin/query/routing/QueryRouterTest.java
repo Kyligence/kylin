@@ -26,7 +26,7 @@ import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
 import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.metadata.realization.IRealization;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.util.MetadataTestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -129,7 +129,7 @@ class QueryRouterTest {
     private Candidate mockStreamingCandidate(String modelId, String modelName, int realizationCost,
             double candidateCost) {
         IRealization realization = CandidateTestUtils.mockRealization(modelId, modelName, realizationCost);
-        OLAPContext olapContext = CandidateTestUtils.mockOlapContext();
+        OlapContext olapContext = CandidateTestUtils.mockOlapContext();
         val candidate = new Candidate(realization, olapContext, Maps.newHashMap());
         val cap = new CapabilityResult();
         cap.setSelectedStreamingCandidate(() -> candidateCost);
@@ -141,7 +141,7 @@ class QueryRouterTest {
     private Candidate mockHybridCandidate(String modelId, String modelName, int realizationCost, double candidateCost,
             double streamingCandidateCost) {
         IRealization realization = CandidateTestUtils.mockRealization(modelId, modelName, realizationCost);
-        OLAPContext olapContext = CandidateTestUtils.mockOlapContext();
+        OlapContext olapContext = CandidateTestUtils.mockOlapContext();
         val candidate = new Candidate(realization, olapContext, Maps.newHashMap());
         val cap = new CapabilityResult();
         cap.setSelectedCandidate(() -> candidateCost);
@@ -154,7 +154,7 @@ class QueryRouterTest {
 
     private Candidate mockEmptyCandidate(String modelId, String modelName, int realizationCost) {
         IRealization realization = CandidateTestUtils.mockRealization(modelId, modelName, realizationCost);
-        OLAPContext olapContext = CandidateTestUtils.mockOlapContext();
+        OlapContext olapContext = CandidateTestUtils.mockOlapContext();
         val candidate = new Candidate(realization, olapContext, Maps.newHashMap());
         candidate.realization = CandidateTestUtils.mockRealization(modelId, modelName, realizationCost);
         val cap = new CapabilityResult();

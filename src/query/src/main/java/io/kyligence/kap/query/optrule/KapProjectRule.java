@@ -30,8 +30,8 @@ import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.kylin.query.relnode.KapProjectRel;
-import org.apache.kylin.query.relnode.KapRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 /**
  */
@@ -40,7 +40,8 @@ public class KapProjectRule extends ConverterRule {
     public static final RelOptRule INSTANCE = new KapProjectRule();
 
     public KapProjectRule() {
-        super(LogicalProject.class, RelOptUtil.PROJECT_PREDICATE, Convention.NONE, KapRel.CONVENTION, "KapProjectRule");
+        super(LogicalProject.class, RelOptUtil.PROJECT_PREDICATE, Convention.NONE, OlapRel.CONVENTION,
+                "KapProjectRule");
     }
 
     @Override
@@ -49,14 +50,13 @@ public class KapProjectRule extends ConverterRule {
         final LogicalProject project = (LogicalProject) rel;
 
         final RelNode convertedInput = project.getInput() instanceof HepRelVertex ? project.getInput()
-                : convert(project.getInput(), project.getInput().getTraitSet().replace(KapRel.CONVENTION));
+                : convert(project.getInput(), project.getInput().getTraitSet().replace(OlapRel.CONVENTION));
         final RelOptCluster cluster = convertedInput.getCluster();
         final RelMetadataQuery mq = cluster.getMetadataQuery();
-        final RelTraitSet traitSet = cluster.traitSet().replace(KapRel.CONVENTION)
-                .replaceIfs(RelCollationTraitDef.INSTANCE,
-                        () -> RelMdCollation.project(mq, convertedInput, project.getProjects()));
+        final RelTraitSet traitSet = cluster.traitSet().replace(OlapRel.CONVENTION).replaceIfs(
+                RelCollationTraitDef.INSTANCE, () -> RelMdCollation.project(mq, convertedInput, project.getProjects()));
 
-        KapProjectRel kapProjectRel = new KapProjectRel(convertedInput.getCluster(), traitSet, convertedInput,
+        OlapProjectRel kapProjectRel = new OlapProjectRel(convertedInput.getCluster(), traitSet, convertedInput,
                 project.getProjects(), project.getRowType());
         return kapProjectRel;
     }

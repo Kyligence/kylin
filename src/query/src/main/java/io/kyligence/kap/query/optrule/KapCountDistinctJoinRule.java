@@ -33,10 +33,10 @@ import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
-import org.apache.kylin.query.relnode.KapRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
+import org.apache.kylin.query.relnode.OlapRel;
 import org.apache.kylin.query.util.RuleUtils;
 
 /**
@@ -45,16 +45,13 @@ import org.apache.kylin.query.util.RuleUtils;
  */
 public class KapCountDistinctJoinRule extends RelOptRule {
 
-    public static final KapCountDistinctJoinRule INSTANCE_COUNT_DISTINCT_JOIN_ONESIDEAGG //
-            = new KapCountDistinctJoinRule(operand(KapAggregateRel.class, operand(KapJoinRel.class, any())),
-                    RelFactories.LOGICAL_BUILDER,
-                    "KapCountDistinctJoinRule:agg(contain-count-distinct)-join-oneSideAgg");
+    public static final KapCountDistinctJoinRule COUNT_DISTINCT_JOIN_ONE_SIDE_AGG = new KapCountDistinctJoinRule(
+            operand(OlapAggregateRel.class, operand(OlapJoinRel.class, any())), RelFactories.LOGICAL_BUILDER,
+            "KapCountDistinctJoinRule:agg(contain-count-distinct)-join-oneSideAgg");
 
-    public static final KapCountDistinctJoinRule INSTANCE_COUNT_DISTINCT_AGG_PROJECT_JOIN //
-            = new KapCountDistinctJoinRule(
-                    operand(KapAggregateRel.class, operand(KapProjectRel.class, operand(KapJoinRel.class, any()))),
-                    RelFactories.LOGICAL_BUILDER,
-                    "KapCountDistinctJoinRule:agg(contain-count-distinct)-agg-project-join");
+    public static final KapCountDistinctJoinRule COUNT_DISTINCT_AGG_PROJECT_JOIN = new KapCountDistinctJoinRule(
+            operand(OlapAggregateRel.class, operand(OlapProjectRel.class, operand(OlapJoinRel.class, any()))),
+            RelFactories.LOGICAL_BUILDER, "KapCountDistinctJoinRule:agg(contain-count-distinct)-agg-project-join");
 
     public KapCountDistinctJoinRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory,
             String description) {
@@ -63,9 +60,9 @@ public class KapCountDistinctJoinRule extends RelOptRule {
 
     @Override
     public boolean matches(RelOptRuleCall call) {
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapJoinRel join;
-        if (call.rel(1) instanceof KapJoinRel) {
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapJoinRel join;
+        if (call.rel(1) instanceof OlapJoinRel) {
             join = call.rel(1);
         } else {
             join = call.rel(2);
@@ -75,8 +72,8 @@ public class KapCountDistinctJoinRule extends RelOptRule {
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapRel inputKapRel = call.rel(1);
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapRel inputKapRel = call.rel(1);
 
         // build bottom aggRelNode
         final ImmutableList.Builder<AggregateCall> bottomAggCallsBuilder = ImmutableList.builder();

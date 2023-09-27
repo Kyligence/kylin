@@ -25,8 +25,8 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Union;
-import org.apache.kylin.query.relnode.OLAPRel;
-import org.apache.kylin.query.relnode.OLAPUnionRel;
+import org.apache.kylin.query.relnode.OlapRel;
+import org.apache.kylin.query.relnode.OlapUnionRel;
 
 /**
  */
@@ -35,14 +35,14 @@ public class OLAPUnionRule extends ConverterRule {
     public static final OLAPUnionRule INSTANCE = new OLAPUnionRule();
 
     public OLAPUnionRule() {
-        super(Union.class, Convention.NONE, OLAPRel.CONVENTION, "OLAPUnionRule");
+        super(Union.class, Convention.NONE, OlapRel.CONVENTION, "OLAPUnionRule");
     }
 
     @Override
     public RelNode convert(RelNode rel) {
         final Union union = (Union) rel;
-        final RelTraitSet traitSet = union.getTraitSet().replace(OLAPRel.CONVENTION);
+        final RelTraitSet traitSet = union.getTraitSet().replace(OlapRel.CONVENTION);
         final List<RelNode> inputs = union.getInputs();
-        return new OLAPUnionRel(rel.getCluster(), traitSet, convertList(inputs, OLAPRel.CONVENTION), union.all);
+        return new OlapUnionRel(rel.getCluster(), traitSet, convertList(inputs, OlapRel.CONVENTION), union.all);
     }
 }

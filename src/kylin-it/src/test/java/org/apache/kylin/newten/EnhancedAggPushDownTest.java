@@ -27,7 +27,7 @@ import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.relnode.ContextUtil;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -57,9 +57,9 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join TEST_CATEGORY_GROUPINGS as tcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = tcg.LEAF_CATEG_ID\n"
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID    \n" + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
-        List<OLAPContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).storageContext.getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).realization.getModel().getAlias());
+        List<OlapContext> contexts = executeSql(sql);
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
+        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
     }
 
     @Test
@@ -69,9 +69,9 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join TEST_CATEGORY_GROUPINGS as tcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = tcg.LEAF_CATEG_ID\n"
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID    \n" + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
-        List<OLAPContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).storageContext.getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).realization.getModel().getAlias());
+        List<OlapContext> contexts = executeSql(sql);
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
+        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
     }
 
     @Test
@@ -83,10 +83,10 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg2 on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg2.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID,kcg2.CATEG_LVL3_ID  \n"
                 + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
-        List<OLAPContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).storageContext.getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).realization.getModel().getAlias());
-        Assert.assertEquals("model_snapshot", contexts.get(2).realization.getModel().getAlias());
+        List<OlapContext> contexts = executeSql(sql);
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
+        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
+        Assert.assertEquals("model_snapshot", contexts.get(2).getRealization().getModel().getAlias());
     }
 
     @Test
@@ -97,11 +97,11 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join TEST_CATEGORY_GROUPINGS as tcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = tcg.LEAF_CATEG_ID\n"
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID    \n" + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
-        List<OLAPContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).storageContext.getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).realization.getModel().getAlias());
-        Assert.assertEquals(1L, contexts.get(2).storageContext.getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(3).realization.getModel().getAlias());
+        List<OlapContext> contexts = executeSql(sql);
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
+        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
+        Assert.assertEquals(1L, contexts.get(2).getStorageContext().getLayoutId(), 0);
+        Assert.assertEquals("model_snapshot", contexts.get(3).getRealization().getModel().getAlias());
     }
 
     @Test
@@ -114,14 +114,14 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join TEST_CATEGORY_GROUPINGS as tcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = tcg.LEAF_CATEG_ID\n"
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID      \n" + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
-        List<OLAPContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).storageContext.getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).realization.getModel().getAlias());
-        Assert.assertEquals(1L, contexts.get(2).storageContext.getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(3).realization.getModel().getAlias());
+        List<OlapContext> contexts = executeSql(sql);
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
+        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
+        Assert.assertEquals(1L, contexts.get(2).getStorageContext().getLayoutId(), 0);
+        Assert.assertEquals("model_snapshot", contexts.get(3).getRealization().getModel().getAlias());
     }
 
-    private List<OLAPContext> executeSql(String sql) {
+    private List<OlapContext> executeSql(String sql) {
         QueryExec queryExec = new QueryExec(getProject(), KylinConfig.getInstanceFromEnv());
         try {
             QueryContext.current().setProject(getProject());

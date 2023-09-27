@@ -30,8 +30,8 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.kylin.metadata.model.FunctionDesc;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.AggExpressionUtil;
 import org.apache.kylin.query.util.AggExpressionUtil.AggExpression;
 
@@ -59,7 +59,7 @@ import org.apache.kylin.query.util.AggExpressionUtil.AggExpression;
 public class SumCaseWhenFunctionRule extends AbstractAggCaseWhenFunctionRule {
 
     public static final SumCaseWhenFunctionRule INSTANCE = new SumCaseWhenFunctionRule(
-            operand(KapAggregateRel.class, operand(KapProjectRel.class, null,
+            operand(OlapAggregateRel.class, operand(OlapProjectRel.class, null,
                     input -> !AggExpressionUtil.hasAggInput(input), RelOptRule.any())),
             RelFactories.LOGICAL_BUILDER, "SumCaseWhenFunctionRule");
 

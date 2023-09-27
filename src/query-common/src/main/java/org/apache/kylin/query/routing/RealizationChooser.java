@@ -82,7 +82,6 @@ import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.model.FusionModelManager;
 import org.apache.kylin.metadata.model.ISourceAware;
-import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.JoinTableDesc;
 import org.apache.kylin.metadata.model.MeasureDesc;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -102,9 +101,9 @@ import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.metadata.realization.NoStreamingRealizationFoundException;
 import org.apache.kylin.metadata.realization.RealizationRuntimeException;
 import org.apache.kylin.metadata.realization.SQLDigest;
-import org.apache.kylin.query.relnode.OLAPContext;
-import org.apache.kylin.query.relnode.OLAPContextProp;
-import org.apache.kylin.query.relnode.OLAPTableScan;
+import org.apache.kylin.query.relnode.OlapContext;
+import org.apache.kylin.query.relnode.OlapContextProp;
+import org.apache.kylin.query.relnode.OlapTableScan;
 import org.apache.kylin.query.util.RelAggPushDownUtil;
 import org.apache.kylin.storage.StorageContext;
 import org.slf4j.Logger;
@@ -126,23 +125,23 @@ public class RealizationChooser {
     }
 
     // select models for given contexts, return realization candidates for each context
-    public static void selectLayoutCandidate(List<OLAPContext> contexts) {
+    public static void selectLayoutCandidate(List<OlapContext> contexts) {
         // try different model for different context
-        for (OLAPContext ctx : contexts) {
+        for (OlapContext ctx : contexts) {
             if (ctx.isConstantQueryWithAggregations()) {
                 continue;
             }
             attemptSelectCandidate(ctx);
-            Preconditions.checkNotNull(ctx.realization);
+            Preconditions.checkNotNull(ctx.getRealization());
         }
     }
 
-    public static void multiThreadSelectLayoutCandidate(List<OLAPContext> contexts) {
+    public static void multiThreadSelectLayoutCandidate(List<OlapContext> contexts) {
         List<Future<?>> futureList = Lists.newArrayList();
         try {
             // try different model for different context
             CountDownLatch latch = new CountDownLatch(contexts.size());
-            for (OLAPContext ctx : contexts) {
+            for (OlapContext ctx : contexts) {
                 TtlRunnable r = Objects.requireNonNull(TtlRunnable.get(() -> selectCandidate0(latch, ctx)));
                 Future<?> future = selectCandidateService.submit(r);
                 futureList.add(future);
@@ -171,14 +170,14 @@ public class RealizationChooser {
         }
     }
 
-    private static void selectCandidate0(CountDownLatch latch, OLAPContext ctx) {
+    private static void selectCandidate0(CountDownLatch latch, OlapContext ctx) {
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         String queryId = QueryContext.current().getQueryId();
         try (KylinConfig.SetAndUnsetThreadLocalConfig ignored0 = KylinConfig.setAndUnsetThreadLocalConfig(kylinConfig);
                 SetThreadName ignored1 = new SetThreadName(Thread.currentThread().getName() + " QueryId %s", queryId);
                 SetLogCategory ignored2 = new SetLogCategory(LogConstant.QUERY_CATEGORY)) {
 
-            String project = ctx.olapSchema.getProjectName();
+            String project = ctx.getOlapSchema().getProjectName();
             NTableMetadataManager.getInstance(kylinConfig, project);
             NDataModelManager.getInstance(kylinConfig, project);
             NDataflowManager.getInstance(kylinConfig, project);
@@ -186,9 +185,9 @@ public class RealizationChooser {
             NProjectLoader.updateCache(project);
 
             if (!ctx.isConstantQueryWithAggregations()) {
-                ctx.realizationCheck = new RealizationCheck();
+                ctx.setRealizationCheck(new RealizationCheck());
                 attemptSelectCandidate(ctx);
-                Preconditions.checkNotNull(ctx.realization);
+                Preconditions.checkNotNull(ctx.getRealization());
             }
         } catch (KylinTimeoutException e) {
             logger.error("realization chooser thread task interrupted due to query [{}] timeout", queryId);
@@ -199,7 +198,7 @@ public class RealizationChooser {
     }
 
     @VisibleForTesting
-    public static void attemptSelectCandidate(OLAPContext context) {
+    public static void attemptSelectCandidate(OlapContext context) {
         // Step 1. get model through matching fact table with query
         Multimap<NDataModel, IRealization> modelMap = makeOrderedModelMap(context);
         checkNoRealizationFound(context, modelMap);
@@ -211,13 +210,13 @@ public class RealizationChooser {
 
         // Step 2.2 try to partial match model
         if (CollectionUtils.isEmpty(candidates)) {
-            String project = context.olapSchema.getProjectName();
+            String project = context.getOlapSchema().getProjectName();
             KylinConfig projectConfig = NProjectManager.getProjectConfig(project);
             boolean partialMatch = projectConfig.isQueryMatchPartialInnerJoinModel();
             boolean nonEquiPartialMatch = projectConfig.partialMatchNonEquiJoins();
             if (partialMatch || nonEquiPartialMatch) {
                 candidates = trySelectCandidates(context, modelMap, partialMatch, nonEquiPartialMatch);
-                context.storageContext.setPartialMatchModel(CollectionUtils.isNotEmpty(candidates));
+                context.getStorageContext().setPartialMatchModel(CollectionUtils.isNotEmpty(candidates));
             }
         }
 
@@ -228,26 +227,26 @@ public class RealizationChooser {
         }
 
         // Step 3. find the lowest-cost candidate
-        QueryRouter.sortCandidates(context.olapSchema.getProjectName(), candidates);
+        QueryRouter.sortCandidates(context.getOlapSchema().getProjectName(), candidates);
         logger.trace("Cost Sorted Realizations {}", candidates);
         Candidate candidate = candidates.get(0);
-        restoreOLAPContextProps(context, candidate.getRewrittenCtx());
+        restoreOlapContextProps(context, candidate.getRewrittenCtx());
         context.fixModel(candidate.getRealization().getModel(), candidate.getMatchedJoinsGraphAliasMap());
         adjustForCapabilityInfluence(candidate, context);
 
-        context.realization = candidate.realization;
+        context.setRealization(candidate.getRealization());
         if (candidate.getCapability().isVacant()) {
             QueryContext.current().getQueryTagInfo().setVacant(true);
             NLayoutCandidate layoutCandidate = (NLayoutCandidate) candidate.capability.getSelectedCandidate();
-            context.storageContext.setCandidate(layoutCandidate);
-            context.storageContext.setLayoutId(layoutCandidate.getLayoutEntity().getId());
-            context.storageContext.setEmptyLayout(true);
+            context.getStorageContext().setCandidate(layoutCandidate);
+            context.getStorageContext().setLayoutId(layoutCandidate.getLayoutEntity().getId());
+            context.getStorageContext().setEmptyLayout(true);
             return;
         }
 
         if (candidate.capability.getSelectedCandidate() instanceof NLookupCandidate) {
-            boolean useSnapshot = context.isFirstTableLookupTableInModel(context.realization.getModel());
-            context.storageContext.setUseSnapshot(useSnapshot);
+            boolean useSnapshot = context.isFirstTableLookupTableInModel(context.getRealization().getModel());
+            context.getStorageContext().setUseSnapshot(useSnapshot);
         } else {
             Set<TblColRef> dimensions = Sets.newHashSet();
             Set<FunctionDesc> metrics = Sets.newHashSet();
@@ -260,7 +259,7 @@ public class RealizationChooser {
         }
     }
 
-    private static void checkNoRealizationFound(OLAPContext context, Multimap<NDataModel, IRealization> modelMap) {
+    private static void checkNoRealizationFound(OlapContext context, Multimap<NDataModel, IRealization> modelMap) {
         if (!modelMap.isEmpty()) {
             return;
         }
@@ -269,18 +268,18 @@ public class RealizationChooser {
         throw new NoRealizationFoundException("No model found for " + toErrorMsg(context));
     }
 
-    private static List<Candidate> trySelectCandidates(OLAPContext context, Multimap<NDataModel, IRealization> modelMap,
+    private static List<Candidate> trySelectCandidates(OlapContext context, Multimap<NDataModel, IRealization> modelMap,
             boolean partialMatch, boolean nonEquiPartialMatch) {
         List<Candidate> candidates = Lists.newArrayList();
         for (NDataModel model : modelMap.keySet()) {
-            // preserve the props of OLAPContext may be modified
-            OLAPContextProp preservedOlapProps = preservePropsBeforeRewrite(context);
+            // preserve the props of OlapContext may be modified
+            OlapContextProp preservedOlapProps = preservePropsBeforeRewrite(context);
             Map<String, String> matchedAliasMap = matchJoins(model, context, partialMatch, nonEquiPartialMatch);
             Set<IRealization> realizations = Sets.newHashSet(modelMap.get(model));
             List<Candidate> list = selectRealizations(model, context, matchedAliasMap, realizations);
 
-            // discard the props of OLAPContext modified by rewriteCcInnerCol
-            restoreOLAPContextProps(context, preservedOlapProps);
+            // discard the props of OlapContext modified by rewriteCcInnerCol
+            restoreOlapContextProps(context, preservedOlapProps);
 
             // The matchJoin() method has the potential to optimize the JoinsGraph, 
             // therefore we perform a check on ready segments at this point.
@@ -291,19 +290,19 @@ public class RealizationChooser {
 
             if (CollectionUtils.isNotEmpty(list)) {
                 candidates.addAll(list);
-                logger.info("context & model({}/{}/{}) match info: {}", context.olapSchema.getProjectName(),
+                logger.info("context & model({}/{}/{}) match info: {}", context.getOlapSchema().getProjectName(),
                         model.getUuid(), model.getAlias(), true);
             }
         }
         return candidates;
     }
 
-    private static void checkNoRealizationWithStreaming(OLAPContext context) {
-        String projectName = context.olapSchema.getProjectName();
+    private static void checkNoRealizationWithStreaming(OlapContext context) {
+        String projectName = context.getOlapSchema().getProjectName();
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
 
         NTableMetadataManager tableManager = NTableMetadataManager.getInstance(kylinConfig, projectName);
-        for (OLAPTableScan tableScan : context.allTableScans) {
+        for (OlapTableScan tableScan : context.getAllTableScans()) {
             TableDesc tableDesc = tableManager.getTableDesc(tableScan.getTableName());
             if (tableDesc.getSourceType() == ISourceAware.ID_STREAMING) {
                 throw new NoStreamingRealizationFoundException(ServerErrorCode.STREAMING_MODEL_NOT_FOUND,
@@ -312,7 +311,7 @@ public class RealizationChooser {
         }
     }
 
-    private static List<Candidate> selectRealizations(NDataModel model, OLAPContext context,
+    private static List<Candidate> selectRealizations(NDataModel model, OlapContext context,
             Map<String, String> matchedGraphAliasMap, Set<IRealization> realizations) {
         // skip selection
         if (MapUtils.isEmpty(matchedGraphAliasMap)) {
@@ -336,7 +335,7 @@ public class RealizationChooser {
         return candidates;
     }
 
-    public static Candidate selectRealization(OLAPContext olapContext, IRealization realization,
+    public static Candidate selectRealization(OlapContext olapContext, IRealization realization,
             Map<String, String> matchedJoinGraphAliasMap) {
         if (!realization.isOnline()) {
             logger.warn("Realization {} is not ready", realization);
@@ -344,8 +343,8 @@ public class RealizationChooser {
         }
 
         Candidate candidate = new Candidate(realization, olapContext, matchedJoinGraphAliasMap);
-        logger.info("Find candidates by table {} and project={} : {}", olapContext.firstTableScan.getTableName(),
-                olapContext.olapSchema.getProjectName(), candidate);
+        logger.info("Find candidates by table {} and project={} : {}", olapContext.getFirstTableScan().getTableName(),
+                olapContext.getOlapSchema().getProjectName(), candidate);
 
         QueryRouter.applyRules(candidate);
 
@@ -354,18 +353,19 @@ public class RealizationChooser {
         }
 
         logger.info("The realizations remaining: {}, and the final chosen one for current olap context {} is {}",
-                candidate.realization.getCanonicalName(), olapContext.id, candidate.realization.getCanonicalName());
+                candidate.getRealization().getCanonicalName(), olapContext.getId(),
+                candidate.getRealization().getCanonicalName());
         return candidate;
     }
 
-    static OLAPContextProp preservePropsBeforeRewrite(OLAPContext oriOLAPContext) {
-        OLAPContextProp preserved = new OLAPContextProp(-1);
-        preserved.allColumns = Sets.newHashSet(oriOLAPContext.allColumns);
-        preserved.setSortColumns(Lists.newArrayList(oriOLAPContext.getSortColumns()));
-        preserved.setInnerGroupByColumns(Sets.newHashSet(oriOLAPContext.getInnerGroupByColumns()));
-        preserved.setGroupByColumns(Sets.newLinkedHashSet(oriOLAPContext.getGroupByColumns()));
-        preserved.setInnerFilterColumns(Sets.newHashSet(oriOLAPContext.getInnerFilterColumns()));
-        for (FunctionDesc agg : oriOLAPContext.aggregations) {
+    static OlapContextProp preservePropsBeforeRewrite(OlapContext oriOlapContext) {
+        OlapContextProp preserved = new OlapContextProp(-1);
+        preserved.setAllColumns(Sets.newHashSet(oriOlapContext.getAllColumns()));
+        preserved.setSortColumns(Lists.newArrayList(oriOlapContext.getSortColumns()));
+        preserved.setInnerGroupByColumns(Sets.newHashSet(oriOlapContext.getInnerGroupByColumns()));
+        preserved.setGroupByColumns(Sets.newLinkedHashSet(oriOlapContext.getGroupByColumns()));
+        preserved.setInnerFilterColumns(Sets.newHashSet(oriOlapContext.getInnerFilterColumns()));
+        for (FunctionDesc agg : oriOlapContext.getAggregations()) {
             preserved.getReservedMap().put(agg,
                     FunctionDesc.newInstance(agg.getExpression(), agg.getParameters(), agg.getReturnType()));
         }
@@ -373,14 +373,14 @@ public class RealizationChooser {
         return preserved;
     }
 
-    static void restoreOLAPContextProps(OLAPContext oriOLAPContext, OLAPContextProp preservedOLAPContext) {
-        oriOLAPContext.allColumns = preservedOLAPContext.allColumns;
-        oriOLAPContext.setSortColumns(preservedOLAPContext.getSortColumns());
+    static void restoreOlapContextProps(OlapContext oriOlapContext, OlapContextProp preservedOlapContext) {
+        oriOlapContext.setAllColumns(preservedOlapContext.getAllColumns());
+        oriOlapContext.setSortColumns(preservedOlapContext.getSortColumns());
         // By creating a new hashMap, the containsKey method can obtain appropriate results.
         // This is necessary because the aggregations have changed during the query matching process,
         // therefore changed hash of the same object would be put into different bucket of the LinkedHashMap.
-        Map<FunctionDesc, FunctionDesc> map = Maps.newHashMap(preservedOLAPContext.getReservedMap());
-        oriOLAPContext.aggregations.forEach(agg -> {
+        Map<FunctionDesc, FunctionDesc> map = Maps.newHashMap(preservedOlapContext.getReservedMap());
+        oriOlapContext.getAggregations().forEach(agg -> {
             if (map.containsKey(agg)) {
                 final FunctionDesc functionDesc = map.get(agg);
                 agg.setExpression(functionDesc.getExpression());
@@ -388,10 +388,10 @@ public class RealizationChooser {
                 agg.setReturnType(functionDesc.getReturnType());
             }
         });
-        oriOLAPContext.setGroupByColumns(preservedOLAPContext.getGroupByColumns());
-        oriOLAPContext.setInnerGroupByColumns(preservedOLAPContext.getInnerGroupByColumns());
-        oriOLAPContext.setInnerFilterColumns(preservedOLAPContext.getInnerFilterColumns());
-        oriOLAPContext.resetSQLDigest();
+        oriOlapContext.setGroupByColumns(preservedOlapContext.getGroupByColumns());
+        oriOlapContext.setInnerGroupByColumns(preservedOlapContext.getInnerGroupByColumns());
+        oriOlapContext.setInnerFilterColumns(preservedOlapContext.getInnerFilterColumns());
+        oriOlapContext.resetSQLDigest();
     }
 
     private static boolean needToManyDerived(NDataModel model) {
@@ -412,11 +412,11 @@ public class RealizationChooser {
         return dataflow.hasReadySegments();
     }
 
-    public static void fixContextForTableIndexAnswerNonRawQuery(OLAPContext context) {
-        if (context.realization.getConfig().isUseTableIndexAnswerNonRawQuery()
-                && !context.storageContext.isEmptyLayout() && context.isAnsweredByTableIndex()) {
-            if (!context.aggregations.isEmpty()) {
-                List<FunctionDesc> aggregations = context.aggregations;
+    public static void fixContextForTableIndexAnswerNonRawQuery(OlapContext context) {
+        if (context.getRealization().getConfig().isUseTableIndexAnswerNonRawQuery()
+                && !context.getStorageContext().isEmptyLayout() && context.isAnsweredByTableIndex()) {
+            if (!context.getAggregations().isEmpty()) {
+                List<FunctionDesc> aggregations = context.getAggregations();
                 HashSet<TblColRef> needDimensions = Sets.newHashSet();
                 for (FunctionDesc aggregation : aggregations) {
                     List<ParameterDesc> parameters = aggregation.getParameters();
@@ -424,19 +424,19 @@ public class RealizationChooser {
                         needDimensions.addAll(aggParameter.getColRef().getSourceColumns());
                     }
                 }
-                context.storageContext.getDimensions().addAll(needDimensions);
-                context.aggregations.clear();
+                context.getStorageContext().getDimensions().addAll(needDimensions);
+                context.getAggregations().clear();
             }
-            if (context.getSQLDigest().aggregations != null) {
-                context.getSQLDigest().aggregations.clear();
+            if (context.getSQLDigest().getAggregations() != null) {
+                context.getSQLDigest().getAggregations().clear();
             }
-            if (context.storageContext.getMetrics() != null) {
-                context.storageContext.getMetrics().clear();
+            if (context.getStorageContext().getMetrics() != null) {
+                context.getStorageContext().getMetrics().clear();
             }
         }
     }
 
-    private static void adjustForCapabilityInfluence(Candidate chosen, OLAPContext olapContext) {
+    private static void adjustForCapabilityInfluence(Candidate chosen, OlapContext olapContext) {
         CapabilityResult capability = chosen.getCapability();
 
         for (CapabilityResult.CapabilityInfluence inf : capability.influences) {
@@ -460,17 +460,17 @@ public class RealizationChooser {
         }
     }
 
-    private static void addToContextGroupBy(Collection<TblColRef> colRefs, OLAPContext context) {
+    private static void addToContextGroupBy(Collection<TblColRef> colRefs, OlapContext context) {
         for (TblColRef col : colRefs) {
             if (!col.isInnerColumn() && context.belongToContextTables(col))
                 context.getGroupByColumns().add(col);
         }
     }
 
-    private static void preprocessSpecialAggregations(OLAPContext context) {
-        if (CollectionUtils.isEmpty(context.aggregations))
+    private static void preprocessSpecialAggregations(OlapContext context) {
+        if (CollectionUtils.isEmpty(context.getAggregations()))
             return;
-        Iterator<FunctionDesc> it = context.aggregations.iterator();
+        Iterator<FunctionDesc> it = context.getAggregations().iterator();
         while (it.hasNext()) {
             FunctionDesc func = it.next();
             if (FunctionDesc.FUNC_GROUPING.equalsIgnoreCase(func.getExpression())) {
@@ -487,19 +487,19 @@ public class RealizationChooser {
         if (kylinConfig.getSecondStorageQueryPushdownLimit() <= 0)
             return;
 
-        if (sqlDigest.isRawQuery && sqlDigest.limit > kylinConfig.getSecondStorageQueryPushdownLimit()) {
+        if (sqlDigest.isRawQuery && sqlDigest.getLimit() > kylinConfig.getSecondStorageQueryPushdownLimit()) {
             QueryContext.current().setRetrySecondStorage(false);
         }
     }
 
-    private static void buildStorageContext(OLAPContext olapContext, Set<TblColRef> dimensions,
+    private static void buildStorageContext(OlapContext olapContext, Set<TblColRef> dimensions,
             Set<FunctionDesc> metrics, Candidate candidate) {
-        boolean isBatchQuery = !(olapContext.realization instanceof HybridRealization)
-                && !olapContext.realization.isStreaming();
+        boolean isBatchQuery = !(olapContext.getRealization() instanceof HybridRealization)
+                && !olapContext.getRealization().isStreaming();
         if (isBatchQuery) {
-            buildBatchStorageContext(olapContext.storageContext, dimensions, metrics, candidate);
+            buildBatchStorageContext(olapContext.getStorageContext(), dimensions, metrics, candidate);
         } else {
-            buildHybridStorageContext(olapContext.storageContext, dimensions, metrics, candidate);
+            buildHybridStorageContext(olapContext.getStorageContext(), dimensions, metrics, candidate);
         }
     }
 
@@ -603,11 +603,11 @@ public class RealizationChooser {
                 .isTableIndex();
     }
 
-    private static void buildDimensionsAndMetrics(OLAPContext context, Collection<TblColRef> dimensions,
+    private static void buildDimensionsAndMetrics(OlapContext context, Collection<TblColRef> dimensions,
             Collection<FunctionDesc> metrics) {
         SQLDigest sqlDigest = context.getSQLDigest();
-        IRealization realization = context.realization;
-        for (FunctionDesc func : sqlDigest.aggregations) {
+        IRealization realization = context.getRealization();
+        for (FunctionDesc func : sqlDigest.getAggregations()) {
             if (!func.isDimensionAsMetric() && !func.isGrouping()) {
                 // use the FunctionDesc from cube desc as much as possible, that has more info such as HLLC precision
 
@@ -631,17 +631,17 @@ public class RealizationChooser {
                 FunctionDesc funcUsedDimenAsMetric = findAggrFuncFromRealization(func, realization);
                 dimensions.addAll(funcUsedDimenAsMetric.getColRefs());
 
-                Set<TblColRef> groupbyCols = Sets.newLinkedHashSet(sqlDigest.groupbyColumns);
-                groupbyCols.addAll(funcUsedDimenAsMetric.getColRefs());
-                sqlDigest.groupbyColumns = Lists.newArrayList(groupbyCols);
+                Set<TblColRef> groupByCols = Sets.newLinkedHashSet(sqlDigest.getGroupByColumns());
+                groupByCols.addAll(funcUsedDimenAsMetric.getColRefs());
+                sqlDigest.setGroupByColumns(Lists.newArrayList(groupByCols));
             }
         }
 
         if (sqlDigest.isRawQuery) {
-            dimensions.addAll(sqlDigest.allColumns);
+            dimensions.addAll(sqlDigest.getAllColumns());
         } else {
-            dimensions.addAll(sqlDigest.groupbyColumns);
-            dimensions.addAll(sqlDigest.filterColumns);
+            dimensions.addAll(sqlDigest.getGroupByColumns());
+            dimensions.addAll(sqlDigest.getFilterColumns());
         }
     }
 
@@ -653,24 +653,23 @@ public class RealizationChooser {
         return aggrFunc;
     }
 
-    private static String toErrorMsg(OLAPContext ctx) {
-        StringBuilder buf = new StringBuilder("OLAPContext");
-        RealizationCheck checkResult = ctx.realizationCheck;
+    private static String toErrorMsg(OlapContext ctx) {
+        StringBuilder buf = new StringBuilder("OlapContext");
+        RealizationCheck checkResult = ctx.getRealizationCheck();
         for (List<RealizationCheck.IncapableReason> reasons : checkResult.getModelIncapableReasons().values()) {
             for (RealizationCheck.IncapableReason reason : reasons) {
                 buf.append(", ").append(reason);
             }
         }
-        buf.append(", ").append(ctx.firstTableScan);
-        for (JoinDesc join : ctx.joins)
-            buf.append(", ").append(join);
+        buf.append(", ").append(ctx.getFirstTableScan());
+        ctx.getJoins().forEach(join -> buf.append(", ").append(join));
         return buf.toString();
     }
 
-    public static Map<String, String> matchJoins(NDataModel model, OLAPContext ctx, boolean partialMatchInnerJoin,
+    public static Map<String, String> matchJoins(NDataModel model, OlapContext ctx, boolean partialMatchInnerJoin,
             boolean partialMatchNonEquiJoin) {
         Map<String, String> matchedAliasMap = Maps.newHashMap();
-        TableRef firstTable = ctx.firstTableScan.getTableRef();
+        TableRef firstTable = ctx.getFirstTableScan().getTableRef();
         boolean matched;
 
         if (ctx.isFirstTableLookupTableInModel(model)) {
@@ -678,17 +677,17 @@ public class RealizationChooser {
             String modelAlias = model.findFirstTable(firstTable.getTableIdentity()).getAlias();
             matchedAliasMap = ImmutableMap.of(firstTable.getAlias(), modelAlias);
             matched = true;
-            logger.info("Context fact table {} matched lookup table in model {}", ctx.firstTableScan.getTableName(),
-                    model);
-        } else if (ctx.joins.size() != ctx.allTableScans.size() - 1) {
+            logger.info("Context fact table {} matched lookup table in model {}",
+                    ctx.getFirstTableScan().getTableName(), model);
+        } else if (ctx.getJoins().size() != ctx.getAllTableScans().size() - 1) {
             // has hanging tables
-            ctx.realizationCheck.addModelIncapableReason(model,
+            ctx.getRealizationCheck().addModelIncapableReason(model,
                     RealizationCheck.IncapableReason.MODEL_BAD_JOIN_SEQUENCE);
             return new HashMap<>();
         } else {
             // normal join graph match
             if (ctx.getJoinsGraph() == null) {
-                ctx.setJoinsGraph(new JoinsGraph(firstTable, ctx.joins));
+                ctx.setJoinsGraph(new JoinsGraph(firstTable, ctx.getJoins()));
             }
             matched = ctx.getJoinsGraph().match(model.getJoinsGraph(), matchedAliasMap, partialMatchInnerJoin,
                     partialMatchNonEquiJoin);
@@ -711,22 +710,23 @@ public class RealizationChooser {
         }
 
         if (!matched) {
-            ctx.realizationCheck.addModelIncapableReason(model, RealizationCheck.IncapableReason.MODEL_UNMATCHED_JOIN);
+            ctx.getRealizationCheck().addModelIncapableReason(model,
+                    RealizationCheck.IncapableReason.MODEL_UNMATCHED_JOIN);
             return new HashMap<>();
         }
-        ctx.realizationCheck.addCapableModel(model, matchedAliasMap);
+        ctx.getRealizationCheck().addCapableModel(model, matchedAliasMap);
         return matchedAliasMap;
     }
 
-    private static Multimap<NDataModel, IRealization> makeOrderedModelMap(OLAPContext context) {
+    private static Multimap<NDataModel, IRealization> makeOrderedModelMap(OlapContext context) {
         if (context.getModelAlias() != null) {
-            logger.info("The query is bounded to a certain model({}/{}).", context.olapSchema.getProjectName(),
+            logger.info("The query is bounded to a certain model({}/{}).", context.getOlapSchema().getProjectName(),
                     context.getModelAlias());
         }
 
-        KylinConfig kylinConfig = context.olapSchema.getConfig();
-        String project = context.olapSchema.getProjectName();
-        String factTable = context.firstTableScan.getOlapTable().getTableName();
+        KylinConfig kylinConfig = context.getOlapSchema().getConfig();
+        String project = context.getOlapSchema().getProjectName();
+        String factTable = context.getFirstTableScan().getOlapTable().getTableName();
         Set<IRealization> realizations = NProjectManager.getInstance(kylinConfig).getRealizationsByTable(project,
                 factTable);
 
@@ -759,7 +759,7 @@ public class RealizationChooser {
     /**
      * context is bound to a certain model (by model view)
      */
-    private static boolean isModelViewBounded(OLAPContext context, IRealization realization) {
+    private static boolean isModelViewBounded(OlapContext context, IRealization realization) {
         return context.getModelAlias() != null
                 && !StringUtils.equalsIgnoreCase(realization.getModel().getAlias(), context.getModelAlias());
     }

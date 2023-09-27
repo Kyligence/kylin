@@ -43,7 +43,7 @@ import org.apache.kylin.metadata.query.QueryMetricsContext;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.exception.UserStopQueryException;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.util.QueryParams;
 import org.apache.kylin.query.util.QueryUtil;
 import org.junit.After;
@@ -97,7 +97,7 @@ public class QueryMetricsContextTest extends NLocalFileMetadataTestCase {
         cleanupTestMetadata();
         QueryContext.reset();
         QueryMetricsContext.reset();
-        OLAPContext.clearThreadLocalContexts();
+        ContextUtil.clearThreadLocalContexts();
     }
 
     @Test

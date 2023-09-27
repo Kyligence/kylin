@@ -259,8 +259,8 @@ public class QueryLayoutChooser {
         for (int i = 0; i < segments.size(); i++) {
             val dataSegment = segments.get(i);
             var layoutIdMapToDataLayout = dataSegment.getLayoutsMap();
-            val isReadyEmptySeg = isMppOnTheFlyLayoutsEnabled
-                    && dataSegment.getStatus() == SegmentStatusEnum.READY && layoutIdMapToDataLayout.isEmpty();
+            val isReadyEmptySeg = isMppOnTheFlyLayoutsEnabled && dataSegment.getStatus() == SegmentStatusEnum.READY
+                    && layoutIdMapToDataLayout.isEmpty();
             if (SegmentOnlineMode.ANY.toString().equalsIgnoreCase(segmentOnlineMode)
                     && MapUtils.isNotEmpty(chSegmentToLayoutsMap)) {
                 // Only the basic TableIndex is built in the CH storage
@@ -317,7 +317,7 @@ public class QueryLayoutChooser {
     }
 
     private static List<Integer> getFilterColIds(ChooserContext chooserContext, SQLDigest sqlDigest) {
-        Set<TblColRef> filterColSet = ImmutableSet.copyOf(sqlDigest.filterColumns);
+        Set<TblColRef> filterColSet = ImmutableSet.copyOf(sqlDigest.getFilterColumns());
         List<TblColRef> filterCols = Lists.newArrayList(filterColSet);
         return filterCols.stream().sorted(ComparatorUtils.filterColComparator(chooserContext))
                 .map(col -> chooserContext.getTblColMap().get(col)).collect(Collectors.toList());
@@ -327,11 +327,11 @@ public class QueryLayoutChooser {
 
         Set<TblColRef> nonFilterColSet;
         if (sqlDigest.isRawQuery) {
-            nonFilterColSet = sqlDigest.allColumns.stream()
+            nonFilterColSet = sqlDigest.getAllColumns().stream()
                     .filter(colRef -> colRef.getFilterLevel() == TblColRef.FilterColEnum.NONE)
                     .collect(Collectors.toSet());
         } else {
-            nonFilterColSet = sqlDigest.groupbyColumns.stream()
+            nonFilterColSet = sqlDigest.getGroupByColumns().stream()
                     .filter(colRef -> colRef.getFilterLevel() == TblColRef.FilterColEnum.NONE)
                     .collect(Collectors.toSet());
         }

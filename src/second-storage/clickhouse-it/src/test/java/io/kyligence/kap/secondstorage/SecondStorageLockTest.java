@@ -121,7 +121,7 @@ import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDaoTest;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.rest.controller.NAdminController;
 import org.apache.kylin.rest.controller.NModelController;
 import org.apache.kylin.rest.controller.NQueryController;
@@ -1414,7 +1414,7 @@ public class SecondStorageLockTest implements JobWaiter {
                         () -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitAllJobFinish();
                 String sql = "select CAL_DT from TEST_KYLIN_FACT where CAL_DT between '2012-01-01' and '2012-01-08'";
-                OLAPContext.clearThreadLocalContexts();
+                ContextUtil.clearThreadLocalContexts();
                 QueryContext.current().close();
                 QueryContext.current().setRetrySecondStorage(true);
                 val result1 = ExecAndComp.queryModel(getProject(), sql).count();
@@ -1471,7 +1471,7 @@ public class SecondStorageLockTest implements JobWaiter {
                         () -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitAllJobFinish();
 
-                OLAPContext.clearThreadLocalContexts();
+                ContextUtil.clearThreadLocalContexts();
                 QueryContext.current().close();
                 QueryContext.current().setRetrySecondStorage(true);
                 val result2 = ExecAndComp.queryModel(getProject(), sql).count();
@@ -2345,13 +2345,13 @@ public class SecondStorageLockTest implements JobWaiter {
     }
 
     private void assertQueryResult(String sql, long hitLayoutId) throws SQLException {
-        OLAPContext.clearThreadLocalContexts();
+        ContextUtil.clearThreadLocalContexts();
         QueryContext.current().close();
         QueryContext.current().setRetrySecondStorage(true);
         ExecAndComp.queryModel(getProject(), sql);
-        assertTrue(OLAPContext.getNativeRealizations().stream().allMatch(NativeQueryRealization::isSecondStorage));
-        assertTrue(OLAPContext.getNativeRealizations().stream().findFirst().isPresent());
-        assertEquals(OLAPContext.getNativeRealizations().stream().findFirst().get().getLayoutId().longValue(),
+        assertTrue(ContextUtil.getNativeRealizations().stream().allMatch(NativeQueryRealization::isSecondStorage));
+        assertTrue(ContextUtil.getNativeRealizations().stream().findFirst().isPresent());
+        assertEquals(ContextUtil.getNativeRealizations().stream().findFirst().get().getLayoutId().longValue(),
                 hitLayoutId);
     }
 
@@ -2443,7 +2443,7 @@ public class SecondStorageLockTest implements JobWaiter {
                             // all live
                             clearQueryContext();
                             ExecAndComp.queryModel(getProject(), sql);
-                            Assert.assertTrue(OLAPContext.getNativeRealizations().stream()
+                            Assert.assertTrue(ContextUtil.getNativeRealizations().stream()
                                     .allMatch(NativeQueryRealization::isSecondStorage));
                         }
 
@@ -2454,7 +2454,7 @@ public class SecondStorageLockTest implements JobWaiter {
                                     "pair1", ImmutableMap.of("node01", false, "node03", false));
                             secondStorageEndpoint.updateNodeStatus(nodeStatusMap);
                             ExecAndComp.queryModel(getProject(), sql);
-                            Assert.assertTrue(OLAPContext.getNativeRealizations().stream()
+                            Assert.assertTrue(ContextUtil.getNativeRealizations().stream()
                                     .noneMatch(NativeQueryRealization::isSecondStorage));
                         }
 
@@ -2466,7 +2466,7 @@ public class SecondStorageLockTest implements JobWaiter {
                             secondStorageEndpoint.updateNodeStatus(nodeStatusMap);
                             clearQueryContext();
                             ExecAndComp.queryModel(getProject(), sql);
-                            Assert.assertTrue(OLAPContext.getNativeRealizations().stream()
+                            Assert.assertTrue(ContextUtil.getNativeRealizations().stream()
                                     .allMatch(NativeQueryRealization::isSecondStorage));
                         }
 
@@ -2477,7 +2477,7 @@ public class SecondStorageLockTest implements JobWaiter {
                                     "pair1", ImmutableMap.of("node01", false, "node03", true));
                             secondStorageEndpoint.updateNodeStatus(nodeStatusMap);
                             ExecAndComp.queryModel(getProject(), sql);
-                            Assert.assertTrue(OLAPContext.getNativeRealizations().stream()
+                            Assert.assertTrue(ContextUtil.getNativeRealizations().stream()
                                     .anyMatch(NativeQueryRealization::isSecondStorage));
                         }
 
@@ -2488,7 +2488,7 @@ public class SecondStorageLockTest implements JobWaiter {
                                     "pair1", ImmutableMap.of("node01", true, "node03", true));
                             secondStorageEndpoint.updateNodeStatus(nodeStatusMap);
                             ExecAndComp.queryModel(getProject(), sql);
-                            Assert.assertTrue(OLAPContext.getNativeRealizations().stream()
+                            Assert.assertTrue(ContextUtil.getNativeRealizations().stream()
                                     .noneMatch(NativeQueryRealization::isSecondStorage));
 
                         }
@@ -2582,7 +2582,7 @@ public class SecondStorageLockTest implements JobWaiter {
                             ImmutableMap.of("node01", false));
                     secondStorageEndpoint.updateNodeStatus(nodeStatusMap);
                     ExecAndComp.queryModel(getProject(), sql, null);
-                    Assert.assertFalse(OLAPContext.getNativeRealizations().stream()
+                    Assert.assertFalse(ContextUtil.getNativeRealizations().stream()
                             .allMatch(NativeQueryRealization::isSecondStorage));
                 }
 
@@ -2648,7 +2648,7 @@ public class SecondStorageLockTest implements JobWaiter {
 
                         try {
                             ExecAndComp.queryModel(getProject(), sql);
-                            Assert.assertFalse(OLAPContext.getNativeRealizations().stream()
+                            Assert.assertFalse(ContextUtil.getNativeRealizations().stream()
                                     .allMatch(NativeQueryRealization::isSecondStorage));
                         } catch (Exception e) {
                             assertTrue(e instanceof SQLException);
@@ -2674,7 +2674,7 @@ public class SecondStorageLockTest implements JobWaiter {
     @SneakyThrows
     private void testForceToTSAndChDown(String sql, JdbcDatabaseContainer<?>[] container, int replica) {
         ExecAndComp.queryModel(getProject(), sql);
-        OLAPContext.getNativeRealizations().stream().findFirst().ifPresent(r -> assertTrue(r.isSecondStorage()));
+        ContextUtil.getNativeRealizations().stream().findFirst().ifPresent(r -> assertTrue(r.isSecondStorage()));
 
         for (JdbcDatabaseContainer<?> clickhouse : container) {
             clickhouse.stop();
@@ -2711,7 +2711,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 QueryContext.current().setForcedToTieredStorage(f);
                 try {
                     ExecAndComp.queryModel(getProject(), sql);
-                    Assert.assertFalse(OLAPContext.getNativeRealizations().stream()
+                    Assert.assertFalse(ContextUtil.getNativeRealizations().stream()
                             .allMatch(NativeQueryRealization::isSecondStorage));
                 } catch (Exception e) {
                     assertTrue(e instanceof SQLException);
@@ -2741,7 +2741,7 @@ public class SecondStorageLockTest implements JobWaiter {
         queryContext.setForcedToTieredStorage(ForceToTieredStorage.CH_FAIL_TO_PUSH_DOWN);
         Dataset<Row> rows = ExecAndComp.queryModel(getProject(), sql, null);
         Assert.assertFalse(
-                OLAPContext.getNativeRealizations().stream().allMatch(NativeQueryRealization::isSecondStorage));
+                ContextUtil.getNativeRealizations().stream().allMatch(NativeQueryRealization::isSecondStorage));
     }
 
     @Test
@@ -3067,7 +3067,7 @@ public class SecondStorageLockTest implements JobWaiter {
     }
 
     private void clearQueryContext() {
-        OLAPContext.clearThreadLocalContexts();
+        ContextUtil.clearThreadLocalContexts();
         QueryContext.current().close();
         QueryContext.current().setRetrySecondStorage(true);
     }

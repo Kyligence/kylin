@@ -39,9 +39,9 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapFilterRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
 import org.apache.kylin.query.util.RuleUtils;
 
 /**
@@ -49,7 +49,7 @@ import org.apache.kylin.query.util.RuleUtils;
  */
 public class KapAggFilterTransposeRule extends RelOptRule {
     public static final KapAggFilterTransposeRule AGG_FILTER_JOIN = new KapAggFilterTransposeRule(
-            operand(KapAggregateRel.class, operand(KapFilterRel.class, operand(KapJoinRel.class, any()))),
+            operand(OlapAggregateRel.class, operand(OlapFilterRel.class, operand(OlapJoinRel.class, any()))),
             RelFactories.LOGICAL_BUILDER, "KapAggFilterTransposeRule:agg-filter-join");
 
     public KapAggFilterTransposeRule(RelOptRuleOperand operand) {
@@ -67,7 +67,7 @@ public class KapAggFilterTransposeRule extends RelOptRule {
 
     @Override
     public boolean matches(RelOptRuleCall call) {
-        final KapJoinRel joinRel = call.rel(2);
+        final OlapJoinRel joinRel = call.rel(2);
 
         //Only one agg child of join is accepted
         return RuleUtils.isJoinOnlyOneAggChild(joinRel);
@@ -75,8 +75,8 @@ public class KapAggFilterTransposeRule extends RelOptRule {
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        final KapAggregateRel aggregate = call.rel(0);
-        final KapFilterRel filter = call.rel(1);
+        final OlapAggregateRel aggregate = call.rel(0);
+        final OlapFilterRel filter = call.rel(1);
 
         // Do the columns used by the filter appear in the output of the aggregate?
         final ImmutableBitSet filterColumns = RelOptUtil.InputFinder.bits(filter.getCondition());

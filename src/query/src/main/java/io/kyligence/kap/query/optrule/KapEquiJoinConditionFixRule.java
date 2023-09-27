@@ -27,7 +27,7 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
-import org.apache.kylin.query.relnode.KapJoinRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
 import org.apache.kylin.query.util.RexUtils;
 
 /**
@@ -40,12 +40,12 @@ public class KapEquiJoinConditionFixRule extends RelOptRule {
     public static final KapEquiJoinConditionFixRule INSTANCE = new KapEquiJoinConditionFixRule();
 
     private KapEquiJoinConditionFixRule() {
-        super(operand(KapJoinRel.class, any()), RelFactories.LOGICAL_BUILDER, "KapEquiJoinConditionFixRule:join");
+        super(operand(OlapJoinRel.class, any()), RelFactories.LOGICAL_BUILDER, "KapEquiJoinConditionFixRule:join");
     }
 
     @Override
     public void onMatch(RelOptRuleCall call) {
-        KapJoinRel join = call.rel(0);
+        OlapJoinRel join = call.rel(0);
         List<RexNode> conditions = RelOptUtil.conjunctions(join.getCondition());
         if (conditions.isEmpty()) {
             return;

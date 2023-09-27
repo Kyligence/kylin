@@ -33,14 +33,14 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
-import org.apache.kylin.query.relnode.KapJoinRel;
-import org.apache.kylin.query.relnode.KapRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 public class RelAggPushDownUtil {
 
     private static final String HEP_REL_VERTEX = "HepRelVertex#";
     private static final String REL = "rel#";
-    private static final String KAP = ":Kap";
+    private static final String OLAP = ":Olap";
     private static final String CTX = "ctx=";
 
     private RelAggPushDownUtil() {
@@ -74,7 +74,7 @@ public class RelAggPushDownUtil {
     }
 
     // Each time a single join rel node push down， delete other join rel node
-    public static synchronized boolean isUnmatchedJoinRel(KapJoinRel joinRel) {
+    public static synchronized boolean isUnmatchedJoinRel(OlapJoinRel joinRel) {
         String digest = getDigest(joinRel);
         boolean unmatched = QueryContext.current().getUnmatchedJoinDigest().get(digest) != null;
         if (unmatched) {
@@ -84,7 +84,7 @@ public class RelAggPushDownUtil {
         return unmatched;
     }
 
-    private static String getDigest(KapJoinRel joinRel) {
+    private static String getDigest(OlapJoinRel joinRel) {
         Map<String, String> cacheDescMap = new HashMap<>();
         analysisRel(joinRel, cacheDescMap);
         String joinRelDigest = joinRel.getDigest();
@@ -116,12 +116,12 @@ public class RelAggPushDownUtil {
         }
     }
 
-    public static KapJoinRel collectFirstJoinRel(RelNode kapRel) {
+    public static OlapJoinRel collectFirstJoinRel(RelNode kapRel) {
         if (kapRel == null || CollectionUtils.isEmpty(kapRel.getInputs())) {
             return null;
         }
-        if (kapRel instanceof KapJoinRel) {
-            return (KapJoinRel) kapRel;
+        if (kapRel instanceof OlapJoinRel) {
+            return (OlapJoinRel) kapRel;
         } else {
             return collectFirstJoinRel(kapRel.getInput(0));
         }
@@ -129,7 +129,7 @@ public class RelAggPushDownUtil {
 
     // only for test
     public static void collectAllJoinRel(RelNode kapRel) {
-        if (kapRel instanceof KapJoinRel) {
+        if (kapRel instanceof OlapJoinRel) {
             QueryContext.current().getUnmatchedJoinDigest().put(handleDigest(kapRel.getDigest()), true);
         }
         for (RelNode rel : kapRel.getInputs()) {
@@ -140,9 +140,9 @@ public class RelAggPushDownUtil {
     public static void clearCtxRelNode(RelNode relNode) {
         List<RelNode> relNodes = relNode.getInputs();
         for (RelNode childNode : relNodes) {
-            KapRel kapRel = ((KapRel) childNode);
-            if (kapRel.getContext() != null) {
-                kapRel.setContext(null);
+            OlapRel olapRel = ((OlapRel) childNode);
+            if (olapRel.getContext() != null) {
+                olapRel.setContext(null);
             }
             clearCtxRelNode(childNode);
         }
@@ -156,7 +156,7 @@ public class RelAggPushDownUtil {
 
     private static String clearDigestRelID(String digest) {
         int start = digest.indexOf(REL);
-        int end = digest.indexOf(KAP);
+        int end = digest.indexOf(OLAP);
         if (start > 0 && end > start) {
             digest = digest.substring(0, start) + digest.substring(end + 1);
             if (digest.contains(REL)) {

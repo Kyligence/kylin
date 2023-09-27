@@ -37,13 +37,13 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.query.relnode.KapFilterRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
 
 public class FilterJoinConditionMergeRule extends RelOptRule {
 
     public static final FilterJoinConditionMergeRule INSTANCE = new FilterJoinConditionMergeRule(
-            operand(KapFilterRel.class, operand(KapJoinRel.class, RelOptRule.any())), RelFactories.LOGICAL_BUILDER,
+            operand(OlapFilterRel.class, operand(OlapJoinRel.class, RelOptRule.any())), RelFactories.LOGICAL_BUILDER,
             "FilterJoinConditionMergeRule");
 
     public FilterJoinConditionMergeRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory,

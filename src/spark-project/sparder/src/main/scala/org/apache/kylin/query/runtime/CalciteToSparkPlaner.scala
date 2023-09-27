@@ -37,49 +37,49 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
   cleanCache()
 
   override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
-    if (node.isInstanceOf[KapUnionRel]) {
+    if (node.isInstanceOf[OlapUnionRel]) {
       unionLayer = unionLayer + 1
     }
-    if (node.isInstanceOf[KapUnionRel] || node.isInstanceOf[KapMinusRel]) {
+    if (node.isInstanceOf[OlapUnionRel] || node.isInstanceOf[OlapMinusRel]) {
       setOpStack.push(stack.size())
     }
     // skip non runtime joins children
     // cases to skip children visit
     // 1. current node is a KapJoinRel and is not a runtime join
     // 2. current node is a KapNonEquiJoinRel and is not a runtime join
-    if (!(node.isInstanceOf[KapJoinRel] && !node.asInstanceOf[KapJoinRel].isRuntimeJoin) &&
-      !(node.isInstanceOf[KapNonEquiJoinRel] && !node.asInstanceOf[KapNonEquiJoinRel].isRuntimeJoin)) {
+    if (!(node.isInstanceOf[OlapJoinRel] && !node.asInstanceOf[OlapJoinRel].isRuntimeJoin) &&
+      !(node.isInstanceOf[OlapNonEquiJoinRel] && !node.asInstanceOf[OlapNonEquiJoinRel].isRuntimeJoin)) {
       node.childrenAccept(this)
     }
     stack.push(node match {
-      case rel: KapTableScan => convertTableScan(rel)
-      case rel: KapFilterRel =>
+      case rel: OlapTableScan => convertTableScan(rel)
+      case rel: OlapFilterRel =>
         logTime("filter") {
           FilterPlan.filter(stack.pop(), rel, dataContext)
         }
-      case rel: KapProjectRel =>
+      case rel: OlapProjectRel =>
         logTime("project") {
           ProjectPlan.select(stack.pop(), rel, dataContext)
         }
-      case rel: KapLimitRel =>
+      case rel: OlapLimitRel =>
         logTime("limit") {
           LimitPlan.limit(stack.pop(), rel, dataContext)
         }
-      case rel: KapSortRel =>
+      case rel: OlapSortRel =>
         logTime("sort") {
           SortPlan.sort(stack.pop(), rel, dataContext)
         }
-      case rel: KapWindowRel =>
+      case rel: OlapWindowRel =>
         logTime("window") {
           WindowPlan.window(stack.pop(), rel, dataContext)
         }
-      case rel: KapAggregateRel =>
+      case rel: OlapAggregateRel =>
         logTime("agg") {
           AggregatePlan.agg(stack.pop(), rel)
         }
-      case rel: KapJoinRel => convertJoinRel(rel)
-      case rel: KapNonEquiJoinRel => convertNonEquiJoinRel(rel)
-      case rel: KapUnionRel =>
+      case rel: OlapJoinRel => convertJoinRel(rel)
+      case rel: OlapNonEquiJoinRel => convertNonEquiJoinRel(rel)
+      case rel: OlapUnionRel =>
         val size = setOpStack.pop()
         var unionBlocks = Range(0, stack.size() - size).map(a => stack.pop())
         if (KylinConfig.getInstanceFromEnv.isCollectUnionInOrder) {
@@ -88,34 +88,34 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
         logTime("union") {
           plan.UnionPlan.union(unionBlocks, rel, dataContext)
         }
-      case rel: KapMinusRel =>
+      case rel: OlapMinusRel =>
         val size = setOpStack.pop()
         logTime("minus") {
           plan.MinusPlan.minus(Range(0, stack.size() - size).map(a => stack.pop()).reverse, rel, dataContext)
         }
-      case rel: KapValuesRel =>
+      case rel: OlapValuesRel =>
         logTime("values") {
           ValuesPlan.values(rel)
         }
-      case rel: KapModelViewRel =>
+      case rel: OlapModelViewRel =>
         logTime("modelview") {
           stack.pop()
         }
     })
-    if (node.isInstanceOf[KapUnionRel]) {
+    if (node.isInstanceOf[OlapUnionRel]) {
       unionLayer = unionLayer - 1
     }
   }
 
-  private def convertTableScan(rel: KapTableScan): LogicalPlan = {
+  private def convertTableScan(rel: OlapTableScan): LogicalPlan = {
     rel.getContext.genExecFunc(rel, rel.getTableName) match {
       case "executeLookupTableQuery" =>
         logTime("createLookupTable") {
           TableScanPlan.createLookupTable(rel)
         }
-      case "executeOLAPQuery" =>
-        logTime("createOLAPTable") {
-          TableScanPlan.createOLAPTable(rel)
+      case "executeOlapQuery" =>
+        logTime("createOlapTable") {
+          TableScanPlan.createOlapTable(rel)
         }
       case "executeSimpleAggregationQuery" =>
         logTime("createSingleRow") {
@@ -128,7 +128,7 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
     }
   }
 
-  private def convertJoinRel(rel: KapJoinRel): LogicalPlan = {
+  private def convertJoinRel(rel: OlapJoinRel): LogicalPlan = {
     if (!rel.isRuntimeJoin) {
       rel.getContext.genExecFunc(rel, "") match {
         case "executeMetadataQuery" =>
@@ -137,7 +137,7 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
           }
         case _ =>
           logTime("join with table scan") {
-            TableScanPlan.createOLAPTable(rel)
+            TableScanPlan.createOlapTable(rel)
           }
       }
     } else {
@@ -149,10 +149,10 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
     }
   }
 
-  private def convertNonEquiJoinRel(rel: KapNonEquiJoinRel): LogicalPlan = {
+  private def convertNonEquiJoinRel(rel: OlapNonEquiJoinRel): LogicalPlan = {
     if (!rel.isRuntimeJoin) {
       logTime("join with table scan") {
-        TableScanPlan.createOLAPTable(rel)
+        TableScanPlan.createOlapTable(rel)
       }
     } else {
       val right = stack.pop()

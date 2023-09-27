@@ -23,8 +23,8 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Sort;
-import org.apache.kylin.query.relnode.KapRel;
-import org.apache.kylin.query.relnode.KapSortRel;
+import org.apache.kylin.query.relnode.OlapRel;
+import org.apache.kylin.query.relnode.OlapSortRel;
 
 /**
  */
@@ -33,7 +33,7 @@ public class KapSortRule extends ConverterRule {
     public static final KapSortRule INSTANCE = new KapSortRule();
 
     public KapSortRule() {
-        super(Sort.class, Convention.NONE, KapRel.CONVENTION, "KapSortRule");
+        super(Sort.class, Convention.NONE, OlapRel.CONVENTION, "KapSortRule");
     }
 
     @Override
@@ -42,10 +42,10 @@ public class KapSortRule extends ConverterRule {
         if (sort.offset != null || sort.fetch != null) {
             return null;
         }
-        final RelTraitSet traitSet = sort.getTraitSet().replace(KapRel.CONVENTION);
+        final RelTraitSet traitSet = sort.getTraitSet().replace(OlapRel.CONVENTION);
         final RelNode input = sort.getInput();
-        return new KapSortRel(rel.getCluster(), traitSet,
-                convert(input, input.getTraitSet().replace(KapRel.CONVENTION)), sort.getCollation(), sort.offset,
+        return new OlapSortRel(rel.getCluster(), traitSet,
+                convert(input, input.getTraitSet().replace(OlapRel.CONVENTION)), sort.getCollation(), sort.offset,
                 sort.fetch);
     }
 

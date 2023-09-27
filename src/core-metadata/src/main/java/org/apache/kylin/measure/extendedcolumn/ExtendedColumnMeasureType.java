@@ -26,7 +26,6 @@ import java.util.Map;
 import org.apache.kylin.common.util.ByteArray;
 import org.apache.kylin.common.util.Bytes;
 import org.apache.kylin.common.util.Dictionary;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.measure.MeasureAggregator;
 import org.apache.kylin.measure.MeasureIngester;
 import org.apache.kylin.measure.MeasureType;
@@ -78,38 +77,9 @@ public class ExtendedColumnMeasureType extends MeasureType<ByteArray> {
         this.dataType = dataType;
     }
 
-    public static List<TblColRef> getExtendedColumnHosts(FunctionDesc functionDesc) {
-        List<TblColRef> ret = Lists.newArrayList();
-        List<TblColRef> params = functionDesc.getColRefs();
-        for (int i = 0; i < params.size() - 1; i++) {
-            ret.add(params.get(i));
-        }
-        return ret;
-    }
-
     public static TblColRef getExtendedColumn(FunctionDesc functionDesc) {
         List<TblColRef> params = functionDesc.getColRefs();
         return params.get(params.size() - 1);
-    }
-
-    public void adjustSqlDigest(List<MeasureDesc> measureDescs, SQLDigest sqlDigest) {
-        for (MeasureDesc measureDesc : measureDescs) {
-            if (!sqlDigest.involvedMeasure.contains(measureDesc)) {
-                continue;
-            }
-            FunctionDesc extendColumnFunc = measureDesc.getFunction();
-            List<TblColRef> hosts = getExtendedColumnHosts(extendColumnFunc);
-            TblColRef extended = getExtendedColumn(extendColumnFunc);
-
-            if (!sqlDigest.groupbyColumns.contains(extended)) {
-                continue;
-            }
-
-            sqlDigest.aggregations.add(extendColumnFunc);
-            sqlDigest.groupbyColumns.remove(extended);
-            sqlDigest.groupbyColumns.addAll(hosts);
-            sqlDigest.metricColumns.add(extended);
-        }
     }
 
     @Override
@@ -121,7 +91,7 @@ public class ExtendedColumnMeasureType extends MeasureType<ByteArray> {
             return null;
         }
 
-        if (digest.filterColumns.contains(extendedCol)) {
+        if (digest.getFilterColumns().contains(extendedCol)) {
             return null;
         }
 

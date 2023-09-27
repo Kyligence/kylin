@@ -39,7 +39,7 @@ import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.QueryExtension;
 import org.apache.kylin.query.engine.view.ViewAnalyzer;
 import org.apache.kylin.query.engine.view.ViewSchema;
-import org.apache.kylin.query.schema.KapOLAPSchema;
+import org.apache.kylin.query.schema.OlapSchema;
 import org.apache.kylin.rest.constant.Constant;
 
 import lombok.extern.slf4j.Slf4j;
@@ -147,7 +147,7 @@ class ProjectSchemaFactory {
     }
 
     private Schema createSchema(String schemaName) {
-        return new KapOLAPSchema(projectName, schemaName, schemasMap.get(schemaName), modelsMap);
+        return new OlapSchema(projectName, schemaName, schemasMap.get(schemaName), modelsMap);
     }
 
     private void addUDFs(CalciteSchema calciteSchema) {

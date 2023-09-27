@@ -53,7 +53,7 @@ public class DataflowCapabilityChecker {
     public static CapabilityResult check(NDataflow dataflow, Candidate candidate, SQLDigest digest) {
         log.info("Matching Layout in dataflow {}, SQL digest {}", dataflow, digest);
         CapabilityResult result = new CapabilityResult();
-        if (digest.limitPrecedesAggr) {
+        if (digest.isLimitPrecedesAggr()) {
             log.info("Exclude NDataflow {} because there's limit preceding aggregation", dataflow);
             result.incapableCause = CapabilityResult.IncapableCause
                     .create(CapabilityResult.IncapableType.LIMIT_PRECEDE_AGGR);
@@ -61,10 +61,10 @@ public class DataflowCapabilityChecker {
         }
 
         // 1. match joins is ensured at model select
-        String factTableOfQuery = digest.factTable;
+        String factTableOfQuery = digest.getFactTable();
         String modelFactTable = dataflow.getModel().getQueryCompatibleFactTable(factTableOfQuery);
         IRealizationCandidate chosenCandidate = null;
-        if (digest.joinDescs.isEmpty() && !modelFactTable.equals(factTableOfQuery)) {
+        if (digest.getJoinDescs().isEmpty() && !modelFactTable.equals(factTableOfQuery)) {
             log.trace("Snapshot dataflow matching");
             chosenCandidate = tryMatchLookup(dataflow, digest, result);
             if (chosenCandidate != null) {
@@ -107,13 +107,14 @@ public class DataflowCapabilityChecker {
 
     private static IRealizationCandidate tryMatchLookup(NDataflow dataflow, SQLDigest digest, CapabilityResult result) {
         // query from snapShot table
-        NTableMetadataManager nTableMetadataManager = NTableMetadataManager.getInstance(dataflow.getConfig(),
-                dataflow.getProject());
-        if (dataflow.getLatestReadySegment() == null)
+        NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(dataflow.getConfig(), dataflow.getProject());
+        if (dataflow.getLatestReadySegment() == null) {
             return null;
+        }
 
-        if (StringUtils.isEmpty(nTableMetadataManager.getTableDesc(digest.factTable).getLastSnapshotPath())) {
-            log.info("Exclude NDataflow {} because snapshot of table {} does not exist", dataflow, digest.factTable);
+        String factTable = digest.getFactTable();
+        if (StringUtils.isEmpty(tableMgr.getTableDesc(factTable).getLastSnapshotPath())) {
+            log.info("Exclude NDataflow {} because snapshot of table {} does not exist", dataflow, factTable);
             result.incapableCause = CapabilityResult.IncapableCause
                     .create(CapabilityResult.IncapableType.NOT_EXIST_SNAPSHOT);
             result.setCapable(false);
@@ -121,13 +122,13 @@ public class DataflowCapabilityChecker {
         }
 
         //1. all aggregations on lookup table can be done
-        NDataModel dataModel = dataflow.getModel();
-        if (dataModel.isFusionModel()) {
-            dataModel = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), dataflow.getProject())
-                    .getDataModelDesc(dataflow.getModel().getFusionId());
+        NDataModel model = dataflow.getModel();
+        if (model.isFusionModel()) {
+            model = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), model.getProject())
+                    .getDataModelDesc(model.getFusionId());
         }
-        Set<TblColRef> colsOfSnapShot = Sets.newHashSet(dataModel.findFirstTable(digest.factTable).getColumns());
-        Collection<TblColRef> unmatchedCols = Sets.newHashSet(digest.allColumns);
+        Set<TblColRef> colsOfSnapShot = Sets.newHashSet(model.findFirstTable(factTable).getColumns());
+        Collection<TblColRef> unmatchedCols = Sets.newHashSet(digest.getAllColumns());
         if (!unmatchedCols.isEmpty()) {
             unmatchedCols.removeAll(colsOfSnapShot);
         }
@@ -137,7 +138,7 @@ public class DataflowCapabilityChecker {
             result.incapableCause = CapabilityResult.IncapableCause.unmatchedDimensions(unmatchedCols);
             return null;
         } else {
-            return new NLookupCandidate(digest.factTable, true);
+            return new NLookupCandidate(factTable, true);
         }
     }
 

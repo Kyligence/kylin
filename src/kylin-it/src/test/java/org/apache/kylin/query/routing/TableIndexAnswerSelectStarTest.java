@@ -48,7 +48,7 @@ import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.engine.SchemaMetaData;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.util.OlapContextTestUtil;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparderEnv;
@@ -101,10 +101,10 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
     public void testTableIndexAnswerSelectStarPartialMatch() throws Exception {
         String sql = "select * from kylin_sales";
         overwriteSystemProp("kylin.query.use-tableindex-answer-select-star.enabled", "true");
-        OLAPContext context = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext context = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
         NDataflow dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
                 .getDataflow("ccb82d81-1497-ca6d-f226-3258a0f0ba4f");
-        Assert.assertEquals(dataflow.getAllColumns().size(), context.allColumns.size());
+        Assert.assertEquals(dataflow.getAllColumns().size(), context.getAllColumns().size());
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), context);
         context.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -117,10 +117,10 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
     public void testTableIndexAnswerSelectStarBaseTableIndex() throws Exception {
         String sql = "select * from test_kylin_fact \n";
         overwriteSystemProp("kylin.query.use-tableindex-answer-select-star.enabled", "true");
-        OLAPContext context = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        OlapContext context = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
         NDataflow dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
                 .getDataflow("c7a44f37-8481-e78b-5cac-faa7d76767db");
-        Assert.assertEquals(dataflow.getAllColumns().size(), context.allColumns.size());
+        Assert.assertEquals(dataflow.getAllColumns().size(), context.getAllColumns().size());
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), context);
         context.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -183,8 +183,8 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
         dataflowManager.updateDataflow(updateOps);
 
         String sql = "select cal_dt, new_cc from test_kylin_fact";
-        OLAPContext context = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
-        Set<TblColRef> allColumns = context.realization.getAllColumns();
+        OlapContext context = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+        Set<TblColRef> allColumns = context.getRealization().getAllColumns();
         Assert.assertEquals(13, allColumns.size());
         SchemaMetaData schemaMetaData = new SchemaMetaData(getProject(), KylinConfig.getInstanceFromEnv());
         Assert.assertEquals(26, schemaMetaData.getTables().get(1).getFields().size());
@@ -208,7 +208,7 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
         overwriteSystemProp("kylin.query.use-tableindex-answer-select-star.enabled", "true");
 
         String sql1 = "select * from (select trans_id from test_kylin_fact)";
-        OLAPContext context = OlapContextTestUtil.getOlapContexts(getProject(), sql1).get(0);
+        OlapContext context = OlapContextTestUtil.getOlapContexts(getProject(), sql1).get(0);
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), context);
         context.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
@@ -223,7 +223,7 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
             Assert.fail();
         } catch (Exception e) {
             Assert.assertTrue(Throwables.getRootCause(e.getCause()).getMessage()
-                    .contains("No realization found for OLAPContext"));
+                    .contains("No realization found for OlapContext"));
         }
 
         String sql3 = "select * from (select price from test_kylin_fact)";
@@ -232,14 +232,12 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
             Assert.fail();
         } catch (Exception e) {
             Assert.assertTrue(Throwables.getRootCause(e.getCause()).getMessage()
-                    .contains("No realization found for OLAPContext"));
+                    .contains("No realization found for OlapContext"));
         }
-
     }
 
     @Override
     public String getProject() {
         return "tableindex_answer_selectstart";
     }
-
 }

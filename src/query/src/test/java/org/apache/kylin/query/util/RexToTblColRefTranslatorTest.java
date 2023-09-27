@@ -172,7 +172,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(innerNode, REX_BUILDER.makeBigintLiteral(new BigDecimal(1000))));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPDIFF(SECOND, `T_1_CED5FEB`.`TIME1`, `T_1_CED5FEB`.`TIME0`)",
                 rexNodeToSqlConverter.convertCall(rexNode));
     }
@@ -195,7 +195,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(innerNode, REX_BUILDER.makeBigintLiteral(new BigDecimal(60000))));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPDIFF(MINUTE, `T_1_CED5FEB`.`TIME1`, `T_1_CED5FEB`.`TIME0`)",
                 rexNodeToSqlConverter.convertCall(rexNode));
     }
@@ -218,7 +218,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(innerNode, REX_BUILDER.makeBigintLiteral(new BigDecimal(3600000))));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPDIFF(HOUR, `T_1_CED5FEB`.`TIME1`, `T_1_CED5FEB`.`TIME0`)",
                 rexNodeToSqlConverter.convertCall(rexNode));
     }
@@ -241,7 +241,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(innerNode, REX_BUILDER.makeBigintLiteral(new BigDecimal(86400000))));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPDIFF(DAY, `T_1_CED5FEB`.`TIME1`, `T_1_CED5FEB`.`TIME0`)",
                 rexNodeToSqlConverter.convertCall(rexNode));
     }
@@ -266,7 +266,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(medianNode, REX_BUILDER.makeBigintLiteral(new BigDecimal(604800))));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPDIFF(WEEK, `T_1_CED5FEB`.`TIME1`, `T_1_CED5FEB`.`TIME0`)",
                 rexNodeToSqlConverter.convertCall(rexNode));
     }
@@ -287,7 +287,7 @@ public class RexToTblColRefTranslatorTest {
                 x);
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPDIFF(MONTH, `T_1_CED5FEB`.`TIME1`, `T_1_CED5FEB`.`TIME0`)",
                 rexNodeToSqlConverter.convertCall(rexNode));
     }
@@ -310,7 +310,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(innerNode, REX_BUILDER.makeBigintLiteral(new BigDecimal(3))));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPDIFF(QUARTER, `T_1_CED5FEB`.`TIME1`, `T_1_CED5FEB`.`TIME0`)",
                 rexNodeToSqlConverter.convertCall(rexNode));
     }
@@ -333,7 +333,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(innerNode, REX_BUILDER.makeBigintLiteral(new BigDecimal(12))));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPDIFF(YEAR, `T_1_CED5FEB`.`TIME1`, `T_1_CED5FEB`.`TIME0`)",
                 rexNodeToSqlConverter.convertCall(rexNode));
     }
@@ -353,7 +353,7 @@ public class RexToTblColRefTranslatorTest {
                         REX_BUILDER.makeIntervalLiteral(new BigDecimal(1000), second)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPADD(SECOND, 1, `T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -372,7 +372,7 @@ public class RexToTblColRefTranslatorTest {
                         REX_BUILDER.makeIntervalLiteral(new BigDecimal(60000), minute)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPADD(MINUTE, 1, `T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -391,7 +391,7 @@ public class RexToTblColRefTranslatorTest {
                         REX_BUILDER.makeIntervalLiteral(new BigDecimal(3600000), hour)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPADD(HOUR, 1, `T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -410,7 +410,7 @@ public class RexToTblColRefTranslatorTest {
                         REX_BUILDER.makeIntervalLiteral(new BigDecimal(86400000), day)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPADD(DAY, 1, `T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -429,7 +429,7 @@ public class RexToTblColRefTranslatorTest {
                         REX_BUILDER.makeIntervalLiteral(new BigDecimal(604800000), week)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPADD(WEEK, 1, `T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -447,7 +447,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(stableRexNodes.get(0), REX_BUILDER.makeIntervalLiteral(new BigDecimal(1), month)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPADD(MONTH, 1, `T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -465,7 +465,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(stableRexNodes.get(0), REX_BUILDER.makeIntervalLiteral(new BigDecimal(3), quarter)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPADD(QUARTER, 1, `T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -483,7 +483,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(stableRexNodes.get(0), REX_BUILDER.makeIntervalLiteral(new BigDecimal(12), year)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("TIMESTAMPADD(YEAR, 1, `T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -501,7 +501,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.YEAR), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("YEAR(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -519,7 +519,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.QUARTER), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("QUARTER(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -537,7 +537,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.MONTH), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("MONTH(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -555,7 +555,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.WEEK), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("WEEK(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -573,7 +573,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.DAY), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("DAYOFMONTH(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -591,7 +591,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.HOUR), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("HOUR(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -609,7 +609,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.MINUTE), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("MINUTE(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -627,7 +627,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.SECOND), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("SECOND(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -645,7 +645,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.DOY), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("DAYOFYEAR(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 
@@ -663,7 +663,7 @@ public class RexToTblColRefTranslatorTest {
                 Lists.newArrayList(REX_BUILDER.makeFlag(TimeUnitRange.DOW), stableRexNodes.get(0)));
         RexToSqlNodeConverter rexNodeToSqlConverter = new RexToTblColRefTranslator(
                 Sets.newHashSet(oriRexToTblColRefMap.values()), oriRexToTblColRefMap).new ExtendedRexToSqlNodeConverter(
-                        new RexToTblColRefTranslator.OLAPRexSqlStandardConvertletTable(rexNode, Maps.newHashMap()));
+                        new RexToTblColRefTranslator.OlapRexSqlStdConvertletTable(rexNode, Maps.newHashMap()));
         check("DAYOFWEEK(`T_1_CED5FEB`.`TIME0`)", rexNodeToSqlConverter.convertCall(rexNode));
     }
 

@@ -51,7 +51,7 @@ import org.apache.kylin.metadata.acl.DependentColumn;
 import org.apache.kylin.metadata.acl.DependentColumnInfo;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
-import org.apache.kylin.query.relnode.KapTableScan;
+import org.apache.kylin.query.relnode.OlapTableScan;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -311,7 +311,7 @@ public class QueryDependentColumnMask implements QueryResultMask {
         String tableName = tableScan.getTable().getQualifiedName().get(1);
         List<ColumnReferences> refs = new ArrayList<>();
         for (RelDataTypeField field : tableScan.getRowType().getFieldList()) {
-            ColumnDesc columnDesc = ((KapTableScan) tableScan).getOlapTable().getSourceColumns().get(field.getIndex());
+            ColumnDesc columnDesc = ((OlapTableScan) tableScan).getOlapTable().getSourceColumns().get(field.getIndex());
             if (columnDesc.isComputedColumn()) {
                 refs.add(getCCReferences(columnDesc.getComputedColumnExpr()));
             } else {

@@ -68,7 +68,7 @@ import org.apache.kylin.common.debug.BackdoorToggles;
 import org.apache.kylin.guava30.shaded.common.base.Function;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.query.engine.meta.PlannerContext;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.ContextUtil;
 
 import io.kyligence.kap.query.optrule.AggregateMultipleExpandRule;
 import io.kyligence.kap.query.optrule.AggregateProjectReduceRule;
@@ -155,7 +155,7 @@ public class PlannerFactory {
 
     private void registerCustomRules(VolcanoPlanner planner) {
         // force clear the query context before traversal relational operators
-        OLAPContext.clearThreadLocalContexts();
+        ContextUtil.clearThreadLocalContexts();
         // register OLAP rules
         //        addRules(planner, kylinConfig.getCalciteAddRule());
         // register OLAP rules

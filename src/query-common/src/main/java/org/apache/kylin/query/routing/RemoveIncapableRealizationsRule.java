@@ -25,7 +25,7 @@ import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.metadata.realization.HybridRealization;
 import org.apache.kylin.metadata.realization.IRealization;
 import org.apache.kylin.metadata.realization.SQLDigest;
-import org.apache.kylin.query.relnode.OLAPContextProp;
+import org.apache.kylin.query.relnode.OlapContextProp;
 import org.apache.kylin.query.util.ComputedColumnRewriter;
 import org.apache.kylin.query.util.QueryAliasMatchInfo;
 
@@ -42,7 +42,7 @@ public class RemoveIncapableRealizationsRule extends PruningRule {
         }
 
         // Preserve the initial OlapContext and initialize the matching result of Candidate as false.
-        OLAPContextProp propsBeforeRewrite = RealizationChooser.preservePropsBeforeRewrite(candidate.getCtx());
+        OlapContextProp propsBeforeRewrite = RealizationChooser.preservePropsBeforeRewrite(candidate.getCtx());
         CapabilityResult capabilityResult = new CapabilityResult();
 
         IRealization realization = candidate.getRealization();
@@ -56,7 +56,7 @@ public class RemoveIncapableRealizationsRule extends PruningRule {
         }
 
         if (!capabilityResult.isCapable()) {
-            RealizationChooser.restoreOLAPContextProps(candidate.getCtx(), propsBeforeRewrite);
+            RealizationChooser.restoreOlapContextProps(candidate.getCtx(), propsBeforeRewrite);
             candidate.getCtx().resetSQLDigest();
             capabilityResult = getCapabilityResult(candidate);
             candidate.recordRewrittenCtxProps();

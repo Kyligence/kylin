@@ -31,6 +31,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Values;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
@@ -46,14 +47,13 @@ import org.apache.calcite.util.TimestampString;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
-import org.apache.kylin.query.relnode.OLAPContext;
-import org.apache.kylin.query.relnode.OLAPTableScan;
+import org.apache.kylin.query.relnode.ContextUtil;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
+import org.apache.kylin.query.relnode.OlapTableScan;
 
 import lombok.val;
-import lombok.var;
 
 public class RexUtils {
 
@@ -151,11 +151,11 @@ public class RexUtils {
      */
     public static boolean isMerelyTableColumnReference(RelNode rel, Collection<Integer> columnIndexes) {
         // project and aggregations may change the columns
-        if (rel instanceof KapProjectRel) {
-            return isProjectMerelyTableColumnReference((KapProjectRel) rel, columnIndexes);
-        } else if (rel instanceof KapAggregateRel) {
-            return isAggMerelyTableColumnReference((KapAggregateRel) rel, columnIndexes);
-        } else if (rel instanceof KapJoinRel) { // test each sub queries of a join
+        if (rel instanceof OlapProjectRel) {
+            return isProjectMerelyTableColumnReference((OlapProjectRel) rel, columnIndexes);
+        } else if (rel instanceof OlapAggregateRel) {
+            return isAggMerelyTableColumnReference((OlapAggregateRel) rel, columnIndexes);
+        } else if (rel instanceof OlapJoinRel) { // test each sub queries of a join
             return isJoinMerelyTableColumnReference(rel, columnIndexes);
         } else { // other rel nodes won't changes the columns, just pass column idx down
             for (RelNode inputRel : rel.getInputs()) {
@@ -184,9 +184,9 @@ public class RexUtils {
         return true;
     }
 
-    private static boolean isAggMerelyTableColumnReference(KapAggregateRel rel, Collection<Integer> columnIndexes) {
+    private static boolean isAggMerelyTableColumnReference(OlapAggregateRel rel, Collection<Integer> columnIndexes) {
         Set<Integer> nextInputRefKeys = new HashSet<>();
-        KapAggregateRel agg = rel;
+        OlapAggregateRel agg = rel;
         for (Integer columnIdx : columnIndexes) {
             if (columnIdx >= agg.getRewriteGroupKeys().size()) { // pointing to agg calls
                 return false;
@@ -197,9 +197,9 @@ public class RexUtils {
         return isMerelyTableColumnReference(agg.getInput(), nextInputRefKeys);
     }
 
-    private static boolean isProjectMerelyTableColumnReference(KapProjectRel rel, Collection<Integer> columnIndexes) {
+    private static boolean isProjectMerelyTableColumnReference(OlapProjectRel rel, Collection<Integer> columnIndexes) {
         Set<Integer> nextInputRefKeys = new HashSet<>();
-        KapProjectRel project = rel;
+        OlapProjectRel project = rel;
         for (Integer columnIdx : columnIndexes) {
             RexNode projExp = project.getProjects().get(columnIdx);
             if (projExp.getKind() == SqlKind.CAST) {
@@ -213,8 +213,8 @@ public class RexUtils {
         return isMerelyTableColumnReference(project.getInput(), nextInputRefKeys);
     }
 
-    public static boolean isMerelyTableColumnReference(KapJoinRel rel, RexNode condition) {
-        // since join rel's columns are just consist of the all the columns from all sub queries
+    public static boolean isMerelyTableColumnReference(OlapJoinRel rel, RexNode condition) {
+        // since join relNode's columns are just consist of the all the columns from all sub queries
         // we can simply use the input ref index extracted from the condition rex node as the column idx of the join rel
         return isMerelyTableColumnReference(rel,
                 getAllInputRefs(condition).stream().map(RexSlot::getIndex).collect(Collectors.toSet()));
@@ -260,11 +260,12 @@ public class RexUtils {
     }
 
     public static RexNode transformValue2RexLiteral(RexBuilder rexBuilder, String value, DataType colType) {
+        RelDataType relDataType;
         switch (colType.getName()) {
         case DataType.DATE:
             return rexBuilder.makeDateLiteral(new DateString(value));
         case DataType.TIMESTAMP:
-            var relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
+            relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
             return rexBuilder.makeTimestampLiteral(new TimestampString(value), relDataType.getPrecision());
         case DataType.VARCHAR:
         case DataType.STRING:
@@ -281,13 +282,13 @@ public class RexUtils {
         }
     }
 
-    public static RexInputRef transformColumn2RexInputRef(TblColRef partitionCol, Set<OLAPTableScan> tableScans) {
-        for (OLAPTableScan tableScan : tableScans) {
+    public static RexInputRef transformColumn2RexInputRef(TblColRef partitionCol, Set<OlapTableScan> tableScans) {
+        for (OlapTableScan tableScan : tableScans) {
             val tableIdentity = tableScan.getTableName();
             if (tableIdentity.equals(partitionCol.getTable())) {
                 val index = tableScan.getColumnRowType().getAllColumns().indexOf(partitionCol);
                 if (index >= 0) {
-                    return OLAPContext.createUniqueInputRefAmongTables(tableScan, index, tableScans);
+                    return ContextUtil.createUniqueInputRefAmongTables(tableScan, index, tableScans);
                 }
                 throw new IllegalStateException(String.format(Locale.ROOT, "Cannot find column %s in all tableScans",
                         partitionCol.getIdentity()));

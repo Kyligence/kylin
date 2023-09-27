@@ -51,7 +51,7 @@ import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.engine.TypeSystem;
 import org.apache.kylin.query.engine.meta.SimpleDataContext;
 import org.apache.kylin.query.exception.UserStopQueryException;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.util.SlowQueryDetector;
 import org.apache.kylin.util.OlapContextTestUtil;
 import org.apache.spark.SparkConf;
@@ -107,12 +107,12 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
     private List<NDataSegment> startRealizationPruner(NDataflowManager dataflowManager, String dataflowId, String sql,
                                                       String project, KylinConfig kylinConfig) throws Exception {
         NDataflow dataflow = dataflowManager.getDataflow(dataflowId);
-        List<OLAPContext> olapContexts = OlapContextTestUtil.getOlapContexts(getProject(), sql);
-        OLAPContext context = olapContexts.get(0);
+        List<OlapContext> olapContexts = OlapContextTestUtil.getOlapContexts(getProject(), sql);
+        OlapContext context = olapContexts.get(0);
         CalciteSchema rootSchema = new QueryExec(project, kylinConfig).getRootSchema();
         SimpleDataContext dataContext = new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(),
                 kylinConfig);
-        context.firstTableScan.getCluster().getPlanner().setExecutor(new RexExecutorImpl(dataContext));
+        context.getFirstTableScan().getCluster().getPlanner().setExecutor(new RexExecutorImpl(dataContext));
         Map<String, String> map = RealizationChooser.matchJoins(dataflow.getModel(), context, false, false);
         context.fixModel(dataflow.getModel(), map);
         return new SegmentPruningRule().pruneSegments(dataflow, context);
@@ -250,8 +250,8 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
 
         String project = getProject();
         NDataflowManager dataflowManager = NDataflowManager.getInstance(kylinConfig, project);
-        List<OLAPContext> olapContexts = OlapContextTestUtil.getOlapContexts(getProject(), sql);
-        OLAPContext context = olapContexts.get(0);
+        List<OlapContext> olapContexts = OlapContextTestUtil.getOlapContexts(getProject(), sql);
+        OlapContext context = olapContexts.get(0);
 
         // append new segments
         Calendar calendar = Calendar.getInstance();
@@ -278,7 +278,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         CalciteSchema rootSchema = new QueryExec(project, kylinConfig).getRootSchema();
         SimpleDataContext dataContext = new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(),
                 kylinConfig);
-        context.firstTableScan.getCluster().getPlanner().setExecutor(new RexExecutorImpl(dataContext));
+        context.getFirstTableScan().getCluster().getPlanner().setExecutor(new RexExecutorImpl(dataContext));
         Map<String, String> map = RealizationChooser.matchJoins(dataflow.getModel(), context, false, false);
         context.fixModel(dataflow.getModel(), map);
 
@@ -293,7 +293,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         testTimeout(dataflow, context);
     }
 
-    private void testCancelQuery(NDataflow dataflow, OLAPContext context) {
+    private void testCancelQuery(NDataflow dataflow, OlapContext context) {
         AtomicReference<Exception> exp = new AtomicReference<>(null);
         AtomicReference<Segments<NDataSegment>> res = new AtomicReference<>(null);
         AtomicReference<SlowQueryDetector> slowQueryDetector = new AtomicReference<>(null);
@@ -334,7 +334,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
                 exp.get() instanceof UserStopQueryException);
     }
 
-    private void testCancelQuery(NDataflow dataflow, OLAPContext context,
+    private void testCancelQuery(NDataflow dataflow, OlapContext context,
             Consumer<SlowQueryDetector.QueryEntry> updater) {
 
         AtomicReference<Exception> exp = new AtomicReference<>(null);
@@ -376,7 +376,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         Assert.assertTrue(exp.get().getMessage().contains("inconsistent states"));
     }
 
-    private void testCancelAsyncQuery(NDataflow dataflow, OLAPContext context) {
+    private void testCancelAsyncQuery(NDataflow dataflow, OlapContext context) {
         AtomicReference<Exception> exp = new AtomicReference<>(null);
         AtomicReference<Segments<NDataSegment>> res = new AtomicReference<>(null);
         AtomicReference<SlowQueryDetector> slowQueryDetector = new AtomicReference<>(null);
@@ -419,7 +419,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
                 exp.get() instanceof UserStopQueryException);
     }
 
-    private void testInterrupt(NDataflow dataflow, OLAPContext context) {
+    private void testInterrupt(NDataflow dataflow, OlapContext context) {
         AtomicReference<Exception> exp = new AtomicReference<>(null);
         AtomicReference<Segments<NDataSegment>> res = new AtomicReference<>(null);
 
@@ -449,7 +449,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         Assert.assertTrue(exp.get().getCause() instanceof InterruptedException);
     }
 
-    private void testTimeout(NDataflow dataflow, OLAPContext context) {
+    private void testTimeout(NDataflow dataflow, OlapContext context) {
         AtomicReference<Exception> exp = new AtomicReference<>(null);
         AtomicReference<Segments<NDataSegment>> res = new AtomicReference<>(null);
         AtomicReference<SlowQueryDetector> slowQueryDetector = new AtomicReference<>(null);

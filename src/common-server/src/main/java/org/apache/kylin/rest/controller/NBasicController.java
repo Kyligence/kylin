@@ -656,7 +656,7 @@ public class NBasicController {
         for (String status : statuses) {
             if (!streamingJobsStatus.contains(status)) {
                 throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, "statuses",
-                        org.apache.commons.lang.StringUtils.join(streamingJobsStatus, ", "));
+                        StringUtils.join(streamingJobsStatus, ", "));
             }
         }
     }
@@ -670,7 +670,7 @@ public class NBasicController {
         for (String status : statuses) {
             if (!streamingJobTypeStatus.contains(status)) {
                 throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, "job_types",
-                        org.apache.commons.lang.StringUtils.join(streamingJobTypeStatus, ", "));
+                        StringUtils.join(streamingJobTypeStatus, ", "));
             }
         }
     }

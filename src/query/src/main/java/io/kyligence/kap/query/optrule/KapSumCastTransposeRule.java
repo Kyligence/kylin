@@ -48,8 +48,8 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
 import org.apache.kylin.query.relnode.ContextUtil;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.AggExpressionUtil;
 import org.apache.kylin.query.util.RuleUtils;
 import org.slf4j.Logger;
@@ -59,8 +59,8 @@ public class KapSumCastTransposeRule extends RelOptRule {
     private static final Logger logger = LoggerFactory.getLogger(KapSumCastTransposeRule.class);
 
     public static final KapSumCastTransposeRule INSTANCE = new KapSumCastTransposeRule(
-            operand(KapAggregateRel.class,
-                    operand(KapProjectRel.class, null, KapSumCastTransposeRule::needSumCastTranspose, any())),
+            operand(OlapAggregateRel.class,
+                    operand(OlapProjectRel.class, null, KapSumCastTransposeRule::needSumCastTranspose, any())),
             RelFactories.LOGICAL_BUILDER, "KapSumTransCastToThenRule");
 
     public KapSumCastTransposeRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory, String description) {
@@ -69,7 +69,7 @@ public class KapSumCastTransposeRule extends RelOptRule {
 
     public static boolean needSumCastTranspose(Project project) {
         if (project.getInput() instanceof HepRelVertex
-                && ((HepRelVertex) project.getInput()).getCurrentRel() instanceof KapAggregateRel) {
+                && ((HepRelVertex) project.getInput()).getCurrentRel() instanceof OlapAggregateRel) {
             return false;
         }
         List<RexNode> childExps = project.getChildExps();

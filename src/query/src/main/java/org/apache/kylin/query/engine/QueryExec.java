@@ -45,7 +45,6 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
@@ -59,15 +58,15 @@ import org.apache.kylin.metadata.query.StructField;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
 import org.apache.kylin.query.engine.data.QueryResult;
+import org.apache.kylin.query.engine.exec.CalcitePlanExec;
 import org.apache.kylin.query.engine.exec.ExecuteResult;
-import org.apache.kylin.query.engine.exec.calcite.CalciteQueryPlanExec;
-import org.apache.kylin.query.engine.exec.sparder.SparderQueryPlanExec;
+import org.apache.kylin.query.engine.exec.SparderPlanExec;
 import org.apache.kylin.query.engine.meta.SimpleDataContext;
 import org.apache.kylin.query.engine.view.ViewAnalyzer;
 import org.apache.kylin.query.mask.QueryResultMasks;
 import org.apache.kylin.query.relnode.ContextUtil;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.util.AsyncQueryUtil;
 import org.apache.kylin.query.util.CalcitePlanRouterVisitor;
 import org.apache.kylin.query.util.HepUtils;
@@ -223,20 +222,18 @@ public class QueryExec {
         }
     }
 
-    public List<OLAPContext> deriveOlapContexts(String sql) {
-        List<OLAPContext> contexts = Lists.newArrayList();
+    public List<OlapContext> deriveOlapContexts(String sql) {
+        List<OlapContext> contexts = Lists.newArrayList();
         try {
-            OLAPContext.clearThreadLocalContexts();
+            ContextUtil.clearThreadLocalContexts();
             RelNode relNode = parseAndOptimize(sql);
             QueryContextCutter.analyzeOlapContext(relNode);
-            Collection<OLAPContext> tmp = OLAPContext.getThreadLocalContexts();
-            if (CollectionUtils.isNotEmpty(tmp)) {
-                contexts.addAll(tmp);
-            }
+            Collection<OlapContext> tmp = ContextUtil.getThreadLocalContexts();
+            contexts.addAll(tmp);
         } catch (Exception e) {
             logger.error("Sql Parsing error.", e);
         } finally {
-            OLAPContext.clearThreadLocalContexts();
+            ContextUtil.clearThreadLocalContexts();
         }
         return contexts;
     }
@@ -386,7 +383,7 @@ public class QueryExec {
                 && KapConfig.wrap(kylinConfig).runConstantQueryLocally() && routeToCalcite) {
             QueryContext.current().getQueryTagInfo().setConstantQuery(true);
             // if sparder is not enabled, or the sql can run locally, use the calcite engine
-            return new CalciteQueryPlanExec().executeToIterable(rels.get(0), dataContext);
+            return new CalcitePlanExec().executeToIterable(rels.get(0), dataContext);
         } else {
             return sparderQuery(rels);
         }
@@ -396,9 +393,9 @@ public class QueryExec {
         RuntimeException lastException = null;
         for (RelNode rel : rels) {
             try {
-                OLAPContext.clearThreadLocalContexts();
-                OLAPContext.clearParameter();
-                return new SparderQueryPlanExec().executeToIterable(rel, dataContext);
+                ContextUtil.clearThreadLocalContexts();
+                ContextUtil.clearParameter();
+                return new SparderPlanExec().executeToIterable(rel, dataContext);
             } catch (NoRealizationFoundException e) {
                 ExecuteResult result = tryEnhancedAggPushDown(rel);
                 if (result != null) {
@@ -436,8 +433,8 @@ public class QueryExec {
         if (!QueryContext.current().isEnhancedAggPushDown() && tryTimes > 1) {
             return null;
         }
-        OLAPContext.clearThreadLocalContexts();
-        OLAPContext.clearParameter();
+        ContextUtil.clearThreadLocalContexts();
+        ContextUtil.clearParameter();
         RelAggPushDownUtil.clearCtxRelNode(relNode);
         QueryContext.current().setEnhancedAggPushDown(false);
         RelNode transformed = HepUtils.runRuleCollection(relNode, postOptRules, false);
@@ -445,7 +442,7 @@ public class QueryExec {
                 transformed, logger);
         try {
             RelAggPushDownUtil.clearUnmatchedJoinDigest();
-            return new SparderQueryPlanExec().executeToIterable(transformed, dataContext);
+            return new SparderPlanExec().executeToIterable(transformed, dataContext);
         } catch (NoRealizationFoundException e) {
             QueryInterruptChecker.checkThreadInterrupted(
                     "Interrupted SparderQueryOptimized NoRealizationFoundException",
@@ -500,14 +497,14 @@ public class QueryExec {
     private boolean isCalciteEngineCapable(RelNode rel) {
         if (rel instanceof Project) {
             Project projectRelNode = (Project) rel;
-            if (projectRelNode.getChildExps().stream().filter(pRelNode -> pRelNode instanceof RexCall)
+            if (projectRelNode.getChildExps().stream().filter(RexCall.class::isInstance)
                     .anyMatch(pRelNode -> pRelNode.accept(new CalcitePlanRouterVisitor()))) {
                 return false;
             }
         }
 
-        if (rel instanceof KapAggregateRel) {
-            KapAggregateRel aggregateRel = (KapAggregateRel) rel;
+        if (rel instanceof OlapAggregateRel) {
+            OlapAggregateRel aggregateRel = (OlapAggregateRel) rel;
             if (aggregateRel.getAggCallList().stream().anyMatch(
                     aggCall -> FunctionDesc.FUNC_BITMAP_BUILD.equalsIgnoreCase(aggCall.getAggregation().getName()))) {
                 return false;

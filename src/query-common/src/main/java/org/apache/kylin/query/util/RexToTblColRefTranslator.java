@@ -78,9 +78,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RexToTblColRefTranslator {
 
-    private Set<TblColRef> sourceColumnCollector;
-    private Map<RexNode, TblColRef> nodeAndTblColMap;
-    private Map<String, SqlNode> rexToSqlMap = Maps.newHashMap();
+    private final Set<TblColRef> sourceColumnCollector;
+    private final Map<RexNode, TblColRef> nodeAndTblColMap;
+    private final Map<String, SqlNode> rexToSqlMap = Maps.newHashMap();
 
     public RexToTblColRefTranslator() {
         this(new HashSet<>(), new HashMap<>());
@@ -218,7 +218,7 @@ public class RexToTblColRefTranslator {
     }
 
     private String createInnerColumn(RexCall call) {
-        final RexSqlStandardConvertletTable convertletTable = new OLAPRexSqlStandardConvertletTable(call, rexToSqlMap);
+        final RexSqlStandardConvertletTable convertletTable = new OlapRexSqlStdConvertletTable(call, rexToSqlMap);
         final RexToSqlNodeConverter rexNodeToSqlConverter = new ExtendedRexToSqlNodeConverter(convertletTable);
 
         try {
@@ -278,7 +278,7 @@ public class RexToTblColRefTranslator {
                 && ((RexCall) rexNode).getOperands().get(0) instanceof RexLiteral;
     }
 
-    static class OLAPRexSqlStandardConvertletTable extends RexSqlStandardConvertletTable {
+    static class OlapRexSqlStdConvertletTable extends RexSqlStandardConvertletTable {
 
         private static final BigDecimal SECONDS_OF_WEEK = new BigDecimal(604800); // a week equals 604800 seconds
         private static final BigDecimal MONTHS_OF_QUARTER = new BigDecimal(3); // a quarter equals 3 months
@@ -288,7 +288,7 @@ public class RexToTblColRefTranslator {
 
         private static final Set<String> REGISTERED_UDFS = registerUdfs();
 
-        public OLAPRexSqlStandardConvertletTable(RexCall call, Map<String, SqlNode> rexToSqlMap) {
+        public OlapRexSqlStdConvertletTable(RexCall call, Map<String, SqlNode> rexToSqlMap) {
             super();
             this.rexToSqlMap = rexToSqlMap;
             registerUdfOperator(call);
@@ -470,11 +470,11 @@ public class RexToTblColRefTranslator {
                     if (node.getKind() == SqlKind.TIMESTAMP_DIFF && secRex instanceof RexLiteral) {
                         SqlCall diffCall = (SqlBasicCall) node;
                         RexLiteral literal = (RexLiteral) secRex;
-                        if (literal.getValue().equals(OLAPRexSqlStandardConvertletTable.SECONDS_OF_WEEK)) {
+                        if (literal.getValue().equals(OlapRexSqlStdConvertletTable.SECONDS_OF_WEEK)) {
                             SqlNode week = SqlLiteral.createSymbol(TimeUnit.WEEK, SqlParserPos.ZERO);
                             return SqlStdOperatorTable.TIMESTAMP_DIFF.createCall(SqlParserPos.ZERO,
                                     Lists.newArrayList(week, diffCall.operand(1), diffCall.operand(2)));
-                        } else if (literal.getValue().equals(OLAPRexSqlStandardConvertletTable.MONTHS_OF_QUARTER)) {
+                        } else if (literal.getValue().equals(OlapRexSqlStdConvertletTable.MONTHS_OF_QUARTER)) {
                             SqlNode quarter = SqlLiteral.createSymbol(TimeUnit.QUARTER, SqlParserPos.ZERO);
                             return SqlStdOperatorTable.TIMESTAMP_DIFF.createCall(SqlParserPos.ZERO,
                                     Lists.newArrayList(quarter, diffCall.operand(1), diffCall.operand(2)));

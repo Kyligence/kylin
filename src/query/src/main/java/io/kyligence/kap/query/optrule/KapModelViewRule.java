@@ -25,8 +25,8 @@ import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.query.relnode.KapModelViewRel;
-import org.apache.kylin.query.relnode.KapRel;
+import org.apache.kylin.query.relnode.OlapModelViewRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 /**
  */
@@ -35,17 +35,17 @@ public class KapModelViewRule extends ConverterRule {
     public static final RelOptRule INSTANCE = new KapModelViewRule();
 
     public KapModelViewRule() {
-        super(KapModelViewRel.class, Convention.NONE, KapRel.CONVENTION, "KapModelViewRule");
+        super(OlapModelViewRel.class, Convention.NONE, OlapRel.CONVENTION, "KapModelViewRule");
     }
 
     @Override
     public RelNode convert(RelNode call) {
-        KapModelViewRel modelViewRel = (KapModelViewRel) call;
+        OlapModelViewRel modelViewRel = (OlapModelViewRel) call;
         RelTraitSet origTraitSet = modelViewRel.getTraitSet();
-        RelTraitSet traitSet = origTraitSet.replace(KapRel.CONVENTION).simplify();
+        RelTraitSet traitSet = origTraitSet.replace(OlapRel.CONVENTION).simplify();
 
         RelNode convertedInput = modelViewRel.getInput() instanceof HepRelVertex ? modelViewRel.getInput()
-                : convert(modelViewRel.getInput(), KapRel.CONVENTION);
+                : convert(modelViewRel.getInput(), OlapRel.CONVENTION);
         return modelViewRel.copy(traitSet, Lists.newArrayList(convertedInput));
     }
 

@@ -134,7 +134,6 @@ import org.apache.kylin.query.engine.data.TableSchema;
 import org.apache.kylin.query.exception.NotSupportedSQLException;
 import org.apache.kylin.query.exception.UserStopQueryException;
 import org.apache.kylin.query.relnode.ContextUtil;
-import org.apache.kylin.query.relnode.OLAPContext;
 import org.apache.kylin.query.util.EscapeDialect;
 import org.apache.kylin.query.util.PrepareSQLUtils;
 import org.apache.kylin.query.util.QueryLimiter;
@@ -451,7 +450,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                     .flatMap(nativeQueryRealization -> nativeQueryRealization.getSnapshots().stream()).distinct()
                     .collect(Collectors.toList());
             snapShotFilters = ContextUtil
-                    .listContexts().stream().flatMap(ctx -> ctx.filterColumns.stream()
+                    .listContexts().stream().flatMap(ctx -> ctx.getFilterColumns().stream()
                             .filter(col -> snapShots.contains(col.getTable())).map(TblColRef::getCanonicalName))
                     .collect(Collectors.toList());
         }
@@ -1018,10 +1017,6 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         return aclInfo != null && aclInfo.isHasAdminPermission();
     }
 
-    public void clearThreadLocalContexts() {
-        OLAPContext.clearThreadLocalContexts();
-    }
-
     public QueryExec newQueryExec(String project) {
         return newQueryExec(project, null);
     }
@@ -1439,7 +1434,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         QueryContext queryContext = QueryContext.current();
 
         response.wrapResultOfQueryContext(queryContext);
-        response.setNativeRealizations(OLAPContext.getNativeRealizations());
+        response.setNativeRealizations(ContextUtil.getNativeRealizations());
         response.updateDataFetchTime(queryContext);
 
         if (!queryContext.getQueryTagInfo().isVacant()) {

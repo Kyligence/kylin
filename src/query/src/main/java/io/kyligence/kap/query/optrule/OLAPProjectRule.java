@@ -28,8 +28,8 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.metadata.RelMdCollation;
-import org.apache.kylin.query.relnode.OLAPProjectRel;
-import org.apache.kylin.query.relnode.OLAPRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
+import org.apache.kylin.query.relnode.OlapRel;
 
 /**
  */
@@ -38,7 +38,7 @@ public class OLAPProjectRule extends ConverterRule {
     public static final RelOptRule INSTANCE = new OLAPProjectRule();
 
     public OLAPProjectRule() {
-        super(LogicalProject.class, RelOptUtil.PROJECT_PREDICATE, Convention.NONE, OLAPRel.CONVENTION,
+        super(LogicalProject.class, RelOptUtil.PROJECT_PREDICATE, Convention.NONE, OlapRel.CONVENTION,
                 "OLAPProjectRule");
     }
 
@@ -49,13 +49,12 @@ public class OLAPProjectRule extends ConverterRule {
         //  OLAPProjectRule can't normal working with projectRel[input=sortRel]
         final LogicalProject project = (LogicalProject) rel;
         final RelNode convertChild = convert(project.getInput(),
-                project.getInput().getTraitSet().replace(OLAPRel.CONVENTION));
+                project.getInput().getTraitSet().replace(OlapRel.CONVENTION));
         final RelOptCluster cluster = convertChild.getCluster();
-        final RelTraitSet traitSet = cluster.traitSet().replace(OLAPRel.CONVENTION)
+        final RelTraitSet traitSet = cluster.traitSet().replace(OlapRel.CONVENTION)
                 .replaceIfs(RelCollationTraitDef.INSTANCE, () -> //  CALCITE-88
-                        RelMdCollation.project(cluster.getMetadataQuery(), convertChild, project.getProjects())
-                );
-        return new OLAPProjectRel(convertChild.getCluster(), traitSet, convertChild, project.getProjects(),
+                RelMdCollation.project(cluster.getMetadataQuery(), convertChild, project.getProjects()));
+        return new OlapProjectRel(convertChild.getCluster(), traitSet, convertChild, project.getProjects(),
                 project.getRowType());
     }
 }

@@ -93,8 +93,8 @@ public class HepUtils {
             KapAggProjectTransposeRule.AGG_PROJECT_JOIN,
             KapAggFilterTransposeRule.AGG_FILTER_JOIN,
             KapAggJoinTransposeRule.INSTANCE_JOIN_RIGHT_AGG,
-            KapCountDistinctJoinRule.INSTANCE_COUNT_DISTINCT_JOIN_ONESIDEAGG,
-            KapCountDistinctJoinRule.INSTANCE_COUNT_DISTINCT_AGG_PROJECT_JOIN,
+            KapCountDistinctJoinRule.COUNT_DISTINCT_JOIN_ONE_SIDE_AGG,
+            KapCountDistinctJoinRule.COUNT_DISTINCT_AGG_PROJECT_JOIN,
             KapProjectRule.INSTANCE,
             KapAggregateRule.INSTANCE,
             KapJoinRule.INSTANCE

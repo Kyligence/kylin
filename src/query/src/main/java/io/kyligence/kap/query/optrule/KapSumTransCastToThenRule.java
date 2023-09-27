@@ -44,8 +44,8 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.AggExpressionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,8 +55,8 @@ public class KapSumTransCastToThenRule extends RelOptRule {
     private static final Logger logger = LoggerFactory.getLogger(KapSumTransCastToThenRule.class);
 
     public static final KapSumTransCastToThenRule INSTANCE = new KapSumTransCastToThenRule(
-            operand(KapAggregateRel.class,
-                    operand(KapProjectRel.class, null, KapSumTransCastToThenRule::existCastCase, any())),
+            operand(OlapAggregateRel.class,
+                    operand(OlapProjectRel.class, null, KapSumTransCastToThenRule::existCastCase, any())),
             RelFactories.LOGICAL_BUILDER, "KapSumTransCastToThenRule");
 
     public static boolean existCastCase(Project logicalProject) {

@@ -46,6 +46,11 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.guava30.shaded.common.base.Joiner;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.measure.MeasureType;
 import org.apache.kylin.measure.MeasureTypeFactory;
 import org.apache.kylin.measure.basic.BasicMeasureType;
@@ -56,11 +61,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.base.Joiner;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -144,7 +144,8 @@ public class FunctionDesc implements Serializable {
 
     private static void checkSumLCTimeColDataType(String dataTypeName) {
         DataType dataType = DataType.getType(dataTypeName);
-        if (dataType.isTinyInt() || dataType.isFloat() || dataType.isDouble() || dataType.isDecimal() || dataType.isBoolean()) {
+        if (dataType.isTinyInt() || dataType.isFloat() || dataType.isDouble() || dataType.isDecimal()
+                || dataType.isBoolean()) {
             throw new KylinException(MODEL_SUM_LC_INVALID_TIMESTAMP_TYPE, dataType);
         }
     }

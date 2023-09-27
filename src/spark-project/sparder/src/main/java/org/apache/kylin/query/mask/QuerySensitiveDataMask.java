@@ -45,8 +45,8 @@ import org.apache.kylin.metadata.acl.SensitiveDataMask;
 import org.apache.kylin.metadata.acl.SensitiveDataMaskInfo;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
-import org.apache.kylin.query.relnode.KapTableScan;
-import org.apache.kylin.query.relnode.KapWindowRel;
+import org.apache.kylin.query.relnode.OlapTableScan;
+import org.apache.kylin.query.relnode.OlapWindowRel;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -183,7 +183,7 @@ public class QuerySensitiveDataMask implements QueryResultMask {
             return getProjectSensitiveCols((Project) relNode);
         } else if (relNode instanceof SetOp) {
             return getUnionSensitiveCols((SetOp) relNode);
-        } else if (relNode instanceof KapWindowRel) {
+        } else if (relNode instanceof OlapWindowRel) {
             return getWindowSensitiveCols((Window) relNode);
         } else {
             List<SensitiveDataMask.MaskType> masks = new ArrayList<>();
@@ -273,7 +273,7 @@ public class QuerySensitiveDataMask implements QueryResultMask {
         String tableName = tableScan.getTable().getQualifiedName().get(1);
         List<SensitiveDataMask.MaskType> masks = new ArrayList<>();
         for (RelDataTypeField field : tableScan.getRowType().getFieldList()) {
-            ColumnDesc columnDesc = ((KapTableScan) tableScan).getOlapTable().getSourceColumns().get(field.getIndex());
+            ColumnDesc columnDesc = ((OlapTableScan) tableScan).getOlapTable().getSourceColumns().get(field.getIndex());
             if (columnDesc.isComputedColumn()) {
                 masks.add(getCCMask(columnDesc.getComputedColumnExpr()));
             } else {

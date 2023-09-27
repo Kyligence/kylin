@@ -55,7 +55,7 @@ public class QueryRouter {
     }
 
     public static void applyRules(Candidate candidate) {
-        Strategy pruningStrategy = getStrategy(candidate.getCtx().olapSchema.getProjectName());
+        Strategy pruningStrategy = getStrategy(candidate.getCtx().getOlapSchema().getProjectName());
         for (PruningRule r : pruningStrategy.getRules()) {
             r.apply(candidate);
         }

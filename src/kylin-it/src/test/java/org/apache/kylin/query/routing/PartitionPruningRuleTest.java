@@ -43,7 +43,7 @@ import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.model.MultiPartitionDesc;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.query.exception.UserStopQueryException;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.util.SlowQueryDetector;
 import org.apache.kylin.util.OlapContextTestUtil;
 import org.junit.Assert;
@@ -59,15 +59,14 @@ public class PartitionPruningRuleTest extends NLocalWithSparkSessionTest {
         String sql = "select cal_dt, sum(price) from test_kylin_fact" + " inner join test_account"
                 + " on test_kylin_fact.seller_id = test_account.account_id"
                 + " where cal_dt > '2012-01-01' and cal_dt < '2012-01-04' and lstg_site_id = 1 group by cal_dt";
-        OLAPContext olapContext = OlapContextTestUtil.getOlapContexts(project, sql, true).get(0);
+        OlapContext olapContext = OlapContextTestUtil.getOlapContexts(project, sql, true).get(0);
 
         int newPartitionsNum = 1000_000;
 
         modelManager.updateDataModel(modelId, copied -> {
             for (int i = 0; i < newPartitionsNum; i++) {
-                copied.getMultiPartitionDesc()
-                    .getPartitions()
-                    .add(new MultiPartitionDesc.PartitionInfo(i + 100, new String[] { String.valueOf(i + 100) }));
+                copied.getMultiPartitionDesc().getPartitions()
+                        .add(new MultiPartitionDesc.PartitionInfo(i + 100, new String[] { String.valueOf(i + 100) }));
             }
         });
 
@@ -135,8 +134,8 @@ public class PartitionPruningRuleTest extends NLocalWithSparkSessionTest {
         slowQueryDetector.get().stopQuery("pruning");
 
         Assert.assertFalse(queryEntry.get().isAsyncQuery());
-        Assert.assertTrue(queryEntry.get().isStopByUser()
-                && queryEntry.get().getPlannerCancelFlag().isCancelRequested());
+        Assert.assertTrue(
+                queryEntry.get().isStopByUser() && queryEntry.get().getPlannerCancelFlag().isCancelRequested());
 
         try {
             t.join();
@@ -222,8 +221,8 @@ public class PartitionPruningRuleTest extends NLocalWithSparkSessionTest {
         slowQueryDetector.get().stopQuery(queryId);
 
         Assert.assertTrue(queryEntry.get().isAsyncQuery());
-        Assert.assertTrue(queryEntry.get().isStopByUser()
-                && queryEntry.get().getPlannerCancelFlag().isCancelRequested());
+        Assert.assertTrue(
+                queryEntry.get().isStopByUser() && queryEntry.get().getPlannerCancelFlag().isCancelRequested());
         try {
             t.join();
         } catch (InterruptedException e) {

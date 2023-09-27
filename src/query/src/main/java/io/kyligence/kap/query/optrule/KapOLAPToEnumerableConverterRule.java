@@ -22,8 +22,8 @@ import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.kylin.query.relnode.KapOLAPToEnumerableConverter;
-import org.apache.kylin.query.relnode.KapRel;
+import org.apache.kylin.query.relnode.OlapRel;
+import org.apache.kylin.query.relnode.OlapToEnumerableConverter;
 
 /**
  */
@@ -32,13 +32,13 @@ public class KapOLAPToEnumerableConverterRule extends ConverterRule {
     public static final ConverterRule INSTANCE = new KapOLAPToEnumerableConverterRule();
 
     public KapOLAPToEnumerableConverterRule() {
-        super(RelNode.class, KapRel.CONVENTION, EnumerableConvention.INSTANCE, "KapOLAPToEnumerableConverterRule");
+        super(RelNode.class, OlapRel.CONVENTION, EnumerableConvention.INSTANCE, "KapOLAPToEnumerableConverterRule");
     }
 
     @Override
     public RelNode convert(RelNode rel) {
         RelTraitSet newTraitSet = rel.getTraitSet().replace(getOutConvention());
-        return new KapOLAPToEnumerableConverter(rel.getCluster(), newTraitSet, rel);
+        return new OlapToEnumerableConverter(rel.getCluster(), newTraitSet, rel);
     }
 
 }

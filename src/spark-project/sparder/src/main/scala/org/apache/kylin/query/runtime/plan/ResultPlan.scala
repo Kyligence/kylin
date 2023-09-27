@@ -35,7 +35,7 @@ import org.apache.kylin.metadata.state.QueryShareStateManager
 import org.apache.kylin.query.engine.RelColumnMetaDataExtractor
 import org.apache.kylin.query.engine.exec.ExecuteResult
 import org.apache.kylin.query.pushdown.SparkSqlClient.readPushDownResultRow
-import org.apache.kylin.query.relnode.OLAPContext
+import org.apache.kylin.query.relnode.{ContextUtil, OlapContext}
 import org.apache.kylin.query.util.{AsyncQueryUtil, QueryInterruptChecker, SparkJobTrace, SparkQueryJobManager}
 import org.apache.poi.xssf.usermodel.{XSSFSheet, XSSFWorkbook}
 import org.apache.spark.SparkConf
@@ -136,9 +136,10 @@ object ResultPlan extends LogEx {
 
       if (!QueryContext.current().getSecondStorageUsageMap.isEmpty &&
         KylinConfig.getInstanceFromEnv.getSecondStorageQueryMetricCollect &&
-        OLAPContext.getNativeRealizations.size() < 2) {
+        ContextUtil.getNativeRealizations.size() < 2) {
         val executedPlan = SecondStorageUtil.collectExecutedPlan(getNormalizedExplain(df))
-        val pushedPlan = SecondStorageUtil.convertExecutedPlan(executedPlan, QueryContext.current.getProject, OLAPContext.getNativeRealizations)
+        val pushedPlan = SecondStorageUtil.convertExecutedPlan(executedPlan,
+          QueryContext.current.getProject, ContextUtil.getNativeRealizations)
         QueryContext.current().getMetrics.setQueryExecutedPlan(pushedPlan)
       }
 

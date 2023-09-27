@@ -24,9 +24,9 @@ import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
-import org.apache.kylin.query.relnode.KapJoinRel;
-import org.apache.kylin.query.relnode.KapNonEquiJoinRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapNonEquiJoinRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
 
 public class KapJoinProjectTransposeRule extends RelOptRule {
 
@@ -40,30 +40,30 @@ public class KapJoinProjectTransposeRule extends RelOptRule {
     }
 
     public static final JoinProjectTransposeRule BOTH_PROJECT = new JoinProjectTransposeRule(
-            operand(KapJoinRel.class, operand(KapProjectRel.class, any()), operand(KapProjectRel.class, any())),
+            operand(OlapJoinRel.class, operand(OlapProjectRel.class, any()), operand(OlapProjectRel.class, any())),
             "JoinProjectTransposeRule(Project-Project)");
 
     public static final JoinProjectTransposeRule LEFT_PROJECT = new JoinProjectTransposeRule(
-            operand(KapJoinRel.class, some(operand(KapProjectRel.class, any()))),
+            operand(OlapJoinRel.class, some(operand(OlapProjectRel.class, any()))),
             "JoinProjectTransposeRule(Project-Other)");
 
     public static final JoinProjectTransposeRule RIGHT_PROJECT = new JoinProjectTransposeRule(
-            operand(KapJoinRel.class, operand(RelNode.class, any()), operand(KapProjectRel.class, any())),
+            operand(OlapJoinRel.class, operand(RelNode.class, any()), operand(OlapProjectRel.class, any())),
             "JoinProjectTransposeRule(Other-Project)");
 
     public static final JoinProjectTransposeRule LEFT_PROJECT_INCLUDE_OUTER = new JoinProjectTransposeRule(
-            operand(KapJoinRel.class, some(operand(KapProjectRel.class, any()))),
+            operand(OlapJoinRel.class, some(operand(OlapProjectRel.class, any()))),
             "Join(IncludingOuter)ProjectTransposeRule(Project-Other)", true, RelFactories.LOGICAL_BUILDER);
 
     public static final JoinProjectTransposeRule RIGHT_PROJECT_INCLUDE_OUTER = new JoinProjectTransposeRule(
-            operand(KapJoinRel.class, operand(RelNode.class, any()), operand(KapProjectRel.class, any())),
+            operand(OlapJoinRel.class, operand(RelNode.class, any()), operand(OlapProjectRel.class, any())),
             "Join(IncludingOuter)ProjectTransposeRule(Other-Project)", true, RelFactories.LOGICAL_BUILDER);
 
     public static final JoinProjectTransposeRule NON_EQUI_LEFT_PROJECT_INCLUDE_OUTER = new JoinProjectTransposeRule(
-            operand(KapNonEquiJoinRel.class, some(operand(KapProjectRel.class, any()))),
+            operand(OlapNonEquiJoinRel.class, some(operand(OlapProjectRel.class, any()))),
             "Join(IncludingOuter)ProjectTransposeRule(Project-Other)", true, RelFactories.LOGICAL_BUILDER);
 
     public static final JoinProjectTransposeRule NON_EQUI_RIGHT_PROJECT_INCLUDE_OUTER = new JoinProjectTransposeRule(
-            operand(KapNonEquiJoinRel.class, operand(RelNode.class, any()), operand(KapProjectRel.class, any())),
+            operand(OlapNonEquiJoinRel.class, operand(RelNode.class, any()), operand(OlapProjectRel.class, any())),
             "Join(IncludingOuter)ProjectTransposeRule(Other-Project)", true, RelFactories.LOGICAL_BUILDER);
 }

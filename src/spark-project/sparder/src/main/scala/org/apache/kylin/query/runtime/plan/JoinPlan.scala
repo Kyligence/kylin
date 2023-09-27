@@ -22,7 +22,7 @@ import java.util
 import org.apache.calcite.DataContext
 import org.apache.calcite.rex.RexCall
 import org.apache.kylin.engine.spark.utils.LogEx
-import org.apache.kylin.query.relnode.{KapJoinRel, KapNonEquiJoinRel}
+import org.apache.kylin.query.relnode.{OlapJoinRel, OlapNonEquiJoinRel}
 import org.apache.kylin.query.runtime.SparderRexVisitor
 import org.apache.kylin.query.util.KapRelUtil
 import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, LogicalPlan}
@@ -34,7 +34,7 @@ import scala.collection.JavaConverters._
 
 object JoinPlan extends LogEx {
   def nonEquiJoin(plans: Seq[LogicalPlan],
-                  rel: KapNonEquiJoinRel, dataContext: DataContext): LogicalPlan = {
+                  rel: OlapNonEquiJoinRel, dataContext: DataContext): LogicalPlan = {
     var lPlan = plans.apply(0)
     var rPlan = plans.apply(1)
 
@@ -73,7 +73,7 @@ object JoinPlan extends LogEx {
 
   // scalastyle:off
   def join(plans: Seq[LogicalPlan],
-           rel: KapJoinRel): LogicalPlan = {
+           rel: OlapJoinRel): LogicalPlan = {
 
     var lPlan = plans.apply(0)
     var rPlan = plans.apply(1)

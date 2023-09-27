@@ -35,8 +35,8 @@ import org.apache.kylin.metadata.model.alias.ExpressionComparator;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.project.NProjectManager;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.relnode.TableColRefWithRel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +51,7 @@ public class ComputedColumnRewriter {
     private ComputedColumnRewriter() {
     }
 
-    public static void rewriteCcInnerCol(OLAPContext context, NDataModel model, QueryAliasMatchInfo matchInfo) {
+    public static void rewriteCcInnerCol(OlapContext context, NDataModel model, QueryAliasMatchInfo matchInfo) {
         KylinConfig projectConfig = NProjectManager.getProjectConfig(model.getProject());
         rewriteAggInnerCol(projectConfig, context, model, matchInfo);
         rewriteTopNInnerCol(projectConfig, context, model, matchInfo);
@@ -61,33 +61,34 @@ public class ComputedColumnRewriter {
         // rewriteFilterInnerCol(projectConfig, context, model, matchInfo)
     }
 
-    private static void rewriteAggInnerCol(KylinConfig kylinConfig, OLAPContext context, NDataModel model,
+    private static void rewriteAggInnerCol(KylinConfig kylinConfig, OlapContext context, NDataModel model,
             QueryAliasMatchInfo matchInfo) {
         if (!kylinConfig.isConvertExpressionToCcEnabled() || !kylinConfig.isAggComputedColumnRewriteEnabled()
                 || CollectionUtils.isEmpty(model.getComputedColumnDescs())) {
             return;
         }
 
-        context.aggregations.stream().filter(agg -> CollectionUtils.isNotEmpty(agg.getParameters())).forEach(agg -> {
-            List<ParameterDesc> parameters = Lists.newArrayList();
-            for (ParameterDesc parameter : agg.getParameters()) {
-                if (!parameter.getColRef().isInnerColumn()) {
-                    parameters.add(parameter);
-                    continue;
-                }
+        context.getAggregations().stream() //
+                .filter(agg -> CollectionUtils.isNotEmpty(agg.getParameters())).forEach(agg -> {
+                    List<ParameterDesc> parameters = Lists.newArrayList();
+                    for (ParameterDesc parameter : agg.getParameters()) {
+                        if (!parameter.getColRef().isInnerColumn()) {
+                            parameters.add(parameter);
+                            continue;
+                        }
 
-                TblColRef translatedInnerCol = rewriteInnerColumnToTblColRef(kylinConfig,
-                        parameter.getColRef().getParserDescription(), model, matchInfo);
-                if (translatedInnerCol != null) {
-                    parameters.add(ParameterDesc.newInstance(translatedInnerCol));
-                    context.allColumns.add(translatedInnerCol);
-                }
-            }
+                        TblColRef translatedInnerCol = rewriteInnerColumnToTblColRef(kylinConfig,
+                                parameter.getColRef().getParserDescription(), model, matchInfo);
+                        if (translatedInnerCol != null) {
+                            parameters.add(ParameterDesc.newInstance(translatedInnerCol));
+                            context.getAllColumns().add(translatedInnerCol);
+                        }
+                    }
 
-            if (!parameters.isEmpty()) {
-                agg.setParameters(parameters);
-            }
-        });
+                    if (!parameters.isEmpty()) {
+                        agg.setParameters(parameters);
+                    }
+                });
     }
 
     private static TblColRef rewriteInnerColumnToTblColRef(KylinConfig kylinConfig, String innerExpression,
@@ -119,7 +120,7 @@ public class ComputedColumnRewriter {
         return null;
     }
 
-    private static void rewriteTopNInnerCol(KylinConfig kylinConfig, OLAPContext context, NDataModel model,
+    private static void rewriteTopNInnerCol(KylinConfig kylinConfig, OlapContext context, NDataModel model,
             QueryAliasMatchInfo matchInfo) {
         if (CollectionUtils.isEmpty(model.getComputedColumnDescs()) || !kylinConfig.isConvertExpressionToCcEnabled())
             return;
@@ -143,14 +144,14 @@ public class ComputedColumnRewriter {
         });
     }
 
-    private static void rewriteGroupByInnerCol(KylinConfig kylinConfig, OLAPContext ctx, NDataModel model,
+    private static void rewriteGroupByInnerCol(KylinConfig kylinConfig, OlapContext ctx, NDataModel model,
             QueryAliasMatchInfo matchInfo) {
         if (CollectionUtils.isEmpty(model.getComputedColumnDescs()) || !kylinConfig.isConvertExpressionToCcEnabled()) {
             return;
         }
 
         // collect all aggRel with candidate CC group keys
-        Map<KapAggregateRel, Map<TblColRef, TblColRef>> relColReplacementMapping = new HashMap<>();
+        Map<OlapAggregateRel, Map<TblColRef, TblColRef>> relColReplacementMapping = new HashMap<>();
         for (TableColRefWithRel tableColRefWIthRel : ctx.getInnerGroupByColumns()) {
             SqlNode innerColExpr;
             try {
@@ -172,11 +173,11 @@ public class ComputedColumnRewriter {
                     var ccCols = ComputedColumnUtil.createComputedColumns(Lists.newArrayList(cc),
                             model.getRootFactTable().getTableDesc());
 
-                    CollectionUtil.find(ctx.firstTableScan.getColumnRowType().getAllColumns(),
+                    CollectionUtil.find(ctx.getFirstTableScan().getColumnRowType().getAllColumns(),
                             colRef -> colRef.getColumnDesc().equals(ccCols[0])).ifPresent(ccColRef -> {
                                 relColReplacementMapping.putIfAbsent(
-                                        tableColRefWIthRel.getRelNodeAs(KapAggregateRel.class), new HashMap<>());
-                                relColReplacementMapping.get(tableColRefWIthRel.getRelNodeAs(KapAggregateRel.class))
+                                        tableColRefWIthRel.getRelNodeAs(OlapAggregateRel.class), new HashMap<>());
+                                relColReplacementMapping.get(tableColRefWIthRel.getRelNodeAs(OlapAggregateRel.class))
                                         .put(tableColRefWIthRel.getTblColRef(), ccColRef);
                                 logger.info("Replacing CC expr [{},{}] in group key {}", cc.getColumnName(),
                                         cc.getExpression(), tableColRefWIthRel.getTblColRef());
@@ -186,9 +187,9 @@ public class ComputedColumnRewriter {
         }
 
         // rebuild aggRel group keys with CC cols
-        for (Map.Entry<KapAggregateRel, Map<TblColRef, TblColRef>> kapAggregateRelMapEntry : relColReplacementMapping
+        for (Map.Entry<OlapAggregateRel, Map<TblColRef, TblColRef>> kapAggregateRelMapEntry : relColReplacementMapping
                 .entrySet()) {
-            KapAggregateRel aggRel = kapAggregateRelMapEntry.getKey();
+            OlapAggregateRel aggRel = kapAggregateRelMapEntry.getKey();
             Map<TblColRef, TblColRef> colReplacementMapping = kapAggregateRelMapEntry.getValue();
             aggRel.reBuildGroups(colReplacementMapping);
         }

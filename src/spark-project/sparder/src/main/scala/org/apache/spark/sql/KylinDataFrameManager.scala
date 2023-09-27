@@ -24,13 +24,11 @@ import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.metadata.cube.model.{LayoutEntity, NDataflow, NDataflowManager}
 import org.apache.kylin.metadata.model.FusionModelManager
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan}
-import org.apache.spark.sql.datasource.storage.StorageStoreFactory
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.StructType
 
 import scala.collection.mutable.{HashMap => MutableHashMap}
 
-import io.kyligence.kap.secondstorage.SecondStorage
 
 class KylinDataFrameManager(sparkSession: SparkSession) {
   private var extraOptions = new MutableHashMap[String, String]()
@@ -99,8 +97,10 @@ class KylinDataFrameManager(sparkSession: SparkSession) {
   }
 
   def read(dataflow: NDataflow, layout: LayoutEntity, pruningInfo: String): LogicalPlan = {
+    import io.kyligence.kap.secondstorage.SecondStorage
     val df = SecondStorage.trySecondStorage(sparkSession, dataflow, layout, pruningInfo)
     if (df.isEmpty) {
+      import org.apache.spark.sql.datasource.storage.StorageStoreFactory
       StorageStoreFactory.create(dataflow.getModel.getStorageType)
         .read(dataflow, layout, sparkSession, extraOptions.toMap)
     } else {

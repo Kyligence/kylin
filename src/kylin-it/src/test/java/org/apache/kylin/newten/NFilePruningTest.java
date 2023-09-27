@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.newten;
 
 import java.time.Instant;
@@ -643,8 +642,8 @@ public class NFilePruningTest extends NLocalWithSparkSessionTest implements Adap
         val df = ExecAndComp.queryModelWithoutCompute(getProject(), sql);
         val context = ContextUtil.listContexts().get(0);
         if (emptyLayout) {
-            Assert.assertTrue(context.storageContext.isEmptyLayout());
-            Assert.assertEquals(Long.valueOf(-1), context.storageContext.getLayoutId());
+            Assert.assertTrue(context.getStorageContext().isEmptyLayout());
+            Assert.assertEquals(Long.valueOf(-1), context.getStorageContext().getLayoutId());
             return numScanFiles;
         }
         df.collect();
@@ -652,7 +651,7 @@ public class NFilePruningTest extends NLocalWithSparkSessionTest implements Adap
         val actualNum = findFileSourceScanExec(df.queryExecution().executedPlan()).metrics().get("numFiles").get()
                 .value();
         Assert.assertEquals(numScanFiles, actualNum);
-        val segmentIds = context.storageContext.getPrunedSegments();
+        val segmentIds = context.getStorageContext().getPrunedSegments();
         assertPrunedSegmentRange(modelId, segmentIds, expectedRanges);
         return actualNum;
     }

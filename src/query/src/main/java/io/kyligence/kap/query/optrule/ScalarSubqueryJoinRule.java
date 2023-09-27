@@ -55,37 +55,37 @@ import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.query.relnode.KapAggregateRel;
-import org.apache.kylin.query.relnode.KapFilterRel;
-import org.apache.kylin.query.relnode.KapJoinRel;
-import org.apache.kylin.query.relnode.KapNonEquiJoinRel;
-import org.apache.kylin.query.relnode.KapProjectRel;
-import org.apache.kylin.query.relnode.KapValuesRel;
+import org.apache.kylin.query.relnode.OlapAggregateRel;
+import org.apache.kylin.query.relnode.OlapFilterRel;
+import org.apache.kylin.query.relnode.OlapJoinRel;
+import org.apache.kylin.query.relnode.OlapNonEquiJoinRel;
+import org.apache.kylin.query.relnode.OlapProjectRel;
+import org.apache.kylin.query.relnode.OlapValuesRel;
 
 public class ScalarSubqueryJoinRule extends RelOptRule {
 
     // JOIN_PREDICATE from guava's Predicate,
 
     public static final ScalarSubqueryJoinRule AGG_JOIN = new ScalarSubqueryJoinRule(//
-            operand(KapAggregateRel.class, //
+            operand(OlapAggregateRel.class, //
                     operand(Join.class, //
-                            null, j -> j instanceof KapJoinRel || j instanceof KapNonEquiJoinRel, any())),
+                            null, j -> j instanceof OlapJoinRel || j instanceof OlapNonEquiJoinRel, any())),
             RelFactories.LOGICAL_BUILDER, "ScalarSubqueryJoinRule:AGG_JOIN");
 
     public static final ScalarSubqueryJoinRule AGG_PRJ_JOIN = new ScalarSubqueryJoinRule(//
-            operand(KapAggregateRel.class, //
-                    operand(KapProjectRel.class, //
+            operand(OlapAggregateRel.class, //
+                    operand(OlapProjectRel.class, //
                             operand(Join.class, //
-                                    null, j -> j instanceof KapJoinRel || j instanceof KapNonEquiJoinRel, any()))),
+                                    null, j -> j instanceof OlapJoinRel || j instanceof OlapNonEquiJoinRel, any()))),
             RelFactories.LOGICAL_BUILDER, "ScalarSubqueryJoinRule:AGG_PRJ_JOIN");
 
     public static final ScalarSubqueryJoinRule AGG_PRJ_FLT_JOIN = new ScalarSubqueryJoinRule(//
-            operand(KapAggregateRel.class, //
-                    operand(KapProjectRel.class, //
-                            operand(KapFilterRel.class, //
+            operand(OlapAggregateRel.class, //
+                    operand(OlapProjectRel.class, //
+                            operand(OlapFilterRel.class, //
                                     operand(Join.class, //
                                             null, //
-                                            j -> j instanceof KapJoinRel || j instanceof KapNonEquiJoinRel, any())))),
+                                            j -> j instanceof OlapJoinRel || j instanceof OlapNonEquiJoinRel, any())))),
             RelFactories.LOGICAL_BUILDER, "ScalarSubqueryJoinRule:AGG_PRJ_FLT_JOIN");
 
     public ScalarSubqueryJoinRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory, String description) {
@@ -103,7 +103,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return false;
         }
 
-        KapAggregateRel aggregate = call.rel(0);
+        OlapAggregateRel aggregate = call.rel(0);
         if (!aggregate.isSimpleGroupType() || aggregate.getAggCallList().isEmpty()) {
             return false;
         }
@@ -118,7 +118,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             return false;
         }
 
-        return !(call.rel(1) instanceof KapProjectRel) || canApplyRule(call.rel(1));
+        return !(call.rel(1) instanceof OlapProjectRel) || canApplyRule(call.rel(1));
     }
 
     @Override
@@ -132,7 +132,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
         call.transformTo(relNode);
     }
 
-    private boolean canApplyRule(KapProjectRel project) {
+    private boolean canApplyRule(OlapProjectRel project) {
         if (project.getProjects().stream().anyMatch(RexCall.class::isInstance)) {
             // to-do: maybe we should support this.
             return false;
@@ -332,12 +332,12 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
     private static class AggregateUnit {
         // base variables
-        protected final KapAggregateRel aggregate;
+        protected final OlapAggregateRel aggregate;
 
         // immediate variables
         private RexBuilder rexBuilder;
 
-        public AggregateUnit(KapAggregateRel aggregate) {
+        public AggregateUnit(OlapAggregateRel aggregate) {
             this.aggregate = aggregate;
         }
 
@@ -380,7 +380,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
     private static class AggregateProject extends AggregateUnit {
         // base variables
-        private final KapProjectRel project;
+        private final OlapProjectRel project;
         private final Mappings.TargetMapping targetMapping;
 
         // immediate variables
@@ -388,7 +388,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
         private ImmutableList<ImmutableBitSet> groupSets;
         private List<AggregateCall> aggCallList;
 
-        public AggregateProject(KapAggregateRel aggregate, KapProjectRel project) {
+        public AggregateProject(OlapAggregateRel aggregate, OlapProjectRel project) {
             super(aggregate);
             this.project = project;
             this.targetMapping = createTargetMapping();
@@ -439,9 +439,9 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
 
     private static class AggregateProjectFilter extends AggregateProject {
 
-        private final KapFilterRel filter;
+        private final OlapFilterRel filter;
 
-        public AggregateProjectFilter(KapAggregateRel aggregate, KapProjectRel project, KapFilterRel filter) {
+        public AggregateProjectFilter(OlapAggregateRel aggregate, OlapProjectRel project, OlapFilterRel filter) {
             super(aggregate, project);
             this.filter = filter;
         }
@@ -543,7 +543,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
         protected final boolean isRelValues(RelNode node) {
             if (node instanceof HepRelVertex) {
                 RelNode current = ((HepRelVertex) node).getCurrentRel();
-                if (current instanceof KapValuesRel) {
+                if (current instanceof OlapValuesRel) {
                     return true;
                 }
 

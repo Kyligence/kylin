@@ -60,7 +60,7 @@ import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.query.NativeQueryRealization;
-import org.apache.kylin.query.relnode.OLAPContext;
+import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.response.NDataSegmentResponse;
 import org.apache.kylin.rest.service.ModelService;
@@ -393,7 +393,7 @@ public class SecondStorageJavaTest implements JobWaiter {
         String sql = "select sum(PRICE) from TEST_KYLIN_FACT group by PRICE";
         ExecAndComp.queryModel(project, sql);
         Assert.assertTrue(
-                OLAPContext.getNativeRealizations().stream().allMatch(NativeQueryRealization::isSecondStorage));
+                ContextUtil.getNativeRealizations().stream().allMatch(NativeQueryRealization::isSecondStorage));
     }
 
     @Test
