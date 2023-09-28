@@ -49,6 +49,10 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
     private final long interval = KylinConfig.getInstanceFromEnv().getLockCheckIntervalSeconds();
     private final ScheduledExecutorService checkerPool = Executors.newScheduledThreadPool(1,
             new NamedThreadFactory("DeadLockChecker"));
+    
+    private int checkCnt = 0;
+    private double checkAvgCost = 0;
+    private long checkMaxCost = 0;
 
     private TransactionDeadLockHandler() {
     }
@@ -71,7 +75,6 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
     @Override
     public void run() {
         try {
-            log.info("Start deadlock detection");
             Set<ThreadInfo> threadInfoSet = getThreadsToBeKill();
             if (CollectionUtils.isEmpty(threadInfoSet)) {
                 return;
@@ -82,7 +85,6 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
             }
             Set<Long> threadIdSet = threadInfoSet.stream().map(ThreadInfo::getThreadId).collect(Collectors.toSet());
             killThreadsById(threadIdSet);
-            log.info("End deadlock detection");
         } catch (Throwable throwable) {
             log.info("Deadlock detection failed. Wait for next execution ...", throwable);
         }
@@ -92,7 +94,6 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
     public Set<ThreadInfo> getThreadsToBeKill() {
         ThreadInfo[] threadInfos = findDeadLockThreads();
         if (ArrayUtils.isEmpty(threadInfos)) {
-            log.info("No deadlock threads");
             return Collections.emptySet();
         }
         Set<ThreadInfo> threadInfoSet = Arrays.stream(threadInfos)//
@@ -100,7 +101,6 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
                 .filter(t -> StringUtils.startsWith(t.getThreadName(), getThreadNamePrefix()))
                 .collect(Collectors.toSet());
         if (CollectionUtils.isEmpty(threadInfoSet)) {
-            log.info("No transaction deadlock threads");
             return Collections.emptySet();
         }
         log.info("Found transaction deadlock thread, size {}, total transaction size: {}", threadInfoSet.size(),
@@ -118,11 +118,22 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
     public ThreadInfo[] findDeadLockThreads() {
         long start = System.currentTimeMillis();
         long[] threadIds = Longs.toArray(MemoryLockUtils.findDeadLockThreadIds());
-        log.info("Find deadlock threads cost {} ms", System.currentTimeMillis() - start);
+        updateTimeStatistics(System.currentTimeMillis() - start);
         if (ArrayUtils.isEmpty(threadIds)) {
             return new ThreadInfo[0];
         }
         return mxBean.getThreadInfo(threadIds, true, true);
+    }
+
+    private void updateTimeStatistics(long timeCost) {
+        checkAvgCost = (checkAvgCost * checkCnt + timeCost) / (checkCnt + 1);
+        checkCnt = checkCnt + 1;
+        checkMaxCost = Math.max(checkMaxCost, timeCost);
+        if (checkCnt % 200 == 0) {
+            log.debug(
+                    "DeadLock checker has run {} times, the average cost time is {} ms, and the max cost time is {} ms.",
+                    checkCnt, checkAvgCost, checkMaxCost);
+        }
     }
 
     @Override
