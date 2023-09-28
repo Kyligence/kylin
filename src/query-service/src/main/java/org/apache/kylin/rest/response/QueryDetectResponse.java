@@ -18,6 +18,8 @@
 
 package org.apache.kylin.rest.response;
 
+import static com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.NONE;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,7 +31,9 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.query.NativeQueryRealization;
+import org.apache.kylin.metadata.query.QueryHistory;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
@@ -39,6 +43,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonAutoDetect(fieldVisibility = NONE, getterVisibility = NONE, isGetterVisibility = NONE, setterVisibility = NONE)
 public class QueryDetectResponse {
     @JsonProperty("is_exception")
     private boolean isException = false;
@@ -64,6 +69,9 @@ public class QueryDetectResponse {
     @JsonProperty("is_cache")
     private boolean isCache = false;
 
+    @JsonProperty("is_constants")
+    private boolean isConstants = false;
+
     @JsonProperty("realizations")
     private List<IndexInfo> realizations = Lists.newArrayList();
 
@@ -81,16 +89,19 @@ public class QueryDetectResponse {
         List<QueryDetectResponse.IndexInfo> indexInfoList = sqlResponse.getNativeRealizations().stream()
                 .map(realization -> new QueryDetectResponse.IndexInfo().buildResponse(realization, project))
                 .collect(Collectors.toList());
+        boolean isConstantQuery = QueryHistory.EngineType.CONSTANTS.name().equals(sqlResponse.getEngineType());
 
         this.isException = sqlResponse.isException;
         this.exceptionMessage = sqlResponse.getExceptionMessage();
         this.queryId = sqlResponse.getQueryId();
         this.isPushDown = sqlResponse.isQueryPushDown();
-        this.isPostAggregation = !sqlResponse.isQueryPushDown() && !queryContext.getMetrics().isExactlyMatch();
+        this.isPostAggregation = !sqlResponse.isQueryPushDown() && !isConstantQuery
+                && !queryContext.getMetrics().isExactlyMatch();
         // any realization is TableIndex、baseIndex
         this.isTableIndex = indexInfoList.stream().anyMatch(QueryDetectResponse.IndexInfo::isTableIndex);
         this.isBaseIndex = indexInfoList.stream().anyMatch(QueryDetectResponse.IndexInfo::isBaseIndex);
         this.isCache = sqlResponse.isStorageCacheUsed();
+        this.isConstants = isConstantQuery;
         this.realizations = indexInfoList;
         return this;
     }
@@ -98,6 +109,7 @@ public class QueryDetectResponse {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
+    @JsonAutoDetect(fieldVisibility = NONE, getterVisibility = NONE, isGetterVisibility = NONE, setterVisibility = NONE)
     public static class IndexInfo {
         @JsonProperty("model_id")
         private String modelId;

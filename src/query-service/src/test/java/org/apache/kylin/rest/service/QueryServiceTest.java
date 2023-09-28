@@ -2856,6 +2856,38 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    public void testQueryDetectWhenIsConstants() {
+        QueryDetectRequest queryDetectRequest = new QueryDetectRequest("sql", "default", 0, 500);
+        // build sqlRequest
+        SQLRequest sqlRequest = new SQLRequest();
+        sqlRequest.setSql(queryDetectRequest.getSql());
+        String project = queryDetectRequest.getProject();
+        sqlRequest.setLimit(queryDetectRequest.getLimit());
+        sqlRequest.setOffset(queryDetectRequest.getOffset());
+        sqlRequest.setProject(project);
+
+        // build sqlResponse
+        SQLResponse sqlResponse = new SQLResponse();
+        sqlResponse.setException(false);
+        sqlResponse.setQueryId("queryId");
+        sqlResponse.setQueryPushDown(false);
+        List<NativeQueryRealization> nativeRealizations = Lists.newArrayList();
+        sqlResponse.setNativeRealizations(nativeRealizations);
+        sqlResponse.setEngineType(QueryHistory.EngineType.CONSTANTS.name());
+
+        // mock method return value
+        Mockito.doReturn(sqlResponse).when(queryService).queryWithCache(sqlRequest);
+
+        // build excepted queryDetectVO
+        QueryDetectResponse exceptedQueryDetectResponse = new QueryDetectResponse().buildResponse(project, sqlResponse,
+                QueryContext.current());
+
+        QueryDetectResponse queryDetectResponse = queryService.queryDetect(queryDetectRequest);
+
+        Assert.assertEquals(exceptedQueryDetectResponse, queryDetectResponse);
+    }
+
+    @Test
     public void testAddToQueryHistoryIsQueryDetect() throws Exception {
         try (QueryContext queryContext = QueryContext.current()) {
             queryContext.getQueryTagInfo().setQueryDetect(true);
