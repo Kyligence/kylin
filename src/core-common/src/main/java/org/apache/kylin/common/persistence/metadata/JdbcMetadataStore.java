@@ -129,6 +129,7 @@ public class JdbcMetadataStore extends MetadataStore {
                             String.format(Locale.ROOT, SELECT_BY_KEY_MVCC_SQL, table, path, mvcc - 1),
                             RAW_RESOURCE_ROW_MAPPER);
                     if (CollectionUtils.isEmpty(result)) {
+                        assert mvcc == 0;
                         affectedRow = insert(String.format(Locale.ROOT, INSERT_SQL, table), path, bs, ts, mvcc);
                     } else {
                         affectedRow = update(String.format(Locale.ROOT, UPDATE_SQL, table), bs, mvcc, ts, path,

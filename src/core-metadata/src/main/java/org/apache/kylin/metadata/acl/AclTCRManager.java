@@ -143,7 +143,8 @@ public class AclTCRManager {
     }
 
     private void doUpdate(AclTCR updateTo, CachedCrudAssist<AclTCR> crud) {
-        AclTCR copied = crud.copyForWrite(updateTo);
+        AclTCR cached = crud.get(updateTo.resourceName());
+        AclTCR copied = crud.copyForWrite(cached == null ? updateTo : cached);
         if (copied.getMvcc() != -1) {
             copied.setTable(updateTo.getTable());
         }

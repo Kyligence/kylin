@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.JsonSerializer;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
@@ -92,16 +91,22 @@ public abstract class CachedCrudAssist<T extends RootPersistentEntity> {
         this.checkCopyOnWrite = check;
     }
 
-    // If the entity exists in metadata, then return a copy of the latest entity in metadata.
-    // Otherwise return a copy of this entity.
+    // If this is a new entity or the reload entity is broken, return a copy of this entity.
+    // If the reload entity is null, just return null.
+    // Otherwise return a copy of the reload entity.
     public T copyForWrite(T entity) {
         if (entity == null) {
             return null;
         }
         String resourcePath = resourcePath(entity.resourceName());
         return MemoryLockUtils.doWithLock(entity, resourcePath, false, store, () -> {
+            if (entity.getMvcc() == -1) {
+                return copyIfCachedAndShared(entity);
+            }
             T reloadedEntity = get(entity.resourceName());
-            if (reloadedEntity == null || reloadedEntity.isBroken()) {
+            if (reloadedEntity == null) {
+                return null;
+            } else if (reloadedEntity.isBroken()) {
                 return copyIfCachedAndShared(entity);
             } else {
                 return copyIfCachedAndShared(reloadedEntity);
