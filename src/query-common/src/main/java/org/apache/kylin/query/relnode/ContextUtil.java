@@ -36,13 +36,12 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.query.util.RexUtils;
 import org.apache.kylin.util.CalciteSystemProperty;
 import org.slf4j.Logger;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class ContextUtil {
     private ContextUtil() {
@@ -200,12 +199,21 @@ public class ContextUtil {
             return false;
         }
         if (potentialSubRel instanceof KapProjectRel) {
-            ((KapJoinRel) joinRel).leftKeys.forEach(leftKey -> {
-                RexNode leftCol = ((KapProjectRel) potentialSubRel).getProjects().get(leftKey);
-                if (leftCol instanceof RexCall) {
-                    indexOfInputCols.add(leftKey);
+            if (joinRel instanceof KapJoinRel) {
+                ((KapJoinRel) joinRel).leftKeys.forEach(leftKey -> {
+                    RexNode leftCol = ((KapProjectRel) potentialSubRel).getProjects().get(leftKey);
+                    if (leftCol instanceof RexCall) {
+                        indexOfInputCols.add(leftKey);
+                    }
+                });
+            } else {
+                // non-equiv-join rel: treat the left and right subtrees as a context, 
+                // and refuse to push agg down.
+                KapNonEquiJoinRel nonEquivJoinRel = (KapNonEquiJoinRel) joinRel;
+                if (!nonEquivJoinRel.isScd2Rel()) {
+                    return false;
                 }
-            });
+            }
         }
         return derivedFromSameContext(indexOfInputCols, potentialSubRel, subContext, hasCountConstant);
     }
