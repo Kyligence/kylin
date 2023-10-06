@@ -38,10 +38,12 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
-import org.apache.kylin.metadata.model.ColumnDesc;
+import org.apache.kylin.guava30.shaded.common.base.Strings;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.acl.SensitiveDataMask;
 import org.apache.kylin.metadata.acl.SensitiveDataMaskInfo;
+import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.relnode.KapTableScan;
 import org.apache.kylin.query.relnode.KapWindowRel;
@@ -52,9 +54,6 @@ import org.apache.spark.sql.catalyst.expressions.Cast;
 import org.apache.spark.sql.catalyst.expressions.Literal;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.unsafe.types.UTF8String;
-
-import org.apache.kylin.guava30.shaded.common.base.Strings;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import scala.Option;
 
@@ -116,7 +115,7 @@ public class QuerySensitiveDataMask implements QueryResultMask {
                         new Cast(new Literal(UTF8String.fromString(defaultMaskResultToString(i)), DataTypes.StringType),
                                 dfWithIndexedCol.schema().fields()[i].dataType(),
                                 Option.apply(TimeZone.getDefault().toZoneId().getId())))
-                                        .as(dfWithIndexedCol.columns()[i]);
+                        .as(dfWithIndexedCol.columns()[i]);
                 masked = true;
                 break;
             case AS_NULL:

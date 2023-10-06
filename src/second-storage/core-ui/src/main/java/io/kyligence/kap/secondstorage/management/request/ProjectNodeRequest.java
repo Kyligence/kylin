@@ -18,11 +18,11 @@
 
 package io.kyligence.kap.secondstorage.management.request;
 
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
 
-import java.util.List;
+import lombok.Data;
 
 @Data
 public class ProjectNodeRequest {

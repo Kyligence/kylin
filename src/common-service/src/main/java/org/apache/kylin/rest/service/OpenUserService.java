@@ -21,15 +21,14 @@ package org.apache.kylin.rest.service;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.annotation.ThirdPartyDependencies;
-import io.kyligence.kap.metadata.user.ManagedUser;
+import org.apache.kylin.common.msg.MsgPicker;
 import org.springframework.security.core.userdetails.UserDetails;
 
-@ThirdPartyDependencies({
-        @ThirdPartyDependencies.ThirdPartyDependent(repository = "static-user-manager",
-                classes = { "StaticUserService"})
-})
+import io.kyligence.kap.metadata.user.ManagedUser;
+
+@ThirdPartyDependencies({ @ThirdPartyDependencies.ThirdPartyDependent(repository = "static-user-manager", classes = {
+        "StaticUserService" }) })
 public abstract class OpenUserService implements UserService {
 
     @Override

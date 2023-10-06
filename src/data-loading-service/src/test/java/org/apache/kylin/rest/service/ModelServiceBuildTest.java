@@ -182,7 +182,7 @@ public class ModelServiceBuildTest extends SourceTestCase {
 
     private final ModelBrokenListener modelBrokenListener = new ModelBrokenListener();
 
-    private final static String[] timeZones = { "GMT+8", "CST", "PST", "UTC" };
+    private static final String[] timeZones = { "GMT+8", "CST", "PST", "UTC" };
 
     private StreamingJobListener eventListener = new StreamingJobListener();
 
@@ -1437,7 +1437,7 @@ public class ModelServiceBuildTest extends SourceTestCase {
         // build all partition values
         IncrementBuildSegmentParams incrParams2 = new IncrementBuildSegmentParams(project, modelId, "1633104000000",
                 "1633190400000", model.getPartitionDesc(), model.getMultiPartitionDesc(), null, true, null)
-                        .withBuildAllSubPartitions(true);
+                .withBuildAllSubPartitions(true);
         val jobInfo2 = modelBuildService.incrementBuildSegmentsManually(incrParams2);
         Assert.assertEquals(1, jobInfo2.getJobs().size());
         Assert.assertEquals(jobInfo2.getJobs().get(0).getJobName(), JobTypeEnum.INC_BUILD.name());

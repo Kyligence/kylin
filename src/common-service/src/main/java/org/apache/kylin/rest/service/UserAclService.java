@@ -40,6 +40,8 @@ import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.CaseInsensitiveStringSet;
 import org.apache.kylin.constants.AclConstants;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.rest.aspect.Transaction;
 import org.apache.kylin.rest.constant.Constant;
@@ -61,8 +63,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -199,7 +199,7 @@ public class UserAclService extends BasicService implements UserAclServiceSuppor
     private UserAccessEntryResponse createUserAccessEntryResponse(UserAcl userAcl) {
         List<String> permissions = CollectionUtils.isEmpty(userAcl.getPermissionMasks()) ? Collections.emptyList()
                 : userAcl.getPermissionMasks().stream().map(ExternalAclProvider::convertToExternalPermission)
-                .collect(Collectors.toList());
+                        .collect(Collectors.toList());
         return new UserAccessEntryResponse(userAcl.getUsername(), permissions, userAcl.getDataQueryProjects());
     }
 
@@ -352,7 +352,7 @@ public class UserAclService extends BasicService implements UserAclServiceSuppor
             if (CollectionUtils.isNotEmpty(adminUserAclRemoveList)) {
                 UserAclManager manager = UserAclManager.getInstance(KylinConfig.getInstanceFromEnv());
                 log.info("adminUserAclRemoveList:{}", adminUserAclRemoveList);
-                adminUserAclRemoveList.stream().forEach(adminUser -> manager.delete(adminUser));
+                adminUserAclRemoveList.forEach(adminUser -> manager.delete(adminUser));
             }
             return null;
         }, UnitOfWork.GLOBAL_UNIT, 1);

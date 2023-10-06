@@ -87,12 +87,12 @@ public class MetaStoreTenantServiceTest {
         Mockito.when(rgManager.getResourceGroup())
                 .thenReturn(JsonUtil.readValue(resourceGroupJson, new TypeReference<ResourceGroup>() {
                 }));
-        CleanTaskExecutorService.getInstance().cleanStorageForRoutine(ArgumentMatchers.anyBoolean(), Collections.emptyList(),
-            ArgumentMatchers.anyDouble(), ArgumentMatchers.anyInt());
+        CleanTaskExecutorService.getInstance().cleanStorageForRoutine(ArgumentMatchers.anyBoolean(),
+                Collections.emptyList(), ArgumentMatchers.anyDouble(), ArgumentMatchers.anyInt());
 
         val storageCleanupRequest = new StorageCleanupRequest();
         storageCleanupRequest.setCleanupStorage(false);
-        storageCleanupRequest.setProjectsToClean(new String[]{});
+        storageCleanupRequest.setProjectsToClean(new String[] {});
         val request = new MockHttpServletRequest();
         metaStoreService.cleanupStorage(storageCleanupRequest, request);
 

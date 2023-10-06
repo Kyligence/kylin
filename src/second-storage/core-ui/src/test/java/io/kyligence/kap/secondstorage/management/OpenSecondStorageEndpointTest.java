@@ -89,8 +89,7 @@ public class OpenSecondStorageEndpointTest extends NLocalFileMetadataTestCase {
         openSecondStorageEndpoint.setModelService(modelService);
         MockitoAnnotations.initMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(openSecondStorageEndpoint)
-                .defaultRequest(MockMvcRequestBuilders.get("/api/storage/segments"))
-                .build();
+                .defaultRequest(MockMvcRequestBuilders.get("/api/storage/segments")).build();
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         createTestMetadata();
@@ -105,15 +104,14 @@ public class OpenSecondStorageEndpointTest extends NLocalFileMetadataTestCase {
     public void loadStorage() throws Exception {
         val model = new NModelDescResponse();
         model.setUuid("11111111");
-        Mockito.when(modelService.getModelDesc("test", "default"))
-                .thenReturn(model);
-        Mockito.when(modelService.convertSegmentIdWithName("test", "default", new String[]{"seg1", "seg2"}, new String[]{}))
-                .thenReturn(new String[]{"seg1", "seg2"});
+        Mockito.when(modelService.getModelDesc("test", "default")).thenReturn(model);
+        Mockito.when(modelService.convertSegmentIdWithName("test", "default", new String[] { "seg1", "seg2" },
+                new String[] {})).thenReturn(new String[] { "seg1", "seg2" });
 
         StorageRequest storageRequest = new StorageRequest();
         storageRequest.setModelName("test");
         storageRequest.setProject("default");
-        storageRequest.setSegmentIds(Lists.asList("seg1", new String[]{"seg2"}));
+        storageRequest.setSegmentIds(Lists.asList("seg1", new String[] { "seg2" }));
         val param = JsonUtil.writeValueAsString(storageRequest);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/storage/segments").content(param)
@@ -132,14 +130,15 @@ public class OpenSecondStorageEndpointTest extends NLocalFileMetadataTestCase {
         try {
             openSecondStorageEndpoint.convertSegmentIdWithName(request);
         } catch (KylinException exception) {
-            Assert.assertEquals(SEGMENT_EMPTY_PARAMETER.getErrorCode().getCode(), exception.getErrorCode().getCodeString());
+            Assert.assertEquals(SEGMENT_EMPTY_PARAMETER.getErrorCode().getCode(),
+                    exception.getErrorCode().getCodeString());
             return;
         }
         Assert.fail();
     }
 
     @Test
-    public void testEnableStorageException() throws Exception{
+    public void testEnableStorageException() throws Exception {
         val request = new ModelEnableRequest();
         request.setProject("default");
         request.setModelName("test");
@@ -212,7 +211,9 @@ public class OpenSecondStorageEndpointTest extends NLocalFileMetadataTestCase {
             Assert.fail();
         } catch (KylinException e) {
             Assert.assertEquals(INVALID_PARAMETER.toErrorCode(), e.getErrorCode());
-            Assert.assertEquals("The datatype is invalid. Only support LowCardinality(Nullable(String)) or Nullable(String) at the moment.", e.getMessage());
+            Assert.assertEquals(
+                    "The datatype is invalid. Only support LowCardinality(Nullable(String)) or Nullable(String) at the moment.",
+                    e.getMessage());
         }
 
         val req2 = new ModelModifyRequest();

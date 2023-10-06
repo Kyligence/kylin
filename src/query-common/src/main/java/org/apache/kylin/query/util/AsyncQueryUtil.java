@@ -34,11 +34,10 @@ import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.HadoopUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class AsyncQueryUtil {
     public static final String ASYNC_QUERY_JOB_ID_PRE = "ASYNC-QUERY-";
@@ -74,7 +73,7 @@ public class AsyncQueryUtil {
         FileSystem fileSystem = getFileSystem();
         Path asyncQueryResultDir = getAsyncQueryResultDir(project, queryId);
         if (fileSystem.exists(asyncQueryResultDir)) {
-            try (FSDataOutputStream os = getFileSystem().create(new Path(asyncQueryResultDir, getMetaDataFileName())); //
+            try (FSDataOutputStream os = getFileSystem().create(new Path(asyncQueryResultDir, getMetaDataFileName()));
                     OutputStreamWriter osw = new OutputStreamWriter(os, Charset.defaultCharset())) {
                 String metaString = StringUtils.join(columnNames, ",") + "\n" + StringUtils.join(dataTypes, ",");
                 osw.write(metaString);

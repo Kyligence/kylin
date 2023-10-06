@@ -42,6 +42,8 @@ import org.apache.kylin.common.metrics.MetricsTag;
 import org.apache.kylin.common.metrics.prometheus.PrometheusMetrics;
 import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
 import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
@@ -69,8 +71,6 @@ import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
 import io.kyligence.kap.metadata.user.NKylinUserManager;
@@ -116,7 +116,7 @@ public class MetricsRegistry {
         projectPendingJobMap = tempProjectPendingJobMap;
         projectRunningJobMap = tempProjectRunningJobMap;
     }
-    
+
     private static Map<Integer, Long> collectTimeoutToPendingJobsMap(ExecutableManager executableManager) {
         Map<Integer, Long> timeoutToPendingJobsMap = Maps.newHashMap();
         List<AbstractExecutable> pendingJobs = executableManager.getAllJobs().stream()
@@ -230,7 +230,7 @@ public class MetricsRegistry {
                 JobContext jobContext = JobContextUtil.getJobContext(kylinConfig);
                 return Objects.isNull(jobContext) ? 0
                         : jobContext.getJobScheduler().getRunningJob().values().stream().map(pair -> pair.getFirst())
-                        .filter(jobExecutable -> project.equals(jobExecutable.getProject())).count();
+                                .filter(jobExecutable -> project.equals(jobExecutable.getProject())).count();
             }).tags(projectTag).tags(MetricsTag.STATE.getVal(), MetricsTag.RUNNING.getVal()).register(meterRegistry);
         }
         for (double runningTimeoutHour : RUNNING_JOB_TIMEOUT_HOUR) {

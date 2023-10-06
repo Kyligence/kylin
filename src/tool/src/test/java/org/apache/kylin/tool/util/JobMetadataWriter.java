@@ -31,9 +31,9 @@ import org.apache.kylin.job.dao.JobInfoDao;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.job.util.JobInfoUtil;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.delegate.ModelMetadataBaseInvoker;
 import org.mockito.Mockito;
-
 
 public class JobMetadataWriter {
 
@@ -59,15 +59,18 @@ public class JobMetadataWriter {
         JobContextUtil.cleanUp();
         JobInfoDao jobInfoDao = JobContextUtil.getJobInfoDao(config);
         ModelMetadataBaseInvoker modelMetadataBaseInvoker = Mockito.mock(ModelMetadataBaseInvoker.class);
-        Mockito.when(modelMetadataBaseInvoker.getModelNameById(Mockito.anyString(), Mockito.anyString())).thenReturn("test");
+        Mockito.when(modelMetadataBaseInvoker.getModelNameById(Mockito.anyString(), Mockito.anyString()))
+                .thenReturn("test");
 
         ResourceStore resourceStore = ResourceStore.getKylinMetaStore(config);
         List<String> allMetadataKey = resourceStore.collectResourceRecursively("/", "");
         NProjectManager projectManager = NProjectManager.getInstance(config);
-        List<String> projectNames = projectManager.listAllProjects().stream().map(projectInstance -> projectInstance.getName()).collect(Collectors.toList());
+        List<String> projectNames = projectManager.listAllProjects().stream().map(ProjectInstance::getName)
+                .collect(Collectors.toList());
         for (String projectName : projectNames) {
             String prefix = "/" + projectName + "/execute/";
-            List<String> jobKeyList = allMetadataKey.stream().filter(key -> key.startsWith(prefix)).collect(Collectors.toList());
+            List<String> jobKeyList = allMetadataKey.stream().filter(key -> key.startsWith(prefix))
+                    .collect(Collectors.toList());
             for (String jobKey : jobKeyList) {
                 RawResource jobRawResource = resourceStore.getResource(jobKey);
                 long updateTime = jobRawResource.getTimestamp();

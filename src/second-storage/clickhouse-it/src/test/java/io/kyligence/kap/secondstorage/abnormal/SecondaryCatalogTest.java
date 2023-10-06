@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -42,8 +43,6 @@ import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-
 import io.kyligence.kap.newten.clickhouse.ClickHouseUtils;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import io.kyligence.kap.secondstorage.test.ClickHouseClassRule;
@@ -53,8 +52,8 @@ import io.kyligence.kap.secondstorage.test.SharedSparkSession;
 import io.kyligence.kap.secondstorage.test.utils.JobWaiter;
 
 public class SecondaryCatalogTest implements JobWaiter {
-    static private final String cubeName = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
-    static private final String project = "table_index";
+    private static final String cubeName = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
+    private static final String project = "table_index";
 
     @ClassRule
     public static SharedSparkSession sharedSpark = new SharedSparkSession(

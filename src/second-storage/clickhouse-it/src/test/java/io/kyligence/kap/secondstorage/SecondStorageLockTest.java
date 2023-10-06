@@ -392,8 +392,6 @@ public class SecondStorageLockTest implements JobWaiter {
         ReflectionTestUtils.setField(jobInfoService, "aclEvaluate", aclEvaluate);
     }
 
-
-
     @Test
     public void testIsAzure() throws URISyntaxException, StorageException {
         System.setProperty("fs.azure.account.key.devstoreaccount1.localhost:10000",
@@ -1411,7 +1409,8 @@ public class SecondStorageLockTest implements JobWaiter {
                 buildIncrementalLoadQuery("2012-01-08", "2012-01-09");
                 buildIncrementalLoadQuery("2012-01-09", "2012-01-10");
 
-                await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
+                await().until(
+                        () -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitAllJobFinish();
                 String sql = "select CAL_DT from TEST_KYLIN_FACT where CAL_DT between '2012-01-01' and '2012-01-08'";
                 OLAPContext.clearThreadLocalContexts();
@@ -1432,7 +1431,8 @@ public class SecondStorageLockTest implements JobWaiter {
                         5000);
                 clickhouse1.stop();
 
-                await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
+                await().until(
+                        () -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitJobEnd(getProject(), jobId);
                 assertEquals(ExecutableState.ERROR,
                         ExecutableManager.getInstance(getConfig(), getProject()).getJob(jobId).getStatus());
@@ -1457,7 +1457,8 @@ public class SecondStorageLockTest implements JobWaiter {
                     executableManager.pauseJob(jobId);
                     return null;
                 }, getProject(), 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
-                await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
+                await().until(
+                        () -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitJobEnd(getProject(), jobId);
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
                     val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
@@ -1465,7 +1466,8 @@ public class SecondStorageLockTest implements JobWaiter {
                     executableManager.resumeJob(jobId);
                     return null;
                 }, getProject(), 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
-                await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
+                await().until(
+                        () -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitAllJobFinish();
 
                 OLAPContext.clearThreadLocalContexts();
@@ -1733,7 +1735,8 @@ public class SecondStorageLockTest implements JobWaiter {
             val dataflow = dataflowManager.getDataflow(modelId);
             String sid1 = dataflow.getQueryableSegments().stream().map(NDataSegment::getId).findAny().get();
 
-            secondStorageService.changeProjectSecondStorageState(getProject(), SecondStorageNodeHelper.getAllPairs(), true);
+            secondStorageService.changeProjectSecondStorageState(getProject(), SecondStorageNodeHelper.getAllPairs(),
+                    true);
             Assert.assertEquals(clickhouse.length, SecondStorageUtil.listProjectNodes(getProject()).size());
             secondStorageService.changeModelSecondStorageState(getProject(), modelId, true);
             setQuerySession(catalog, clickhouse[0].getJdbcUrl(), clickhouse[0].getDriverClassName());
@@ -1755,10 +1758,12 @@ public class SecondStorageLockTest implements JobWaiter {
             val layout01 = getBuildBaseLayout(existTablePlanLayoutIds, existTableDataLayoutIds, clickhouse, replica);
 
             {
-                List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(modelId, getProject(), "0", "" + (Long.MAX_VALUE - 1), null, null, null, false, null, false, null, null);
+                List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(modelId, getProject(), "0",
+                        "" + (Long.MAX_VALUE - 1), null, null, null, false, null, false, null, null);
                 Assert.assertEquals(3, segments.size());
                 Assert.assertEquals(SegmentStatusEnumToDisplay.ONLINE, segments.get(0).getStatusToDisplay());
-                Assert.assertEquals(SegmentSecondStorageStatusEnum.LOADED, segments.get(0).getStatusSecondStorageToDisplay());
+                Assert.assertEquals(SegmentSecondStorageStatusEnum.LOADED,
+                        segments.get(0).getStatusSecondStorageToDisplay());
             }
 
             {
@@ -1782,7 +1787,6 @@ public class SecondStorageLockTest implements JobWaiter {
 
             // Step2: change model and removed locked index
             val layout02 = updateIndex("LSTG_SITE_ID");
-
             buildSegmentAndLoadCH(layout02); // build new index segment
             existTablePlanLayoutIds.add(layout02);
             existTableDataLayoutIds.add(layout02);
@@ -1801,7 +1805,6 @@ public class SecondStorageLockTest implements JobWaiter {
             existTableDataLayoutIds.remove(layout01);
             checkSecondStorageMetadata(existTablePlanLayoutIds, existTableDataLayoutIds);
             checkSecondStorageSegmentMetadata(getAllSegmentIds(), layout02);
-
             // check load second storage button is enable
             assertTrue(checkNDataSegmentResponse());
 
@@ -1861,7 +1864,6 @@ public class SecondStorageLockTest implements JobWaiter {
             checkSecondStorageMetadata(existTablePlanLayoutIds, existTableDataLayoutIds);
             checkSecondStorageSegmentMetadata(layout04Segments, layout04);
             checkSecondStorageSegmentMetadata(getAllSegmentIds(), layout05);
-
             // Step8: close second storage
             secondStorageService.changeModelSecondStorageState(getProject(), modelId, false);
             return true;
@@ -2109,7 +2111,7 @@ public class SecondStorageLockTest implements JobWaiter {
         String jobId = chJob.getJobId();
         assertThrows(KylinException.class, () -> SecondStorageUtil.checkJobRestart(project, jobId));
     }
-    
+
     @Test
     public void testStepStatus() {
         assertTrue(SecondStorageUtil.isStepEnd(ExecutableState.SUCCEED));
@@ -2571,7 +2573,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 Map<String, Map<String, Boolean>> nodeStatusMap;
 
                 testForceToTSAndChDown(sql, container, replica);
-                        
+
                 {
                     // testGroupNodeDownForceToTierStorageOK
                     clearQueryContext();
@@ -2653,10 +2655,10 @@ public class SecondStorageLockTest implements JobWaiter {
                     }
                     triggerClickHouseJob(getDataFlow());
                 }
-                
+
                 testReverseForceToTierStorageWhenCHUnavailable(sql);
                 testReverseForceToTierStorageWhenCHOK(sql);
-                
+
                 //reset status
                 nodeStatusMap = ImmutableMap.of("pair0", ImmutableMap.of("node00", true), "pair1",
                         ImmutableMap.of("node01", true));
@@ -2667,7 +2669,7 @@ public class SecondStorageLockTest implements JobWaiter {
             });
         }
     }
-    
+
     @SneakyThrows
     private void testForceToTSAndChDown(String sql, JdbcDatabaseContainer<?>[] container, int replica) {
         ExecAndComp.queryModel(getProject(), sql);
@@ -3006,7 +3008,7 @@ public class SecondStorageLockTest implements JobWaiter {
 
                 queryOperator.modifyColumnByCardinality(database, destTableName, Sets.newHashSet(4));
                 try (Connection connection = DriverManager.getConnection(clickhouse1.getJdbcUrl());
-                     val stmt = connection.createStatement()) {
+                        val stmt = connection.createStatement()) {
                     val rs = stmt.executeQuery(String.format(Locale.ROOT, "desc %s.%s", database, destTableName));
                     while (rs.next()) {
                         if ("c4".equals(rs.getString(1))) {

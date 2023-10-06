@@ -1234,9 +1234,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
     }
 
     private Optional<ColumnDesc> findColumn(ColumnDesc[] columns, String name) {
-        return Stream.of(columns)
-                .filter(col -> col.getName().equalsIgnoreCase(name))
-                .findFirst();
+        return Stream.of(columns).filter(col -> col.getName().equalsIgnoreCase(name)).findFirst();
     }
 
     @Test
@@ -1927,8 +1925,8 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         changeTypeColumn(tableIdentity, columns, Collections.emptyMap(), useMeta);
     }
 
-    private void changeTypeColumn(String tableIdentity, Map<String, String> columns, Map<String, String> comments, boolean useMeta)
-            throws IOException {
+    private void changeTypeColumn(String tableIdentity, Map<String, String> columns, Map<String, String> comments,
+            boolean useMeta) throws IOException {
         val tableManager = NTableMetadataManager.getInstance(getTestConfig(), PROJECT);
         val factTable = tableManager.getTableDesc(tableIdentity);
         String resPath = KylinConfig.getInstanceFromEnv().getMetadataUrl().getIdentifier();

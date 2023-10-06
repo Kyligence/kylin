@@ -21,6 +21,7 @@ package org.apache.kylin.measure.dim;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.measure.MeasureAggregator;
 import org.apache.kylin.measure.MeasureIngester;
 import org.apache.kylin.measure.MeasureType;
@@ -29,8 +30,6 @@ import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.model.MeasureDesc;
 import org.apache.kylin.metadata.realization.SQLDigest;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 
 public class DimCountDistinctMeasureType extends MeasureType<Object> {
     public static final String DATATYPE_DIM_DC = "dim_dc";
@@ -79,7 +78,7 @@ public class DimCountDistinctMeasureType extends MeasureType<Object> {
         return false;
     }
 
-    static final Map<String, Class<?>> UDAF_MAP = ImmutableMap.<String, Class<?>> of(FunctionDesc.FUNC_COUNT_DISTINCT,
+    static final Map<String, Class<?>> UDAF_MAP = ImmutableMap.of(FunctionDesc.FUNC_COUNT_DISTINCT,
             DimCountDistinctAggFunc.class);
 
     @Override

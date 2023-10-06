@@ -21,6 +21,7 @@ import java.sql.Connection;
 import java.util.List;
 
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.execution.datasources.jdbc.ClickHouseDialect$;
@@ -31,8 +32,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.testcontainers.containers.JdbcDatabaseContainer;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 
 import lombok.extern.slf4j.Slf4j;
 import scala.collection.JavaConversions;
@@ -55,7 +54,7 @@ public class ClickHouseV1QueryTest extends NLocalWithSparkSessionTest {
     @Test
     public void testMultipleShard() throws Exception {
         boolean result = ClickHouseUtils.prepare2Instances(true, (JdbcDatabaseContainer<?> clickhouse1,
-                                                                  Connection connection1, JdbcDatabaseContainer<?> clickhouse2, Connection connection2) -> {
+                Connection connection1, JdbcDatabaseContainer<?> clickhouse2, Connection connection2) -> {
 
             List<String> shardList = ImmutableList.of(clickhouse1.getJdbcUrl(), clickhouse2.getJdbcUrl());
             String shards = ShardOptions$.MODULE$.buildSharding(JavaConversions.asScalaBuffer(shardList));

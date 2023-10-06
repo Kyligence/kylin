@@ -18,8 +18,8 @@
 
 package org.apache.kylin.common.lock;
 
-import lombok.extern.slf4j.Slf4j;
-import org.junit.Assert;
+import static org.apache.kylin.common.util.TestUtils.getTestConfig;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -27,8 +27,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 
-import static org.apache.kylin.common.util.TestUtils.getTestConfig;
-import static org.awaitility.Awaitility.await;
+import org.junit.Assert;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class DistributedLockFactoryTest {
@@ -39,7 +40,7 @@ public class DistributedLockFactoryTest {
 
         final CountDownLatch tasks = new CountDownLatch(threadNum);
 
-        int[] count = new int[] {0};
+        int[] count = new int[] { 0 };
 
         for (int i = 0; i < threadNum; i++) {
             executorService.submit(new DirtyReadTest(key, times, tasks, count));

@@ -20,6 +20,7 @@ package org.apache.kylin.measure.bitmap.intersect;
 
 import java.util.Map;
 
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.measure.MeasureAggregator;
 import org.apache.kylin.measure.MeasureIngester;
 import org.apache.kylin.measure.MeasureType;
@@ -29,8 +30,6 @@ import org.apache.kylin.measure.bitmap.BitmapIntersectDistinctCountAggV2Func;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.metadata.datatype.DataTypeSerializer;
 import org.apache.kylin.metadata.model.FunctionDesc;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 
 public class IntersectMeasureType extends MeasureType<IntersectBitmapCounter> {
     public static final String FUNC_INTERSECT_COUNT_DISTINCT = FunctionDesc.FUNC_INTERSECT_COUNT;

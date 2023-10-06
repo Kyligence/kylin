@@ -90,8 +90,7 @@ public class SnapshotSourceTableStatsService extends BasicService {
                     val sourceTables = Sets.<String> newHashSet();
                     for (String sourceTable : sourceTablesTmp) {
                         val split = StringUtils.split(sourceTable, ".");
-                        String source = split.length < 2 ? "default." + sourceTable
-                                : sourceTable;
+                        String source = split.length < 2 ? "default." + sourceTable : sourceTable;
                         sourceTables.add(source);
                     }
                     viewMapping.put(tableDesc.getIdentity(), sourceTables);
@@ -116,8 +115,7 @@ public class SnapshotSourceTableStatsService extends BasicService {
         try {
             viewSourceTables = SparkSqlUtil
                     .getViewOrignalTables(tableMetadata.qualifiedName(), SparderEnv.getSparkSession()) //
-                    .stream().filter(StringUtils::isNotBlank)
-                    .collect(Collectors.toSet());
+                    .stream().filter(StringUtils::isNotBlank).collect(Collectors.toSet());
             log.info("snapshot[{}] view original tables: [{}]", tableMetadata.qualifiedName(), viewSourceTables);
         } catch (Exception e) {
             log.error("snapshot[{}] get view original tables error", tableMetadata.qualifiedName(), e);

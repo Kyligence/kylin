@@ -29,12 +29,15 @@ import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.persistence.metadata.JdbcAuditLogStore;
 import org.apache.kylin.common.persistence.metadata.jdbc.RawResourceRowMapper;
 import org.apache.kylin.common.persistence.transaction.AuditLogBroadcastEventNotifier;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.base.Joiner;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.tool.restclient.RestClient;
 import org.junit.After;
 import org.junit.Before;
@@ -45,10 +48,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
-import org.apache.kylin.guava30.shaded.common.base.Joiner;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.val;
 
 @Ignore("Only for Developer")

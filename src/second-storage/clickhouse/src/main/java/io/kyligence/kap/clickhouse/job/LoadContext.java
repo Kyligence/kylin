@@ -18,19 +18,21 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.SneakyThrows;
-import org.apache.kylin.common.util.JsonUtil;
-
-import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import javax.annotation.concurrent.ThreadSafe;
+
+import org.apache.kylin.common.util.JsonUtil;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.SneakyThrows;
 
 @ThreadSafe
 public class LoadContext {
@@ -65,9 +67,10 @@ public class LoadContext {
     public Map<String, List<String>> getHistory() {
         return Collections.unmodifiableMap(this.history);
     }
-    
+
     public List<String> getHistorySegments(CompletedSegmentKeyUtil keyUtil) {
-        return Collections.unmodifiableList(this.historySegments.getOrDefault(keyUtil.toKey(), Collections.emptyList()));
+        return Collections
+                .unmodifiableList(this.historySegments.getOrDefault(keyUtil.toKey(), Collections.emptyList()));
     }
 
     @SneakyThrows
@@ -88,8 +91,10 @@ public class LoadContext {
         completedSegments.clear();
         historySegments.clear();
 
-        history.putAll(historyState.getCompletedFiles() == null ? Collections.emptyMap() : historyState.getCompletedFiles());
-        historySegments.putAll(historyState.getCompletedSegments() == null ? Collections.emptyMap() : historyState.getCompletedSegments());
+        history.putAll(
+                historyState.getCompletedFiles() == null ? Collections.emptyMap() : historyState.getCompletedFiles());
+        historySegments.putAll(historyState.getCompletedSegments() == null ? Collections.emptyMap()
+                : historyState.getCompletedSegments());
         completedFiles.putAll(history);
         completedSegments.putAll(historySegments);
     }
@@ -106,8 +111,10 @@ public class LoadContext {
     @AllArgsConstructor
     @NoArgsConstructor
     static class ContextDump {
-        private Map<String, List<String>> completedSegments; // CompletedSegmentKeyUtil.toKey / value: segment_ids
-        private Map<String, List<String>> completedFiles; // kes: CompletedFileKeyUtil.toKey / value: hdfs files
+        // CompletedSegmentKeyUtil.toKey / value: segment_ids
+        private Map<String, List<String>> completedSegments;
+        // kes: CompletedFileKeyUtil.toKey / value: hdfs files
+        private Map<String, List<String>> completedFiles;
 
         static ContextDump getEmptyInstance() {
             return new ContextDump(Collections.emptyMap(), Collections.emptyMap());

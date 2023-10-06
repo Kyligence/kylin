@@ -45,10 +45,11 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
-import org.apache.kylin.metadata.model.ColumnDesc;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.acl.DependentColumn;
 import org.apache.kylin.metadata.acl.DependentColumnInfo;
+import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.relnode.KapTableScan;
 import org.apache.spark.sql.Column;
@@ -57,8 +58,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.Literal;
 import org.apache.spark.sql.catalyst.parser.ParseException;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class QueryDependentColumnMask implements QueryResultMask {
 

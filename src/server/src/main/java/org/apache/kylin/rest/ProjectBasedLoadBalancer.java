@@ -28,7 +28,6 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.Pair;
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import org.apache.kylin.rest.interceptor.ProjectInfoParser;
 import org.springframework.cloud.client.DefaultServiceInstance;
 import org.springframework.cloud.client.ServiceInstance;
@@ -39,6 +38,7 @@ import org.springframework.cloud.loadbalancer.core.ReactorServiceInstanceLoadBal
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;

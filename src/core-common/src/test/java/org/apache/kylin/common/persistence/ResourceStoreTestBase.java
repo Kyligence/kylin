@@ -26,11 +26,10 @@ import java.util.NavigableSet;
 import java.util.function.Consumer;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
 
 /**
  * Be called by LocalFileResourceStoreTest and ITHDFSResourceStoreTest.

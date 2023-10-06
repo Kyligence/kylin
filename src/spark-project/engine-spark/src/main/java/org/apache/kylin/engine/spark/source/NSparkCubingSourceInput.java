@@ -17,6 +17,17 @@
  */
 package org.apache.kylin.engine.spark.source;
 
+import static org.apache.calcite.avatica.util.Quoting.BACK_TICK;
+import static org.apache.kylin.engine.spark.stats.utils.HiveTableRefChecker.isNeedCreateHiveTemporaryTable;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NSparkCubingEngine;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
@@ -30,17 +41,6 @@ import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.util.SparderTypeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.apache.calcite.avatica.util.Quoting.BACK_TICK;
-import static org.apache.kylin.engine.spark.stats.utils.HiveTableRefChecker.isNeedCreateHiveTemporaryTable;
 
 public class NSparkCubingSourceInput implements NSparkCubingEngine.NSparkCubingSource {
 
@@ -84,7 +84,8 @@ public class NSparkCubingSourceInput implements NSparkCubingEngine.NSparkCubingS
         return ret;
     }
 
-    private String generateSelectSql(TableDesc table, List<ColumnDesc> effectiveColumns, Map<String, String> params, KylinConfig kylinConfig) {
+    private String generateSelectSql(TableDesc table, List<ColumnDesc> effectiveColumns, Map<String, String> params,
+            KylinConfig kylinConfig) {
         String colString = generateColString(effectiveColumns);
         String sql;
         if (isNeedCreateHiveTemporaryTable(table.isRangePartition(), table.isTransactional(),

@@ -85,7 +85,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
                             operand(KapFilterRel.class, //
                                     operand(Join.class, //
                                             null, //
-                                            j -> j instanceof KapJoinRel || j instanceof KapNonEquiJoinRel, any())))), //
+                                            j -> j instanceof KapJoinRel || j instanceof KapNonEquiJoinRel, any())))),
             RelFactories.LOGICAL_BUILDER, "ScalarSubqueryJoinRule:AGG_PRJ_FLT_JOIN");
 
     public ScalarSubqueryJoinRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory, String description) {

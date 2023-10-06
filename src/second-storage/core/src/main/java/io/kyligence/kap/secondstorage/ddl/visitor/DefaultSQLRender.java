@@ -96,7 +96,8 @@ public class DefaultSQLRender implements BaseRender {
     public void visit(GroupBy groupBy) {
         result.append(KeyWord.GROUP_BY);
         result.append(' ');
-        List<String> columns = groupBy.columns().stream().map(col -> "`" + col.getName() + "`").collect(Collectors.toList());
+        List<String> columns = groupBy.columns().stream().map(col -> "`" + col.getName() + "`")
+                .collect(Collectors.toList());
         result.append(String.join(",", columns));
     }
 
@@ -235,12 +236,14 @@ public class DefaultSQLRender implements BaseRender {
 
     @Override
     public void visit(ExistsDatabase existsDatabase) {
-        result.append(KeyWord.EXISTS).append(" ").append(KeyWord.DATABASE).append(" ").append(existsDatabase.getDatabase());
+        result.append(KeyWord.EXISTS).append(" ").append(KeyWord.DATABASE).append(" ")
+                .append(existsDatabase.getDatabase());
     }
 
     @Override
     public void visit(ExistsTable existsTable) {
-        result.append(KeyWord.EXISTS).append(" ").append(KeyWord.TABLE).append(" ").append(existsTable.getTableIdentifier().table());
+        result.append(KeyWord.EXISTS).append(" ").append(KeyWord.TABLE).append(" ")
+                .append(existsTable.getTableIdentifier().table());
     }
 
     @Override
@@ -259,7 +262,9 @@ public class DefaultSQLRender implements BaseRender {
     }
 
     protected static class KeyWord {
-        private KeyWord() {}
+        private KeyWord() {
+        }
+
         public static final String CREATE = "CREATE";
         public static final String DATABASE = "DATABASE";
         public static final String SHOW_CREATE_DATABASE = "SHOW CREATE DATABASE";
@@ -308,9 +313,7 @@ public class DefaultSQLRender implements BaseRender {
 
     @Override
     public void visit(Desc desc) {
-        result.append(KeyWord.DESC)
-                .append(' ')
-                .append(desc.getTable().table());
+        result.append(KeyWord.DESC).append(' ').append(desc.getTable().table());
     }
 
     @Override

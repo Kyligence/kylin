@@ -103,10 +103,10 @@ public class AccessServiceWithProjectTest extends NLocalFileMetadataTestCase {
     AccessService accessService = Mockito.spy(AccessService.class);
 
     @InjectMocks
-    ProjectService projectService = Mockito.spy(ProjectService.class);;
+    ProjectService projectService = Mockito.spy(ProjectService.class);
 
     @InjectMocks
-    private IUserGroupService userGroupService = Mockito.spy(IUserGroupService.class);;
+    private IUserGroupService userGroupService = Mockito.spy(IUserGroupService.class);
 
     @Mock
     AclService aclService = Mockito.spy(AclService.class);

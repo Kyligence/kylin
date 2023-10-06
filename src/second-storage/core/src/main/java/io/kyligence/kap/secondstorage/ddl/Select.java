@@ -17,13 +17,13 @@
  */
 package io.kyligence.kap.secondstorage.ddl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.kyligence.kap.secondstorage.ddl.exp.ColumnWithAlias;
 import io.kyligence.kap.secondstorage.ddl.exp.GroupBy;
 import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
 import io.kyligence.kap.secondstorage.ddl.visitor.RenderVisitor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class Select extends DDL<Select> {
     private final TableIdentifier fromTable;

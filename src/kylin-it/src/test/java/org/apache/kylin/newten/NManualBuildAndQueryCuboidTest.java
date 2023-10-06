@@ -28,6 +28,8 @@ import org.apache.kylin.engine.spark.NSparkCubingEngine;
 import org.apache.kylin.engine.spark.builder.CreateFlatTable;
 import org.apache.kylin.engine.spark.job.CuboidAggregator;
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.measure.bitmap.BitmapCounter;
 import org.apache.kylin.measure.bitmap.BitmapSerializer;
@@ -59,9 +61,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sparkproject.guava.collect.Sets;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class NManualBuildAndQueryCuboidTest extends NManualBuildAndQueryTest {
 

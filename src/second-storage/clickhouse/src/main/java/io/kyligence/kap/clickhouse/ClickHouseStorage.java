@@ -31,6 +31,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.ClickHouseConfig;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.base.Strings;
 import org.apache.kylin.job.SecondStorageStepFactory;
 import org.apache.kylin.job.factory.JobFactory;
 import org.apache.spark.sql.execution.datasources.jdbc.ClickHouseDialect$;
@@ -55,7 +56,6 @@ import io.kyligence.kap.clickhouse.management.ClickHouseConfigLoader;
 import io.kyligence.kap.clickhouse.metadata.ClickHouseFlowManager;
 import io.kyligence.kap.clickhouse.metadata.ClickHouseManager;
 import io.kyligence.kap.clickhouse.metadata.ClickHouseNodeGroupManager;
-import org.apache.kylin.guava30.shaded.common.base.Strings;
 import io.kyligence.kap.secondstorage.SecondStorageConfigLoader;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import io.kyligence.kap.secondstorage.SecondStoragePlugin;
@@ -84,8 +84,7 @@ public class ClickHouseStorage implements SecondStoragePlugin {
         ClickHouseConfigLoader.getInstance().refresh();
         ClusterInfo cluster = ClickHouseConfigLoader.getInstance().getCluster();
         SecondStorageNodeHelper.clear();
-        SecondStorageNodeHelper.initFromCluster(
-                cluster,
+        SecondStorageNodeHelper.initFromCluster(cluster,
                 node -> ClickHouse.buildUrl(node.getIp(), node.getPort(), getJdbcUrlProperties(cluster, node)),
                 (nodes, queryContext) -> {
                     if (nodes.isEmpty()) {
@@ -158,9 +157,11 @@ public class ClickHouseStorage implements SecondStoragePlugin {
                 new ClickHouseRefreshSecondaryIndexJob.RefreshSecondaryIndexJobFactory());
 
         SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageLoadStep.class, ClickHouseLoad::new);
-        SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageRefreshStep.class, ClickHouseRefresh::new);
+        SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageRefreshStep.class,
+                ClickHouseRefresh::new);
         SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageMergeStep.class, ClickHouseMerge::new);
-        SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageIndexClean.class, ClickHouseIndexClean::new);
+        SecondStorageStepFactory.register(SecondStorageStepFactory.SecondStorageIndexClean.class,
+                ClickHouseIndexClean::new);
 
         SecondStorageFactoryUtils.register(SecondStorageMetadataFactory.class, new ClickHouseMetadataFactory());
         SecondStorageFactoryUtils.register(SecondStorageDatabaseOperatorFactory.class, new ClickHouseOperatorFactory());

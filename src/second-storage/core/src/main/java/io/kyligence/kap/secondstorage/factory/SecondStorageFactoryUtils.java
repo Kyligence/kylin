@@ -31,36 +31,40 @@ import io.kyligence.kap.secondstorage.ddl.DDLOperator;
 import io.kyligence.kap.secondstorage.metadata.MetadataOperator;
 
 public class SecondStorageFactoryUtils {
-    private static final Map<Class<? extends SecondStorageFactory>, SecondStorageFactory> FACTORY_MAP = new ConcurrentHashMap<>();
+    private static final Map<Class<? extends SecondStorageFactory>, SecondStorageFactory> FACTORY_MAP //
+            = new ConcurrentHashMap<>();
 
     private SecondStorageFactoryUtils() {
         // can't new
     }
-    
+
     public static void register(Class<? extends SecondStorageFactory> type, SecondStorageFactory factory) {
-        Preconditions.checkArgument(type.isAssignableFrom(factory.getClass()), String.format(Locale.ROOT, "type %s is not assignable from %s",
-                type.getName(), factory.getClass().getName()));
+        Preconditions.checkArgument(type.isAssignableFrom(factory.getClass()), String.format(Locale.ROOT,
+                "type %s is not assignable from %s", type.getName(), factory.getClass().getName()));
         FACTORY_MAP.put(type, factory);
     }
 
-
     public static MetadataOperator createMetadataOperator(SecondStorageProperties properties) {
-        SecondStorageMetadataFactory factory = (SecondStorageMetadataFactory) FACTORY_MAP.get(SecondStorageMetadataFactory.class);
+        SecondStorageMetadataFactory factory = (SecondStorageMetadataFactory) FACTORY_MAP
+                .get(SecondStorageMetadataFactory.class);
         return factory.createMetadataOperator(properties);
     }
 
     public static DatabaseOperator createDatabaseOperator(String jdbcUrl) {
-        SecondStorageDatabaseOperatorFactory factory = (SecondStorageDatabaseOperatorFactory) FACTORY_MAP.get(SecondStorageDatabaseOperatorFactory.class);
+        SecondStorageDatabaseOperatorFactory factory = (SecondStorageDatabaseOperatorFactory) FACTORY_MAP
+                .get(SecondStorageDatabaseOperatorFactory.class);
         return factory.createDatabaseOperator(jdbcUrl);
     }
 
     public static QueryOperator createQueryMetricOperator(String project) {
-        SecondStorageQueryOperatorFactory factory = (SecondStorageQueryOperatorFactory) FACTORY_MAP.get(SecondStorageQueryOperatorFactory.class);
+        SecondStorageQueryOperatorFactory factory = (SecondStorageQueryOperatorFactory) FACTORY_MAP
+                .get(SecondStorageQueryOperatorFactory.class);
         return factory.getQueryOperator(project);
     }
 
-    public static DDLOperator createSecondaryDDLOperator(){
-        SecondStorageIndexFactory factory = (SecondStorageIndexFactory) FACTORY_MAP.get(SecondStorageIndexFactory.class);
+    public static DDLOperator createSecondaryDDLOperator() {
+        SecondStorageIndexFactory factory = (SecondStorageIndexFactory) FACTORY_MAP
+                .get(SecondStorageIndexFactory.class);
         return factory.createDDLOperator();
     }
 }

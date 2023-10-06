@@ -33,7 +33,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
  */
 public class BackdoorToggles {
 
-    private static final ThreadLocal<Map<String, String>> _backdoorToggles = new ThreadLocal<Map<String, String>>();
+    private static final ThreadLocal<Map<String, String>> _backdoorToggles = new ThreadLocal<>();
 
     public static void setToggles(Map<String, String> toggles) {
         _backdoorToggles.set(toggles);
@@ -55,7 +55,7 @@ public class BackdoorToggles {
         _backdoorToggles.get().putAll(toggles);
     }
 
-    // try avoid using this generic method
+    // try to avoid using this generic method
     public static String getToggle(String key) {
         Map<String, String> map = _backdoorToggles.get();
         if (map == null)
@@ -146,7 +146,7 @@ public class BackdoorToggles {
         "DEBUG_TOGGLE_DISABLE_FUZZY_KEY": "true"
      }
      */
-    public final static String DEBUG_TOGGLE_DISABLE_FUZZY_KEY = "DEBUG_TOGGLE_DISABLE_FUZZY_KEY";
+    public static final String DEBUG_TOGGLE_DISABLE_FUZZY_KEY = "DEBUG_TOGGLE_DISABLE_FUZZY_KEY";
 
     /**
      * set DEBUG_TOGGLE_DISABLE_QUERY_CACHE=true to prevent using cache for current query
@@ -158,7 +158,7 @@ public class BackdoorToggles {
      "DEBUG_TOGGLE_DISABLE_QUERY_CACHE": "true"
      }
      */
-    public final static String DEBUG_TOGGLE_DISABLE_QUERY_CACHE = "DEBUG_TOGGLE_DISABLE_QUERY_CACHE";
+    public static final String DEBUG_TOGGLE_DISABLE_QUERY_CACHE = "DEBUG_TOGGLE_DISABLE_QUERY_CACHE";
 
     /**
      * set DEBUG_TOGGLE_QUERY_TIMEOUT="timeout_millis" to overwrite the global timeout settings
@@ -168,17 +168,18 @@ public class BackdoorToggles {
      "DEBUG_TOGGLE_QUERY_TIMEOUT": "120000"
      }
      */
-    public final static String DEBUG_TOGGLE_QUERY_TIMEOUT = "DEBUG_TOGGLE_QUERY_TIMEOUT";
+    public static final String DEBUG_TOGGLE_QUERY_TIMEOUT = "DEBUG_TOGGLE_QUERY_TIMEOUT";
 
     /**
-     * set DEBUG_TOGGLE_SHARD_ASSIGNMENT="totalAssignedWorkers#assignedWorkerID" to specify subset of shards to deal with
+     * set DEBUG_TOGGLE_SHARD_ASSIGNMENT="totalAssignedWorkers#assignedWorkerID" 
+     * to specify subset of shards to deal with
      *
      example:(put it into request body)
      "backdoorToggles": {
      "DEBUG_TOGGLE_SHARD_ASSIGNMENT": "4#0"
      }
      */
-    public final static String DEBUG_TOGGLE_SHARD_ASSIGNMENT = "DEBUG_TOGGLE_SHARD_ASSIGNMENT";
+    public static final String DEBUG_TOGGLE_SHARD_ASSIGNMENT = "DEBUG_TOGGLE_SHARD_ASSIGNMENT";
 
     /**
      * set DEBUG_TOGGLE_PARTITION_DUMP_DIR="dir" to dump the partitions from storage.
@@ -189,7 +190,7 @@ public class BackdoorToggles {
      "DEBUG_TOGGLE_PARTITION_DUMP_DIR": "/tmp/dumping"
      }
      */
-    public final static String DEBUG_TOGGLE_PARTITION_DUMP_DIR = "DEBUG_TOGGLE_PARTITION_DUMP_DIR";
+    public static final String DEBUG_TOGGLE_PARTITION_DUMP_DIR = "DEBUG_TOGGLE_PARTITION_DUMP_DIR";
 
     /**
      * set DEBUG_TOGGLE_DUMPED_PARTITION_DIR="dir" to specify the dir to retrieve previously dumped partitions
@@ -200,7 +201,7 @@ public class BackdoorToggles {
      "DEBUG_TOGGLE_DUMPED_PARTITION_DIR": "/tmp/dumped"
      }
      */
-    public final static String DEBUG_TOGGLE_DUMPED_PARTITION_DIR = "DEBUG_TOGGLE_DUMPED_PARTITION_DIR";
+    public static final String DEBUG_TOGGLE_DUMPED_PARTITION_DIR = "DEBUG_TOGGLE_DUMPED_PARTITION_DIR";
 
     /**
      * set DEBUG_TOGGLE_PREPARE_ONLY="true" to prepare the sql statement and get its result set metadata
@@ -210,7 +211,7 @@ public class BackdoorToggles {
      "DEBUG_TOGGLE_PREPARE_ONLY": "true"
      }
      */
-    public final static String DEBUG_TOGGLE_PREPARE_ONLY = "DEBUG_TOGGLE_PREPARE_ONLY";
+    public static final String DEBUG_TOGGLE_PREPARE_ONLY = "DEBUG_TOGGLE_PREPARE_ONLY";
 
     // properties on statement may go with this "channel" too
     /**
@@ -221,7 +222,7 @@ public class BackdoorToggles {
      "ATTR_STATEMENT_MAX_ROWS": "10"
      }
      */
-    public final static String ATTR_STATEMENT_MAX_ROWS = "ATTR_STATEMENT_MAX_ROWS";
+    public static final String ATTR_STATEMENT_MAX_ROWS = "ATTR_STATEMENT_MAX_ROWS";
 
     /**
      * set DEBUG_TOGGLE_CHECK_ALL_MODELS="true" to check all OlapContexts when selecting realization
@@ -231,7 +232,7 @@ public class BackdoorToggles {
      "DEBUG_TOGGLE_CHECK_ALL_MODELS": "true"
      }
      */
-    public final static String DEBUG_TOGGLE_CHECK_ALL_MODELS = "DEBUG_TOGGLE_CHECK_ALL_MODELS";
+    public static final String DEBUG_TOGGLE_CHECK_ALL_MODELS = "DEBUG_TOGGLE_CHECK_ALL_MODELS";
 
     /**
      * set DISABLE_RAW_QUERY_HACKER="true" to disable RawQueryLastHacker.hackNoAggregations()
@@ -241,9 +242,9 @@ public class BackdoorToggles {
      "DISABLE_RAW_QUERY_HACKER": "true"
      }
      */
-    public final static String DISABLE_RAW_QUERY_HACKER = "DISABLE_RAW_QUERY_HACKER";
+    public static final String DISABLE_RAW_QUERY_HACKER = "DISABLE_RAW_QUERY_HACKER";
 
-    public final static String QUERY_FROM_AUTO_MODELING = "QUERY_FROM_AUTO_MODELING";
+    public static final String QUERY_FROM_AUTO_MODELING = "QUERY_FROM_AUTO_MODELING";
 
-    public final static String QUERY_NON_EQUI_JOIN_MODEL_ENABLED = "QUERY_NON_EQUI_JOIN_MODEL_ENABLED";
+    public static final String QUERY_NON_EQUI_JOIN_MODEL_ENABLED = "QUERY_NON_EQUI_JOIN_MODEL_ENABLED";
 }

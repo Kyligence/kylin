@@ -44,16 +44,15 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
-import org.apache.kylin.query.util.RexToTblColRefTranslator;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
 import org.apache.kylin.query.util.ICutContextStrategy;
+import org.apache.kylin.query.util.RexToTblColRefTranslator;
 import org.apache.kylin.query.util.RexUtils;
 import org.apache.kylin.util.FilterConditionExpander;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class KapFilterRel extends OLAPFilterRel implements KapRel {
     private Set<OLAPContext> subContexts = Sets.newHashSet();

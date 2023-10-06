@@ -29,8 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.constant.ObsConfig;
 
 public class FileSystemUtil {
-    public final static String S3_FILE_SYSTEM_CLASS = "S3AFileSystem";
-    public final static String OSS_FILE_SYSTEM_CLASS = "AliyunOSSFileSystem";
+    public static final String S3_FILE_SYSTEM_CLASS = "S3AFileSystem";
+    public static final String OSS_FILE_SYSTEM_CLASS = "AliyunOSSFileSystem";
 
     public static FileStatus[] listStatus(FileSystem fs, Path path) throws IOException {
         FileStatus[] statuses = fs.listStatus(path);

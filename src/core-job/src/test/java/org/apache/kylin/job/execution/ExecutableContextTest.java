@@ -22,10 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.jupiter.api.Test;
 
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import lombok.val;
 
 @MetadataInfo

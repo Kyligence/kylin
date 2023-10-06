@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
@@ -39,6 +38,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Holds per query information and statistics.
@@ -54,12 +54,13 @@ public class QueryContext implements Closeable {
     public static final long DEFAULT_NULL_SCANNED_DATA = -1L;
     public static final String ROUTE_USE_FORCEDTOTIEREDSTORAGE = "should route use forcedToTieredStorage";
 
-    private static final TransmittableThreadLocal<QueryContext> contexts = new TransmittableThreadLocal<QueryContext>() {
-        @Override
-        protected QueryContext initialValue() {
-            return new QueryContext();
-        }
-    };
+    private static final TransmittableThreadLocal<QueryContext> contexts //
+            = new TransmittableThreadLocal<QueryContext>() {
+                @Override
+                protected QueryContext initialValue() {
+                    return new QueryContext();
+                }
+            };
 
     @Setter
     private String queryId;

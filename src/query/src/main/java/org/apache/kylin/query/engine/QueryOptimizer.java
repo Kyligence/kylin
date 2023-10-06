@@ -33,6 +33,7 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
+
 import io.kyligence.kap.query.optrule.KapProjectJoinTransposeRule;
 
 public class QueryOptimizer {

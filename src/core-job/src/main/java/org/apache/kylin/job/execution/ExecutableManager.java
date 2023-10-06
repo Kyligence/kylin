@@ -189,7 +189,7 @@ public class ExecutableManager {
         }
         return result;
     }
-    
+
     private ExecutablePO copyForWrite(ExecutablePO po) {
         // No need to copy, just return the origin object
         // This will be rewrite after metadata is refactored
@@ -648,8 +648,8 @@ public class ExecutableManager {
             ExecutableOutputPO jobOutput = job.getOutput();
             val subTasks = job.getTasks();
             if (null != subTasks) {
-                val errorTaskAndNotFailedStepIdTaskCount = subTasks.stream()
-                        .filter(task -> ExecutableState.valueOf(task.getOutput().getStatus()).equals(ExecutableState.ERROR))
+                val errorTaskAndNotFailedStepIdTaskCount = subTasks.stream().filter(
+                        task -> ExecutableState.valueOf(task.getOutput().getStatus()).equals(ExecutableState.ERROR))
                         .filter(task -> !StringUtils.startsWith(failedStepId, task.getId())).count();
                 if (errorTaskAndNotFailedStepIdTaskCount != 0) {
                     return false;
@@ -683,7 +683,8 @@ public class ExecutableManager {
 
     public void cancelRemoteJob(ExecutablePO executablePO) {
         if (executablePO.getOutput().getStatus().equalsIgnoreCase(ExecutableState.RUNNING.toString())) {
-            // when start or restart KE, will resumeAllRunningJobs, don't need to interrupt job thread, so job id is null
+            // when start or restart KE, will resumeAllRunningJobs, 
+            // don't need to interrupt job thread, so job id is null
             //TODO KE-37319
             // cancelJob(executablePO, null);
         }
@@ -743,9 +744,9 @@ public class ExecutableManager {
                                 // update running stage to ready
                                 Optional.ofNullable(entry.getValue()).orElse(Lists.newArrayList())//
                                         .stream() //
-                                        .filter(stage -> stage.getStatusInMem(entry.getKey()) == ExecutableState.READY)//
-                                        .forEach(stage -> //
-                                                updateStageStatus(stage.getId(), entry.getKey(), ExecutableState.PENDING, null, null));
+                                        .filter(stage -> stage.getStatusInMem(entry.getKey()) == ExecutableState.READY)
+                                        .forEach(stage -> updateStageStatus(stage.getId(), entry.getKey(),
+                                                ExecutableState.PENDING, null, null));
                             }
                         }
                     }
@@ -1951,13 +1952,10 @@ public class ExecutableManager {
         return fetchJobsByTypesAndStates(project, jobTypes, subjects, ExecutableState.getNotFinalStates());
     }
 
-    public List<JobInfo> fetchJobsByTypesAndStates(String project, List<String> jobTypes, List<String> subjects, List<ExecutableState> states) {
-        JobMapperFilter mapperFilter = JobMapperFilter.builder()
-                .jobNames(jobTypes)
-                .statuses(states)
-                .subjects(subjects)
-                .project(project)
-                .build();
+    public List<JobInfo> fetchJobsByTypesAndStates(String project, List<String> jobTypes, List<String> subjects,
+            List<ExecutableState> states) {
+        JobMapperFilter mapperFilter = JobMapperFilter.builder().jobNames(jobTypes).statuses(states).subjects(subjects)
+                .project(project).build();
         return jobInfoDao.getJobInfoListByFilter(mapperFilter);
     }
 

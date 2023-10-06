@@ -32,6 +32,8 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.base.MoreObjects;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
@@ -46,11 +48,6 @@ import org.apache.kylin.metadata.sourceusage.SourceUsageManager;
 import org.apache.kylin.metadata.sourceusage.SourceUsageRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
-import org.apache.kylin.guava30.shaded.common.base.MoreObjects;
-
 
 public class SystemUsageTool {
     private SystemUsageTool() {
@@ -92,8 +89,8 @@ public class SystemUsageTool {
         NProjectManager projectManager = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
         List<ExecutablePO> allJobs = Lists.newArrayList();
         projectManager.listAllProjects().forEach(projectInstance -> {
-            ExecutableManager executableManager = KylinConfig.getInstanceFromEnv()
-                    .getManager(projectInstance.getName(), ExecutableManager.class);
+            ExecutableManager executableManager = KylinConfig.getInstanceFromEnv().getManager(projectInstance.getName(),
+                    ExecutableManager.class);
             allJobs.addAll(executableManager.getAllJobs(startTime, endTime));
         });
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");

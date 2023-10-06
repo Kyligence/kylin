@@ -370,7 +370,8 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                 throw new KylinException(SAVE_QUERY_FAILED,
                         String.format(Locale.ROOT, msg.getDuplicateQueryName(), query.getName()));
             currentQueries.add(query);
-            getStore().checkAndPutResource(getQueryKeyById(project, creator), record, QueryRecordSerializer.getInstance());
+            getStore().checkAndPutResource(getQueryKeyById(project, creator), record,
+                    QueryRecordSerializer.getInstance());
             return null;
         }, project);
     }
@@ -380,8 +381,10 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         UnitOfWork.doInTransactionWithRetry(() -> {
             val record = getSavedQueries(creator, project, true);
             assert record != null;
-            record.setQueries(record.getQueries().stream().filter(q -> !q.getId().equals(id)).collect(Collectors.toList()));
-            getStore().checkAndPutResource(getQueryKeyById(project, creator), record, QueryRecordSerializer.getInstance());
+            record.setQueries(
+                    record.getQueries().stream().filter(q -> !q.getId().equals(id)).collect(Collectors.toList()));
+            getStore().checkAndPutResource(getQueryKeyById(project, creator), record,
+                    QueryRecordSerializer.getInstance());
             return null;
         }, project);
     }
@@ -576,7 +579,8 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         val isDataPermissionDefaultEnabled = KylinConfig.getInstanceFromEnv().isDataPermissionDefaultEnabled();
         if (isDataPermissionDefaultEnabled) {
             try {
-                Set<String> extPermissions = accessService.getUserNormalExtPermissionsByUserInProject(sqlRequest.getProject(), executeUser);
+                Set<String> extPermissions = accessService
+                        .getUserNormalExtPermissionsByUserInProject(sqlRequest.getProject(), executeUser);
                 if (!extPermissions.contains(AclConstants.DATA_QUERY)) {
                     throw new KylinException(ACCESS_DENIED, "Access is denied.");
                 }
@@ -630,7 +634,8 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             RawSql rawSql = new RawSqlParser(sqlRequest.getSql()).parse();
             rawSql.autoAppendLimit(kylinConfig, sqlRequest.getLimit(), sqlRequest.getOffset());
 
-            WhiteSpaceParser whiteSpaceParser = new WhiteSpaceParser(EscapeDialect.DEFAULT, rawSql.getStatementString().trim());
+            WhiteSpaceParser whiteSpaceParser = new WhiteSpaceParser(EscapeDialect.DEFAULT,
+                    rawSql.getStatementString().trim());
 
             sqlRequest.setNormalizedSql(whiteSpaceParser.parse());
 
@@ -1589,13 +1594,13 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                 .put(SHUFFLE_PARTITIONS, "Shuffle partitions: ").put(ACCEPT_PARTIAL, "Accept Partial: ")
                 .put(PARTIAL_RESULT, "Is Partial Result: ").put(HIT_EXCEPTION_CACHE, "Hit Exception Cache: ")
                 .put(STORAGE_CACHE_USED, "Storage Cache Used: ").put(STORAGE_CACHE_TYPE, "Storage Cache Type: ")
-                .put(DATA_FETCH_TIME, "Data Fetch Time: ")
-                .put(PUSH_DOWN, "Is Query Push-Down: ").put(IS_PREPARE, "Is Prepare: ").put(TIMEOUT, "Is Timeout: ")
-                .put(TRACE_URL, "Trace URL: ").put(TIMELINE_SCHEMA, "Time Line Schema: ").put(TIMELINE, "Time Line: ")
-                .put(ERROR_MSG, "Message: ").put(USER_TAG, "User Defined Tag: ")
-                .put(PUSH_DOWN_FORCED, "Is forced to Push-Down: ").put(USER_AGENT, "User Agent: ")
-                .put(BACK_DOOR_TOGGLES, "Back door toggles: ").put(SCAN_SEGMENT_COUNT, "Scan Segment Count: ")
-                .put(SCAN_FILE_COUNT, "Scan File Count: ").put(REFUSE, "Is Refused: ").build();
+                .put(DATA_FETCH_TIME, "Data Fetch Time: ").put(PUSH_DOWN, "Is Query Push-Down: ")
+                .put(IS_PREPARE, "Is Prepare: ").put(TIMEOUT, "Is Timeout: ").put(TRACE_URL, "Trace URL: ")
+                .put(TIMELINE_SCHEMA, "Time Line Schema: ").put(TIMELINE, "Time Line: ").put(ERROR_MSG, "Message: ")
+                .put(USER_TAG, "User Defined Tag: ").put(PUSH_DOWN_FORCED, "Is forced to Push-Down: ")
+                .put(USER_AGENT, "User Agent: ").put(BACK_DOOR_TOGGLES, "Back door toggles: ")
+                .put(SCAN_SEGMENT_COUNT, "Scan Segment Count: ").put(SCAN_FILE_COUNT, "Scan File Count: ")
+                .put(REFUSE, "Is Refused: ").build();
 
         private Map<String, Object> logs = new HashMap<>(100);
 

@@ -18,26 +18,25 @@
 
 package org.apache.kylin.common.lock.jdbc;
 
+import static org.apache.kylin.common.util.TestUtils.getTestConfig;
+
+import java.util.UUID;
+
 import org.apache.kylin.common.lock.DistributedLockFactoryTest;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.junit.annotation.OverwriteProp;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.UUID;
-
-import static org.apache.kylin.common.util.TestUtils.getTestConfig;
-
 @MetadataInfo(onlyProps = true)
 class JdbcDistributedLockFactoryTest extends DistributedLockFactoryTest {
 
     @BeforeEach
     public void setup() {
-       getTestConfig().getDistributedLockFactory().initialize();
+        getTestConfig().getDistributedLockFactory().initialize();
     }
 
-    @OverwriteProp(key = "kylin.metadata.distributed-lock-impl",
-            value = "org.apache.kylin.common.lock.jdbc.JdbcDistributedLockFactory")
+    @OverwriteProp(key = "kylin.metadata.distributed-lock-impl", value = "org.apache.kylin.common.lock.jdbc.JdbcDistributedLockFactory")
     @Test
     void testConcurrence() throws Exception {
         getTestConfig().getDistributedLockFactory().initialize();

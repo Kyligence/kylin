@@ -31,9 +31,7 @@ import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
-
 import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 
 class RenameEntity {

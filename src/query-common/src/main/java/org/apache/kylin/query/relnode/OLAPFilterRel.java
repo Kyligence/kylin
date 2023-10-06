@@ -45,11 +45,10 @@ import org.apache.calcite.rex.RexProgramBuilder;
 import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.kylin.metadata.model.TblColRef;
-
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.metadata.model.TblColRef;
 
 /**
  */
@@ -72,6 +71,7 @@ public class OLAPFilterRel extends Filter implements OLAPRel {
 
     protected ColumnRowType columnRowType;
     protected OLAPContext context;
+
     public OLAPFilterRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RexNode condition) {
         super(cluster, traits, child, condition);
         Preconditions.checkArgument(getConvention() == CONVENTION);

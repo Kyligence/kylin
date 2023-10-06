@@ -35,17 +35,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.logging.SetLogCategory;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.VersionConflictException;
 import org.apache.kylin.common.persistence.AuditLog;
+import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.UnitMessages;
+import org.apache.kylin.common.persistence.VersionConflictException;
 import org.apache.kylin.common.persistence.event.Event;
 import org.apache.kylin.common.persistence.metadata.JdbcAuditLogStore;
-import org.springframework.transaction.TransactionException;
-
 import org.apache.kylin.guava30.shaded.common.base.Joiner;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.springframework.transaction.TransactionException;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -349,5 +348,4 @@ public class AuditLogReplayWorker extends AbstractAuditLogReplayWorker {
             return "[" + auditLogId + "," + logTimestamp + "]";
         }
     }
-
 }

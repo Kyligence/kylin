@@ -18,10 +18,11 @@
 
 package io.kyligence.kap.secondstorage.test.utils;
 
-import io.kyligence.kap.secondstorage.management.SecondStorageService;
+import java.util.Set;
+
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 
-import java.util.Set;
+import io.kyligence.kap.secondstorage.management.SecondStorageService;
 
 public class MockedSecondStorageService extends SecondStorageService {
     @Override

@@ -20,8 +20,6 @@ package org.apache.hadoop.hive.serde2.lazy;
 import static io.kyligence.hive.serde2.lazy.LazyQuoteAwareSerDe.PrimitiveParser.parseDate;
 import static io.kyligence.hive.serde2.lazy.LazyQuoteAwareSerDe.PrimitiveParser.parseTimestamp;
 
-import io.kyligence.hive.serde2.lazy.LazyQuoteAwareSerDe;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -36,16 +34,16 @@ import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 
+import io.kyligence.hive.serde2.lazy.LazyQuoteAwareSerDe;
+
 public class LazyQuoteAwareSerDeTest {
 
     @Test
     public void testParseCsvLines() {
-        List<String[]> content = LazyQuoteAwareSerDe.parseCsvLines(ImmutableList.of(
-                "Bella1,$5%,2020-07-01,2022-04-14 12:00:00",
-                "Emily1,\"@6,000%\",2021-08-01,2022-04-14 12:00:00",
-                "Coco,10,2012-03-01,2022-04-13 12:00:00"
-        ));
-        String[] expectCol2 = new String[] {"$5%", "@6,000%", "10"};
+        List<String[]> content = LazyQuoteAwareSerDe
+                .parseCsvLines(ImmutableList.of("Bella1,$5%,2020-07-01,2022-04-14 12:00:00",
+                        "Emily1,\"@6,000%\",2021-08-01,2022-04-14 12:00:00", "Coco,10,2012-03-01,2022-04-13 12:00:00"));
+        String[] expectCol2 = new String[] { "$5%", "@6,000%", "10" };
         for (int i = 0; i < content.size(); i++) {
             String[] strs = content.get(i);
             System.out.println(Arrays.toString(strs));
@@ -281,8 +279,8 @@ public class LazyQuoteAwareSerDeTest {
     private String str(LazyStruct struct, int fieldId, StructObjectInspector soi) {
         StructField field = soi.getAllStructFieldRefs().get(fieldId);
         //noinspection unchecked
-        LazyPrimitive<ObjectInspector, Writable> val =
-                (LazyPrimitive<ObjectInspector, Writable>) soi.getStructFieldData(struct, field);
+        LazyPrimitive<ObjectInspector, Writable> val = (LazyPrimitive<ObjectInspector, Writable>) soi
+                .getStructFieldData(struct, field);
         return val == null ? null : val.getWritableObject().toString();
     }
 }

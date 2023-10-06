@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.newten;
 
 import java.util.List;
 import java.util.Set;
 
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.cuboid.NSpanningTree;
 import org.apache.kylin.metadata.cube.cuboid.NSpanningTreeFactory;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
@@ -34,8 +34,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class NSpanningTreeCubingJobTest extends NLocalWithSparkSessionTest {
 

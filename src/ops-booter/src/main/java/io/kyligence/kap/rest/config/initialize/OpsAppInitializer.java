@@ -18,8 +18,10 @@
 
 package io.kyligence.kap.rest.config.initialize;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
-import io.kyligence.kap.metadata.favorite.AsyncTaskManager;
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.metadata.asynctask.AbstractAsyncTask;
 import org.apache.kylin.metadata.asynctask.MetadataRestoreTask;
@@ -34,9 +36,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
+import io.kyligence.kap.metadata.epoch.EpochManager;
+import io.kyligence.kap.metadata.favorite.AsyncTaskManager;
 
 @Configuration
 public class OpsAppInitializer {
@@ -85,8 +86,8 @@ public class OpsAppInitializer {
         for (String project : projectList) {
             for (MetadataBackupResponse metadataBackup : OpsService.getMetadataBackupList(project)) {
                 if (OpsService.MetadataBackupStatu.IN_PROGRESS.equals(metadataBackup.getStatus())) {
-                    OpsService.MetadataBackupOperator operator =
-                            new OpsService.MetadataBackupOperator(metadataBackup, project);
+                    OpsService.MetadataBackupOperator operator = new OpsService.MetadataBackupOperator(metadataBackup,
+                            project);
                     operator.markFail();
                 }
             }

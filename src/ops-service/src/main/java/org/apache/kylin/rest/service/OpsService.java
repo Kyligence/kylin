@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -75,12 +74,12 @@ public class OpsService {
     public static final String BACKUP_STATUS = "_backup_status";
     public static final String _GLOBAL = GLOBAL_UNIT;
     public static final String CORE_META_DIR = "core_meta";
-    public static final String META_BACKUP_PATH =
-            KylinConfig.getInstanceFromEnv().getHdfsWorkingDirectory() + META_BACKUP_DIR;
-    public static final String GLOBAL_METADATA_BACKUP_PATH =
-            META_BACKUP_PATH + "/" + SYSTEM_LEVEL_METADATA_BACKUP_DIR_NAME;
-    public static final String PROJECT_METADATA_BACKUP_PATH =
-            META_BACKUP_PATH + "/" + PROJECT_LEVEL_METADATA_BACKUP_DIR_NAME;
+    public static final String META_BACKUP_PATH = KylinConfig.getInstanceFromEnv().getHdfsWorkingDirectory()
+            + META_BACKUP_DIR;
+    public static final String GLOBAL_METADATA_BACKUP_PATH = META_BACKUP_PATH + "/"
+            + SYSTEM_LEVEL_METADATA_BACKUP_DIR_NAME;
+    public static final String PROJECT_METADATA_BACKUP_PATH = META_BACKUP_PATH + "/"
+            + PROJECT_LEVEL_METADATA_BACKUP_DIR_NAME;
     public static int defaultStatusReadRetryTime = 5;
 
     public static String getMetaBackupStoreDir(String project) {
@@ -94,8 +93,8 @@ public class OpsService {
     public String backupMetadata(String project) {
         FileSystem fs = HadoopUtil.getWorkingFileSystem();
         String username = AclPermissionUtil.getCurrentUsername();
-        MetadataBackupOperator metadataBackupOperator = new MetadataBackupOperator(getMetaBackupStoreDir(project),
-                fs, username, project);
+        MetadataBackupOperator metadataBackupOperator = new MetadataBackupOperator(getMetaBackupStoreDir(project), fs,
+                username, project);
         return metadataBackupOperator.startBackup();
     }
 
@@ -107,14 +106,14 @@ public class OpsService {
         if (!fs.exists(path)) {
             return res;
         }
-        for (FileStatus fileStatu: fs.listStatus(path)) {
+        for (FileStatus fileStatu : fs.listStatus(path)) {
             if (fileStatu.isDirectory()) {
                 Path statusPath = new Path(fileStatu.getPath().toString() + "/" + BACKUP_STATUS);
                 MetadataBackupResponse response = new MetadataBackupResponse();
                 response.setPath(fileStatu.getPath().toUri().toString());
                 if (fs.exists(statusPath)) {
-                    MetadataBackupStatuInfo backupStatuInfo =
-                            getMetadataStatusInfoWithRetry(statusPath, fs, defaultStatusReadRetryTime);
+                    MetadataBackupStatuInfo backupStatuInfo = getMetadataStatusInfoWithRetry(statusPath, fs,
+                            defaultStatusReadRetryTime);
                     response.setStatus(backupStatuInfo.getStatus());
                     response.setSize(backupStatuInfo.getSize());
                     response.setOwner(backupStatuInfo.getOwner());
@@ -125,13 +124,14 @@ public class OpsService {
         return res;
     }
 
-    public static MetadataBackupStatuInfo getMetadataStatusInfoWithRetry(Path statusPath, FileSystem fs, int retryTime) {
+    public static MetadataBackupStatuInfo getMetadataStatusInfoWithRetry(Path statusPath, FileSystem fs,
+            int retryTime) {
         MetadataBackupStatuInfo metadataBackupStatuInfo = new MetadataBackupStatuInfo();
         do {
             try (FSDataInputStream fis = fs.open(statusPath)) {
                 String value = fis.readUTF();
-                 metadataBackupStatuInfo = JsonUtil.readValue(value, MetadataBackupStatuInfo.class);
-                 return metadataBackupStatuInfo;
+                metadataBackupStatuInfo = JsonUtil.readValue(value, MetadataBackupStatuInfo.class);
+                return metadataBackupStatuInfo;
             } catch (Exception e) {
                 retryTime--;
                 try {
@@ -185,7 +185,7 @@ public class OpsService {
         return pathStr + " path not exist";
     }
 
-    public void cancelAndDeleteMetadataBackup(String rootPath, String project) throws IOException, InterruptedException, ExecutionException {
+    public void cancelAndDeleteMetadataBackup(String rootPath, String project) throws IOException {
         MetadataBackupOperator.cancelAndAsyncDeleteBackup(rootPath, project);
     }
 
@@ -203,7 +203,7 @@ public class OpsService {
         }
         AsyncTaskManager taskManager = AsyncTaskManager.getInstance(project);
         AbstractAsyncTask asyncTask = taskManager.get(AsyncTaskManager.METADATA_RECOVER_TASK, uuid);
-        if (asyncTask == null){
+        if (asyncTask == null) {
             return null;
         } else {
             return ((MetadataRestoreTask) asyncTask).getStatus();
@@ -265,15 +265,15 @@ public class OpsService {
             this.jobInfoTool = new JobInfoTool();
             jobInfoTool.setHook(hook);
             if (project == null || project.equals(_GLOBAL)) {
-                List<String> projects = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).listAllProjects().stream()
-                        .map(ProjectInstance::getName).collect(Collectors.toList());
+                List<String> projects = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).listAllProjects()
+                        .stream().map(ProjectInstance::getName).collect(Collectors.toList());
                 statuInfo.setProjects(projects);
             } else {
                 statuInfo.setProjects(Lists.newArrayList(project));
             }
         }
 
-        public synchronized static void cancelAndAsyncDeleteBackup(String rootPath, String project) throws IOException {
+        public static synchronized void cancelAndAsyncDeleteBackup(String rootPath, String project) throws IOException {
             String key = getProjectMetadataKeyFromRootPath(rootPath);
             if (runningTask.containsKey(key)) {
                 Future future = runningTask.get(key).getFirst();

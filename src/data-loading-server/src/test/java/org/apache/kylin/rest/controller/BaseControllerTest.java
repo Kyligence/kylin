@@ -40,6 +40,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.constant.ModelStatusToDisplayEnum;
@@ -66,8 +67,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 @RunWith(MockitoJUnitRunner.class)
 public class BaseControllerTest extends NLocalFileMetadataTestCase {
@@ -238,7 +237,7 @@ public class BaseControllerTest extends NLocalFileMetadataTestCase {
     public void testCheckParamLength() {
         thrown.expect(KylinException.class);
         thrown.expectMessage(String.format(Message.getInstance().getParamTooLarge(), "tag", 1000));
-        List param = new ArrayList();
+        List<Object> param = new ArrayList();
         param.add(1);
         param.add(6);
         param.add(String.join("", Collections.nCopies(1000 * 1024, "l")));

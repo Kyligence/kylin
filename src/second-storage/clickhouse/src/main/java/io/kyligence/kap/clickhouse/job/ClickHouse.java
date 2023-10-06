@@ -18,13 +18,6 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.kylin.common.KylinConfig;
-
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.Date;
@@ -45,6 +38,14 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.kylin.common.KylinConfig;
+
+import lombok.Getter;
+import lombok.val;
+import lombok.extern.slf4j.Slf4j;
+
 @Slf4j
 @Getter
 public class ClickHouse implements Closeable {
@@ -59,7 +60,6 @@ public class ClickHouse implements Closeable {
     private Connection connection;
     private final String preprocessedUrl;
     private final Properties properties;
-
 
     public ClickHouse(String jdbcUrl) {
         String user = null;
@@ -92,10 +92,12 @@ public class ClickHouse implements Closeable {
 
     public static Map<String, String> extractParam(String jdbcUrl) {
         String query = jdbcUrl.contains("?") ? jdbcUrl.split("\\?")[1] : "";
-        if (StringUtils.isBlank(query)) return Collections.emptyMap();
+        if (StringUtils.isBlank(query))
+            return Collections.emptyMap();
         Map<String, String> params = new HashMap<>();
         for (String s : query.split("&")) {
-            if (StringUtils.isBlank(s)) continue;
+            if (StringUtils.isBlank(s))
+                continue;
             String[] pair = s.split("=");
             params.put(pair[0], pair[1]);
         }
@@ -113,10 +115,12 @@ public class ClickHouse implements Closeable {
             List<String> paramList = new ArrayList<>();
             param.forEach((name, value) -> {
                 if (ClickHouse.SOCKET_TIMEOUT.equals(name)) {
-                    value = getNoEmptyValue(KylinConfig.getInstanceFromEnv().getSecondStorageJDBCSocketTimeout(), value);
+                    value = getNoEmptyValue(KylinConfig.getInstanceFromEnv().getSecondStorageJDBCSocketTimeout(),
+                            value);
                 }
                 if (ClickHouse.KEEP_ALIVE_TIMEOUT.equals(name)) {
-                    value = getNoEmptyValue(KylinConfig.getInstanceFromEnv().getSecondStorageJDBCKeepAliveTimeout(), value);
+                    value = getNoEmptyValue(KylinConfig.getInstanceFromEnv().getSecondStorageJDBCKeepAliveTimeout(),
+                            value);
                 }
                 paramList.add(name + "=" + value);
             });
@@ -143,7 +147,6 @@ public class ClickHouse implements Closeable {
             return stmt.execute(sql);
         }
     }
-
 
     public <T> List<T> query(String sql, Function<ResultSet, T> resultParser) throws SQLException {
         connect();

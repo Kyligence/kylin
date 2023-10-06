@@ -18,17 +18,18 @@
 
 package io.kyligence.kap.secondstorage;
 
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import io.kyligence.kap.secondstorage.metadata.NodeGroup;
-import io.kyligence.kap.secondstorage.metadata.TablePartition;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.QueryContext;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.QueryContext;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+
+import io.kyligence.kap.secondstorage.metadata.NodeGroup;
+import io.kyligence.kap.secondstorage.metadata.TablePartition;
 
 public class SecondStorageQueryRouteUtil {
     private static final Map<String, Boolean> NODE_STATUS = new ConcurrentHashMap<>();
@@ -44,7 +45,8 @@ public class SecondStorageQueryRouteUtil {
         return NODE_STATUS.getOrDefault(node, true);
     }
 
-    public static List<Set<String>> getUsedShard(List<TablePartition> partitions, String project, Set<String> allSegIds) {
+    public static List<Set<String>> getUsedShard(List<TablePartition> partitions, String project,
+            Set<String> allSegIds) {
         // collect all node which partition used
         Set<String> allSegmentUsedNode = Sets.newHashSet();
         for (TablePartition partition : partitions) {
@@ -57,7 +59,8 @@ public class SecondStorageQueryRouteUtil {
             QueryContext.current().setRetrySecondStorage(false);
             throw new IllegalStateException("Segment node is empty.");
         }
-        List<NodeGroup> nodeGroups = SecondStorage.nodeGroupManager(KylinConfig.getInstanceFromEnv(), project).listAll();
+        List<NodeGroup> nodeGroups = SecondStorage.nodeGroupManager(KylinConfig.getInstanceFromEnv(), project)
+                .listAll();
 
         if (nodeGroups.isEmpty()) {
             QueryContext.current().setRetrySecondStorage(false);

@@ -18,11 +18,11 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-
 import java.io.File;
 import java.net.URI;
 import java.util.Locale;
+
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 public class UtTableSource implements AbstractTableSource {
     private static final String UT_TABLE_FORMAT = "URL('%s/%s' , Parquet)";

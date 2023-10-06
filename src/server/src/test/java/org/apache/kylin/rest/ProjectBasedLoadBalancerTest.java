@@ -30,7 +30,6 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.junit.After;
 import org.junit.Assert;
@@ -45,6 +44,7 @@ import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 import reactor.core.publisher.Mono;
 

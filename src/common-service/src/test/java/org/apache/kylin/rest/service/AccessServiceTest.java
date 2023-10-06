@@ -105,10 +105,10 @@ public class AccessServiceTest extends NLocalFileMetadataTestCase {
     AccessService accessService = Mockito.spy(AccessService.class);
 
     @InjectMocks
-    ProjectService projectService = Mockito.spy(ProjectService.class);;
+    ProjectService projectService = Mockito.spy(ProjectService.class);
 
     @InjectMocks
-    private IUserGroupService userGroupService = Mockito.spy(IUserGroupService.class);;
+    private IUserGroupService userGroupService = Mockito.spy(IUserGroupService.class);
 
     @Mock
     AclService aclService = Mockito.spy(AclService.class);
@@ -504,7 +504,7 @@ public class AccessServiceTest extends NLocalFileMetadataTestCase {
 
         // system admin without data query permission
         assertFalse(accessService.getUserNormalExtPermissions("default").contains("DATA_QUERY"));
-        Assert.assertThrows(AccessDeniedException.class, ()-> aclEvaluate.checkProjectQueryPermission("default"));
+        Assert.assertThrows(AccessDeniedException.class, () -> aclEvaluate.checkProjectQueryPermission("default"));
 
         // system admin with global data query permission
         userAclService.getManager(UserAclManager.class).addPermission("ADMIN", AclPermission.DATA_QUERY);
@@ -796,7 +796,7 @@ public class AccessServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testAclWithUnNaturalOrderUpdate() throws IOException{
+    public void testAclWithUnNaturalOrderUpdate() throws IOException {
         AclEntity ae = accessService.getAclEntity(AclEntityType.PROJECT_INSTANCE,
                 "1eaca32a-a33e-4b69-83dd-0bb8b1f8c91b");
 

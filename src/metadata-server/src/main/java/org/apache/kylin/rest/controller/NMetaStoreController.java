@@ -44,6 +44,7 @@ import org.apache.kylin.common.constant.Constant;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.ZipFileUtils;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.schema.SchemaChangeCheckResult;
 import org.apache.kylin.rest.request.MetadataCleanupRequest;
 import org.apache.kylin.rest.request.ModelImportRequest;
@@ -65,8 +66,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.swagger.annotations.ApiOperation;
 

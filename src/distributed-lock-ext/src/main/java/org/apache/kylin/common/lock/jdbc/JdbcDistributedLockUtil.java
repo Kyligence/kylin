@@ -18,17 +18,6 @@
 
 package org.apache.kylin.common.lock.jdbc;
 
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.ibatis.jdbc.ScriptRunner;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.StorageURL;
-import org.apache.kylin.common.logging.LogOutputStream;
-import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
-import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
-
-import javax.sql.DataSource;
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -37,6 +26,19 @@ import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.util.Locale;
 import java.util.Properties;
+
+import javax.sql.DataSource;
+
+import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.ibatis.jdbc.ScriptRunner;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.StorageURL;
+import org.apache.kylin.common.logging.LogOutputStream;
+import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
+import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
+
+import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class JdbcDistributedLockUtil {

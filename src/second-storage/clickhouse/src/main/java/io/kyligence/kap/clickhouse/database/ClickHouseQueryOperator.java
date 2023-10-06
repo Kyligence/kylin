@@ -28,24 +28,23 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.kyligence.kap.secondstorage.ColumnMapping;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.query.QueryMetrics;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.kyligence.kap.clickhouse.ddl.ClickHouseRender;
 import io.kyligence.kap.clickhouse.job.ClickHouse;
 import io.kyligence.kap.clickhouse.job.ClickHouseSystemQuery;
 import io.kyligence.kap.clickhouse.parser.DescQueryParser;
 import io.kyligence.kap.clickhouse.parser.ExistsQueryParser;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import io.kyligence.kap.secondstorage.ColumnMapping;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import io.kyligence.kap.secondstorage.SecondStorageQueryRouteUtil;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
@@ -80,11 +79,13 @@ public class ClickHouseQueryOperator implements QueryOperator {
         }
 
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        List<Set<String>> allShards = SecondStorageNodeHelper.groupsToShards(SecondStorageUtil.listNodeGroup(config, project));
+        List<Set<String>> allShards = SecondStorageNodeHelper
+                .groupsToShards(SecondStorageUtil.listNodeGroup(config, project));
 
         // filter if one node down
         List<Set<String>> upShards = allShards.stream()
-                .map(replicas -> replicas.stream().filter(SecondStorageQueryRouteUtil::getNodeStatus).collect(Collectors.toSet()))
+                .map(replicas -> replicas.stream().filter(SecondStorageQueryRouteUtil::getNodeStatus)
+                        .collect(Collectors.toSet()))
                 .filter(replicas -> !replicas.isEmpty()).collect(Collectors.toList());
 
         if (upShards.size() != allShards.size()) {
@@ -104,46 +105,45 @@ public class ClickHouseQueryOperator implements QueryOperator {
                 queryMetrics.putAll(getQueryMetric(replicas, sql, true));
             } catch (SQLException ex) {
                 log.error("Fetch tired storage query metric fail.", ex);
-                queryMetrics.put(queryId,
-                        ClickHouseSystemQuery.QueryMetric.builder().clientName(queryId).readBytes(-1).readRows(-1).resultRows(-1).build());
+                queryMetrics.put(queryId, ClickHouseSystemQuery.QueryMetric.builder().clientName(queryId).readBytes(-1)
+                        .readRows(-1).resultRows(-1).build());
             }
 
             return queryMetrics.entrySet().stream();
-        }).collect(Collectors.toMap(
-                Map.Entry::getKey,
-                Map.Entry::getValue,
-                (o1, o2) -> {
-                    if (queryId.equals(o1.getClientName())) {
-                        return o1;
-                    }
+        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (o1, o2) -> {
+            if (queryId.equals(o1.getClientName())) {
+                return o1;
+            }
 
-                    if (queryId.equals(o2.getClientName())) {
-                        return o2;
-                    }
+            if (queryId.equals(o2.getClientName())) {
+                return o2;
+            }
 
-                    o1.setReadBytes(o2.getReadBytes() + o1.getReadBytes());
-                    o1.setReadRows(o2.getReadRows() + o1.getReadRows());
-                    o1.setResultRows(o2.getResultRows() + o1.getResultRows());
-                    return o1;
-                }
-        ));
+            o1.setReadBytes(o2.getReadBytes() + o1.getReadBytes());
+            o1.setReadRows(o2.getReadRows() + o1.getReadRows());
+            o1.setResultRows(o2.getResultRows() + o1.getResultRows());
+            return o1;
+        }));
 
         if (queryMetricMap.containsKey(queryId)) {
             return exceptionQueryMetric();
         }
 
-        Optional<String> lastQueryIdOptional = queryMetricMap.keySet().stream().filter(q -> !queryId.equals(q)).max(Comparator.comparing(String::toString));
+        Optional<String> lastQueryIdOptional = queryMetricMap.keySet().stream().filter(q -> !queryId.equals(q))
+                .max(Comparator.comparing(String::toString));
 
         if (!lastQueryIdOptional.isPresent()) {
             return exceptionQueryMetric();
         }
 
         String lastQueryId = lastQueryIdOptional.get();
-        return ImmutableMap.of(QueryMetrics.TOTAL_SCAN_COUNT, queryMetricMap.get(lastQueryId).getReadRows(), QueryMetrics.TOTAL_SCAN_BYTES, queryMetricMap.get(lastQueryId).getReadBytes(),
+        return ImmutableMap.of(QueryMetrics.TOTAL_SCAN_COUNT, queryMetricMap.get(lastQueryId).getReadRows(),
+                QueryMetrics.TOTAL_SCAN_BYTES, queryMetricMap.get(lastQueryId).getReadBytes(),
                 QueryMetrics.SOURCE_RESULT_COUNT, queryMetricMap.get(lastQueryId).getResultRows());
     }
 
-    public Map<String, ClickHouseSystemQuery.QueryMetric> getQueryMetric(Set<String> replicas, String sql, boolean needFlush) throws SQLException {
+    public Map<String, ClickHouseSystemQuery.QueryMetric> getQueryMetric(Set<String> replicas, String sql,
+            boolean needFlush) throws SQLException {
         Map<String, ClickHouseSystemQuery.QueryMetric> queryMetrics = new HashMap<>(3);
         for (String replica : replicas) {
             try (ClickHouse clickHouse = new ClickHouse(SecondStorageNodeHelper.resolve(replica))) {
@@ -151,7 +151,8 @@ public class ClickHouseQueryOperator implements QueryOperator {
                     clickHouse.apply("SYSTEM FLUSH LOGS");
                 }
 
-                List<ClickHouseSystemQuery.QueryMetric> result = clickHouse.query(sql, ClickHouseSystemQuery.QUERY_METRIC_MAPPER);
+                List<ClickHouseSystemQuery.QueryMetric> result = clickHouse.query(sql,
+                        ClickHouseSystemQuery.QUERY_METRIC_MAPPER);
 
                 for (ClickHouseSystemQuery.QueryMetric queryMetric : result) {
                     queryMetrics.put(queryMetric.getClientName(), queryMetric);
@@ -170,10 +171,8 @@ public class ClickHouseQueryOperator implements QueryOperator {
     public void modifyColumnByCardinality(String database, String destTableName, Set<Integer> secondaryIndex) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         List<NodeGroup> nodeGroups = SecondStorageUtil.listNodeGroup(config, project);
-        Set<String> nodes = nodeGroups.stream()
-                .flatMap(x -> x.getNodeNames().stream())
-                .filter(SecondStorageQueryRouteUtil::getNodeStatus)
-                .collect(Collectors.toSet());
+        Set<String> nodes = nodeGroups.stream().flatMap(x -> x.getNodeNames().stream())
+                .filter(SecondStorageQueryRouteUtil::getNodeStatus).collect(Collectors.toSet());
         String maxRowsNode = getMaxRowsNode(nodes, database, destTableName);
         if (maxRowsNode.isEmpty())
             return;
@@ -181,7 +180,8 @@ public class ClickHouseQueryOperator implements QueryOperator {
         ProjectInstance projectInstance = NProjectManager.getInstance(config).getProject(project);
         val tableColumns = getFilterDescTable(maxRowsNode, database, destTableName, projectInstance.getConfig());
         val modifyColumns = tableColumns.stream()
-                .filter(col -> !secondaryIndex.contains(Integer.valueOf(ColumnMapping.secondStorageColumnToKapColumn(col.getColumn()))))
+                .filter(col -> !secondaryIndex
+                        .contains(Integer.valueOf(ColumnMapping.secondStorageColumnToKapColumn(col.getColumn()))))
                 .collect(Collectors.toList());
         if (CollectionUtils.isEmpty(modifyColumns))
             return;
@@ -189,7 +189,8 @@ public class ClickHouseQueryOperator implements QueryOperator {
         for (String node : nodes) {
             try (ClickHouse clickHouse = new ClickHouse(SecondStorageNodeHelper.resolve(node))) {
                 modifyColumns.stream().forEach(c -> {
-                    String targetType = NULLABLE_STRING.equals(c.getDatatype()) ? LOW_CARDINALITY_STRING : NULLABLE_STRING;
+                    String targetType = NULLABLE_STRING.equals(c.getDatatype()) ? LOW_CARDINALITY_STRING
+                            : NULLABLE_STRING;
                     modifyColumn(clickHouse, database, destTableName, c.getColumn(), targetType);
                 });
             } catch (Exception sqlException) {
@@ -201,10 +202,8 @@ public class ClickHouseQueryOperator implements QueryOperator {
     public void modifyColumnByCardinality(String database, String destTableName, String column, String datatype) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         List<NodeGroup> nodeGroups = SecondStorageUtil.listNodeGroup(config, project);
-        Set<String> nodes = nodeGroups.stream()
-                .flatMap(x -> x.getNodeNames().stream())
-                .filter(SecondStorageQueryRouteUtil::getNodeStatus)
-                .collect(Collectors.toSet());
+        Set<String> nodes = nodeGroups.stream().flatMap(x -> x.getNodeNames().stream())
+                .filter(SecondStorageQueryRouteUtil::getNodeStatus).collect(Collectors.toSet());
 
         for (String node : nodes) {
             try (ClickHouse clickHouse = new ClickHouse(SecondStorageNodeHelper.resolve(node))) {
@@ -220,7 +219,10 @@ public class ClickHouseQueryOperator implements QueryOperator {
         long tableRows = 0L;
         for (String node : nodes) {
             try (ClickHouse clickHouse = new ClickHouse(SecondStorageNodeHelper.resolve(node))) {
-                int existCode = clickHouse.query(new ExistsTable(TableIdentifier.table(database, destTableName)).toSql(), ExistsQueryParser.EXISTS).get(0);
+                int existCode = clickHouse
+                        .query(new ExistsTable(TableIdentifier.table(database, destTableName)).toSql(),
+                                ExistsQueryParser.EXISTS)
+                        .get(0);
                 if (existCode == 0)
                     continue;
 
@@ -246,18 +248,24 @@ public class ClickHouseQueryOperator implements QueryOperator {
         return nodeName;
     }
 
-    private List<ClickHouseSystemQuery.DescTable> getFilterDescTable(String node, String database, String destTableName, KylinConfig config) {
+    private List<ClickHouseSystemQuery.DescTable> getFilterDescTable(String node, String database, String destTableName,
+            KylinConfig config) {
         try (ClickHouse clickHouse = new ClickHouse(SecondStorageNodeHelper.resolve(node))) {
-            val columnTypeMap = clickHouse.query(new Desc(TableIdentifier.table(database, destTableName)).toSql(), DescQueryParser.Desc)
-                    .stream().filter(c -> NULLABLE_STRING.equals(c.getDatatype()) || LOW_CARDINALITY_STRING.equals(c.getDatatype()))
+            val columnTypeMap = clickHouse
+                    .query(new Desc(TableIdentifier.table(database, destTableName)).toSql(), DescQueryParser.Desc)
+                    .stream().filter(c -> NULLABLE_STRING.equals(c.getDatatype())
+                            || LOW_CARDINALITY_STRING.equals(c.getDatatype()))
                     .collect(Collectors.toList());
 
-            Map<String, Long> columnCardinalities = selectCardinality(clickHouse, database, destTableName, columnTypeMap).get(0);
+            Map<String, Long> columnCardinalities = selectCardinality(clickHouse, database, destTableName,
+                    columnTypeMap).get(0);
             long lowCardinalityNumber = config.getSecondStorageLowCardinalityNumber();
             long highCardinalityNumber = config.getSecondStorageHighCardinalityNumber();
             return columnTypeMap.stream()
-                    .filter(c -> (NULLABLE_STRING.equals(c.getDatatype()) && columnCardinalities.get(c.getColumn()) < lowCardinalityNumber)
-                            || (LOW_CARDINALITY_STRING.equals(c.getDatatype()) && columnCardinalities.get(c.getColumn()) > highCardinalityNumber))
+                    .filter(c -> (NULLABLE_STRING.equals(c.getDatatype())
+                            && columnCardinalities.get(c.getColumn()) < lowCardinalityNumber)
+                            || (LOW_CARDINALITY_STRING.equals(c.getDatatype())
+                                    && columnCardinalities.get(c.getColumn()) > highCardinalityNumber))
                     .collect(Collectors.toList());
         } catch (SQLException sqlException) {
             ExceptionUtils.rethrow(sqlException);
@@ -266,16 +274,15 @@ public class ClickHouseQueryOperator implements QueryOperator {
     }
 
     private List<Map<String, Long>> selectCardinality(ClickHouse clickHouse, String database, String table,
-                                                      List<ClickHouseSystemQuery.DescTable> columnTypeMap) throws SQLException {
+            List<ClickHouseSystemQuery.DescTable> columnTypeMap) throws SQLException {
         final Select select = new Select(TableIdentifier.table(database, table));
-        columnTypeMap.forEach(column ->
-            select.column(ColumnWithAlias.builder().expr("uniqCombined(`" + column.getColumn() + "`)").alias(column.getColumn()).build())
-        );
+        columnTypeMap.forEach(column -> select.column(ColumnWithAlias.builder()
+                .expr("uniqCombined(`" + column.getColumn() + "`)").alias(column.getColumn()).build()));
         return clickHouse.query(select.toSql(), rs -> {
             Map<String, Long> columnCardinality = Maps.newHashMap();
             for (int i = 0; i < columnTypeMap.size(); i++) {
                 try {
-                    columnCardinality.put(columnTypeMap.get(i).getColumn(), rs.getLong(i+1));
+                    columnCardinality.put(columnTypeMap.get(i).getColumn(), rs.getLong(i + 1));
                 } catch (SQLException e) {
                     return ExceptionUtils.rethrow(e);
                 }
@@ -290,7 +297,7 @@ public class ClickHouseQueryOperator implements QueryOperator {
                     new AlterTable.ModifyColumn(column, datatype)).toSql(render);
             clickHouse.apply(alterTable);
         } catch (SQLException e) {
-             ExceptionUtils.rethrow(e);
+            ExceptionUtils.rethrow(e);
         }
     }
 }

@@ -159,7 +159,6 @@ public class SecondStorageService extends BasicService implements SecondStorageU
     @Qualifier("modelService")
     private ModelService modelService;
 
-
     @Override
     @Transaction(project = 0)
     public String updateIndex(final String project, final String modelId) {
@@ -186,10 +185,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
 
         tableFlowManager.get().get(modelId).map(tf -> {
             // clean unused table_data, maybe index is deleted
-            List<Long> deleteLayouts = tf.getTableDataList().stream()
-                    .map(TableData::getLayoutID)
-                    .filter(id -> !allBaseLayout.contains(id))
-                    .collect(Collectors.toList());
+            List<Long> deleteLayouts = tf.getTableDataList().stream().map(TableData::getLayoutID)
+                    .filter(id -> !allBaseLayout.contains(id)).collect(Collectors.toList());
             needDeleteLayoutIds.addAll(deleteLayouts);
             return tf;
         });
@@ -213,10 +210,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
 
         tableFlowManager.get().get(modelId).map(tf -> {
             // clean unused table_data, maybe index is deleted
-            List<Long> deleteLayouts = tf.getTableDataList().stream()
-                    .map(TableData::getLayoutID)
-                    .filter(id -> !allBaseLayout.contains(id))
-                    .collect(Collectors.toList());
+            List<Long> deleteLayouts = tf.getTableDataList().stream().map(TableData::getLayoutID)
+                    .filter(id -> !allBaseLayout.contains(id)).collect(Collectors.toList());
 
             tf = tf.update(t -> t.cleanTableData(tableData -> deleteLayouts.contains(tableData.getLayoutID())));
             return tf;
@@ -367,7 +362,7 @@ public class SecondStorageService extends BasicService implements SecondStorageU
             return jobId;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
     }
-    
+
     private void deleteLayoutChTable(String project, String modelId, long layoutId) {
         KylinConfig config = getConfig();
         String database = NameUtil.getDatabase(config, project);
@@ -424,17 +419,14 @@ public class SecondStorageService extends BasicService implements SecondStorageU
             projectLoadResponse.getLoads().add(projectRecoveryResponse);
             val validModels = allModelAlias.stream()
                     .map(modelName -> modelManager.getDataModelDescByAlias(modelName).getUuid())
-                    .filter(modelId -> SecondStorageUtil.isModelEnable(project, modelId))
-                    .filter(modelId -> {
+                    .filter(modelId -> SecondStorageUtil.isModelEnable(project, modelId)).filter(modelId -> {
                         val jobs = execManager.listExecByModelAndStatus(modelId, ExecutableState::isRunning);
                         if (!jobs.isEmpty()) {
                             failedModels.add(modelManager.getDataModelDesc(modelId).getAlias());
                         }
                         val dataflow = dataflowManager.getDataflow(modelId);
                         return jobs.isEmpty() && !dataflow.getSegments().isEmpty();
-                    })
-                    .map(modelId -> modelManager.getDataModelDesc(modelId).getAlias())
-                    .collect(Collectors.toList());
+                    }).map(modelId -> modelManager.getDataModelDesc(modelId).getAlias()).collect(Collectors.toList());
             for (val modelName : validModels) {
                 try {
                     List<JobInfoResponse.JobInfo> jobs = this.importSingleModel(project, modelName);
@@ -459,13 +451,14 @@ public class SecondStorageService extends BasicService implements SecondStorageU
                 "model %s doesn't enable tiered storage.", model);
 
         val dataflowManager = NDataflowManager.getInstance(config, project);
-        val segIds = dataflowManager.getDataflow(model).getQueryableSegments().stream()
-                .map(NDataSegment::getId).collect(Collectors.toList());
-        return modelService.exportSegmentToSecondStorage(project, model, segIds.toArray(new String[]{}));
+        val segIds = dataflowManager.getDataflow(model).getQueryableSegments().stream().map(NDataSegment::getId)
+                .collect(Collectors.toList());
+        return modelService.exportSegmentToSecondStorage(project, model, segIds.toArray(new String[] {}));
     }
 
     @Transaction(project = 0)
-    public Optional<JobInfoResponse.JobInfo> changeModelSecondStorageState(String project, String modelId, boolean enabled) {
+    public Optional<JobInfoResponse.JobInfo> changeModelSecondStorageState(String project, String modelId,
+            boolean enabled) {
         if (!KylinConfig.getInstanceFromEnv().isUTEnv())
             aclEvaluate.checkProjectAdminPermission(project);
         if (!SecondStorageUtil.isProjectEnableWithoutCheckKylinInfo(project)) {
@@ -487,13 +480,15 @@ public class SecondStorageService extends BasicService implements SecondStorageU
     }
 
     @Transaction(project = 0)
-    public Optional<JobInfoResponse.JobInfo> changeProjectSecondStorageState(String project, List<String> pairs, boolean enable) {
+    public Optional<JobInfoResponse.JobInfo> changeProjectSecondStorageState(String project, List<String> pairs,
+            boolean enable) {
         if (!KylinConfig.getInstanceFromEnv().isUTEnv())
             aclEvaluate.checkProjectAdminPermission(project);
         JobInfoResponse.JobInfo jobInfo = null;
         if (enable) {
             if (!new HashSet<>(listAvailablePairs()).containsAll(pairs)) {
-                throw new KylinException(SECOND_STORAGE_NODE_NOT_AVAILABLE, MsgPicker.getMsg().getSecondStorageNodeNotAvailable());
+                throw new KylinException(SECOND_STORAGE_NODE_NOT_AVAILABLE,
+                        MsgPicker.getMsg().getSecondStorageNodeNotAvailable());
             }
             if (!SecondStorageUtil.isProjectEnable(project)) {
                 enableProjectSecondStorage(project, pairs);
@@ -520,7 +515,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         Map<String, List<NodeData>> shards = convertNodeGroupToPairs(nodeGroups);
 
         if (shards.size() == shardNames.size()) {
-            throw new KylinException(INVALID_PARAMETER, String.format(Locale.ROOT, "Second storage shard names contains all %s", shardNames));
+            throw new KylinException(INVALID_PARAMETER,
+                    String.format(Locale.ROOT, "Second storage shard names contains all %s", shardNames));
         }
 
         boolean isLocked = LockTypeEnum.locked(LockTypeEnum.LOAD.name(), SecondStorageUtil.getProjectLocks(project));
@@ -532,7 +528,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         try {
             return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
                 List<String> requiredDeleteNodeNames = shardNames.stream()
-                        .flatMap(shardName -> SecondStorageNodeHelper.getPair(shardName).stream()).collect(Collectors.toList());
+                        .flatMap(shardName -> SecondStorageNodeHelper.getPair(shardName).stream())
+                        .collect(Collectors.toList());
 
                 val nodeManager = SecondStorageUtil.nodeGroupManager(getConfig(), project);
                 Preconditions.checkState(nodeManager.isPresent());
@@ -558,7 +555,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
             }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
         } finally {
             if (!isLocked) {
-                lockOperate(project, Collections.singletonList(LockTypeEnum.LOAD.name()), LockOperateTypeEnum.UNLOCK.name());
+                lockOperate(project, Collections.singletonList(LockTypeEnum.LOAD.name()),
+                        LockOperateTypeEnum.UNLOCK.name());
             }
         }
     }
@@ -582,8 +580,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         }
         SecondStorageUtil.validateProjectLock(project, Arrays.asList(LockTypeEnum.LOAD.name()));
         int replicaNum = SecondStorageConfig.getInstanceFromEnv().getReplicaNum();
-        Map<Integer, List<String>> replicaNodes = SecondStorageNodeHelper
-                .separateReplicaGroup(replicaNum, pairs.toArray(new String[0]));
+        Map<Integer, List<String>> replicaNodes = SecondStorageNodeHelper.separateReplicaGroup(replicaNum,
+                pairs.toArray(new String[0]));
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             val internalManager = SecondStorageUtil.nodeGroupManager(KylinConfig.getInstanceFromEnv(), project);
             Preconditions.checkState(internalManager.isPresent());
@@ -630,7 +628,7 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         val segments = dataflowManager.getDataflow(model).getSegments().stream().map(NDataSegment::getId)
                 .collect(Collectors.toSet());
         if (!SecondStorageUtil.isModelEnable(project, model) || segments.size() <= 0) {
-          return null;
+            return null;
         }
         return triggerSegmentsClean(project, model, segments);
     }
@@ -684,13 +682,14 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         Preconditions.checkState(SecondStorageUtil.isModelEnable(project, modelId));
 
         val jobHandler = new SecondStorageIndexCleanJobHandler();
-        final JobParam param = SecondStorageJobParamUtil.layoutCleanParam(project, modelId, getUsername(), needDeleteLayoutIds, Collections.emptySet());
+        final JobParam param = SecondStorageJobParamUtil.layoutCleanParam(project, modelId, getUsername(),
+                needDeleteLayoutIds, Collections.emptySet());
         return getManager(JobManager.class, project).addJob(param, jobHandler);
     }
 
     @Transaction(project = 0)
     public String triggerRefreshSecondaryIndex(String project, String modelId, LayoutEntity layout,
-                                               Set<Integer> newIndexes, Set<Integer> deletedIndexes) {
+            Set<Integer> newIndexes, Set<Integer> deletedIndexes) {
         Preconditions.checkState(SecondStorageUtil.isModelEnable(project, modelId));
         SecondStorageUtil.validateProjectLock(project, Collections.singletonList(LockTypeEnum.LOAD.name()));
         val jobHandler = new SecondStorageRefreshSecondaryIndexJobHandler();
@@ -701,28 +700,27 @@ public class SecondStorageService extends BasicService implements SecondStorageU
 
     public List<ProjectLock> lockList(String project) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        List<ProjectInstance> projectInstances = NProjectManager.getInstance(config)
-                .listAllProjects().stream()
+        List<ProjectInstance> projectInstances = NProjectManager.getInstance(config).listAllProjects().stream()
                 .filter(projectInstance -> {
                     return project == null || projectInstance.getName().equals(project);
-                })
-                .collect(Collectors.toList());
-        return projectInstances.stream()
-                .filter(projectInstance -> {
-                    Manager<NodeGroup> nodeGroupManager = SecondStorage.nodeGroupManager(config, projectInstance.getName());
-                    return !CollectionUtils.isEmpty(nodeGroupManager.listAll());
-                }).map(projectInstance -> {
-                    Manager<NodeGroup> nodeGroupManager = SecondStorage.nodeGroupManager(config, projectInstance.getName());
-                    List<String> lockTypes = nodeGroupManager.listAll().get(0).getLockTypes();
-                    return new ProjectLock(projectInstance.getName(), lockTypes);
                 }).collect(Collectors.toList());
+        return projectInstances.stream().filter(projectInstance -> {
+            Manager<NodeGroup> nodeGroupManager = SecondStorage.nodeGroupManager(config, projectInstance.getName());
+            return !CollectionUtils.isEmpty(nodeGroupManager.listAll());
+        }).map(projectInstance -> {
+            Manager<NodeGroup> nodeGroupManager = SecondStorage.nodeGroupManager(config, projectInstance.getName());
+            List<String> lockTypes = nodeGroupManager.listAll().get(0).getLockTypes();
+            return new ProjectLock(projectInstance.getName(), lockTypes);
+        }).collect(Collectors.toList());
     }
 
     @Transaction(project = 0)
     public void lockOperate(String project, List<String> lockTypes, String operateType) {
-        if (!KylinConfig.getInstanceFromEnv().isUTEnv()) aclEvaluate.checkProjectAdminPermission(project);
+        if (!KylinConfig.getInstanceFromEnv().isUTEnv())
+            aclEvaluate.checkProjectAdminPermission(project);
         if (!SecondStorageUtil.isProjectEnable(project)) {
-            throw new KylinException(SECOND_STORAGE_PROJECT_STATUS_ERROR, String.format(Locale.ROOT, "'%s' not enable second storage.", project));
+            throw new KylinException(SECOND_STORAGE_PROJECT_STATUS_ERROR,
+                    String.format(Locale.ROOT, "'%s' not enable second storage.", project));
         }
         LockTypeEnum.check(lockTypes);
         LockOperateTypeEnum.check(operateType);
@@ -731,13 +729,15 @@ public class SecondStorageService extends BasicService implements SecondStorageU
                     project, "last_modified", true);
             List<ExecutableResponse> executableResponses = jobInfoService.listJobs(jobFilter);
             executableResponses.stream().forEach(job -> {
-                List<ExecutableStepResponse> executableStepResponses = jobInfoService.getJobDetail(project, job.getId());
+                List<ExecutableStepResponse> executableStepResponses = jobInfoService.getJobDetail(project,
+                        job.getId());
                 executableStepResponses.stream().forEach(step -> {
-                    if ((SecondStorageConstants.SKIP_STEP_RUNNING.contains(step.getName()) && step.getStatus() == JobStatusEnum.RUNNING)
+                    if ((SecondStorageConstants.SKIP_STEP_RUNNING.contains(step.getName())
+                            && step.getStatus() == JobStatusEnum.RUNNING)
                             || SecondStorageConstants.SKIP_JOB_RUNNING.contains(step.getName())) {
-                        throw new KylinException(SECOND_STORAGE_PROJECT_LOCK_FAIL,
-                                String.format(Locale.ROOT, "project='%s' has job=%s that contains step operating clickhouse, so can not be locked",
-                                        project, job.getId()));
+                        throw new KylinException(SECOND_STORAGE_PROJECT_LOCK_FAIL, String.format(Locale.ROOT,
+                                "project='%s' has job=%s that contains step operating clickhouse, so can not be locked",
+                                project, job.getId()));
                     }
                 });
             });
@@ -746,17 +746,18 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         Optional<Manager<NodeGroup>> optionalNodeGroupManager = SecondStorageUtil.nodeGroupManager(config, project);
         if (!optionalNodeGroupManager.isPresent()) {
-            throw new KylinException(SECOND_STORAGE_NODE_NOT_AVAILABLE, String.format(Locale.ROOT, "'%s' second storage node not available.", project));
+            throw new KylinException(SECOND_STORAGE_NODE_NOT_AVAILABLE,
+                    String.format(Locale.ROOT, "'%s' second storage node not available.", project));
         }
         Manager<NodeGroup> nodeGroupManager = optionalNodeGroupManager.get();
         List<NodeGroup> nodeGroups = nodeGroupManager.listAll();
 
         val dataModelManager = NDataModelManager.getInstance(config, project);
         List<NDataModel> lockedModels = dataModelManager.listAllModels().stream()
-                .filter(model -> SecondStorageLockUtils.containsKey(model.getId()))
-                .collect(Collectors.toList());
+                .filter(model -> SecondStorageLockUtils.containsKey(model.getId())).collect(Collectors.toList());
         if (!CollectionUtils.isEmpty(lockedModels))
-            throw new KylinException(SECOND_STORAGE_PROJECT_LOCKING, String.format(Locale.ROOT, MsgPicker.getMsg().getProjectLocked()));
+            throw new KylinException(SECOND_STORAGE_PROJECT_LOCKING,
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getProjectLocked()));
 
         if (LockOperateTypeEnum.LOCK.name().equals(operateType)) {
             for (NodeGroup nodeGroup : nodeGroups) {
@@ -784,7 +785,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         properties.put(SecondStorageConstants.PROJECT, project);
         DefaultSecondStorageProperties defaultSecondStorageProperties = new DefaultSecondStorageProperties(properties);
 
-        MetadataOperator metadataOperator = SecondStorageFactoryUtils.createMetadataOperator(defaultSecondStorageProperties);
+        MetadataOperator metadataOperator = SecondStorageFactoryUtils
+                .createMetadataOperator(defaultSecondStorageProperties);
         TableSyncResponse response = metadataOperator.tableSync();
 
         if (computedSize) {
@@ -802,7 +804,7 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         NDataflowManager dataflowManager = getManager(NDataflowManager.class, project);
         SecondStorageProjectModelSegment projectModelSegment = new SecondStorageProjectModelSegment();
         Map<String, SecondStorageModelSegment> modelSegmentMap = new HashMap<>();
-        for(TableFlow tableFlow : tableFlows) {
+        for (TableFlow tableFlow : tableFlows) {
             String uuid = tableFlow.getUuid();
             Map<String, SecondStorageSegment> segmentRangeMap = new HashMap<>();
             NDataflow dataflow = dataflowManager.getDataflow(tableFlow.getUuid());
@@ -818,7 +820,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
             if (model.isIncrementBuildOnExpertMode()) {
                 dateFormat = model.getPartitionDesc().getPartitionDateFormat();
             }
-            SecondStorageModelSegment modelSegment = new SecondStorageModelSegment(tableFlow.getUuid(), dateFormat, segmentRangeMap);
+            SecondStorageModelSegment modelSegment = new SecondStorageModelSegment(tableFlow.getUuid(), dateFormat,
+                    segmentRangeMap);
             modelSegmentMap.put(uuid, modelSegment);
         }
         projectModelSegment.setProject(project);
@@ -828,20 +831,21 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         properties.put(SecondStorageConstants.PROJECT_MODEL_SEGMENT_PARAM, projectModelSegment);
 
         DefaultSecondStorageProperties defaultSecondStorageProperties = new DefaultSecondStorageProperties(properties);
-        MetadataOperator metadataOperator = SecondStorageFactoryUtils.createMetadataOperator(defaultSecondStorageProperties);
+        MetadataOperator metadataOperator = SecondStorageFactoryUtils
+                .createMetadataOperator(defaultSecondStorageProperties);
         metadataOperator.sizeInNode();
     }
 
     private Map<String, List<NodeData>> convertNodeGroupToPairs(List<NodeGroup> nodeGroups) {
-        return convertNodesToPairs(nodeGroups.stream()
-                .flatMap(group -> group.getNodeNames().stream())
-                .collect(Collectors.toList()));
+        return convertNodesToPairs(
+                nodeGroups.stream().flatMap(group -> group.getNodeNames().stream()).collect(Collectors.toList()));
     }
 
     private Map<String, List<NodeData>> convertNodesToPairs(List<String> nodes) {
         Map<String, List<NodeData>> result = Maps.newHashMap();
-        nodes.stream().sorted().forEach(node ->
-                result.computeIfAbsent(SecondStorageNodeHelper.getPairByNode(node), k -> new ArrayList<>())
+        nodes.stream().sorted()
+                .forEach(node -> result
+                        .computeIfAbsent(SecondStorageNodeHelper.getPairByNode(node), k -> new ArrayList<>())
                         .add(new NodeData(SecondStorageNodeHelper.getNode(node))));
         return result;
     }
@@ -860,7 +864,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
             projectNodes.add(new ProjectNode(project, true, convertNodeGroupToPairs(nodeGroups)));
         } else {
             Set<String> projectNodeSet = new HashSet<>();
-            List<ProjectInstance> projectInstances = new ArrayList<>(NProjectManager.getInstance(config).listAllProjects());
+            List<ProjectInstance> projectInstances = new ArrayList<>(
+                    NProjectManager.getInstance(config).listAllProjects());
             projectNodes = projectInstances.stream().map(projectInstance -> {
                 Manager<NodeGroup> nodeGroupManager = SecondStorage.nodeGroupManager(config, projectInstance.getName());
                 List<NodeGroup> nodeGroups = nodeGroupManager.listAll();
@@ -871,8 +876,7 @@ public class SecondStorageService extends BasicService implements SecondStorageU
                 return new ProjectNode(projectInstance.getName(), true, convertNodeGroupToPairs(nodeGroups));
             }).collect(Collectors.toList());
 
-            List<String> dataList = allNodes.stream()
-                    .filter(node -> !projectNodeSet.contains(node))
+            List<String> dataList = allNodes.stream().filter(node -> !projectNodeSet.contains(node))
                     .collect(Collectors.toList());
 
             projectNodes.add(new ProjectNode(null, false, convertNodesToPairs(dataList)));
@@ -886,8 +890,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
             Manager<NodeGroup> nodeGroupManager = SecondStorage.nodeGroupManager(config, projectInstance.getName());
             return nodeGroupManager.listAll().stream().flatMap(nodeGroup -> nodeGroup.getNodeNames().stream());
         }).collect(Collectors.toSet());
-        List<String> allNodes = SecondStorageNodeHelper.getAllNames().stream()
-                .filter(node -> !usedNodes.contains(node)).collect(Collectors.toList());
+        List<String> allNodes = SecondStorageNodeHelper.getAllNames().stream().filter(node -> !usedNodes.contains(node))
+                .collect(Collectors.toList());
         return convertNodesToPairs(allNodes);
     }
 
@@ -919,8 +923,9 @@ public class SecondStorageService extends BasicService implements SecondStorageU
     public List<String> getAllSecondStorageModel(String project) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         val modelManager = NDataModelManager.getInstance(config, project);
-        return modelManager.listAllModels().stream().filter(model -> SecondStorageUtil.isModelEnable(project, model.getId()))
-                .map(NDataModel::getAlias).collect(Collectors.toList());
+        return modelManager.listAllModels().stream()
+                .filter(model -> SecondStorageUtil.isModelEnable(project, model.getId())).map(NDataModel::getAlias)
+                .collect(Collectors.toList());
     }
 
     public List<String> validateProjectDisable(String project) {
@@ -943,7 +948,7 @@ public class SecondStorageService extends BasicService implements SecondStorageU
     }
 
     private List<AbstractExecutable> getJobs(String project, String modelId, Set<ExecutableState> filterState,
-                                             Set<JobTypeEnum> filterJobs) {
+            Set<JobTypeEnum> filterJobs) {
         val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         return executableManager.getJobs().stream().map(executableManager::getJob)
                 .filter(job -> StringUtils.isEmpty(modelId) || modelId.equals(job.getTargetSubject()))
@@ -952,7 +957,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
     }
 
     public List<String> getAllSecondStorageJobs() {
-        List<ProjectInstance> projects = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).listAllProjects();
+        List<ProjectInstance> projects = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
+                .listAllProjects();
         for (ProjectInstance project : projects) {
             if (SecondStorageUtil.isProjectEnable(project.getName())) {
                 List<String> allJobs = getProjectSecondStorageJobs(project.getName());
@@ -969,7 +975,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
             throw new KylinException(SECOND_STORAGE_PROJECT_STATUS_ERROR,
                     String.format(Locale.ROOT, MsgPicker.getMsg().getSecondStorageProjectEnabled(), project));
         }
-        return getRelationJobsWithoutFinish(project, null).stream().map(AbstractExecutable::getId).collect(Collectors.toList());
+        return getRelationJobsWithoutFinish(project, null).stream().map(AbstractExecutable::getId)
+                .collect(Collectors.toList());
     }
 
     public void isProjectAdmin(String project) {
@@ -1184,12 +1191,15 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         isProjectAdmin(project);
         logger.info("Start to modify second storage low cardinality on model {}.", model);
         if (!SecondStorageUtil.isProjectEnable(project) || !SecondStorageUtil.isModelEnable(project, model)) {
-            throw new KylinException(INVALID_PARAMETER, String.format("The model does not have tiered storage enabled on project %s.", project));
+            throw new KylinException(INVALID_PARAMETER,
+                    String.format("The model does not have tiered storage enabled on project %s.", project));
         }
-        SecondStorageUtil.validateProjectLock(project, Arrays.asList(LockTypeEnum.LOAD.name(), LockTypeEnum.ALL.name()));
+        SecondStorageUtil.validateProjectLock(project,
+                Arrays.asList(LockTypeEnum.LOAD.name(), LockTypeEnum.ALL.name()));
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         val df = NDataflowManager.getInstance(config, project).getDataflow(model);
-        SegmentRange<Long> range = new SegmentRange.TimePartitionedSegmentRange(df.getSegments().getTSStart(), df.getSegments().getTSEnd());
+        SegmentRange<Long> range = new SegmentRange.TimePartitionedSegmentRange(df.getSegments().getTSStart(),
+                df.getSegments().getTSEnd());
         SecondStorageLockUtils.acquireLock(model, range).lock();
         QueryOperator queryOperator = SecondStorageFactoryUtils.createQueryMetricOperator(project);
         try {
@@ -1202,13 +1212,16 @@ public class SecondStorageService extends BasicService implements SecondStorageU
                 }
             });
             if (StringUtils.isEmpty(colPrefix.get()))
-                throw new KylinException(INVALID_PARAMETER, String.format("There is no column %s in model %s", column, df.getModel().getAlias()));
+                throw new KylinException(INVALID_PARAMETER,
+                        String.format("There is no column %s in model %s", column, df.getModel().getAlias()));
 
             val tablePlanManager = SecondStorageUtil.tablePlanManager(config, project);
             TablePlan tablePlan = tablePlanManager.get().get(model).get();
             TableEntity tableEntity = tablePlan.getEntity(SecondStorageUtil.getBaseIndex(df).getId()).orElse(null);
-            if (tableEntity.getSecondaryIndexColumns().contains(Integer.valueOf(ColumnMapping.secondStorageColumnToKapColumn(colPrefix.get()))))
-                throw new KylinException(INVALID_PARAMETER, String.format("The column %s is Secondary Index Column.", column));
+            if (tableEntity.getSecondaryIndexColumns()
+                    .contains(Integer.valueOf(ColumnMapping.secondStorageColumnToKapColumn(colPrefix.get()))))
+                throw new KylinException(INVALID_PARAMETER,
+                        String.format("The column %s is Secondary Index Column.", column));
 
             val destTableName = NameUtil.getTable(df, layout.getId());
             queryOperator.modifyColumnByCardinality(database, destTableName, colPrefix.get(), datatype);

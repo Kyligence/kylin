@@ -53,6 +53,8 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.tool.util.JobMetadataWriter;
@@ -67,18 +69,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.val;
 
 public class AuditLogToolTest extends NLocalFileMetadataTestCase {
 
-    private final static String project = "calories";
-    private final static String jobId = "9462fee8-e6cd-4d18-a5fc-b598a3c5edb5";
-    private final static String AUDIT_LOG_SUFFIX = ".jsonl";
-    private final static String TEST_RESTORE_TABLE = "test_audit_log_restore";
-    private final static String DATA_DIR = "src/test/resources/ut_audit_log/";
+    private static final String project = "calories";
+    private static final String jobId = "9462fee8-e6cd-4d18-a5fc-b598a3c5edb5";
+    private static final String AUDIT_LOG_SUFFIX = ".jsonl";
+    private static final String TEST_RESTORE_TABLE = "test_audit_log_restore";
+    private static final String DATA_DIR = "src/test/resources/ut_audit_log/";
 
     private static final Option OPTION_START_TIME = OptionBuilder.getInstance().hasArg().withArgName("START_TIMESTAMP")
             .withDescription("Specify the start timestamp (sec) (optional)").isRequired(false).create("startTime");

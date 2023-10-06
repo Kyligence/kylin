@@ -27,11 +27,10 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.transaction.EventListenerRegistry;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.streaming.KafkaConfigManager;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.extern.slf4j.Slf4j;
 

@@ -246,8 +246,8 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
         UnitOfWork.doInTransactionWithRetry(() -> {
             manager.addJob(job);
             for (ExecutableState state : ExecutableState.values()) {
-                if (Arrays.asList(ExecutableState.PENDING, ExecutableState.RUNNING, ExecutableState.ERROR, ExecutableState.PAUSED)
-                        .contains(state)) {
+                if (Arrays.asList(ExecutableState.PENDING, ExecutableState.RUNNING, ExecutableState.ERROR,
+                        ExecutableState.PAUSED).contains(state)) {
                     manager.updateJobOutput(id, state, extraInfo, null, null);
                     Assert.assertTrue(
                             manager.getJob(job.getId()).getExtraInfo().containsKey(ExecutableConstants.YARN_APP_URL));
@@ -787,8 +787,8 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
         job.setProject(project);
         val start = "2015-01-01 00:00:00";
         val end = "2015-02-01 00:00:00";
-        job.setParam(NBatchConstants.P_DATA_RANGE_START, SegmentRange.dateToLong(start) + "");
-        job.setParam(NBatchConstants.P_DATA_RANGE_END, SegmentRange.dateToLong(end) + "");
+        job.setParam(NBatchConstants.P_DATA_RANGE_START, String.valueOf(SegmentRange.dateToLong(start)));
+        job.setParam(NBatchConstants.P_DATA_RANGE_END, String.valueOf(SegmentRange.dateToLong(end)));
 
         job.setTargetSubject("334671fd-e383-4fc9-b5c2-94fce832f77a");
         Assert.assertEquals("streaming_test", job.getTargetModelAlias());
@@ -801,7 +801,7 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals("batch", job.getTargetModelAlias());
 
         job.setTargetSubject("554671fd-e383-4fc9-b5c2-94fce832f77b");
-        Assert.assertEquals(null, job.getTargetModelAlias());
+        Assert.assertNull(job.getTargetModelAlias());
 
     }
 
@@ -861,8 +861,8 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
         String sampleLog = "";
         try (InputStream verboseMsgStream = manager.getStreamingOutputFromHDFS(jobId, Integer.MAX_VALUE)
                 .getVerboseMsgStream();
-             BufferedReader reader = new BufferedReader(
-                     new InputStreamReader(verboseMsgStream, Charset.defaultCharset()))) {
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(verboseMsgStream, Charset.defaultCharset()))) {
 
             String line;
             StringBuilder sampleData = new StringBuilder();
@@ -880,12 +880,13 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
 
     }
 
+    // why this is comment?
     /*
     @Test
     public void testCancelTaskAnfInterruptJobThread() {
         val scheduler = NDefaultScheduler.getInstance(DEFAULT_PROJECT);
         scheduler.init(new JobEngineConfig(getTestConfig()));
-
+    
         val job = new DefaultExecutable();
         job.setProject(DEFAULT_PROJECT);
         val executable1 = new SucceedDagTestExecutable();
@@ -899,16 +900,16 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
         job.addTask(executable3);
         job.setJobType(JobTypeEnum.INDEX_BUILD);
         manager.addJob(job);
-
+    
         manager.cancelJobSubTasks(ExecutableManager.toPO(job, DEFAULT_PROJECT));
-
+    
         JobContextUtil.getJobContext(getTestConfig());
         await().untilAsserted(() -> Assertions.assertEquals(ExecutableState.SUCCEED, executable1.getStatus()));
-
+    
         Assertions.assertNotNull(scheduler.getContext().getRunningJobThread(job));
         manager.cancelJob(ExecutableManager.toPO(job, DEFAULT_PROJECT), job.getId());
         Assertions.assertNotNull(scheduler.getContext().getRunningJobThread(job));
-
+    
         val env = getTestConfig().getDeployEnv();
         getTestConfig().setProperty("kylin.env", "PROD");
         manager.cancelJob(ExecutableManager.toPO(job, DEFAULT_PROJECT), job.getId());
@@ -916,12 +917,11 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
         getTestConfig().setProperty("kylin.env", env);
         scheduler.shutdown();
     }
-
      */
 
     @Test
     public void testCancelRemoteJob() {
-        val config = getTestConfig();
+        getTestConfig();
         val job = new DefaultExecutable();
         job.setProject(DEFAULT_PROJECT);
         val executable1 = new SucceedDagTestExecutable();

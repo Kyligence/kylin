@@ -1352,8 +1352,9 @@ public class TableService extends BasicService {
         if (KylinConfig.getInstanceFromEnv().useDynamicRoleCredentialInTable()) {
             SparderEnv.addCredential(roleCredentialInfo, SparderEnv.getSparkSession());
             EventBusFactory.getInstance()
-                    .postAsync(new AddCredentialToSparkBroadcastEventNotifier(roleCredentialInfo.getType(), roleCredentialInfo.getBucket(),
-                            roleCredentialInfo.getRole(), roleCredentialInfo.getEndpoint(), roleCredentialInfo.getRegion()));
+                    .postAsync(new AddCredentialToSparkBroadcastEventNotifier(roleCredentialInfo.getType(),
+                            roleCredentialInfo.getBucket(), roleCredentialInfo.getRole(),
+                            roleCredentialInfo.getEndpoint(), roleCredentialInfo.getRegion()));
         }
     }
 
@@ -1532,8 +1533,8 @@ public class TableService extends BasicService {
             if (stopJobs.isEmpty()) {
                 val execManager = getManager(ExecutableManager.class, projectName);
                 val jobInfoList = execManager.fetchJobsByTypesAndStates(projectName,
-                        Lists.newArrayList(SNAPSHOT_BUILD.name(), SNAPSHOT_REFRESH.name()), Lists.newArrayList(tableIdentity),
-                        Lists.newArrayList(ExecutableState.getFinalStates()));
+                        Lists.newArrayList(SNAPSHOT_BUILD.name(), SNAPSHOT_REFRESH.name()),
+                        Lists.newArrayList(tableIdentity), Lists.newArrayList(ExecutableState.getFinalStates()));
                 snapshotBuilt = !jobInfoList.isEmpty();
             }
 
@@ -1670,8 +1671,9 @@ public class TableService extends BasicService {
         }
 
         val dependencyGraph = SchemaUtil.dependencyGraph(project, tableIdentity);
-        Map<String, Set<Pair<NDataModel.Measure, NDataModel.Measure>>> suitableColumnTypeChangedMeasuresMap = getSuitableColumnTypeChangedMeasures(
-                dependencyGraph, project, originTableDesc, dataTypeDiff.entriesDiffering());
+        Map<String, Set<Pair<NDataModel.Measure, NDataModel.Measure>>> suitableColumnTypeChangedMeasuresMap //
+                = getSuitableColumnTypeChangedMeasures(dependencyGraph, project, originTableDesc,
+                        dataTypeDiff.entriesDiffering());
 
         BiFunction<Set<String>, Boolean, Map<String, AffectedModelContext>> toAffectedModels = (cols, isDelete) -> {
             Set<SchemaNode> affectedNodes = Sets.newHashSet();

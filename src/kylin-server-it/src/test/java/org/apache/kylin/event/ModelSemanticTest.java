@@ -269,10 +269,12 @@ public class ModelSemanticTest extends AbstractMVCIntegrationTestCase {
                 .perform(MockMvcRequestBuilders.put("/api/models/semantic").contentType(MediaType.APPLICATION_JSON)
                         .content(JsonUtil.writeValueAsString(getModelRequest()))
                         .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isInternalServerError()).andReturn().getResponse().getContentAsString();
+                .andExpect(MockMvcResultMatchers.status().isInternalServerError()).andReturn().getResponse()
+                .getContentAsString();
 
-        Assert.assertTrue(errorMessage.contains("The measure SUM_DEAL_AMOUNT is referenced by indexes or aggregate groups. "
-                + "Please go to the Data Asset - Model - Index page to view, delete referenced aggregate groups and indexes."));
+        Assert.assertTrue(
+                errorMessage.contains("The measure SUM_DEAL_AMOUNT is referenced by indexes or aggregate groups. "
+                        + "Please go to the Data Asset - Model - Index page to view, delete referenced aggregate groups and indexes."));
     }
 
     private ModelRequest getModelRequest() throws Exception {

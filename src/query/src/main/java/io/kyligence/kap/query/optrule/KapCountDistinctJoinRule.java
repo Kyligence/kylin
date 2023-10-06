@@ -31,14 +31,13 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.relnode.KapAggregateRel;
 import org.apache.kylin.query.relnode.KapJoinRel;
 import org.apache.kylin.query.relnode.KapProjectRel;
 import org.apache.kylin.query.relnode.KapRel;
 import org.apache.kylin.query.util.RuleUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 /**
  * agg-join  ->  agg(CD)-agg(other-agg)-join
@@ -46,13 +45,16 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
  */
 public class KapCountDistinctJoinRule extends RelOptRule {
 
-    public static final KapCountDistinctJoinRule INSTANCE_COUNT_DISTINCT_JOIN_ONESIDEAGG = new KapCountDistinctJoinRule(
-            operand(KapAggregateRel.class, operand(KapJoinRel.class, any())), RelFactories.LOGICAL_BUILDER,
-            "KapCountDistinctJoinRule:agg(contain-count-distinct)-join-oneSideAgg");
+    public static final KapCountDistinctJoinRule INSTANCE_COUNT_DISTINCT_JOIN_ONESIDEAGG //
+            = new KapCountDistinctJoinRule(operand(KapAggregateRel.class, operand(KapJoinRel.class, any())),
+                    RelFactories.LOGICAL_BUILDER,
+                    "KapCountDistinctJoinRule:agg(contain-count-distinct)-join-oneSideAgg");
 
-    public static final KapCountDistinctJoinRule INSTANCE_COUNT_DISTINCT_AGG_PROJECT_JOIN = new KapCountDistinctJoinRule(
-            operand(KapAggregateRel.class, operand(KapProjectRel.class, operand(KapJoinRel.class, any()))),
-            RelFactories.LOGICAL_BUILDER, "KapCountDistinctJoinRule:agg(contain-count-distinct)-agg-project-join");
+    public static final KapCountDistinctJoinRule INSTANCE_COUNT_DISTINCT_AGG_PROJECT_JOIN //
+            = new KapCountDistinctJoinRule(
+                    operand(KapAggregateRel.class, operand(KapProjectRel.class, operand(KapJoinRel.class, any()))),
+                    RelFactories.LOGICAL_BUILDER,
+                    "KapCountDistinctJoinRule:agg(contain-count-distinct)-agg-project-join");
 
     public KapCountDistinctJoinRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory,
             String description) {

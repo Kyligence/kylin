@@ -24,6 +24,9 @@ import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.base.Joiner;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -39,10 +42,6 @@ import org.apache.kylin.rest.service.CacheSignatureQuerySupporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import org.apache.kylin.guava30.shaded.common.base.Joiner;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.val;
@@ -192,7 +191,8 @@ public class QueryCacheSignatureUtil {
             String allTableTimesSignature = Joiner.on("_").join(allTableTimes);
             String allSnapshotTimesSignature = Joiner.on("_").join(allSnapshotTimes);
             String allSegmentTimesSignature = Joiner.on("_").join(allSegmentTimes);
-            return Joiner.on(";").join(allLayoutTimesSignature, allTableTimesSignature, allSnapshotTimesSignature, allSegmentTimesSignature);
+            return Joiner.on(";").join(allLayoutTimesSignature, allTableTimesSignature, allSnapshotTimesSignature,
+                    allSegmentTimesSignature);
         } catch (NullPointerException e) {
             logger.warn("NPE occurred because metadata changed during query.", e);
             return "";

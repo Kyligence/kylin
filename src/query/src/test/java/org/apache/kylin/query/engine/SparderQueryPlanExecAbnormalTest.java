@@ -17,6 +17,8 @@
  */
 package org.apache.kylin.query.engine;
 
+import java.sql.SQLException;
+
 import org.apache.calcite.rel.RelNode;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.ForceToTieredStorage;
@@ -34,8 +36,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import lombok.SneakyThrows;
-
-import java.sql.SQLException;
 
 public class SparderQueryPlanExecAbnormalTest {
 

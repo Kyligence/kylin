@@ -33,7 +33,8 @@ import org.apache.kylin.rest.delegate.JobStatisticsInvoker;
 
 public class ExecutableHandleUtils {
 
-    public static void recordDownJobStats(AbstractExecutable buildTask, NDataLayout[] addOrUpdateCuboids, String project) {
+    public static void recordDownJobStats(AbstractExecutable buildTask, NDataLayout[] addOrUpdateCuboids,
+            String project) {
         // make sure call this method in the last step, if 4th step is added, please modify the logic accordingly
         String model = buildTask.getTargetSubject();
         // get end time from current task instead of parent job，since parent job is in running state at this time

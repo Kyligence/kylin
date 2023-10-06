@@ -26,7 +26,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
+import javax.annotation.PostConstruct;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
@@ -35,6 +36,8 @@ import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,14 +51,10 @@ import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.Getter;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
-
-import javax.annotation.PostConstruct;
 
 /**
  * File hierarchy is

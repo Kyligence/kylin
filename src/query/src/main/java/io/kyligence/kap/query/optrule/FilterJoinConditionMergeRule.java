@@ -36,20 +36,18 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.query.relnode.KapFilterRel;
 import org.apache.kylin.query.relnode.KapJoinRel;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-
 
 public class FilterJoinConditionMergeRule extends RelOptRule {
 
     public static final FilterJoinConditionMergeRule INSTANCE = new FilterJoinConditionMergeRule(
-            operand(KapFilterRel.class, operand(KapJoinRel.class, RelOptRule.any())),
-            RelFactories.LOGICAL_BUILDER, "FilterJoinConditionMergeRule");
+            operand(KapFilterRel.class, operand(KapJoinRel.class, RelOptRule.any())), RelFactories.LOGICAL_BUILDER,
+            "FilterJoinConditionMergeRule");
 
     public FilterJoinConditionMergeRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory,
-                                        String description) {
+            String description) {
         super(operand, relBuilderFactory, description);
     }
 
@@ -73,8 +71,7 @@ public class FilterJoinConditionMergeRule extends RelOptRule {
     }
 
     private List<RexNode> simpifly(List<RexNode> filterConditions, Join join) {
-        final List<RexNode> joinFilters =
-                RelOptUtil.conjunctions(join.getCondition());
+        final List<RexNode> joinFilters = RelOptUtil.conjunctions(join.getCondition());
         if (filterConditions.isEmpty()) {
             return filterConditions;
         }
@@ -87,27 +84,18 @@ public class FilterJoinConditionMergeRule extends RelOptRule {
         final List<RexNode> rightFilters = new ArrayList<>();
 
         boolean filterPushed = false;
-        if (RelOptUtil.classifyFilters(
-                join,
-                aboveFilters,
-                joinType,
-                true,
-                !joinType.generatesNullsOnLeft(),
-                !joinType.generatesNullsOnRight(),
-                joinFilters,
-                leftFilters,
-                rightFilters,
-                shiftedMapping)) {
+        if (RelOptUtil.classifyFilters(join, aboveFilters, joinType, true, !joinType.generatesNullsOnLeft(),
+                !joinType.generatesNullsOnRight(), joinFilters, leftFilters, rightFilters, shiftedMapping)) {
             filterPushed = true;
         }
 
         List<RexNode> leftSimplified = leftFilters;
         List<RexNode> rightSimplified = rightFilters;
         if (filterPushed) {
-            RelNode left = join.getLeft() instanceof HepRelVertex
-                    ? ((HepRelVertex) join.getLeft()).getCurrentRel() : join.getLeft();
-            RelNode right = join.getRight() instanceof HepRelVertex
-                    ? ((HepRelVertex) join.getRight()).getCurrentRel() : join.getRight();
+            RelNode left = join.getLeft() instanceof HepRelVertex ? ((HepRelVertex) join.getLeft()).getCurrentRel()
+                    : join.getLeft();
+            RelNode right = join.getRight() instanceof HepRelVertex ? ((HepRelVertex) join.getRight()).getCurrentRel()
+                    : join.getRight();
             if (left instanceof Join) {
                 leftSimplified = simpifly(leftFilters, (Join) left);
             }

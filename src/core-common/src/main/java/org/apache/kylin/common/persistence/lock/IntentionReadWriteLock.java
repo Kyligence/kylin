@@ -28,9 +28,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 @Slf4j
 public class IntentionReadWriteLock implements IntentionLock, ReadWriteLock, MemoryLock {
@@ -72,7 +72,7 @@ public class IntentionReadWriteLock implements IntentionLock, ReadWriteLock, Mem
         public InnerReentrantLock() {
             super(true);
         }
-        
+
         private Set<Long> getReadLockOwners() {
             return this.readLockOwners;
         }

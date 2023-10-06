@@ -29,14 +29,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.kylin.common.util.JsonUtil;
-import org.junit.Assert;
-
-import io.kyligence.kap.clickhouse.management.ClickHouseConfigLoader;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
+import org.junit.Assert;
+
+import io.kyligence.kap.clickhouse.management.ClickHouseConfigLoader;
 import io.kyligence.kap.secondstorage.SecondStorage;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import io.kyligence.kap.secondstorage.config.ClusterInfo;
@@ -51,8 +51,8 @@ public class MockSecondStorage {
         cluster.setSocketTimeout("600000");
         cluster.setCluster(Collections.emptyMap());
         File file = File.createTempFile("clickhouse", ".yaml");
-        ClickHouseConfigLoader.getConfigYaml().dump(JsonUtil.readValue(JsonUtil.writeValueAsString(cluster),
-                Map.class), new PrintWriter(file, Charset.defaultCharset().name()));
+        ClickHouseConfigLoader.getConfigYaml().dump(JsonUtil.readValue(JsonUtil.writeValueAsString(cluster), Map.class),
+                new PrintWriter(file, Charset.defaultCharset().name()));
         Unsafe.setProperty(CONFIG_SECOND_STORAGE_CLUSTER, file.getAbsolutePath());
         SecondStorage.init(true);
     }
@@ -69,8 +69,8 @@ public class MockSecondStorage {
             clusterNodes.put("pair" + it.nextIndex(), Collections.singletonList(it.next()));
         }
         File file = File.createTempFile("clickhouse", ".yaml");
-        ClickHouseConfigLoader.getConfigYaml().dump(JsonUtil.readValue(JsonUtil.writeValueAsString(cluster),
-                Map.class), new PrintWriter(file, Charset.defaultCharset().name()));
+        ClickHouseConfigLoader.getConfigYaml().dump(JsonUtil.readValue(JsonUtil.writeValueAsString(cluster), Map.class),
+                new PrintWriter(file, Charset.defaultCharset().name()));
         Unsafe.setProperty(CONFIG_SECOND_STORAGE_CLUSTER, file.getAbsolutePath());
         SecondStorage.init(true);
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {

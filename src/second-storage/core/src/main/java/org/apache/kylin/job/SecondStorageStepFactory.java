@@ -26,12 +26,16 @@ import java.util.function.Supplier;
 import org.apache.kylin.job.execution.AbstractExecutable;
 
 public class SecondStorageStepFactory {
-    private static final Map<Class<? extends SecondStorageStep>, Supplier<AbstractExecutable>> SUPPLIER_MAP = new ConcurrentHashMap<>(5);
+    private static final Map<Class<? extends SecondStorageStep>, Supplier<AbstractExecutable>> SUPPLIER_MAP //
+            = new ConcurrentHashMap<>(5);
 
-    public static void register(Class<? extends SecondStorageStep> stepType, Supplier<AbstractExecutable> stepSupplier) {
+    public static void register(Class<? extends SecondStorageStep> stepType,
+            Supplier<AbstractExecutable> stepSupplier) {
         SUPPLIER_MAP.put(stepType, stepSupplier);
     }
-    public static AbstractExecutable create(Class<? extends SecondStorageStep> stepType, Consumer<AbstractExecutable> paramInjector) {
+
+    public static AbstractExecutable create(Class<? extends SecondStorageStep> stepType,
+            Consumer<AbstractExecutable> paramInjector) {
         AbstractExecutable step = SUPPLIER_MAP.get(stepType).get();
         paramInjector.accept(step);
         return step;
@@ -44,10 +48,13 @@ public class SecondStorageStepFactory {
 
     }
 
-    public interface SecondStorageRefreshStep extends SecondStorageStep {}
+    public interface SecondStorageRefreshStep extends SecondStorageStep {
+    }
 
-    public interface SecondStorageMergeStep extends SecondStorageStep {}
+    public interface SecondStorageMergeStep extends SecondStorageStep {
+    }
 
-    public interface SecondStorageIndexClean extends SecondStorageStep {}
+    public interface SecondStorageIndexClean extends SecondStorageStep {
+    }
 
 }

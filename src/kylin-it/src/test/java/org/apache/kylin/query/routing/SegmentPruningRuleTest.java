@@ -18,6 +18,8 @@
 
 package org.apache.kylin.query.routing;
 
+import static org.awaitility.Awaitility.await;
+
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -64,8 +66,6 @@ import org.junit.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import lombok.val;
-
-import static org.awaitility.Awaitility.await;
 
 public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
 
@@ -318,8 +318,8 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         slowQueryDetector.get().stopQuery("pruning");
 
         Assert.assertFalse(queryEntry.get().isAsyncQuery());
-        Assert.assertTrue(queryEntry.get().isStopByUser()
-                && queryEntry.get().getPlannerCancelFlag().isCancelRequested());
+        Assert.assertTrue(
+                queryEntry.get().isStopByUser() && queryEntry.get().getPlannerCancelFlag().isCancelRequested());
 
         try {
             t.join();
@@ -404,8 +404,8 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         slowQueryDetector.get().stopQuery(queryId);
 
         Assert.assertTrue(queryEntry.get().isAsyncQuery());
-        Assert.assertTrue(queryEntry.get().isStopByUser()
-                && queryEntry.get().getPlannerCancelFlag().isCancelRequested());
+        Assert.assertTrue(
+                queryEntry.get().isStopByUser() && queryEntry.get().getPlannerCancelFlag().isCancelRequested());
         try {
             t.join();
         } catch (InterruptedException e) {

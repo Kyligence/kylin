@@ -110,10 +110,6 @@ public class NLocalWithSparkSessionTest extends NLocalWithSparkSessionTestBase {
         if (!Objects.equals(IndexDataConstructor.wait(job), ExecutableState.SUCCEED)) {
             throw new IllegalStateException(IndexDataConstructor.firstFailedJobErrorMessage(execMgr, job));
         }
-
-//        val merger = new AfterMergeOrRefreshResourceMerger(getTestConfig(), getProject());
-//        merger.merge(job.getSparkMergingStep());
-
     }
 
 }

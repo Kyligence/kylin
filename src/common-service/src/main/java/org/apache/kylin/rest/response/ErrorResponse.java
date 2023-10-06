@@ -21,7 +21,6 @@ package org.apache.kylin.rest.response;
 import static org.apache.kylin.common.exception.CommonErrorCode.FAILED_PARSE_JSON;
 import static org.apache.kylin.common.exception.CommonErrorCode.UNKNOWN_ERROR_CODE;
 
-import lombok.NoArgsConstructor;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
 
@@ -29,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParseException;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * response to client when the return HTTP code is not 200

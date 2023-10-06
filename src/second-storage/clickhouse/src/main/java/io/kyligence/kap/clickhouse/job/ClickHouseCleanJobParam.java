@@ -18,12 +18,13 @@
 
 package io.kyligence.kap.clickhouse.job;
 
+import java.util.Set;
+
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
+
 import lombok.Builder;
 import lombok.Getter;
-
-import java.util.Set;
 
 @Builder
 @Getter

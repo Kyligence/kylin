@@ -76,12 +76,12 @@ public class SecondStorageScheduleService {
         List<String> enabledProjects = projectManager.listAllProjects().stream()
                 .filter(project -> SecondStorageUtil.isProjectEnable(project.getName())
                         && project.getConfig().getSecondStorageUseLowCardinality())
-                .map(ProjectInstance::getName)
-                .collect(Collectors.toList());
+                .map(ProjectInstance::getName).collect(Collectors.toList());
 
         for (String project : enabledProjects) {
             try {
-                SecondStorageUtil.validateProjectLock(project, Arrays.asList(LockTypeEnum.LOAD.name(), LockTypeEnum.ALL.name()));
+                SecondStorageUtil.validateProjectLock(project,
+                        Arrays.asList(LockTypeEnum.LOAD.name(), LockTypeEnum.ALL.name()));
             } catch (KylinException e) {
                 log.error("There is second storage task on project {}.", project);
                 continue;
@@ -96,17 +96,21 @@ public class SecondStorageScheduleService {
             for (NDataModel model : enabledModels) {
                 val df = NDataflowManager.getInstance(config, project).getDataflow(model.getId());
                 if (df.getConfig().getSecondStorageUseLowCardinality()) {
-                    SegmentRange<Long> range = new SegmentRange.TimePartitionedSegmentRange(df.getSegments().getTSStart(), df.getSegments().getTSEnd());
+                    SegmentRange<Long> range = new SegmentRange.TimePartitionedSegmentRange(
+                            df.getSegments().getTSStart(), df.getSegments().getTSEnd());
                     SecondStorageLockUtils.acquireLock(model.getId(), range).lock();
                     try {
                         val database = NameUtil.getDatabase(df);
                         val destTableName = NameUtil.getTable(df, SecondStorageUtil.getBaseIndex(df).getId());
                         val tablePlanManager = SecondStorageUtil.tablePlanManager(config, project);
                         TablePlan tablePlan = tablePlanManager.get().get(model.getId()).get();
-                        TableEntity tableEntity = tablePlan.getEntity(SecondStorageUtil.getBaseIndex(df).getId()).orElse(null);
-                        queryOperator.modifyColumnByCardinality(database, destTableName, tableEntity.getSecondaryIndexColumns());
+                        TableEntity tableEntity = tablePlan.getEntity(SecondStorageUtil.getBaseIndex(df).getId())
+                                .orElse(null);
+                        queryOperator.modifyColumnByCardinality(database, destTableName,
+                                tableEntity.getSecondaryIndexColumns());
                     } catch (Exception exception) {
-                        log.error("Failed to modify second storage low cardinality on model {}.", model.getId(), exception);
+                        log.error("Failed to modify second storage low cardinality on model {}.", model.getId(),
+                                exception);
                     } finally {
                         SecondStorageLockUtils.unlock(model.getId(), range);
                     }
@@ -120,8 +124,7 @@ public class SecondStorageScheduleService {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         val projectManager = NProjectManager.getInstance(config);
         List<String> enabledProjects = projectManager.listAllProjects().stream().map(ProjectInstance::getName)
-                .filter(SecondStorageUtil::isProjectEnable)
-                .collect(Collectors.toList());
+                .filter(SecondStorageUtil::isProjectEnable).collect(Collectors.toList());
         Map<String, List<String>> projectNodeMap = Maps.newHashMap();
         enabledProjects.forEach(project -> {
             val nodeGroupManager = SecondStorageUtil.nodeGroupManager(config, project);
@@ -147,7 +150,8 @@ public class SecondStorageScheduleService {
 
     private void cleanSingleNode(String project, String node) throws IOException {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        try (DatabaseOperator operator = SecondStorageFactoryUtils.createDatabaseOperator(SecondStorageNodeHelper.resolve(node))) {
+        try (DatabaseOperator operator = SecondStorageFactoryUtils
+                .createDatabaseOperator(SecondStorageNodeHelper.resolve(node))) {
             String database = NameUtil.getDatabase(config, project);
             List<String> allDatabases = operator.listDatabases();
             if (!allDatabases.contains(database)) {
@@ -155,8 +159,8 @@ public class SecondStorageScheduleService {
             }
 
             // get all temp table in database
-            List<String> tempTables = operator.listTables(database).stream()
-                    .filter(NameUtil::isTempTable).map(table -> table.replace("-", "_")).collect(Collectors.toList());
+            List<String> tempTables = operator.listTables(database).stream().filter(NameUtil::isTempTable)
+                    .map(table -> table.replace("-", "_")).collect(Collectors.toList());
 
             val execManager = ExecutableManager.getInstance(config, project);
             val allJobs = execManager.getAllJobs();
@@ -164,23 +168,23 @@ public class SecondStorageScheduleService {
                     .filter(job -> job.getOutput().getStatus().equals(ExecutableState.DISCARDED.name()))
                     .map(RootPersistentEntity::getId)
                     .map(jobId -> jobId.length() > JOB_ID_LENGTH ? jobId.substring(0, JOB_ID_LENGTH) : jobId)
-                    .map(jobId -> jobId.replace("-", "_"))
-                    .collect(Collectors.toList());
+                    .map(jobId -> jobId.replace("-", "_")).collect(Collectors.toList());
 
-            List<String> allJobIds = allJobs.stream()
-                    .map(RootPersistentEntity::getId)
+            List<String> allJobIds = allJobs.stream().map(RootPersistentEntity::getId)
                     .map(jobId -> jobId.length() > JOB_ID_LENGTH ? jobId.substring(0, JOB_ID_LENGTH) : jobId)
-                    .map(jobId -> jobId.replace("-", "_"))
-                    .collect(Collectors.toList());
+                    .map(jobId -> jobId.replace("-", "_")).collect(Collectors.toList());
 
             // temp table is start with job id
             List<String> discardTempTables = tempTables.stream()
-                    .filter(table -> discardJobs.contains(table.substring(0, JOB_ID_LENGTH))).collect(Collectors.toList());
+                    .filter(table -> discardJobs.contains(table.substring(0, JOB_ID_LENGTH)))
+                    .collect(Collectors.toList());
 
             // a temp table doesn't belong to any job
-            List<String> orphanTempTables = tempTables.stream().filter(table -> !allJobIds.contains(table.substring(0, JOB_ID_LENGTH)))
+            List<String> orphanTempTables = tempTables.stream()
+                    .filter(table -> !allJobIds.contains(table.substring(0, JOB_ID_LENGTH)))
                     .collect(Collectors.toList());
-            log.info("check database {}, find discardTempTables: {}, orphanTempTables: {} ", database, discardTempTables, orphanTempTables);
+            log.info("check database {}, find discardTempTables: {}, orphanTempTables: {} ", database,
+                    discardTempTables, orphanTempTables);
 
             discardTempTables.forEach(table -> operator.dropTable(database, table));
             orphanTempTables.forEach(table -> operator.dropTable(database, table));

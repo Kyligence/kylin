@@ -17,9 +17,9 @@
  */
 package io.kyligence.kap.secondstorage.util;
 
-import io.kyligence.kap.secondstorage.config.SecondStorageProjectModelSegment;
-
 import java.util.Locale;
+
+import io.kyligence.kap.secondstorage.config.SecondStorageProjectModelSegment;
 
 public class ConvertUtils {
     public static <T> T convertValue(Object rawValue, Class<?> clazz) {
@@ -56,10 +56,8 @@ public class ConvertUtils {
             if (value <= Integer.MAX_VALUE && value >= Integer.MIN_VALUE) {
                 return (int) value;
             } else {
-                throw new IllegalArgumentException(
-                        String.format(Locale.ROOT,
-                                "Configuration value %s overflow/underflow the integer type.",
-                                value));
+                throw new IllegalArgumentException(String.format(Locale.ROOT,
+                        "Configuration value %s overflow/underflow the integer type.", value));
             }
         }
         return Integer.parseInt(o.toString());
@@ -80,15 +78,13 @@ public class ConvertUtils {
         }
 
         switch (o.toString().toUpperCase(Locale.ROOT)) {
-            case "TRUE":
-                return true;
-            case "FALSE":
-                return false;
-            default:
-                throw new IllegalArgumentException(
-                        String.format(Locale.ROOT,
-                                "Unrecognized option for boolean: %s. Expected either true or false(case insensitive)",
-                                o));
+        case "TRUE":
+            return true;
+        case "FALSE":
+            return false;
+        default:
+            throw new IllegalArgumentException(String.format(Locale.ROOT,
+                    "Unrecognized option for boolean: %s. Expected either true or false(case insensitive)", o));
         }
     }
 
@@ -97,15 +93,12 @@ public class ConvertUtils {
             return (Float) o;
         } else if (o.getClass() == Double.class) {
             double value = ((Double) o);
-            if (value == 0.0
-                    || (value >= Float.MIN_VALUE && value <= Float.MAX_VALUE)
+            if (value == 0.0 || (value >= Float.MIN_VALUE && value <= Float.MAX_VALUE)
                     || (value >= -Float.MAX_VALUE && value <= -Float.MIN_VALUE)) {
                 return (float) value;
             } else {
-                throw new IllegalArgumentException(
-                        String.format(Locale.ROOT,
-                                "Configuration value %s overflows/underflow the float type.",
-                                value));
+                throw new IllegalArgumentException(String.format(Locale.ROOT,
+                        "Configuration value %s overflows/underflow the float type.", value));
             }
         }
 

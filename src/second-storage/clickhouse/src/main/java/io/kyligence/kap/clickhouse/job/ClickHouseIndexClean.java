@@ -139,10 +139,8 @@ public class ClickHouseIndexClean extends AbstractClickHouseClean {
         setNodeCount(Math.toIntExact(nodeGroupManager.map(
                 manager -> manager.listAll().stream().mapToLong(nodeGroup -> nodeGroup.getNodeNames().size()).sum())
                 .orElse(0L)));
-        List<String> nodes = nodeGroupManager.get().listAll()
-                .stream()
-                .flatMap(nodeGroup -> nodeGroup.getNodeNames().stream())
-                .collect(Collectors.toList());
+        List<String> nodes = nodeGroupManager.get().listAll().stream()
+                .flatMap(nodeGroup -> nodeGroup.getNodeNames().stream()).collect(Collectors.toList());
         getNeedDeleteLayoutIds().forEach(layoutId -> {
             // table_data not contains layout means deleted. Delete table instead partition
             if (segmentRangeMap == null || segmentRangeMap.isEmpty() || !tableFlow.getEntity(layoutId).isPresent()) {
@@ -172,16 +170,17 @@ public class ClickHouseIndexClean extends AbstractClickHouseClean {
     }
 
     private List<ShardCleaner> cleanTable(List<String> nodes, long layoutId) {
-        return nodes.stream().map(node ->
-                new ShardCleaner(node, NameUtil.getDatabase(getConfig(), project),
-                        NameUtil.getTable(getParam(NBatchConstants.P_DATAFLOW_ID), layoutId))
-        ).collect(Collectors.toList());
+        return nodes.stream()
+                .map(node -> new ShardCleaner(node, NameUtil.getDatabase(getConfig(), project),
+                        NameUtil.getTable(getParam(NBatchConstants.P_DATAFLOW_ID), layoutId)))
+                .collect(Collectors.toList());
     }
 
     private List<ShardCleaner> cleanPartition(List<String> nodes, long layoutId, String segmentId) {
-        return nodes.stream().map(node ->
-                new ShardCleaner(node, NameUtil.getDatabase(getConfig(), project), NameUtil.getTable(getParam(NBatchConstants.P_DATAFLOW_ID), layoutId),
-                        SecondStorageDateUtils.splitByDay(segmentRangeMap.get(segmentId)), getDateFormat())
-        ).collect(Collectors.toList());
+        return nodes.stream()
+                .map(node -> new ShardCleaner(node, NameUtil.getDatabase(getConfig(), project),
+                        NameUtil.getTable(getParam(NBatchConstants.P_DATAFLOW_ID), layoutId),
+                        SecondStorageDateUtils.splitByDay(segmentRangeMap.get(segmentId)), getDateFormat()))
+                .collect(Collectors.toList());
     }
 }

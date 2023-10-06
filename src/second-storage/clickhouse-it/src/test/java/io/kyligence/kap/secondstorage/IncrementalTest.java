@@ -76,13 +76,13 @@ import lombok.val;
 
 public class IncrementalTest implements JobWaiter {
     private static final String modelName = "test_table_index";
-    static private final String modelId = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
+    private static final String modelId = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
 
     public static String getProject() {
         return project;
     }
 
-    static private final String project = "table_index_incremental";
+    private static final String project = "table_index_incremental";
 
     @ClassRule
     public static SharedSparkSession sharedSpark = new SharedSparkSession(
@@ -229,12 +229,11 @@ public class IncrementalTest implements JobWaiter {
 
         response.getData().forEach(res -> res.getJobs().forEach(job -> waitJobEnd(getProject(), job.getJobId())));
 
-        dataflowManager.getDataflow(modelId).getSegments()
-                .forEach(segment -> {
-                    List<Long> toRemove = segment.getSegDetails().getAllLayouts().stream().map(NDataLayout::getLayoutId)
-                            .collect(Collectors.toList());
-                    dataflowManager.updateDataflowDetailsLayouts(segment, toRemove, Collections.emptyList());
-                });
+        dataflowManager.getDataflow(modelId).getSegments().forEach(segment -> {
+            List<Long> toRemove = segment.getSegDetails().getAllLayouts().stream().map(NDataLayout::getLayoutId)
+                    .collect(Collectors.toList());
+            dataflowManager.updateDataflowDetailsLayouts(segment, toRemove, Collections.emptyList());
+        });
         response = secondStorageEndpoint.projectLoad(request);
         Assert.assertEquals("000", response.getCode());
         Assert.assertNotNull(response.getData());

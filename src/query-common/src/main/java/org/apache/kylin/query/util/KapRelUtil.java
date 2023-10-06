@@ -28,7 +28,7 @@ import org.apache.kylin.common.util.Pair;
 
 public class KapRelUtil {
 
-    private final static String CTX = "ctx=";
+    private static final String CTX = "ctx=";
 
     private KapRelUtil() {
     }

@@ -46,17 +46,16 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.query.relnode.ColumnRowType;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class RexToTblColRefTranslatorTest {
 
@@ -65,20 +64,20 @@ public class RexToTblColRefTranslatorTest {
 
     private RelDataType boolRelDataType = TYPE_FACTORY.createSqlType(SqlTypeName.BOOLEAN);
     private RelDataType timestampRelDataType = TYPE_FACTORY.createSqlType(SqlTypeName.TIMESTAMP);
-    private RelDataType bingIntRelDataType = TYPE_FACTORY.createSqlType(SqlTypeName.BIGINT);
+    private final RelDataType bingIntRelDataType = TYPE_FACTORY.createSqlType(SqlTypeName.BIGINT);
 
-    private SqlIntervalQualifier second = new SqlIntervalQualifier(TimeUnit.SECOND, null, SqlParserPos.ZERO);
-    private SqlIntervalQualifier minute = new SqlIntervalQualifier(TimeUnit.MINUTE, null, SqlParserPos.ZERO);
-    private SqlIntervalQualifier hour = new SqlIntervalQualifier(TimeUnit.HOUR, null, SqlParserPos.ZERO);
-    private SqlIntervalQualifier day = new SqlIntervalQualifier(TimeUnit.DAY, null, SqlParserPos.ZERO);
-    private SqlIntervalQualifier week = new SqlIntervalQualifier(TimeUnit.WEEK, null, SqlParserPos.ZERO);
-    private SqlIntervalQualifier month = new SqlIntervalQualifier(TimeUnit.MONTH, null, SqlParserPos.ZERO);
-    private SqlIntervalQualifier quarter = new SqlIntervalQualifier(TimeUnit.QUARTER, null, SqlParserPos.ZERO);
-    private SqlIntervalQualifier year = new SqlIntervalQualifier(TimeUnit.YEAR, null, SqlParserPos.ZERO);
+    private final SqlIntervalQualifier second = new SqlIntervalQualifier(TimeUnit.SECOND, null, SqlParserPos.ZERO);
+    private final SqlIntervalQualifier minute = new SqlIntervalQualifier(TimeUnit.MINUTE, null, SqlParserPos.ZERO);
+    private final SqlIntervalQualifier hour = new SqlIntervalQualifier(TimeUnit.HOUR, null, SqlParserPos.ZERO);
+    private final SqlIntervalQualifier day = new SqlIntervalQualifier(TimeUnit.DAY, null, SqlParserPos.ZERO);
+    private final SqlIntervalQualifier week = new SqlIntervalQualifier(TimeUnit.WEEK, null, SqlParserPos.ZERO);
+    private final SqlIntervalQualifier month = new SqlIntervalQualifier(TimeUnit.MONTH, null, SqlParserPos.ZERO);
+    private final SqlIntervalQualifier quarter = new SqlIntervalQualifier(TimeUnit.QUARTER, null, SqlParserPos.ZERO);
+    private final SqlIntervalQualifier year = new SqlIntervalQualifier(TimeUnit.YEAR, null, SqlParserPos.ZERO);
 
     private RexNode x, y, z;
     private RexNode literalOne, literalTwo, literalThree;
-    private List<String> properties = Lists.newArrayList();
+    private final List<String> properties = Lists.newArrayList();
 
     @Before
     public void setUp() throws IOException {
@@ -91,10 +90,7 @@ public class RexToTblColRefTranslatorTest {
         File tempKylinProperties = new File(tmpFile, "kylin.properties");
         tmpFile.deleteOnExit();
         FileUtils.touch(tempKylinProperties);
-
-        if (properties != null) {
-            FileUtils.writeLines(tempKylinProperties, properties);
-        }
+        FileUtils.writeLines(tempKylinProperties, properties);
 
         //implicitly set KYLIN_CONF
         KylinConfig.setKylinConfigForLocalTest(tmpFile.getCanonicalPath());

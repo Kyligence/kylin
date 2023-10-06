@@ -18,6 +18,9 @@
 
 package io.kyligence.kap.clickhouse.job;
 
+import java.io.IOException;
+import java.net.URI;
+
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,12 +30,10 @@ import org.apache.kylin.common.exception.CommonErrorCode;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.HadoopUtil;
 
-import java.io.IOException;
-import java.net.URI;
-
 // transform a viewFs url to a hdfs url
 public class ViewFsTransform {
     private FileSystem vfs;
+
     private ViewFsTransform(FileSystem vfs) {
         this.vfs = vfs;
     }
@@ -42,21 +43,20 @@ public class ViewFsTransform {
             Configuration conf = HadoopUtil.getCurrentConfiguration();
             URI root = FileSystem.getDefaultUri(conf);
             FileSystem vfs = null;
-            try{
+            try {
                 vfs = FileSystem.get(root, conf);
-            }catch (IOException e){
+            } catch (IOException e) {
                 return ExceptionUtils.rethrow(new KylinException(CommonErrorCode.UNKNOWN_ERROR_CODE, e));
             }
             return new ViewFsTransform(vfs);
         });
     }
 
-    public String generateFileUrl(
-            String sourceUrl) {
+    public String generateFileUrl(String sourceUrl) {
         try {
             Path p = vfs.resolvePath(new Path(sourceUrl));
             return p.toString();
-        }catch (IllegalArgumentException | IOException e) {
+        } catch (IllegalArgumentException | IOException e) {
             return ExceptionUtils.rethrow(new KylinException(CommonErrorCode.UNKNOWN_ERROR_CODE, e));
         }
     }

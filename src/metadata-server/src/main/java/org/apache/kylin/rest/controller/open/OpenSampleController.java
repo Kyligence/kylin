@@ -26,6 +26,7 @@ import java.util.Locale;
 
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.rest.controller.NBasicController;
@@ -44,8 +45,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 
 import alluxio.shaded.client.org.apache.commons.lang3.StringUtils;
 import io.swagger.annotations.ApiOperation;

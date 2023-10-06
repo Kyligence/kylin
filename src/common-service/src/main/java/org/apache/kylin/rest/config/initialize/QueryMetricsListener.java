@@ -22,27 +22,26 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Tags;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.rest.util.SpringContext;
 import org.apache.kylin.common.constant.Constant;
 import org.apache.kylin.common.metrics.MetricsCategory;
 import org.apache.kylin.common.metrics.MetricsGroup;
 import org.apache.kylin.common.metrics.MetricsName;
 import org.apache.kylin.common.metrics.MetricsTag;
 import org.apache.kylin.common.metrics.prometheus.PrometheusMetrics;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.QueryMetricsContext;
+import org.apache.kylin.rest.util.SpringContext;
 
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
-import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import lombok.val;
 
 public class QueryMetricsListener {
@@ -76,7 +75,8 @@ public class QueryMetricsListener {
 
     }
 
-    public void recordQueryPrometheusMetric(QueryMetrics queryMetric, NDataModelManager modelManager, MeterRegistry meterRegistry) {
+    public void recordQueryPrometheusMetric(QueryMetrics queryMetric, NDataModelManager modelManager,
+            MeterRegistry meterRegistry) {
         if (!KylinConfig.getInstanceFromEnv().isPrometheusMetricsEnabled()) {
             return;
         }
@@ -85,14 +85,13 @@ public class QueryMetricsListener {
                 .tags(MetricsTag.PUSH_DOWN.getVal(), queryMetric.isPushdown() + "", MetricsTag.CACHE.getVal(),
                         queryMetric.isCacheHit() + "", MetricsTag.HIT_INDEX.getVal(), queryMetric.isIndexHit() + "",
                         MetricsTag.HIT_EXACTLY_INDEX.getVal(), queryMetric.getQueryHistoryInfo().isExactlyMatch() + "",
-                        MetricsTag.SUCCEED.getVal(), queryMetric.isSucceed() + "",
-                        MetricsTag.HIT_SNAPSHOT.getVal(), queryMetric.isTableSnapshotUsed() + "",
-                        MetricsTag.PROJECT.getVal(), queryMetric.getProjectName(),
-                        MetricsTag.CONSTANTS.getVal(), MetricsTag.CONSTANTS.getVal().equalsIgnoreCase(queryMetric.getEngineType()) + "",
+                        MetricsTag.SUCCEED.getVal(), queryMetric.isSucceed() + "", MetricsTag.HIT_SNAPSHOT.getVal(),
+                        queryMetric.isTableSnapshotUsed() + "", MetricsTag.PROJECT.getVal(),
+                        queryMetric.getProjectName(), MetricsTag.CONSTANTS.getVal(),
+                        MetricsTag.CONSTANTS.getVal().equalsIgnoreCase(queryMetric.getEngineType()) + "",
                         MetricsTag.HIT_SECOND_STORAGE.getVal(), queryMetric.isSecondStorage() + "")
                 .distributionStatisticExpiry(Duration.ofDays(1))
-                .sla(KylinConfig.getInstanceFromEnv().getMetricsQuerySlaSeconds())
-                .register(meterRegistry)
+                .sla(KylinConfig.getInstanceFromEnv().getMetricsQuerySlaSeconds()).register(meterRegistry)
                 .record(queryMetric.getQueryDuration() * 1.0 / 1000);
 
         if (queryMetric.isSucceed()) {

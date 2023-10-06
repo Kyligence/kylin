@@ -52,8 +52,10 @@ import lombok.extern.slf4j.Slf4j;
 public class NTableSamplingJob extends DefaultExecutableOnTable {
 
     static {
-        JobFactory.register(JobFactoryConstant.TABLE_SAMPLING_JOB_FACTORY, new NTableSamplingJob.TableSamplingJobFactory());
+        JobFactory.register(JobFactoryConstant.TABLE_SAMPLING_JOB_FACTORY,
+                new NTableSamplingJob.TableSamplingJobFactory());
     }
+
     public NTableSamplingJob() {
         super();
     }
@@ -72,7 +74,9 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
     public static NTableSamplingJob internalCreate(TableDesc tableDesc, String project, String submitter, int rows) {
         return internalCreate(tableDesc, project, submitter, rows, RandomUtil.randomUUIDStr());
     }
-    public static NTableSamplingJob internalCreate(TableDesc tableDesc, String project, String submitter, int rows, String jobId) {
+
+    public static NTableSamplingJob internalCreate(TableDesc tableDesc, String project, String submitter, int rows,
+            String jobId) {
         Preconditions.checkArgument(tableDesc != null, //
                 "Create table sampling job failed for table not exist!");
 
@@ -140,7 +144,6 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
             super(notSetId);
         }
 
-
         // Ensure metadata compatibility
         public SamplingStep(String sparkSubmitClassName) {
             this.setSparkSubmitClassName(sparkSubmitClassName);
@@ -158,8 +161,7 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
                 return result;
             }
             if (checkSuicide()) {
-                log.info(
-                        "This Table Sampling job seems meaningless now, quit before mergeRemoteMetaAfterSampling()");
+                log.info("This Table Sampling job seems meaningless now, quit before mergeRemoteMetaAfterSampling()");
                 return null;
             }
             MergerInfo mergerInfo = new MergerInfo(project, ExecutableHandler.HandlerType.SAMPLING);
@@ -191,7 +193,6 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
             return dumpList;
         }
     }
-
 
     public static class TableSamplingJobFactory extends JobFactory {
 

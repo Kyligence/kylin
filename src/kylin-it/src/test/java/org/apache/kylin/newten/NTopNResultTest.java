@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.newten;
 
 import java.util.List;
@@ -72,10 +71,10 @@ public class NTopNResultTest extends NLocalWithSparkSessionTest {
         NDataflowManager dsMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
         NDataflow df = dsMgr.getDataflow(dfID);
         val layouts = df.getIndexPlan().getAllLayouts();
-        indexDataConstructor.buildIndex(dfID, SegmentRange.TimePartitionedSegmentRange.createInfinite(), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfID, SegmentRange.TimePartitionedSegmentRange.createInfinite(),
+                Sets.newLinkedHashSet(layouts), true);
 
-        return ExecAndComp.queryModelWithoutCompute(getProject(), sqlHitCube).collectAsList().stream().map(Row::toString)
-                .collect(Collectors.toList());
+        return ExecAndComp.queryModelWithoutCompute(getProject(), sqlHitCube).collectAsList().stream()
+                .map(Row::toString).collect(Collectors.toList());
     }
 }

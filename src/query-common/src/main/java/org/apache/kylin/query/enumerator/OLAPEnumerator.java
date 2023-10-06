@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  */
 public class OLAPEnumerator implements Enumerator<Object[]> {
 
-    private final static Logger logger = LoggerFactory.getLogger(OLAPEnumerator.class);
+    private static final Logger logger = LoggerFactory.getLogger(OLAPEnumerator.class);
 
     private final OLAPContext olapContext;
     private final DataContext optiqContext;

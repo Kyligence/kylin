@@ -134,34 +134,21 @@ public class NTableSamplingJobTest extends NLocalWithSparkSessionTestBase {
 
         ColumnDesc[] columns = tableDesc.getColumns();
         ColumnDesc[] columnsModified = Arrays.copyOfRange(columns, 0, columns.length + 2);
-        columnsModified[columnsModified.length - 2] = new ColumnDesc(
-                "13",
-                "A_CC_COL",
-                "boolean",
-                "",
-                "true|false|TRUE|FALSE|True|False",
-                null,
-                "non-empty expr");
-        columnsModified[columnsModified.length - 1] = new ColumnDesc(
-                "14",
-                "A_NON_EXIST_COL",
-                "boolean",
-                "",
-                "true|false|TRUE|FALSE|True|False",
-                null,
-                null);
+        columnsModified[columnsModified.length - 2] = new ColumnDesc("13", "A_CC_COL", "boolean", "",
+                "true|false|TRUE|FALSE|True|False", null, "non-empty expr");
+        columnsModified[columnsModified.length - 1] = new ColumnDesc("14", "A_NON_EXIST_COL", "boolean", "",
+                "true|false|TRUE|FALSE|True|False", null, null);
         TableDesc tableDescModified = tableMgr.copyForWrite(tableDesc);
         tableDescModified.setDatabase(null);
         tableDescModified.setColumns(columnsModified);
         tableDescModified.setMvcc(-1L);
         tableMgr.saveSourceTable(tableDescModified);
 
-        Map<String, String> params = NProjectManager.getInstance(config)
-                .getProject(PROJECT).getLegalOverrideKylinProps();
+        Map<String, String> params = NProjectManager.getInstance(config).getProject(PROJECT)
+                .getLegalOverrideKylinProps();
         Dataset<Row> dataFrame = SourceFactory
                 .createEngineAdapter(tableDesc, NSparkCubingEngine.NSparkCubingSource.class)
-                .getSourceData(tableDesc, ss, params)
-                .coalesce(1);
+                .getSourceData(tableDesc, ss, params).coalesce(1);
         dataFrame.createOrReplaceTempView(tableDescModified.getName());
 
         ExecutableManager execMgr = ExecutableManager.getInstance(config, PROJECT);
@@ -169,7 +156,8 @@ public class NTableSamplingJobTest extends NLocalWithSparkSessionTestBase {
         execMgr.addJob(samplingJob);
         Assert.assertEquals(ExecutableState.READY, samplingJob.getStatus());
 
-        await().atMost(60000, TimeUnit.MINUTES).until(() -> !execMgr.getJob(samplingJob.getId()).getStatus().isProgressing());
+        await().atMost(60000, TimeUnit.MINUTES)
+                .until(() -> !execMgr.getJob(samplingJob.getId()).getStatus().isProgressing());
         Assert.assertEquals(ExecutableState.ERROR, samplingJob.getStatus());
     }
 

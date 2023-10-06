@@ -55,7 +55,6 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.SetThreadName;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.AccessLevel;
@@ -288,7 +287,7 @@ public class UnitOfWork {
                 }
             });
         }
-        
+
         val eventList = data.stream().map(x -> {
             if (x instanceof TombRawResource) {
                 return new ResourceDeleteEvent(x.getResPath());
@@ -417,7 +416,7 @@ public class UnitOfWork {
         try {
             task.run();
         } catch (KylinException e) {
-          throw e;
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Execute 'doAfterUpdate' failed.", e);
         }

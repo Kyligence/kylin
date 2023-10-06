@@ -36,6 +36,9 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.util.PushDownUtil;
@@ -58,10 +61,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
-
 import io.kyligence.kap.newten.clickhouse.ClickHouseUtils;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import io.kyligence.kap.secondstorage.test.ClickHouseClassRule;
@@ -77,13 +76,13 @@ import scala.math.Ordering;
 @Slf4j
 public class TDVTHiveTest {
 
-    static private final String project = "tdvt_new";
-    static private final String AUTO_MODEL_CALCS_1 = "d4ebc34f-ec70-4e81-830c-0d278fe064aa";
-    static private final String AUTO_MODEL_STAPLES_1 = "0dabbdd5-7246-4fdb-b2a9-5398dc4c57f7";
-    static private final int clickhouseNumber = 1;
-    static private final List<String> modelList = ImmutableList.of(AUTO_MODEL_CALCS_1, AUTO_MODEL_STAPLES_1);
-    static private final String queryCatalog = TDVTTest.class.getSimpleName();
-    static private ImmutableSet<String> blackList = ImmutableSet.of("untest.sql", "sql038.sql", "sql108.sql",
+    private static final String project = "tdvt_new";
+    private static final String AUTO_MODEL_CALCS_1 = "d4ebc34f-ec70-4e81-830c-0d278fe064aa";
+    private static final String AUTO_MODEL_STAPLES_1 = "0dabbdd5-7246-4fdb-b2a9-5398dc4c57f7";
+    private static final int clickhouseNumber = 1;
+    private static final List<String> modelList = ImmutableList.of(AUTO_MODEL_CALCS_1, AUTO_MODEL_STAPLES_1);
+    private static final String queryCatalog = TDVTTest.class.getSimpleName();
+    private static ImmutableSet<String> blackList = ImmutableSet.of("untest.sql", "sql038.sql", "sql108.sql",
             "sql618.sql");
 
     @ClassRule

@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -46,8 +47,6 @@ import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ SpringContext.class, UserGroupInformation.class })
@@ -143,8 +142,8 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testCheckCacheExpiredWhenAddSegment() {
-        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange = new SegmentRange.TimePartitionedSegmentRange(
-                883612800000L, 1275321600000L);
+        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange //
+                = new SegmentRange.TimePartitionedSegmentRange(883612800000L, 1275321600000L);
         NDataSegment nDataSegment = dataflowManager.appendSegment(dataflowManager.getDataflow(modelId),
                 timePartitionedSegmentRange);
         nDataSegment.setStatus(SegmentStatusEnum.READY);
@@ -160,9 +159,9 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
     public void testCacheSignatureWhenHitSnapshotBasic() throws IOException {
         String project = "default";
         SQLResponse sqlResponse = new SQLResponse();
-        List<NativeQueryRealization> nativeRealizations = Lists.newArrayList(new NativeQueryRealization(
-                "89af4ee2-2cdb-4b07-b39e-4c29856309aa", -1L, QueryMetricsContext.TABLE_SNAPSHOT,
-                Lists.newArrayList("DEFAULT.TEST_ORDER")));
+        List<NativeQueryRealization> nativeRealizations = Lists
+                .newArrayList(new NativeQueryRealization("89af4ee2-2cdb-4b07-b39e-4c29856309aa", -1L,
+                        QueryMetricsContext.TABLE_SNAPSHOT, Lists.newArrayList("DEFAULT.TEST_ORDER")));
         sqlResponse.setNativeRealizations(nativeRealizations);
         QueryService queryService = PowerMockito.mock(QueryService.class);
         PowerMockito.when(SpringContext.getBean(CacheSignatureQuerySupporter.class)).thenReturn(queryService);
@@ -204,10 +203,11 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
     public void testCacheSignatureWhenHitSnapshotMultiModel() throws IOException {
         String project = "default";
         SQLResponse sqlResponse = new SQLResponse();
-        List<NativeQueryRealization> nativeRealizations = Lists.newArrayList(new NativeQueryRealization(
-                "89af4ee2-2cdb-4b07-b39e-4c29856309aa", -1L, QueryMetricsContext.TABLE_SNAPSHOT,
-                Lists.newArrayList("DEFAULT.TEST_ORDER")), new NativeQueryRealization(
-                "89af4ee2-2cdb-4b07-b39e-4c29856309aa", 1000001L, QueryMetricsContext.AGG_INDEX, Lists.newArrayList()));
+        List<NativeQueryRealization> nativeRealizations = Lists.newArrayList(
+                new NativeQueryRealization("89af4ee2-2cdb-4b07-b39e-4c29856309aa", -1L,
+                        QueryMetricsContext.TABLE_SNAPSHOT, Lists.newArrayList("DEFAULT.TEST_ORDER")),
+                new NativeQueryRealization("89af4ee2-2cdb-4b07-b39e-4c29856309aa", 1000001L,
+                        QueryMetricsContext.AGG_INDEX, Lists.newArrayList()));
         sqlResponse.setNativeRealizations(nativeRealizations);
         QueryService queryService = PowerMockito.mock(QueryService.class);
         //PowerMockito.when(SpringContext.getBean(QueryService.class)).thenReturn(queryService);
@@ -227,15 +227,14 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
     @Test
     public void testCacheSignatureWhenSegmentOutOfRange() {
         SQLResponse sqlResponse = new SQLResponse();
-        List<NativeQueryRealization> nativeRealizations = Lists.newArrayList(new NativeQueryRealization(
-                modelId, -1L, null,
-                Lists.newArrayList()));
+        List<NativeQueryRealization> nativeRealizations = Lists
+                .newArrayList(new NativeQueryRealization(modelId, -1L, null, Lists.newArrayList()));
         sqlResponse.setNativeRealizations(nativeRealizations);
         sqlResponse.setSignature(QueryCacheSignatureUtil.createCacheSignature(sqlResponse, project));
         Assert.assertFalse(QueryCacheSignatureUtil.checkCacheExpired(sqlResponse, project));
 
-        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange = new SegmentRange.TimePartitionedSegmentRange(
-                883612800000L, 1275321600000L);
+        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange //
+                = new SegmentRange.TimePartitionedSegmentRange(883612800000L, 1275321600000L);
         NDataSegment nDataSegment = dataflowManager.appendSegment(dataflowManager.getDataflow(modelId),
                 timePartitionedSegmentRange);
         nDataSegment.setStatus(SegmentStatusEnum.READY);

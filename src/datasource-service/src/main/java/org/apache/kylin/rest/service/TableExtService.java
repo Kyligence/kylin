@@ -130,8 +130,8 @@ public class TableExtService extends BasicService {
             tableResponseFromDB = new LoadTableResponse();
             StringHelper.toUpperCaseArray(request.getDatabases(), request.getDatabases());
             dbs = classifyDbTables(request.getDatabases(), true);
-            Pair<List<Pair<TableDesc, TableExtDesc>>, Integer> pair = findCanLoadTables(dbs, project,
-                    true, tableResponseFromDB, existDbs, Maps.newHashMap());
+            Pair<List<Pair<TableDesc, TableExtDesc>>, Integer> pair = findCanLoadTables(dbs, project, true,
+                    tableResponseFromDB, existDbs, Maps.newHashMap());
             canLoadTablesFromDB = pair.getFirst();
             count = pair.getSecond();
             checkThreshold(thresholdEnabled, count);
@@ -143,8 +143,8 @@ public class TableExtService extends BasicService {
             StringHelper.toUpperCaseArray(request.getTables(), request.getTables());
             Map<String, Set<String>> tables = classifyDbTables(request.getTables(), false);
             tableResponse = new LoadTableResponse();
-            Pair<List<Pair<TableDesc, TableExtDesc>>, Integer> pair = findCanLoadTables(tables, project,
-                    false, tableResponse, existDbs, dbs);
+            Pair<List<Pair<TableDesc, TableExtDesc>>, Integer> pair = findCanLoadTables(tables, project, false,
+                    tableResponse, existDbs, dbs);
             canLoadTables = pair.getFirst();
             count = pair.getSecond() + count;
             checkThreshold(thresholdEnabled, count);
@@ -177,8 +177,9 @@ public class TableExtService extends BasicService {
         }
     }
 
-    public Pair<List<Pair<TableDesc, TableExtDesc>>, Integer> findCanLoadTables(Map<String, Set<String>> dbTables, String project,
-            boolean isDb, LoadTableResponse tableResponse, Set<String> existDbs, Map<String, Set<String>> formalDbs) throws Exception {
+    public Pair<List<Pair<TableDesc, TableExtDesc>>, Integer> findCanLoadTables(Map<String, Set<String>> dbTables,
+            String project, boolean isDb, LoadTableResponse tableResponse, Set<String> existDbs,
+            Map<String, Set<String>> formalDbs) throws Exception {
         List<Pair<TableDesc, TableExtDesc>> canLoadTables = Lists.newArrayList();
         List<TableNameResponse> responseAll = Lists.newArrayList();
         for (Map.Entry<String, Set<String>> entry : dbTables.entrySet()) {
@@ -216,8 +217,7 @@ public class TableExtService extends BasicService {
         return new Pair<>(canLoadTables, getTableCount(responseAll, canLoadTables));
     }
 
-    private int getTableCount(List<TableNameResponse> responseAll,
-            List<Pair<TableDesc, TableExtDesc>> canLoadTables) {
+    private int getTableCount(List<TableNameResponse> responseAll, List<Pair<TableDesc, TableExtDesc>> canLoadTables) {
         List<String> loaded = responseAll.stream().filter(TableNameResponse::isLoaded)
                 .map(TableNameResponse::getTableName).collect(Collectors.toList());
         return (int) canLoadTables.stream().filter(t -> !loaded.contains(t.getFirst().getIdentity())).count();
@@ -238,9 +238,8 @@ public class TableExtService extends BasicService {
     }
 
     @VisibleForTesting
-    public void filterAccessTables(
-        String[] tables, List<Pair<TableDesc, TableExtDesc>> canLoadTables,
-        LoadTableResponse tableResponse, String project) throws Exception {
+    public void filterAccessTables(String[] tables, List<Pair<TableDesc, TableExtDesc>> canLoadTables,
+            LoadTableResponse tableResponse, String project) throws Exception {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         List<Pair<TableDesc, TableExtDesc>> toLoadTables = extractTableMeta(tables, project, tableResponse);
         if (!config.isDDLLogicalViewEnabled()) {
@@ -249,21 +248,17 @@ public class TableExtService extends BasicService {
         }
         String viewDB = config.getDDLLogicalViewDB();
         LogicalViewManager viewManager = LogicalViewManager.getInstance(config);
-        toLoadTables.stream()
-            .filter(table -> !table.getFirst().isLogicalView())
-            .forEach(canLoadTables::add);
-        toLoadTables.stream()
-            .filter(table -> table.getFirst().isLogicalView())
-            .forEach(table -> {
-                String tableName = table.getFirst().getName();
-                LogicalView logicalTable = viewManager.get(tableName);
-                String viewProject = logicalTable != null ? logicalTable.getCreatedProject() : "unknown";
-                if (logicalTable != null && viewProject.equalsIgnoreCase(project)) {
-                    canLoadTables.add(table);
-                } else {
-                    tableResponse.getFailed().add(viewDB + "." + tableName);
-                }
-            });
+        toLoadTables.stream().filter(table -> !table.getFirst().isLogicalView()).forEach(canLoadTables::add);
+        toLoadTables.stream().filter(table -> table.getFirst().isLogicalView()).forEach(table -> {
+            String tableName = table.getFirst().getName();
+            LogicalView logicalTable = viewManager.get(tableName);
+            String viewProject = logicalTable != null ? logicalTable.getCreatedProject() : "unknown";
+            if (logicalTable != null && viewProject.equalsIgnoreCase(project)) {
+                canLoadTables.add(table);
+            } else {
+                tableResponse.getFailed().add(viewDB + "." + tableName);
+            }
+        });
     }
 
     public LoadTableResponse loadAWSTablesCompatibleCrossAccount(List<S3TableExtInfo> s3TableExtInfoList,
@@ -489,7 +484,8 @@ public class TableExtService extends BasicService {
         // query from all projects
         List<ProjectInstance> projectInstances = projectService.getReadableProjects(null, false);
         for (ProjectInstance projectInstance : projectInstances) {
-            NTableMetadataManager nTableMetadataManager = getManager(NTableMetadataManager.class, projectInstance.getName());
+            NTableMetadataManager nTableMetadataManager = getManager(NTableMetadataManager.class,
+                    projectInstance.getName());
             tableNames.addAll(matchTableNames(nTableMetadataManager, fuzzyKey, exact));
         }
         return tableNames;

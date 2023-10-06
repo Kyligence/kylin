@@ -22,11 +22,11 @@ import java.util.Locale;
 
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.sdk.datasource.adaptor.SQLDWAdaptor;
 import org.apache.kylin.sdk.datasource.framework.def.DataSourceDef;
 import org.apache.kylin.sdk.datasource.framework.def.DataSourceDefProvider;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,7 +34,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 public class SqlConverterTest extends NLocalFileMetadataTestCase {
-    private final static String TEST_TARGET = "testing";
+    private static final String TEST_TARGET = "testing";
 
     @Before
     public void setUp() {

@@ -36,9 +36,9 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.guava30.shaded.common.primitives.Longs;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kylin.guava30.shaded.common.primitives.Longs;
 
 @Slf4j
 public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
@@ -49,7 +49,7 @@ public class TransactionDeadLockHandler implements DeadLockHandler, Runnable {
     private final long interval = KylinConfig.getInstanceFromEnv().getLockCheckIntervalSeconds();
     private final ScheduledExecutorService checkerPool = Executors.newScheduledThreadPool(1,
             new NamedThreadFactory("DeadLockChecker"));
-    
+
     private int checkCnt = 0;
     private double checkAvgCost = 0;
     private long checkMaxCost = 0;

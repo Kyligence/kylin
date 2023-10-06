@@ -34,12 +34,12 @@ import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.Singletons;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.junit.Assert;
 import org.junit.Before;
 import org.mockito.Mockito;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import lombok.val;
 
 @Deprecated

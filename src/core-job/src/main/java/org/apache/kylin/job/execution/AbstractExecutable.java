@@ -238,7 +238,7 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
 
             tryAgain = false;
             try {
-                JobContextUtil.withTxAndRetry(()->{
+                JobContextUtil.withTxAndRetry(() -> {
                     checkNeedQuit(false);
                     f.process();
 
@@ -295,7 +295,7 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
     protected ExecutableState adjustState(ExecutableState originalState) {
         return originalState;
     }
-        
+
     protected void onExecuteErrorHook(String jobId) {
         // At present, only instance of DefaultExecutableOnModel take full advantage of this method.
     }
@@ -383,8 +383,8 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
             }
 
             retry++;
-
-        } while (needRetry(this.retry, result.getThrowable())); //exception in ExecuteResult should handle by user itself.
+            //exception in ExecuteResult should handle by user itself.
+        } while (needRetry(this.retry, result.getThrowable()));
         //check exception in result to avoid retry on ChainedExecutable(only need retry on subtask actually)
 
         onExecuteFinished(result);
@@ -470,20 +470,21 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
             val parent = getParent();
             ExecutableState state = parent.getStatus();
             switch (state) {
-                case READY:
-                case PENDING:
-                case PAUSED:
-                case DISCARDED:
-                    //if a job is restarted(all steps' status changed to READY) or paused or discarded, the old thread may still be alive and attempt to update job output
-                    //in this case the old thread should fail itself by calling this
-                    if (applyChange) {
-                        logger.debug("abort {} because parent job is {}", getId(), state);
-                        updateJobOutput(project, getId(), state, null, null, null);
-                    }
-                    abort = true;
-                    break;
-                default:
-                    break;
+            case READY:
+            case PENDING:
+            case PAUSED:
+            case DISCARDED:
+                // If a job is restarted(all steps' status changed to READY) or paused or discarded,
+                // the old thread may still be alive and attempt to update job output
+                //in this case the old thread should fail itself by calling this
+                if (applyChange) {
+                    logger.debug("abort {} because parent job is {}", getId(), state);
+                    updateJobOutput(project, getId(), state, null, null, null);
+                }
+                abort = true;
+                break;
+            default:
+                break;
             }
 
             return abort;
@@ -670,7 +671,7 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
     public static long getEndTime(Output output) {
         return output.getEndTime();
     }
-    
+
     public final long getEndTime(ExecutablePO po) {
         return getEndTime(getOutput(po));
     }
@@ -702,13 +703,15 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
         val tasks = ((DagExecutable) this).getTasks();
         val tasksMap = tasks.stream().collect(Collectors.toMap(AbstractExecutable::getId, task -> task));
         return tasks.stream().filter(task -> StringUtils.isBlank(task.getPreviousStep()))
-                .map(task -> calculateDagTaskExecutableDuration(task, executablePO, tasksMap)).max(Long::compare).orElse(0L);
+                .map(task -> calculateDagTaskExecutableDuration(task, executablePO, tasksMap)).max(Long::compare)
+                .orElse(0L);
     }
 
     private Long calculateDagTaskExecutableDuration(AbstractExecutable task, ExecutablePO executablePO,
             Map<String, ? extends AbstractExecutable> tasksMap) {
         Long nextTaskDurationMax = task.getNextSteps().stream().map(tasksMap::get)
-                .map(nextTask -> calculateDagTaskExecutableDuration(nextTask, executablePO, tasksMap)).max(Long::compare).orElse(0L);
+                .map(nextTask -> calculateDagTaskExecutableDuration(nextTask, executablePO, tasksMap))
+                .max(Long::compare).orElse(0L);
         return getTaskDuration(task, executablePO) + nextTaskDurationMax;
     }
 
@@ -730,12 +733,14 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
     private long getTaskDuration(AbstractExecutable task, ExecutablePO executablePO) {
         var taskDuration = task.getDuration(executablePO);
         if (task instanceof ChainedStageExecutable) {
-            taskDuration = calculateSingleSegmentStagesDuration((ChainedStageExecutable) task, executablePO, taskDuration);
+            taskDuration = calculateSingleSegmentStagesDuration((ChainedStageExecutable) task, executablePO,
+                    taskDuration);
         }
         return taskDuration;
     }
 
-    private long calculateSingleSegmentStagesDuration(ChainedStageExecutable task, ExecutablePO executablePO, long taskDuration) {
+    private long calculateSingleSegmentStagesDuration(ChainedStageExecutable task, ExecutablePO executablePO,
+            long taskDuration) {
         val stagesMap = task.getStagesMap();
         if (stagesMap.size() == 1) {
             for (Map.Entry<String, List<StageBase>> entry : stagesMap.entrySet()) {
@@ -768,7 +773,8 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
     public static long getStageDuration(Output output, AbstractExecutable parent) {
         if (output.getDuration() != 0) {
             var duration = output.getDuration();
-            // If the parent job is not running, the duration of the stage is no longer counted no matter what state the stage is
+            // If the parent job is not running, the duration of the stage
+            // is no longer counted no matter what state the stage is
             if (parent != null && parent.getStatus() == ExecutableState.RUNNING
                     && ExecutableState.RUNNING == output.getState()) {
                 duration = duration + System.currentTimeMillis() - output.getLastRunningStartTime();
@@ -930,8 +936,8 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
 
     protected void wrapWithExecuteExceptionUpdateJobError(Exception exception) {
         JobContextUtil.withTxAndRetry(() -> {
-            getExecutableManager(project).updateJobError(getId(), getId(), null, ExceptionUtils.getStackTrace(exception),
-                    exception.getMessage());
+            getExecutableManager(project).updateJobError(getId(), getId(), null,
+                    ExceptionUtils.getStackTrace(exception), exception.getMessage());
 
             return true;
         });

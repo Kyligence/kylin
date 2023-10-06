@@ -114,8 +114,8 @@ public class MetadataToolHelper extends CancelableTask {
         new MetadataToolHelper().backup(kylinConfig, project, backupPath, true, false);
     }
 
-    public Pair<String, String> backup(KylinConfig kylinConfig, String project, String path, String folder, boolean compress,
-                                       boolean excludeTableExd) throws Exception {
+    public Pair<String, String> backup(KylinConfig kylinConfig, String project, String path, String folder,
+            boolean compress, boolean excludeTableExd) throws Exception {
         Pair<String, String> pair = getBackupPath(path, folder);
         String coreMetadataBackupPath = StringUtils.appendIfMissing(pair.getFirst(), "/") + "core_meta";
         backup(kylinConfig, project, coreMetadataBackupPath, compress, excludeTableExd);
@@ -164,7 +164,8 @@ public class MetadataToolHelper extends CancelableTask {
             throws Exception {
         ResourceStore resourceStore = ResourceStore.getKylinMetaStore(kylinConfig);
         boolean isUTEnv = kylinConfig.isUTEnv();
-        //FIXME should replace printf with Logger while Logger MUST print this message to console, because test depends on it
+        //FIXME should replace printf with Logger while Logger MUST print this message to console,
+        // because test depends on it
         System.out.printf(Locale.ROOT, "The metadata backup path is %s.%n", backupPath);
         val backupMetadataUrl = getMetadataUrl(backupPath, compress, kylinConfig);
         val backupConfig = KylinConfig.createKylinConfig(kylinConfig);
@@ -249,8 +250,8 @@ public class MetadataToolHelper extends CancelableTask {
         }
     }
 
-    private void copyResourceStore(String projectPath, ResourceStore srcResourceStore,
-            ResourceStore destResourceStore, boolean isProjectLevel, boolean excludeTableExd) {
+    private void copyResourceStore(String projectPath, ResourceStore srcResourceStore, ResourceStore destResourceStore,
+            boolean isProjectLevel, boolean excludeTableExd) {
         if (excludeTableExd) {
             String tableExdPath = projectPath + ResourceStore.TABLE_EXD_RESOURCE_ROOT;
             var projectItems = srcResourceStore.listResources(projectPath);
@@ -297,7 +298,8 @@ public class MetadataToolHelper extends CancelableTask {
         }
     }
 
-    public void restore(KylinConfig kylinConfig, String project, String path, boolean delete, boolean backup) throws Exception {
+    public void restore(KylinConfig kylinConfig, String project, String path, boolean delete, boolean backup)
+            throws Exception {
         logger.info("Restore metadata with delete : {}", delete);
         ResourceStore resourceStore = ResourceStore.getKylinMetaStore(kylinConfig);
         val restoreMetadataUrl = getMetadataUrl(path, false, kylinConfig);
@@ -499,7 +501,8 @@ public class MetadataToolHelper extends CancelableTask {
             Set<String> destResources, Set<String> srcResources, boolean delete) throws IOException {
         val threadViewRS = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
 
-        //check destResources and srcResources are null,because  Sets.difference(srcResources, destResources) will report NullPointerException
+        // check destResources and srcResources are null,
+        // because Sets.difference(srcResources, destResources) will report NullPointerException
         destResources = destResources == null ? Collections.emptySet() : destResources;
         srcResources = srcResources == null ? Collections.emptySet() : srcResources;
 
@@ -527,6 +530,5 @@ public class MetadataToolHelper extends CancelableTask {
 
         return 0;
     }
-
 
 }

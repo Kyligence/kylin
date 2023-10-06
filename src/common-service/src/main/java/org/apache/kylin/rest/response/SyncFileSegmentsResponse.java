@@ -17,12 +17,11 @@
  */
 package org.apache.kylin.rest.response;
 
-import io.kyligence.kap.fileseg.FileSegments.ModelFileSegments;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
-
+import io.kyligence.kap.fileseg.FileSegments.ModelFileSegments;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

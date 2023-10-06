@@ -18,9 +18,6 @@
 
 package io.kyligence.kap.secondstorage;
 
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -29,6 +26,8 @@ import java.util.concurrent.Callable;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.rest.controller.NModelController;
 import org.apache.kylin.rest.controller.SegmentController;
 import org.apache.kylin.rest.service.AccessService;
@@ -46,6 +45,7 @@ import org.apache.kylin.rest.util.AclUtil;
 import org.apache.kylin.rest.util.SpringContext;
 import org.apache.spark.sql.SparkSession;
 import org.eclipse.jetty.toolchain.test.SimpleRequest;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -64,9 +64,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 
 import io.kyligence.kap.clickhouse.ClickHouseStorage;
 import io.kyligence.kap.newten.clickhouse.EmbeddedHttpServer;
@@ -211,20 +208,20 @@ public class EndpointParametersTest extends SecondStorageMetadataHelperTest impl
     public void testProjectLoad() {
         ProjectLoadRequest request = new ProjectLoadRequest();
         request.setProjects(ImmutableList.of());
-        assertThrows(KylinException.class, () -> secondStorageEndpoint.projectLoad(request));
+        Assert.assertThrows(KylinException.class, () -> secondStorageEndpoint.projectLoad(request));
 
         request.setProjects(ImmutableList.of(getProject(), "123"));
-        assertThrows(KylinException.class, () -> secondStorageEndpoint.projectLoad(request));
+        Assert.assertThrows(KylinException.class, () -> secondStorageEndpoint.projectLoad(request));
     }
 
     @Test
     public void testProjectClean() {
         ProjectCleanRequest request = new ProjectCleanRequest();
         request.setProjects(ImmutableList.of());
-        assertThrows(KylinException.class, () -> secondStorageEndpoint.projectClean(request));
+        Assert.assertThrows(KylinException.class, () -> secondStorageEndpoint.projectClean(request));
 
         request.setProjects(ImmutableList.of(getProject(), "123"));
-        assertThrows(KylinException.class, () -> secondStorageEndpoint.projectClean(request));
+        Assert.assertThrows(KylinException.class, () -> secondStorageEndpoint.projectClean(request));
     }
 
     @Override
@@ -257,7 +254,7 @@ public class EndpointParametersTest extends SecondStorageMetadataHelperTest impl
     private void checkHttpServer() throws IOException {
         SimpleRequest sr = new SimpleRequest(_httpServer.serverUri);
         final String content = sr.getString("/");
-        assertTrue(content.length() > 0);
+        Assert.assertTrue(content.length() > 0);
     }
 
     private static String getLocalWorkingDirectory() {

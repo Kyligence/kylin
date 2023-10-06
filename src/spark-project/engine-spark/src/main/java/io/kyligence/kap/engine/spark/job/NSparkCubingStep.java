@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -38,8 +39,6 @@ import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.NoArgsConstructor;
 import lombok.val;
@@ -91,8 +90,8 @@ public class NSparkCubingStep extends NSparkExecutable {
         for (String segId : segmentIds) {
             val seg = dfMgr.getDataflow(dataflowId).getSegment(segId);
             for (LayoutEntity layout : indexPlan.getAllLayouts()) {
-                String path = "/" + NSparkCubingUtil.getStoragePathWithoutPrefix(project,
-                        dataflowId, segId, layout.getId());
+                String path = "/"
+                        + NSparkCubingUtil.getStoragePathWithoutPrefix(project, dataflowId, segId, layout.getId());
                 result.add(new Path(path).getParent().toString());
             }
         }
@@ -124,8 +123,8 @@ public class NSparkCubingStep extends NSparkExecutable {
         for (Map.Entry<String, List<StageBase>> entry : stagesMap.entrySet()) {
             String segmentId = entry.getKey();
             List<StageBase> stages = entry.getValue();
-            boolean hasWarning = stages.stream()
-                    .anyMatch(stage -> executableManager.getOutput(stage.getId(), segmentId).getState() == ExecutableState.WARNING);
+            boolean hasWarning = stages.stream().anyMatch(stage -> executableManager.getOutput(stage.getId(), segmentId)
+                    .getState() == ExecutableState.WARNING);
             if (hasWarning) {
                 return true;
             }

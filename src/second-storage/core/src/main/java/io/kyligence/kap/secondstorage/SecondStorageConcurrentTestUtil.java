@@ -18,11 +18,11 @@
 
 package io.kyligence.kap.secondstorage;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.common.KylinConfig;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 /**
  * Only used for concurrent integration test

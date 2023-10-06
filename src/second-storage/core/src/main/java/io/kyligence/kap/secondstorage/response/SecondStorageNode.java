@@ -18,10 +18,11 @@
 
 package io.kyligence.kap.secondstorage.response;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.kyligence.kap.secondstorage.config.Node;
-
 import java.io.Serializable;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.kyligence.kap.secondstorage.config.Node;
 
 public class SecondStorageNode implements Serializable {
     private static final long serialVersionUID = 0L;

@@ -123,7 +123,8 @@ public class ExecutableParams {
 
     /**
      * Compression bucket param to reduce storage volume in database.
-     * pattern: {segmentId:[ [layoutId:[{partitionId, bucketId},{partitionId, bucketId},...], [layoutId:[{partId, bucketId},{partId, bucketId},...], }
+     * pattern: {segmentId:[ [layoutId:[{partitionId, bucketId},{partitionId, bucketId},...], 
+     * [layoutId:[{partId, bucketId},{partId, bucketId},...], }
      */
     public static String toBucketParam(Set<JobBucket> buckets) {
         String param = "";

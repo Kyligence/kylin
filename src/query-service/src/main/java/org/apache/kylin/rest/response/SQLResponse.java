@@ -232,9 +232,10 @@ public class SQLResponse implements Serializable {
 
     public void updateDataFetchTime(QueryContext queryContext) {
         // The dataFetchTime could come from:
-        // 1) from queryContext.getMetrics().getDataFetchTime(), in case of push-down, this is the time from local file cache (KylinCacheFileSystem)
+        // 1) from queryContext.getMetrics().getDataFetchTime(), in case of push-down,
+        //    this is the time from local file cache (KylinCacheFileSystem)
         // 2) from this.nativeRealizations, in case of index query, this is the time when segment is built
-        // We take the max of the above all.
+        //    We take the max of the above all.
 
         dataFetchTime = queryContext.getMetrics().getDataFetchTime();
 

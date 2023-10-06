@@ -23,13 +23,14 @@ import static org.apache.kylin.common.exception.code.ErrorCodeSystem.MAINTENANCE
 
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.rest.util.AclEvaluate;
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import org.apache.kylin.rest.response.MaintenanceModeResponse;
+import org.apache.kylin.rest.util.AclEvaluate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import io.kyligence.kap.metadata.epoch.EpochManager;
 
 @Component("maintenanceModeService")
 public class MaintenanceModeService extends BasicService implements MaintenanceModeSupporter {

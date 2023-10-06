@@ -17,11 +17,11 @@
  */
 package io.kyligence.kap.secondstorage.config;
 
+import java.util.HashMap;
+
 import org.apache.kylin.common.util.RandomUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
 
 public class SecondStorageModelSegmentTest {
 

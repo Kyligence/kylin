@@ -17,11 +17,12 @@
  */
 package io.kyligence.kap.secondstorage.ddl;
 
-import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
-import io.kyligence.kap.secondstorage.ddl.visitor.RenderVisitor;
+import java.sql.SQLException;
+
 import org.apache.commons.collections.map.ListOrderedMap;
 
-import java.sql.SQLException;
+import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
+import io.kyligence.kap.secondstorage.ddl.visitor.RenderVisitor;
 
 public class InsertInto extends DDL<InsertInto> {
 
@@ -44,15 +45,14 @@ public class InsertInto extends DDL<InsertInto> {
     }
 
     public InsertInto set(final String column, final Object value) {
-//        if (columnsValues.containsKey(column))
-//            throw new QueryGrammarException("Column '" + column
-//                    + "' has already been set.");
+        //        if (columnsValues.containsKey(column))
+        //            throw new QueryGrammarException("Column '" + column
+        //                    + "' has already been set.");
         columnsValues.put(column, value);
         return this;
     }
 
-    public InsertInto set(final String column, final Object value,
-                           final Object defaultValueIfNull) {
+    public InsertInto set(final String column, final Object value, final Object defaultValueIfNull) {
         if (value == null)
             return set(column, defaultValueIfNull);
         else

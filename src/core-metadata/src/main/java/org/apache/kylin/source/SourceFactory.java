@@ -28,11 +28,10 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.ClassUtil;
-import org.apache.kylin.metadata.model.ISourceAware;
-
 import org.apache.kylin.guava30.shaded.common.cache.Cache;
 import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 import org.apache.kylin.guava30.shaded.common.cache.RemovalListener;
+import org.apache.kylin.metadata.model.ISourceAware;
 
 import lombok.extern.slf4j.Slf4j;
 

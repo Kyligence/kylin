@@ -32,17 +32,17 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.junit.annotation.OverwriteProp;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import lombok.val;
 
 @MetadataInfo(onlyProps = true)
-public class UnitOfWorkTest {
+class UnitOfWorkTest {
 
     @Test
-    public void testTransaction() {
-        val ret = UnitOfWork.doInTransactionWithRetry(() -> {
+    void testTransaction() {
+        UnitOfWork.doInTransactionWithRetry(() -> {
             val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
             MemoryLockUtils.lockAndRecord("/_global/path/res", null, false);
             MemoryLockUtils.lockAndRecord("/_global/path/res2", null, false);
@@ -57,15 +57,15 @@ public class UnitOfWorkTest {
         }, UnitOfWork.GLOBAL_UNIT);
 
         val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path/res").getMvcc());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path/res2").getMvcc());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path/res3").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path/res").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path/res2").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path/res3").getMvcc());
     }
 
     @Test
-    public void testExceptionInTransactionWithRetry() {
+    void testExceptionInTransactionWithRetry() {
         try {
-            val ret = UnitOfWork.doInTransactionWithRetry(() -> {
+            UnitOfWork.doInTransactionWithRetry(() -> {
                 val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
                 MemoryLockUtils.lockAndRecord("/_global/path/res", null, false);
                 MemoryLockUtils.lockAndRecord("/_global/path/res2", null, false);
@@ -79,21 +79,21 @@ public class UnitOfWorkTest {
         }
 
         val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
-        Assert.assertNull(resourceStore.getResource("/_global/path/res"));
-        Assert.assertNull(resourceStore.getResource("/_global/path/res2"));
+        Assertions.assertNull(resourceStore.getResource("/_global/path/res"));
+        Assertions.assertNull(resourceStore.getResource("/_global/path/res2"));
 
         // test can be used again after exception
         testTransaction();
     }
 
     @Test
-    public void testUnitOfWorkPreprocess() {
+    void testUnitOfWorkPreprocess() {
         class A implements UnitOfWork.Callback<Object> {
             private final List<String> list = Lists.newArrayList();
 
             @Override
             public String toString() {
-                return list.size() + "";
+                return String.valueOf(list.size());
             }
 
             @Override
@@ -117,26 +117,26 @@ public class UnitOfWorkTest {
             }
         }
         A callback = new A();
-        Assert.assertTrue(callback.list.isEmpty());
+        Assertions.assertTrue(callback.list.isEmpty());
         try {
-            val ret = UnitOfWork.doInTransactionWithRetry(callback, UnitOfWork.GLOBAL_UNIT);
-            Assert.fail();
+            UnitOfWork.doInTransactionWithRetry(callback, UnitOfWork.GLOBAL_UNIT);
+            Assertions.fail();
         } catch (Throwable e) {
-            Assert.assertTrue(e instanceof TransactionException);
-            Assert.assertEquals("conflict", Throwables.getRootCause(e).getMessage());
+            Assertions.assertTrue(e instanceof TransactionException);
+            Assertions.assertEquals("conflict", Throwables.getRootCause(e).getMessage());
         }
-        Assert.assertEquals(7, callback.list.size());
-        Assert.assertEquals("no args", callback.list.get(0));
-        Assert.assertEquals("1", callback.list.get(1));
-        Assert.assertEquals("no args", callback.list.get(2));
-        Assert.assertEquals("3", callback.list.get(3));
-        Assert.assertEquals("no args", callback.list.get(4));
-        Assert.assertEquals("5", callback.list.get(5));
-        Assert.assertEquals("conflict", callback.list.get(6));
+        Assertions.assertEquals(7, callback.list.size());
+        Assertions.assertEquals("no args", callback.list.get(0));
+        Assertions.assertEquals("1", callback.list.get(1));
+        Assertions.assertEquals("no args", callback.list.get(2));
+        Assertions.assertEquals("3", callback.list.get(3));
+        Assertions.assertEquals("no args", callback.list.get(4));
+        Assertions.assertEquals("5", callback.list.get(5));
+        Assertions.assertEquals("conflict", callback.list.get(6));
     }
 
     @Test
-    public void testReentrant() {
+    void testReentrant() {
         UnitOfWork.doInTransactionWithRetry(() -> {
             val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
             MemoryLockUtils.lockAndRecord("/_global/path/res", null, false);
@@ -156,7 +156,7 @@ public class UnitOfWorkTest {
                         ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
                 resourceStore2.checkAndPutResource("/_global/path2/res2/3",
                         ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
-                Assert.assertEquals(resourceStore, resourceStore2);
+                Assertions.assertEquals(resourceStore, resourceStore2);
                 return 0;
             }, UnitOfWork.GLOBAL_UNIT);
             MemoryLockUtils.lockAndRecord("/_global/path/res3", null, false);
@@ -166,16 +166,16 @@ public class UnitOfWorkTest {
         }, UnitOfWork.GLOBAL_UNIT);
 
         val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path/res").getMvcc());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path/res2").getMvcc());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path2/res2/1").getMvcc());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path2/res2/2").getMvcc());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path2/res2/3").getMvcc());
-        Assert.assertEquals(0, resourceStore.getResource("/_global/path/res3").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path/res").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path/res2").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path2/res2/1").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path2/res2/2").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path2/res2/3").getMvcc());
+        Assertions.assertEquals(0, resourceStore.getResource("/_global/path/res3").getMvcc());
     }
 
     @Test
-    public void testReadLockExclusive() {
+    void testReadLockExclusive() {
         val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
         resourceStore.checkAndPutResource("/_global/path/res1",
                 ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
@@ -216,13 +216,13 @@ public class UnitOfWorkTest {
             UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().unitName(UnitOfWork.GLOBAL_UNIT)
                     .readonly(true).maxRetry(1).processor(() -> {
                         long cost = System.currentTimeMillis() - readStart;
-                        Assert.assertTrue(cost < 500);
-                        Assert.assertEquals(0, ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
+                        Assertions.assertTrue(cost < 500);
+                        Assertions.assertEquals(0, ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
                                 .getResource("/_global/path/res1").getMvcc());
                         return 0;
                     }).build());
         } catch (Exception e) {
-            Assert.fail();
+            Assertions.fail();
         }
         new Thread(() -> {
             try {
@@ -238,19 +238,19 @@ public class UnitOfWorkTest {
                     .readonly(false).maxRetry(1).processor(() -> {
                         MemoryLockUtils.lockAndRecord("/_global/path/res1", null, false);
                         long cost = System.currentTimeMillis() - writeStart;
-                        Assert.assertTrue(cost > 1500);
-                        Assert.assertEquals(0, ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
+                        Assertions.assertTrue(cost > 1500);
+                        Assertions.assertEquals(0, ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
                                 .getResource("/_global/path/res1").getMvcc());
                         return 0;
                     }).build());
         } catch (Exception e) {
-            Assert.fail();
+            Assertions.fail();
         }
         stop.set(true);
     }
 
     @Test
-    public void testWriteLockExclusive() {
+    void testWriteLockExclusive() {
         Object condition = new Object();
         AtomicBoolean stop = new AtomicBoolean();
         Thread writeLockHelder = new Thread(() -> {
@@ -300,28 +300,25 @@ public class UnitOfWorkTest {
             stop.set(true);
         }).start();
         long start = System.currentTimeMillis();
-        try {
-            UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().unitName(UnitOfWork.GLOBAL_UNIT)
-                    .readonly(true).maxRetry(1).processor(() -> {
-                        System.out.println("Read thread start to lock.");
-                        RawResource raw = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
-                                .getResource("/_global/path/res1");
-                        System.out.println("Read thread lock succeed.");
-                        long cost = System.currentTimeMillis() - start;
-                        System.out.println(cost + " " + (raw == null ? -2 : raw.getMvcc()));
-                        Assert.assertTrue(cost > 1500);
-                        Assert.assertEquals(0, raw.getMvcc());
-                        return 0;
-                    }).build());
-        } catch (Exception e) {
-            throw e;
-        }
+        UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().unitName(UnitOfWork.GLOBAL_UNIT) //
+                .readonly(true).maxRetry(1).processor(() -> {
+                    System.out.println("Read thread start to lock.");
+                    RawResource raw = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
+                            .getResource("/_global/path/res1");
+                    System.out.println("Read thread lock succeed.");
+                    long cost = System.currentTimeMillis() - start;
+                    System.out.println(cost + " " + (raw == null ? -2 : raw.getMvcc()));
+                    Assertions.assertTrue(cost > 1500);
+                    assert raw != null;
+                    Assertions.assertEquals(0, raw.getMvcc());
+                    return 0;
+                }).build());
         stop.set(true);
     }
 
     @OverwriteProp(key = "kylin.env", value = "PROD")
     @Test
-    public void testUpdateInReadTransaction() {
+    void testUpdateInReadTransaction() {
         try {
             UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().unitName(UnitOfWork.GLOBAL_UNIT)
                     .readonly(true).maxRetry(1).processor(() -> {
@@ -331,9 +328,9 @@ public class UnitOfWorkTest {
                                 ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
                         return 0;
                     }).build());
-            Assert.fail();
+            Assertions.fail();
         } catch (Exception e) {
-            Assert.assertEquals(TransactionException.class, e.getClass());
+            Assertions.assertEquals(TransactionException.class, e.getClass());
         }
     }
 
@@ -344,7 +341,7 @@ public class UnitOfWorkTest {
         UnitOfWork.doInTransactionWithRetry(
                 UnitOfWorkParams.builder().unitName(UnitOfWork.GLOBAL_UNIT).readonly(true).maxRetry(1).processor(() -> {
                     val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
-                    Assert.assertEquals(0, resourceStore.getResource("/_global/path/res1").getMvcc());
+                    Assertions.assertEquals(0, resourceStore.getResource("/_global/path/res1").getMvcc());
                     return 0;
                 }).build());
     }
@@ -360,7 +357,7 @@ public class UnitOfWorkTest {
                             ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
                     return 0;
                 }).build());
-        Assert.assertEquals(0, ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
+        Assertions.assertEquals(0, ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
                 .getResource("/_global/path/res1").getMvcc());
 
     }
@@ -370,12 +367,13 @@ public class UnitOfWorkTest {
         KylinConfig.getInstanceFromEnv().setProperty("kylin.env.max-seconds-for-dead-lock-retry", "2");
         long startTime = System.currentTimeMillis();
         try {
-            UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().retryMoreTimeForDeadLockException(true).processor(() -> {
-                throw new DeadLockException("test");
-            }).build());
+            UnitOfWork.doInTransactionWithRetry(
+                    UnitOfWorkParams.builder().retryMoreTimeForDeadLockException(true).processor(() -> {
+                        throw new DeadLockException("test");
+                    }).build());
         } catch (Exception e) {
-            Assert.assertEquals(DeadLockException.class, e.getCause().getClass());
-            Assert.assertTrue(System.currentTimeMillis() - startTime > 2 * 1000);
+            Assertions.assertEquals(DeadLockException.class, e.getCause().getClass());
+            Assertions.assertTrue(System.currentTimeMillis() - startTime > 2 * 1000);
         }
     }
 }

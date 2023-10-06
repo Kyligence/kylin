@@ -24,25 +24,24 @@ import java.util.Set;
 
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
-
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.val;
 
 public class MetadataChecker {
 
-    private MetadataStore metadataStore;
+    private final MetadataStore metadataStore;
 
     private static final String JSON_SUFFIX = ".json";
+    private static final String LINE_BREAK = "\n";
 
     public MetadataChecker(MetadataStore metadataStore) {
         this.metadataStore = metadataStore;
     }
 
-    @Getter(AccessLevel.PUBLIC)
-    public class VerifyResult {
+    @Getter
+    public static class VerifyResult {
         boolean existUUIDFile = false;
         boolean existImageFile = false;
         boolean existACLDir = false;
@@ -53,8 +52,8 @@ public class MetadataChecker {
         boolean existIndexPlanFile = false;
         boolean existTable = false;
         boolean existVersionFile = false;
-        private Set<String> illegalProjects = Sets.newHashSet();
-        private Set<String> illegalFiles = Sets.newHashSet();
+        private final Set<String> illegalProjects = Sets.newHashSet();
+        private final Set<String> illegalFiles = Sets.newHashSet();
 
         public boolean isQualified() {
             return illegalProjects.isEmpty() && illegalFiles.isEmpty();
@@ -67,23 +66,23 @@ public class MetadataChecker {
         public String getResultMessage() {
             StringBuilder resultMessage = new StringBuilder();
 
-            resultMessage.append("the uuid file exists : " + existUUIDFile + "\n");
-            resultMessage.append("the image file exists : " + existImageFile + "\n");
-            resultMessage.append("the user_group file exists : " + existUserGroupFile + "\n");
-            resultMessage.append("the user dir exist : " + existUserDir + "\n");
-            resultMessage.append("the acl dir exist : " + existACLDir + "\n");
+            resultMessage.append("the uuid file exists : ").append(existUUIDFile).append(LINE_BREAK);
+            resultMessage.append("the image file exists : ").append(existImageFile).append(LINE_BREAK);
+            resultMessage.append("the user_group file exists : ").append(existUserGroupFile).append(LINE_BREAK);
+            resultMessage.append("the user dir exist : ").append(existUserDir).append(LINE_BREAK);
+            resultMessage.append("the acl dir exist : ").append(existACLDir).append(LINE_BREAK);
 
             if (!illegalProjects.isEmpty()) {
-                resultMessage.append("illegal projects : \n");
+                resultMessage.append("illegal projects : ").append(LINE_BREAK);
                 for (String illegalProject : illegalProjects) {
-                    resultMessage.append("\t" + illegalProject + "\n");
+                    resultMessage.append("\t").append(illegalProject).append(LINE_BREAK);
                 }
             }
 
             if (!illegalFiles.isEmpty()) {
-                resultMessage.append("illegal files : \n");
+                resultMessage.append("illegal files : ").append(LINE_BREAK);
                 for (String illegalFile : illegalFiles) {
-                    resultMessage.append("\t" + illegalFile + "\n");
+                    resultMessage.append("\t").append(illegalFile).append(LINE_BREAK);
                 }
             }
 

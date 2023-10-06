@@ -17,11 +17,11 @@
  */
 package io.kyligence.kap.secondstorage.util;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.util.Arrays;
 import java.util.List;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SecondStorageDateUtilsTest {
     @Test
@@ -30,7 +30,8 @@ public class SecondStorageDateUtilsTest {
         List<String> result = SecondStorageDateUtils.splitByDayStr(696873600000L, 697046400000L);
         Assertions.assertIterableEquals(result, expected);
 
-        Exception exception = Assertions.assertThrows(IllegalArgumentException.class, () -> SecondStorageDateUtils.splitByDayStr(696873600000L, Long.MAX_VALUE));
+        Exception exception = Assertions.assertThrows(IllegalArgumentException.class,
+                () -> SecondStorageDateUtils.splitByDayStr(696873600000L, Long.MAX_VALUE));
         Assertions.assertEquals("segmentRange end is invalid.", exception.getMessage());
     }
 

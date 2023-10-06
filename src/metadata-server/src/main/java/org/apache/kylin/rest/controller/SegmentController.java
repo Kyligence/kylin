@@ -167,7 +167,8 @@ public class SegmentController extends NBasicController {
         checkProjectName(buildSegmentsRequest.getProject());
         String partitionColumnFormat = modelService.getPartitionColumnFormatById(buildSegmentsRequest.getProject(),
                 modelId);
-        DataRangeUtils.validateDataRange(buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(), partitionColumnFormat);
+        DataRangeUtils.validateDataRange(buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(),
+                partitionColumnFormat);
         val res = modelService.checkSegHoleExistIfNewRangeBuild(buildSegmentsRequest.getProject(), modelId,
                 buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(),
                 buildSegmentsRequest.isBuildAllIndexes(), buildSegmentsRequest.getBatchIndexIds());
@@ -283,7 +284,8 @@ public class SegmentController extends NBasicController {
         checkParamLength("tag", buildSegmentsRequest.getTag(), prjInstance.getConfig().getJobTagMaxSize());
         String partitionColumnFormat = modelService.getPartitionColumnFormatById(buildSegmentsRequest.getProject(),
                 modelId);
-        DataRangeUtils.validateDataRange(buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(), partitionColumnFormat);
+        DataRangeUtils.validateDataRange(buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(),
+                partitionColumnFormat);
         modelService.validateCCType(modelId, buildSegmentsRequest.getProject());
         JobInfoResponse response = modelBuildService.buildSegmentsManually(buildSegmentsRequest.getProject(), modelId,
                 buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(),
@@ -305,7 +307,8 @@ public class SegmentController extends NBasicController {
                 .getProject(buildSegmentsRequest.getProject());
         checkParamLength("tag", buildSegmentsRequest.getTag(), prjInstance.getConfig().getJobTagMaxSize());
         String partitionColumnFormat = buildSegmentsRequest.getPartitionDesc().getPartitionDateFormat();
-        DataRangeUtils.validateDataRange(buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(), partitionColumnFormat);
+        DataRangeUtils.validateDataRange(buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(),
+                partitionColumnFormat);
         modelService.validateCCType(modelId, buildSegmentsRequest.getProject());
         ModelUtils.checkSecondStoragePartition(buildSegmentsRequest.getProject(), modelId,
                 buildSegmentsRequest.getPartitionDesc(), ModelUtils.MessageType.SEGMENT);
@@ -315,10 +318,10 @@ public class SegmentController extends NBasicController {
                 buildSegmentsRequest.getPartitionDesc(), buildSegmentsRequest.getMultiPartitionDesc(),
                 buildSegmentsRequest.getSegmentHoles(), buildSegmentsRequest.isBuildAllIndexes(),
                 buildSegmentsRequest.getSubPartitionValues())
-                        .withIgnoredSnapshotTables(buildSegmentsRequest.getIgnoredSnapshotTables())
-                        .withPriority(buildSegmentsRequest.getPriority())
-                        .withBuildAllSubPartitions(buildSegmentsRequest.isBuildAllSubPartitions())
-                        .withYarnQueue(buildSegmentsRequest.getYarnQueue()).withTag(buildSegmentsRequest.getTag());
+                .withIgnoredSnapshotTables(buildSegmentsRequest.getIgnoredSnapshotTables())
+                .withPriority(buildSegmentsRequest.getPriority())
+                .withBuildAllSubPartitions(buildSegmentsRequest.isBuildAllSubPartitions())
+                .withYarnQueue(buildSegmentsRequest.getYarnQueue()).withTag(buildSegmentsRequest.getTag());
 
         JobInfoResponse response = fusionModelService.incrementBuildSegmentsManually(incrParams);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");

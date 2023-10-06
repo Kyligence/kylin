@@ -19,10 +19,10 @@
 package org.apache.kylin.source.jdbc;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -35,13 +35,12 @@ import java.util.Map;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.ColumnDesc;
-import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableDesc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class H2Database {
     @SuppressWarnings("unused")
@@ -109,8 +108,8 @@ public class H2Database {
         try {
             File tempFile = File.createTempFile("tmp_h2", ".csv");
             try (FileOutputStream tempFileStream = new FileOutputStream(tempFile)) {
-                try (InputStream is = new FileInputStream(
-                        Paths.get(config.getMetadataUrl().getIdentifier(), "..", path).toFile())) {
+                try (InputStream is = Files.newInputStream(
+                        Paths.get(config.getMetadataUrl().getIdentifier(), "..", path).toFile().toPath())) {
                     IOUtils.copy(is, tempFileStream);
                 }
 
@@ -160,12 +159,12 @@ public class H2Database {
                 ddl.append(",");
                 csvColumns.append(",");
             }
-            ddl.append(col.getName() + " " + getH2DataType((col.getDatatype())) + "\n");
+            ddl.append(col.getName()).append(" ").append(getH2DataType((col.getDatatype()))).append("\n");
             csvColumns.append(col.getName());
         }
         ddl.append(")" + "\n");
-        ddl.append("AS SELECT * FROM CSVREAD('" + csvFilePath + "', '" + csvColumns
-                + "', 'charset=UTF-8 fieldSeparator=,');");
+        ddl.append("AS SELECT * FROM CSVREAD('").append(csvFilePath).append("', '").append(csvColumns)
+                .append("', 'charset=UTF-8 fieldSeparator=,');");
 
         return ddl.toString();
     }
@@ -176,8 +175,8 @@ public class H2Database {
         for (ColumnDesc col : tableDesc.getColumns()) {
             if ("T".equalsIgnoreCase(col.getIndex())) {
                 StringBuilder ddl = new StringBuilder();
-                ddl.append("CREATE INDEX IF NOT EXISTS IDX_" + tableDesc.getName() + "_" + x + " ON "
-                        + tableDesc.getIdentity() + "(" + col.getName() + ")");
+                ddl.append("CREATE INDEX IF NOT EXISTS IDX_").append(tableDesc.getName()).append("_").append(x)
+                        .append(" ON ").append(tableDesc.getIdentity()).append("(").append(col.getName()).append(")");
                 ddl.append("\n");
                 result.add(ddl.toString());
                 x++;

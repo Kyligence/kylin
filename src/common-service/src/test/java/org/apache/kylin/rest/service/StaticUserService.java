@@ -22,13 +22,13 @@ import java.util.List;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.rest.constant.Constant;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class StaticUserService extends OpenUserService {
     private List<ManagedUser> users = Lists.newArrayList();

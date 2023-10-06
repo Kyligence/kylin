@@ -18,6 +18,12 @@
 
 package io.kyligence.kap.clickhouse.database;
 
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
+
 import io.kyligence.kap.clickhouse.ddl.ClickHouseRender;
 import io.kyligence.kap.clickhouse.job.ClickHouse;
 import io.kyligence.kap.secondstorage.database.DatabaseOperator;
@@ -25,14 +31,9 @@ import io.kyligence.kap.secondstorage.ddl.DropTable;
 import io.kyligence.kap.secondstorage.ddl.ShowDatabases;
 import io.kyligence.kap.secondstorage.ddl.ShowTables;
 import lombok.SneakyThrows;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
 
 public class ClickHouseOperator implements DatabaseOperator {
-    private ClickHouse clickHouse;
+    private final ClickHouse clickHouse;
     private final ClickHouseRender render = new ClickHouseRender();
 
     public ClickHouseOperator(final String jdbcUrl) {

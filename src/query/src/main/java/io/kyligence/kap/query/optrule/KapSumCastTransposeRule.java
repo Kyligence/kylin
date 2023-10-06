@@ -44,6 +44,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
 import org.apache.kylin.query.relnode.ContextUtil;
@@ -53,8 +54,6 @@ import org.apache.kylin.query.util.AggExpressionUtil;
 import org.apache.kylin.query.util.RuleUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class KapSumCastTransposeRule extends RelOptRule {
     private static final Logger logger = LoggerFactory.getLogger(KapSumCastTransposeRule.class);

@@ -17,13 +17,13 @@
  */
 package io.kyligence.kap.secondstorage.util;
 
-import org.apache.kylin.metadata.model.SegmentRange;
-
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.apache.kylin.metadata.model.SegmentRange;
 
 public class SecondStorageDateUtils {
 

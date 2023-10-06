@@ -551,7 +551,8 @@ public class QueryUtilTest extends NLocalFileMetadataTestCase {
     public void testAddLimitOffsetBetweenBigQueryPushDownWithForceLimit() {
         KylinConfig config = KylinConfig.createKylinConfig(new Properties());
         String sql = "select TRANS_ID as test_limit, ORDER_ID as test_offset from TEST_KYLIN_FACT group by TRANS_ID, ORDER_ID";
-        // compare the priority of two properties, the `kylin.query.max-result-rows` has higher priority if it is bigger than 0
+        // compare the priority of two properties, the `kylin.query.max-result-rows` 
+        // has higher priority if it is bigger than 0
         {
             Map<String, String> map = Maps.newHashMap();
             map.put("kylin.query.max-result-rows", "-1");

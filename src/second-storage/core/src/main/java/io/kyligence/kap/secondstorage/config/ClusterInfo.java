@@ -18,12 +18,6 @@
 
 package io.kyligence.kap.secondstorage.config;
 
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.common.util.EncryptUtil;
-import org.apache.kylin.common.util.JsonUtil;
-
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,6 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+
+import org.apache.kylin.common.util.EncryptUtil;
+import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class ClusterInfo {
     private Map<String, List<Node>> cluster;
@@ -45,7 +45,8 @@ public class ClusterInfo {
 
     @JsonIgnore
     public List<Node> getNodes() {
-        return Collections.unmodifiableList(cluster.values().stream().flatMap(List::stream).collect(Collectors.toList()));
+        return Collections.unmodifiableList(cluster.values().stream() //
+                .flatMap(List::stream).collect(Collectors.toList()));
     }
 
     public ClusterInfo setCluster(Map<String, List<Node>> cluster) {
@@ -66,8 +67,7 @@ public class ClusterInfo {
                 Node n;
                 if (!(node instanceof Node)) {
                     n = JsonUtil.readValueQuietly(
-                            JsonUtil.writeValueAsStringQuietly(node).getBytes(StandardCharsets.UTF_8),
-                            Node.class);
+                            JsonUtil.writeValueAsStringQuietly(node).getBytes(StandardCharsets.UTF_8), Node.class);
                 } else {
                     n = (Node) node;
                 }
@@ -150,5 +150,3 @@ public class ClusterInfo {
     }
 
 }
-
-

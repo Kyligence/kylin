@@ -18,13 +18,13 @@
 
 package org.apache.kylin.tool;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class ProjectTool {
 

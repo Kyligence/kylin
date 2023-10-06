@@ -58,7 +58,8 @@ public class CountDistinctExprPlannerTest extends CalciteRuleTestBase {
         return diff;
     }
 
-    protected void checkSQL(String project, String sql, String prefix, StringOutput StrOut, Collection<RelOptRule>... ruleSets) {
+    protected void checkSQL(String project, String sql, String prefix, StringOutput StrOut,
+            Collection<RelOptRule>... ruleSets) {
         Collection<RelOptRule> rules = new HashSet<>();
         for (Collection<RelOptRule> ruleSet : ruleSets) {
             rules.addAll(ruleSet);
@@ -72,7 +73,8 @@ public class CountDistinctExprPlannerTest extends CalciteRuleTestBase {
         List<Pair<String, String>> queries = readALLSQLs(KylinConfig.getInstanceFromEnv(), defaultProject,
                 "query/sql_count_distinct_expr");
         CalciteRuleTestBase.StringOutput output = new CalciteRuleTestBase.StringOutput(false);
-        queries.forEach(e -> checkSQL(defaultProject, e.getSecond(), e.getFirst(), output, HepUtils.SumExprRules, HepUtils.CountDistinctExprRules));
+        queries.forEach(e -> checkSQL(defaultProject, e.getSecond(), e.getFirst(), output, HepUtils.SumExprRules,
+                HepUtils.CountDistinctExprRules));
         output.dump(log);
     }
 
@@ -80,7 +82,8 @@ public class CountDistinctExprPlannerTest extends CalciteRuleTestBase {
     public void testAllCases() throws IOException {
         List<Pair<String, String>> queries = readALLSQLs(KylinConfig.getInstanceFromEnv(), defaultProject,
                 "query/sql_count_distinct_expr");
-        queries.forEach(e -> checkSQL(defaultProject, e.getSecond(), e.getFirst(), null, HepUtils.SumExprRules, HepUtils.CountDistinctExprRules));
+        queries.forEach(e -> checkSQL(defaultProject, e.getSecond(), e.getFirst(), null, HepUtils.SumExprRules,
+                HepUtils.CountDistinctExprRules));
     }
 
     @Test

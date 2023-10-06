@@ -21,10 +21,9 @@ package org.apache.kylin.rest.request;
 import static io.kyligence.kap.metadata.user.ManagedUser.DISABLED_ROLE;
 import static org.apache.kylin.rest.constant.Constant.GROUP_ALL_USERS;
 
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
 

@@ -18,9 +18,10 @@
 
 package org.apache.kylin.tool.garbage;
 
-import javax.validation.constraints.NotNull;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+
+import javax.validation.constraints.NotNull;
 
 /**
  * The priority of the task to be executed is:

@@ -151,7 +151,7 @@ public abstract class RootPersistentEntity implements AclEntity, Serializable {
         }
         this.mvcc = mvcc;
     }
-    
+
     public <T extends RootPersistentEntity> void copyPropertiesTo(T copy) {
         BeanUtils.copyProperties(this, copy, "cachedAndShared");
     }

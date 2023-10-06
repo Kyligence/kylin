@@ -57,11 +57,10 @@ import io.swagger.annotations.ApiOperation;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
-
 @RestController
-@RequestMapping(value = "/api/storage", produces = {HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON})
+@RequestMapping(value = "/api/storage", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
 @Slf4j
-@ConditionalOnProperty({"kylin.second-storage.class"})
+@ConditionalOnProperty({ "kylin.second-storage.class" })
 public class OpenSecondStorageEndpoint extends NBasicController {
     private static final String MODEL_ARG_NAME = "model_name";
     private static final String MODEL_ENABLE = "enabled";
@@ -128,8 +127,7 @@ public class OpenSecondStorageEndpoint extends NBasicController {
 
     protected List<String> convertSegmentIdWithName(StorageRequest request) {
         String[] segIds = modelService.convertSegmentIdWithName(request.getModel(), request.getProject(),
-                request.getSegmentIds().toArray(new String[0]),
-                request.getSegmentNames().toArray(new String[0]));
+                request.getSegmentIds().toArray(new String[0]), request.getSegmentNames().toArray(new String[0]));
         modelService.checkSegmentsExistById(request.getModel(), request.getProject(), segIds);
 
         if (segIds == null)
@@ -138,7 +136,7 @@ public class OpenSecondStorageEndpoint extends NBasicController {
         return Lists.newArrayList(segIds);
     }
 
-    @PostMapping(value = "/recovery/model", produces = {HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON})
+    @PostMapping(value = "/recovery/model", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
     public EnvelopeResponse<Void> recoverModel(@RequestBody RecoverRequest request) {
         checkProjectName(request.getProject());
         checkRequiredArg("modelName", request.getModelName());
@@ -147,7 +145,7 @@ public class OpenSecondStorageEndpoint extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, null, "");
     }
 
-    @PostMapping(value = "/recovery/project", produces = {HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON})
+    @PostMapping(value = "/recovery/project", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
     public EnvelopeResponse<ProjectRecoveryResponse> recoverProject(@RequestBody RecoverRequest request) {
         checkProjectName(request.getProject());
         secondStorageService.isProjectAdmin(request.getProject());
@@ -156,14 +154,15 @@ public class OpenSecondStorageEndpoint extends NBasicController {
     }
 
     @ApiOperation(value = "enableModelWithModelName")
-    @PostMapping(value = "/models/state", produces = {HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON})
+    @PostMapping(value = "/models/state", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
     @ResponseBody
     public EnvelopeResponse<JobInfoResponse> enableStorage(@RequestBody ModelEnableRequest modelEnableRequest) {
         modelEnableRequest.setProject(checkProjectName(modelEnableRequest.getProject()));
         checkRequiredArg(MODEL_ARG_NAME, modelEnableRequest.getModelName());
         checkRequiredArg(MODEL_ENABLE, modelEnableRequest.getEnabled());
         checkKylinInfo(modelEnableRequest.getEnabled());
-        val modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), modelEnableRequest.getProject());
+        val modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                modelEnableRequest.getProject());
         val model = modelManager.getDataModelDescByAlias(modelEnableRequest.getModelName());
         if (Objects.isNull(model)) {
             throw new KylinException(MODEL_NAME_NOT_EXIST, modelEnableRequest.getModelName());
@@ -185,7 +184,8 @@ public class OpenSecondStorageEndpoint extends NBasicController {
         }
         checkDatatype(request.getDatatype());
         if (StringUtils.isEmpty(request.getColumn())) {
-            throw new KylinException(INVALID_PARAMETER, String.format(MsgPicker.getMsg().getParameterEmpty(), "column"));
+            throw new KylinException(INVALID_PARAMETER,
+                    String.format(MsgPicker.getMsg().getParameterEmpty(), "column"));
         }
         secondStorageService.modifyColumn(projectName, model.getId(), request.getColumn(), request.getDatatype());
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, null, "");
@@ -193,10 +193,12 @@ public class OpenSecondStorageEndpoint extends NBasicController {
 
     public void checkDatatype(String datatype) {
         if (StringUtils.isEmpty(datatype)) {
-            throw new KylinException(INVALID_PARAMETER, String.format(MsgPicker.getMsg().getParameterEmpty(), "datatype"));
+            throw new KylinException(INVALID_PARAMETER,
+                    String.format(MsgPicker.getMsg().getParameterEmpty(), "datatype"));
         }
         if (!NULLABLE_STRING.equals(datatype) && !LOW_CARDINALITY_STRING.equals(datatype)) {
-            throw new KylinException(INVALID_PARAMETER, String.format(MsgPicker.getMsg().getInvalidLowCardinalityDataType()));
+            throw new KylinException(INVALID_PARAMETER,
+                    String.format(MsgPicker.getMsg().getInvalidLowCardinalityDataType()));
         }
     }
 }

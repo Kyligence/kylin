@@ -44,6 +44,7 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.job.constant.JobStatusEnum;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
@@ -87,8 +88,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 import lombok.val;
 

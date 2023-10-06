@@ -219,8 +219,8 @@ public class NQueryController extends NBasicController {
                         // return modelIds to syncFileSegments()
                         sqlResponse.addNativeRealizationIfNotExist(finding.modelId);
                     }
-                    modelService.forceFileSegments(finding.project, finding.modelId,
-                            finding.storageLocation, Optional.of(finding.fileHashs), SegmentStatusEnum.NEW);
+                    modelService.forceFileSegments(finding.project, finding.modelId, finding.storageLocation,
+                            Optional.of(finding.fileHashs), SegmentStatusEnum.NEW);
                 });
             }
 
@@ -274,12 +274,10 @@ public class NQueryController extends NBasicController {
 
         SyncFileSegmentsResponse resp = new SyncFileSegmentsResponse();
         resp.setProject(project);
-        resp.setModels(touchedModelIds.stream()
-                .map(modelId -> FileSegments.getModelFileSegments(project, modelId))
+        resp.setModels(touchedModelIds.stream().map(modelId -> FileSegments.getModelFileSegments(project, modelId))
                 .collect(Collectors.toList()));
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, resp, "");
     }
-
 
     @ApiOperation(value = "cancelQuery", tags = { "QE" })
     @DeleteMapping(value = "/{id:.+}")
@@ -472,9 +470,8 @@ public class NQueryController extends NBasicController {
                 latencyTo, sql, server, submitter, null, null, queryStatus, realizations, excludeRealization, null,
                 false, null, true);
         checkGetQueryHistoriesParam(request);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
-                QueryHisTransformStandardUtil.transformQueryHistorySqlForDisplay(
-                        queryHistoryService.getQueryHistories(request, limit, offset)), "");
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, QueryHisTransformStandardUtil
+                .transformQueryHistorySqlForDisplay(queryHistoryService.getQueryHistories(request, limit, offset)), "");
     }
 
     @ApiOperation(value = "getQueryHistories", tags = { "QE" }, notes = "Update Param: start_time_from, start_time_to")
@@ -488,8 +485,8 @@ public class NQueryController extends NBasicController {
         checkProjectName(project);
         QueryHistoryRequest request = new QueryHistoryRequest(project, startTimeFrom, startTimeTo);
         DataRangeUtils.validateDataRange(startTimeFrom, startTimeTo, null);
-        Map<String, Object> queryHistories = QueryHisTransformStandardUtil.transformQueryHistory(
-                queryHistoryService.getQueryHistories(request, size, offset));
+        Map<String, Object> queryHistories = QueryHisTransformStandardUtil
+                .transformQueryHistory(queryHistoryService.getQueryHistories(request, size, offset));
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, queryHistories, "");
     }
 
@@ -524,17 +521,18 @@ public class NQueryController extends NBasicController {
                 queryHistoryService.getQueryHistoryModels(request, size), "");
     }
 
-    @ApiOperation(value = "queryHistoryTiredStorageMetrics", tags = {"QE"}, notes = "Update Param: project, query_id")
+    @ApiOperation(value = "queryHistoryTiredStorageMetrics", tags = { "QE" }, notes = "Update Param: project, query_id")
     @GetMapping(value = "/query_history/tired_storage_metrics")
     @ResponseBody
-    public EnvelopeResponse<Map<String, Long>> queryHistoryTiredStorageMetrics(@RequestParam(value = "project") String project,
-                                                                               @RequestParam(value = "query_id") String queryId) {
+    public EnvelopeResponse<Map<String, Long>> queryHistoryTiredStorageMetrics(
+            @RequestParam(value = "project") String project, @RequestParam(value = "query_id") String queryId) {
         checkProjectName(project);
         checkRequiredArg("query_id", queryId);
         QueryHistoryRequest request = new QueryHistoryRequest();
         request.setProject(project);
         request.setSql(queryId);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, queryHistoryService.queryTiredStorageMetric(request), "");
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, queryHistoryService.queryTiredStorageMetric(request),
+                "");
     }
 
     @ApiOperation(value = "getServers", tags = { "QE" })
@@ -543,11 +541,9 @@ public class NQueryController extends NBasicController {
     public EnvelopeResponse<List<?>> getServers(
             @RequestParam(value = "ext", required = false, defaultValue = "false") boolean ext) {
         if (ext) {
-            List<ServerExtInfoResponse> serverInfo =
-                clusterManager.getServers().stream().map(server ->
-                    new ServerExtInfoResponse()
-                        .setServer(server)
-                        .setSecretName(encodeHost(server.getHost()))).collect(Collectors.toList());
+            List<ServerExtInfoResponse> serverInfo = clusterManager.getServers().stream().map(
+                    server -> new ServerExtInfoResponse().setServer(server).setSecretName(encodeHost(server.getHost())))
+                    .collect(Collectors.toList());
             return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, serverInfo, "");
         } else {
             return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
@@ -688,15 +684,15 @@ public class NQueryController extends NBasicController {
 
     private void checkForcedToParams(PrepareSqlRequest sqlRequest) {
         if (sqlRequest.isForcedToIndex() && sqlRequest.isForcedToPushDown()) {
-            throw new KylinException(
-                    QueryErrorCode.INVALID_QUERY_PARAMS, MsgPicker.getMsg().getCannotForceToBothPushdodwnAndIndex());
+            throw new KylinException(QueryErrorCode.INVALID_QUERY_PARAMS,
+                    MsgPicker.getMsg().getCannotForceToBothPushdodwnAndIndex());
         }
-        try{
+        try {
             int forcedToTieredStorage = sqlRequest.getForcedToTieredStorage();
             if (forcedToTieredStorage > ForceToTieredStorage.CH_FAIL_TO_RETURN.ordinal()
                     || forcedToTieredStorage < ForceToTieredStorage.CH_FAIL_TO_DFS.ordinal()) {
-                throw new KylinException(
-                        QueryErrorCode.FORCED_TO_TIEREDSTORAGE_INVALID_PARAMETER, MsgPicker.getMsg().getForcedToTieredstorageInvalidParameter());
+                throw new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_INVALID_PARAMETER,
+                        MsgPicker.getMsg().getForcedToTieredstorageInvalidParameter());
             }
         } catch (NullPointerException e) {
             //do nothing

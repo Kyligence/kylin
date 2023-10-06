@@ -24,15 +24,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.kylin.metadata.model.TblColRef;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.PartitionStatusEnum;
 import org.apache.kylin.metadata.cube.model.SegmentPartition;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.model.TblColRef;
 
 public class PartitionDictionaryBuilderHelper extends DictionaryBuilderHelper {
 

@@ -81,15 +81,15 @@ import lombok.val;
 @PowerMockIgnore({ "javax.management.*", "javax.script.*" })
 public class AsyncQueryJobTest extends NLocalFileMetadataTestCase {
 
-    final static String BUILD_HADOOP_CONF = "kylin.engine.submit-hadoop-conf-dir";
-    final static String BUILD_HADOOP_CONF_VALUE = "/home/kylin/hadoop_conf";
+    static final String BUILD_HADOOP_CONF = "kylin.engine.submit-hadoop-conf-dir";
+    static final String BUILD_HADOOP_CONF_VALUE = "/home/kylin/hadoop_conf";
 
-    final static String ASYNC_HADOOP_CONF = "kylin.query.async-query.submit-hadoop-conf-dir";
-    final static String ASYNC_HADOOP_CONF_VALUE = "/home/kylin/hadoop_conf_async";
-    final static String ASYNC_QUERY_CLASS = "-className org.apache.kylin.query.engine.AsyncQueryApplication";
-    final static String ASYNC_QUERY_SPARK_EXECUTOR_CORES = "kylin.query.async-query.spark-conf.spark.executor.cores";
-    final static String ASYNC_QUERY_SPARK_EXECUTOR_MEMORY = "kylin.query.async-query.spark-conf.spark.executor.memory";
-    final static String ASYNC_QUERY_SPARK_QUEUE = "root.quard";
+    static final String ASYNC_HADOOP_CONF = "kylin.query.async-query.submit-hadoop-conf-dir";
+    static final String ASYNC_HADOOP_CONF_VALUE = "/home/kylin/hadoop_conf_async";
+    static final String ASYNC_QUERY_CLASS = "-className org.apache.kylin.query.engine.AsyncQueryApplication";
+    static final String ASYNC_QUERY_SPARK_EXECUTOR_CORES = "kylin.query.async-query.spark-conf.spark.executor.cores";
+    static final String ASYNC_QUERY_SPARK_EXECUTOR_MEMORY = "kylin.query.async-query.spark-conf.spark.executor.memory";
+    static final String ASYNC_QUERY_SPARK_QUEUE = "root.quard";
 
     @Before
     public void setup() throws IOException {

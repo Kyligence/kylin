@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.SecondStorageRefreshSecondaryIndexJobParams;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
@@ -35,7 +36,6 @@ import org.apache.kylin.job.factory.JobFactory;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import lombok.val;
 
 public class ClickHouseRefreshSecondaryIndexJob extends DefaultExecutable {
@@ -76,7 +76,8 @@ public class ClickHouseRefreshSecondaryIndexJob extends DefaultExecutable {
     public static class RefreshSecondaryIndexJobFactory extends JobFactory {
         @Override
         protected AbstractExecutable create(JobBuildParams jobBuildParams) {
-            SecondStorageRefreshSecondaryIndexJobParams params = (SecondStorageRefreshSecondaryIndexJobParams) jobBuildParams;
+            SecondStorageRefreshSecondaryIndexJobParams params //
+                    = (SecondStorageRefreshSecondaryIndexJobParams) jobBuildParams;
             val dfManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), params.getProject());
             val param = ClickHouseRefreshSecondaryIndexParam.builder().modelId(params.getModelId())
                     .jobId(params.getJobId()).submitter(params.getSubmitter())

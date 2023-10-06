@@ -98,11 +98,11 @@ public class JobContextUtil {
 
     private static DataSourceTransactionManager transactionManager;
 
-    private static JobTableInterceptor jobTableInterceptor = new JobTableInterceptor();
+    private static final JobTableInterceptor jobTableInterceptor = new JobTableInterceptor();
 
-    private static JobMybatisConfig jobMybatisConfig = new JobMybatisConfig();
+    private static final JobMybatisConfig jobMybatisConfig = new JobMybatisConfig();
 
-    synchronized private static JobInfoDao getJobInfoDaoForTestOrTool(KylinConfig config) {
+    private static synchronized JobInfoDao getJobInfoDaoForTestOrTool(KylinConfig config) {
         initMappers(config);
         if (null == jobInfoDao) {
             jobInfoDao = new JobInfoDao();
@@ -112,7 +112,7 @@ public class JobContextUtil {
         return jobInfoDao;
     }
 
-    synchronized private static JobContext getJobContextForTestOrTool(KylinConfig config) {
+    private static synchronized JobContext getJobContextForTestOrTool(KylinConfig config) {
         initMappers(config);
         if (config.isUTEnv()) {
             config.setProperty("kylin.job.master-poll-interval-second", "1");
@@ -129,7 +129,7 @@ public class JobContextUtil {
         return jobContext;
     }
 
-    synchronized private static void initMappers(KylinConfig config) {
+    private static synchronized void initMappers(KylinConfig config) {
         if (null != jobInfoMapper && null != jobLockMapper) {
             return;
         }
@@ -262,7 +262,7 @@ public class JobContextUtil {
     }
 
     // for test only
-    synchronized public static void cleanUp() {
+    public static synchronized void cleanUp() {
         try {
             if (null != jobContext) {
                 jobContext.destroy();
@@ -307,7 +307,7 @@ public class JobContextUtil {
             log.info("Discarding jobs {} on node {}", entry.getValue(), entry.getKey());
             if (local.equals(entry.getKey())) {
                 val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-                entry.getValue().stream().forEach(jobId -> executableManager.discardJob(jobId));
+                entry.getValue().forEach(executableManager::discardJob);
                 continue;
             }
             Map<String, String> form = Maps.newHashMap();

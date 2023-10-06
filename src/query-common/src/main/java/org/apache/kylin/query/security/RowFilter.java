@@ -38,12 +38,13 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang.text.StrBuilder;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.query.IQueryTransformer;
@@ -51,8 +52,6 @@ import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.source.adhocquery.IPushDownConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 public class RowFilter implements IQueryTransformer, IPushDownConverter {
     private static final Logger logger = LoggerFactory.getLogger(RowFilter.class);
@@ -143,7 +142,8 @@ public class RowFilter implements IQueryTransformer, IPushDownConverter {
         int finalPos = pos.getSecond();
         int bracketNum = 0;
         //move the pos to the rightest ")", if has.
-        //bracketNum if for the situation like that: "from ( select * from t where t.a > 0 )", the rightest ")" is not belong to where clause
+        //bracketNum if for the situation like that:
+        //  "from ( select * from t where t.a > 0 )", the rightest ")" is not belong to where clause
         for (int j = pos.getFirst() - 1;; j--) {
             if (inputSQL.charAt(j) == ' ' || inputSQL.charAt(j) == '\t' || inputSQL.charAt(j) == '\n') {
                 continue;
@@ -362,7 +362,8 @@ public class RowFilter implements IQueryTransformer, IPushDownConverter {
                 // do nothing.
             } else if (call instanceof SqlBasicCall) {
                 // for the case table alias like "from t t1".The only SqlBasicCall in from clause is "AS".
-                // the instanceof SqlIdentifier is for the case that "select * from (select * from t2) t1".subquery as table.
+                // the instanceof SqlIdentifier is for the case that
+                // "select * from (select * from t2) t1".subquery as table.
                 SqlBasicCall node = (SqlBasicCall) call;
                 if (node.getOperator() instanceof SqlAsOperator && node.getOperands()[0] instanceof SqlIdentifier) {
                     SqlIdentifier id0 = (SqlIdentifier) ((SqlBasicCall) call).getOperands()[0];

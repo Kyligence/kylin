@@ -22,17 +22,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.metadata.project.ProjectInstance;
-import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.AddressUtil;
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupManager;
+import org.apache.kylin.rest.util.AclEvaluate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import io.kyligence.kap.metadata.epoch.EpochManager;
 
 @Component("epochService")
 public class EpochService extends BasicService {

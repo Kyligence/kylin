@@ -63,7 +63,7 @@ public class ExecutableAddCuboidHandler extends ExecutableHandler {
 
         List<NDataLayout[]> mergedLayout = MetadataInvoker.getInstance().mergeMetadata(project, mergerInfo);
         List<AbstractExecutable> tasks = ExecutableHandleUtils.getNeedMergeTasks(executable);
-//        Preconditions.checkArgument(mergedLayout.size() == tasks.size());
+        // Preconditions.checkArgument(mergedLayout.size() == tasks.size());
         for (int idx = 0; idx < mergedLayout.size(); idx++) {
             AbstractExecutable task = tasks.get(idx);
             NDataLayout[] layouts = mergedLayout.get(idx);

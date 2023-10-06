@@ -49,6 +49,8 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.utils.RichOption;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.job.SecondStorageJobParamUtil;
 import org.apache.kylin.job.common.ExecutableUtil;
 import org.apache.kylin.job.execution.DefaultExecutable;
@@ -78,9 +80,6 @@ import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.utility.DockerImageName;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-
 import io.kyligence.kap.clickhouse.ddl.ClickHouseCreateTable;
 import io.kyligence.kap.clickhouse.ddl.ClickHouseRender;
 import io.kyligence.kap.clickhouse.management.ClickHouseConfigLoader;
@@ -99,12 +98,12 @@ public class ClickHouseUtils {
 
     static final Network TEST_NETWORK = Network.newNetwork();
     private static final Pattern _extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
-    static public String DEFAULT_VERSION = "22.5.2.53";//"20.8.2.3"; //"20.10.3.30";"20.10.2.20";
-    static public String DEFAULT_TAG = "clickhouse/clickhouse-server:" + DEFAULT_VERSION;
-    static public DockerImageName CLICKHOUSE_IMAGE = DockerImageName.parse(DEFAULT_TAG)
+    public static String DEFAULT_VERSION = "22.5.2.53";//"20.8.2.3"; //"20.10.3.30";"20.10.2.20";
+    public static String DEFAULT_TAG = "clickhouse/clickhouse-server:" + DEFAULT_VERSION;
+    public static DockerImageName CLICKHOUSE_IMAGE = DockerImageName.parse(DEFAULT_TAG)
             .asCompatibleSubstituteFor("yandex/clickhouse-server");
 
-    static public JdbcDatabaseContainer<?> startClickHouse() {
+    public static JdbcDatabaseContainer<?> startClickHouse() {
         int tryTimes = 3;
         do {
             try {
@@ -170,7 +169,7 @@ public class ClickHouseUtils {
         R apply(T1 t1, T2 t2, T3 t3, T4 t4) throws Exception;
     }
 
-    static public <R> R prepare1Instance(boolean setupDataByDefault,
+    public static <R> R prepare1Instance(boolean setupDataByDefault,
             CheckedFunction2<JdbcDatabaseContainer<?>, Connection, R> lambda) throws Exception {
         try (JdbcDatabaseContainer<?> clickhouse = startClickHouse();
                 Connection connection = DriverManager.getConnection(clickhouse.getJdbcUrl())) {
@@ -191,7 +190,7 @@ public class ClickHouseUtils {
         }
     }
 
-    static public <R> R prepare2Instances(boolean setupDataByDefault,
+    public static <R> R prepare2Instances(boolean setupDataByDefault,
             CheckedFunction4<JdbcDatabaseContainer<?>, Connection, JdbcDatabaseContainer<?>, Connection, R> lambda)
             throws Exception {
         try (JdbcDatabaseContainer<?> clickhouse1 = startClickHouse();
@@ -220,7 +219,7 @@ public class ClickHouseUtils {
         }
     }
 
-    static public class PrepareTestData {
+    public static class PrepareTestData {
 
         public static final String db = "default";
         public static final String table = "shard_table";
@@ -254,7 +253,7 @@ public class ClickHouseUtils {
         }
     }
 
-    static public <R> R setupData(Connection connection, CheckedFunction<PrepareTestData, R> lambda) throws Exception {
+    public static <R> R setupData(Connection connection, CheckedFunction<PrepareTestData, R> lambda) throws Exception {
         PrepareTestData prepareTestData = new PrepareTestData(connection);
         return lambda.apply(prepareTestData);
     }
@@ -337,7 +336,7 @@ public class ClickHouseUtils {
         }).isEmpty();
     }
 
-    static public Optional<DataSourceV2ScanRelation> findDataSourceV2ScanRelation(LogicalPlan logicalPlan) {
+    public static Optional<DataSourceV2ScanRelation> findDataSourceV2ScanRelation(LogicalPlan logicalPlan) {
         return new RichOption<>(logicalPlan.find(new AbstractFunction1<LogicalPlan, Object>() {
             @Override
             public Object apply(LogicalPlan v1) {
@@ -346,7 +345,7 @@ public class ClickHouseUtils {
         })).toOptional().map(logical -> (DataSourceV2ScanRelation) logical);
     }
 
-    static public JDBCScan findJDBCScan(LogicalPlan logicalPlan) {
+    public static JDBCScan findJDBCScan(LogicalPlan logicalPlan) {
         Optional<DataSourceV2ScanRelation> plan = findDataSourceV2ScanRelation(logicalPlan);
 
         Assert.assertTrue(plan.isPresent());
@@ -398,7 +397,7 @@ public class ClickHouseUtils {
         return output.replaceAll("#\\d+", "#x");
     }
 
-    static public FilePruner findFilePruner(LogicalPlan logicalPlan) {
+    public static FilePruner findFilePruner(LogicalPlan logicalPlan) {
         return new RichOption<>(logicalPlan.find(new AbstractFunction1<LogicalPlan, Object>() {
             @Override
             public Object apply(LogicalPlan v1) {

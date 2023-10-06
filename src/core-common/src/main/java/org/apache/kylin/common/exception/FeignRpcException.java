@@ -18,9 +18,10 @@
 
 package org.apache.kylin.common.exception;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.kylin.rest.util.SerializeUtil;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class FeignRpcException extends RuntimeException {

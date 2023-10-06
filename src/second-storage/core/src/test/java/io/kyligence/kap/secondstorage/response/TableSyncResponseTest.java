@@ -17,10 +17,10 @@
  */
 package io.kyligence.kap.secondstorage.response;
 
+import java.util.ArrayList;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
 
 public class TableSyncResponseTest {
 

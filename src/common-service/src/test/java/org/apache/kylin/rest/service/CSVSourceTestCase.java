@@ -30,7 +30,6 @@ import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
@@ -38,6 +37,7 @@ import org.apache.kylin.source.jdbc.H2Database;
 import org.junit.After;
 import org.junit.Before;
 
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 
 public class CSVSourceTestCase extends ServiceTestBase {

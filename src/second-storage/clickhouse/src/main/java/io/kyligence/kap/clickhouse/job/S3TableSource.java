@@ -44,7 +44,9 @@ public class S3TableSource implements AbstractTableSource {
 
     @Override
     public String transformFileUrl(String file, String sitePath, URI rootPath) {
-        // s3a://liunengdev/kylin_clickhouse/ke_metadata/test/parquet/3070ef88-fa57-4ad6-9a6b-9587cfcd4140/62fea0e8-40ef-4baa-a59f-29822fc17321/20000040001/part-00000-b1920799-ef6f-4c77-b0bf-2e72edb558dd-c000.snappy.parquet
+        // s3a://liunengdev/kylin_clickhouse/ke_metadata/test/parquet
+        // /3070ef88-fa57-4ad6-9a6b-9587cfcd4140/62fea0e8-40ef-4baa-a59f-29822fc17321
+        // /20000040001/part-00000-b1920799-ef6f-4c77-b0bf-2e72edb558dd-c000.snappy.parquet
         URI uri = URI.create(file);
         if (KylinConfig.getInstanceFromEnv().isUTEnv()) {
             // sitepath = host.docker.internal:9000&test&test123

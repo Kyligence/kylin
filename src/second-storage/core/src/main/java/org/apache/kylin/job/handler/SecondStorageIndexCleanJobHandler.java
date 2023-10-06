@@ -18,8 +18,8 @@
 
 package org.apache.kylin.job.handler;
 
-import org.apache.kylin.metadata.cube.model.NDataflow;
-import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import java.util.stream.Collectors;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.job.SecondStorageCleanJobBuildParams;
 import org.apache.kylin.job.execution.AbstractExecutable;
@@ -27,8 +27,8 @@ import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.factory.JobFactory;
 import org.apache.kylin.job.factory.JobFactoryConstant;
 import org.apache.kylin.job.model.JobParam;
-
-import java.util.stream.Collectors;
+import org.apache.kylin.metadata.cube.model.NDataflow;
+import org.apache.kylin.metadata.cube.model.NDataflowManager;
 
 public class SecondStorageIndexCleanJobHandler extends AbstractSecondStorageJobHanlder {
     @Override
@@ -37,8 +37,7 @@ public class SecondStorageIndexCleanJobHandler extends AbstractSecondStorageJobH
         NDataflow dataflow = NDataflowManager.getInstance(kylinConfig, jobParam.getProject())
                 .getDataflow(jobParam.getModel());
         SecondStorageCleanJobBuildParams params = new SecondStorageCleanJobBuildParams(
-                jobParam.getTargetSegments().stream().map(dataflow::getSegment).collect(Collectors.toSet()),
-                jobParam,
+                jobParam.getTargetSegments().stream().map(dataflow::getSegment).collect(Collectors.toSet()), jobParam,
                 JobTypeEnum.SECOND_STORAGE_INDEX_CLEAN);
         params.setProject(dataflow.getProject());
         params.setModelId(dataflow.getModel().getId());

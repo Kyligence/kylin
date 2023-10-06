@@ -92,7 +92,7 @@ public class ModelServiceBrokenRepairTest extends SourceTestCase {
 
     private final ModelBrokenListener modelBrokenListener = new ModelBrokenListener();
 
-    private final static String[] timeZones = { "GMT+8", "CST", "PST", "UTC" };
+    private static final String[] timeZones = { "GMT+8", "CST", "PST", "UTC" };
 
     private StreamingJobListener eventListener = new StreamingJobListener();
 

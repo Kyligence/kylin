@@ -186,7 +186,8 @@ public class StorageCleaner implements GarbageCleaner {
         allFileSystems.add(new StorageItem(FileSystemDecorator.getInstance(HadoopUtil.getWorkingFileSystem()),
                 config.getHdfsWorkingDirectory()));
         // Check if independent storage of flat tables under read/write separation is enabled
-        // For build tasks it is a project-level parameter(Higher project-level priority), but for cleaning up storage garbage,
+        // For build tasks it is a project-level parameter(Higher project-level priority), 
+        // but for cleaning up storage garbage,
         // WRITING_CLUSTER_WORKING_DIR is a system-level parameter
         if (kylinConfig.isBuildFilesSeparationEnabled()) {
             allFileSystems
@@ -308,8 +309,7 @@ public class StorageCleaner implements GarbageCleaner {
                     RawResource raw = resourceStore.getResource(ResourceStore.METASTORE_TRASH_RECORD);
                     long mvcc = raw == null ? -1 : raw.getMvcc();
                     // TrashRecord doesn't extend RootPersistentEntity. Let's manually lock it's resource path.
-                    MemoryLockUtils.doWithLock(ResourceStore.METASTORE_TRASH_RECORD, false, threadViewRS,
-                            () -> null);
+                    MemoryLockUtils.doWithLock(ResourceStore.METASTORE_TRASH_RECORD, false, threadViewRS, () -> null);
                     threadViewRS.checkAndPutResource(ResourceStore.METASTORE_TRASH_RECORD,
                             ByteSource.wrap(JsonUtil.writeValueAsBytes(new TrashRecord(trashRecord))), mvcc);
                     return 0;
@@ -878,7 +878,8 @@ public class StorageCleaner implements GarbageCleaner {
             long cleanTime = eventLogCleanStartTime - KYLIN_CONFIG.getQueryHistorySurvivalThreshold();
             queryExpirationTime = Objects.isNull(minQueryHistoryTime) ? cleanTime
                     : Math.min(cleanTime, minQueryHistoryTime);
-            log.info("eventLogCleanStartTime is {}, queryHistorySurvivalThreshold is {}ms, minQueryHistoryTime is {}, queryExpirationTime is {}",
+            log.info(
+                    "eventLogCleanStartTime is {}, queryHistorySurvivalThreshold is {}ms, minQueryHistoryTime is {}, queryExpirationTime is {}",
                     eventLogCleanStartTime, KYLIN_CONFIG.getQueryHistorySurvivalThreshold(), minQueryHistoryTime,
                     queryExpirationTime);
 
@@ -890,7 +891,8 @@ public class StorageCleaner implements GarbageCleaner {
 
             buildExpirationTime = Math.min(eventLogCleanStartTime - KYLIN_CONFIG.getExecutableSurvivalTimeThreshold(),
                     earliest);
-            log.info("eventLogCleanStartTime is {}, executableSurvivalTimeThreshold is {}ms, earliest executable's createTime is {}, buildExpirationTime is {}",
+            log.info(
+                    "eventLogCleanStartTime is {}, executableSurvivalTimeThreshold is {}ms, earliest executable's createTime is {}, buildExpirationTime is {}",
                     eventLogCleanStartTime, KYLIN_CONFIG.getExecutableSurvivalTimeThreshold(), earliest,
                     buildExpirationTime);
         }

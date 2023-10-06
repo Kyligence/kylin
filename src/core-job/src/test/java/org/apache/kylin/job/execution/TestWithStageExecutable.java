@@ -24,12 +24,11 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.kylin.job.JobContext;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -37,7 +36,7 @@ import lombok.Setter;
  */
 public class TestWithStageExecutable extends BaseTestExecutable implements ChainedStageExecutable {
 
-    private transient final List<StageBase> stages = Lists.newCopyOnWriteArrayList();
+    private final transient List<StageBase> stages = Lists.newCopyOnWriteArrayList();
     private final Map<String, List<StageBase>> stagesMap = Maps.newConcurrentMap();
 
     @Setter

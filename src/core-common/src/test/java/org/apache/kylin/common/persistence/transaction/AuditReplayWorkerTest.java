@@ -37,6 +37,7 @@ import org.apache.kylin.common.persistence.AuditLog;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.StringEntity;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.junit.JdbcInfo;
 import org.apache.kylin.junit.annotation.JdbcMetadataInfo;
 import org.apache.kylin.junit.annotation.MetadataInfo;
@@ -47,7 +48,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.InvalidTimeoutException;
 import org.springframework.transaction.TransactionUsageException;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 

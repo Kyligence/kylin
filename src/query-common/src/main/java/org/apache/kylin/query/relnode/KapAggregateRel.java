@@ -68,7 +68,8 @@ public class KapAggregateRel extends OLAPAggregateRel implements KapRel {
     private ImmutableList<Integer> rewriteGroupKeys; // preserve the ordering of group keys after CC replacement
     private List<ImmutableBitSet> rewriteGroupSets; // group sets with cc replaced
     List<AggregateCall> aggregateCalls;
-    private final Set<TblColRef> groupByInnerColumns = new HashSet<>(); // inner columns in group keys, for CC generation
+    // inner columns in group keys, for CC generation
+    private final Set<TblColRef> groupByInnerColumns = new HashSet<>();
     private Set<OLAPContext> subContexts = Sets.newHashSet();
 
     public KapAggregateRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, boolean indicator,

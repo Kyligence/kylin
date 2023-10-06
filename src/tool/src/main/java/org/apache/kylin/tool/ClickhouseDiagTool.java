@@ -18,9 +18,9 @@
 package org.apache.kylin.tool;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -34,11 +34,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 import io.kyligence.kap.secondstorage.SecondStorage;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
@@ -216,7 +215,7 @@ public class ClickhouseDiagTool {
         Arrays.stream(gzFileList).filter(file -> FileUtils.sizeOf(file) > 0).forEach(file -> {
             try {
 
-                GZIPInputStream gzipInputStream = new GZIPInputStream(new FileInputStream(file));
+                GZIPInputStream gzipInputStream = new GZIPInputStream(Files.newInputStream(file.toPath()));
                 String fileName = file.getName().substring(0, file.getName().lastIndexOf("."));
                 FileOutputStream fileOutputStream = new FileOutputStream(new File(nodeTargetPath, fileName + ".log"));
 

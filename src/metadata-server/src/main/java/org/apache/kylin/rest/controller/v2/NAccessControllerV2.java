@@ -34,6 +34,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.AclEntity;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
@@ -61,9 +63,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
 import io.swagger.annotations.ApiOperation;
@@ -195,7 +194,7 @@ public class NAccessControllerV2 extends NBasicController {
         }
         return Lists.newArrayList();
     }
-    
+
     private Set<ManagedUser> getUsersOfProjects(List<String> projects) throws IOException {
         Set<ManagedUser> allUsers = Sets.newHashSet();
         for (String projectName : projects) {

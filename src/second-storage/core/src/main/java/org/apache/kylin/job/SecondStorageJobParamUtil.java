@@ -23,11 +23,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class SecondStorageJobParamUtil {
 
@@ -37,7 +36,8 @@ public class SecondStorageJobParamUtil {
         registerImplementation(JobTypeEnum.SECOND_STORAGE_SEGMENT_CLEAN, new SecondStorageCleanJobUtil());
         registerImplementation(JobTypeEnum.SECOND_STORAGE_NODE_CLEAN, new SecondStorageCleanJobUtil());
         registerImplementation(JobTypeEnum.SECOND_STORAGE_INDEX_CLEAN, new SecondStorageCleanJobUtil());
-        registerImplementation(JobTypeEnum.SECOND_STORAGE_REFRESH_SECONDARY_INDEXES, new SecondStorageRefreshSecondaryIndexUtil());
+        registerImplementation(JobTypeEnum.SECOND_STORAGE_REFRESH_SECONDARY_INDEXES,
+                new SecondStorageRefreshSecondaryIndexUtil());
     }
 
     private SecondStorageJobParamUtil() {
@@ -87,7 +87,7 @@ public class SecondStorageJobParamUtil {
      * @return job parameters
      */
     public static JobParam layoutCleanParam(String project, String model, String owner, Set<Long> needDeleteLayoutIds,
-                                            Set<String> segmentIds) {
+            Set<String> segmentIds) {
         JobParam param = new JobParam(model, owner);
         param.setProject(project);
         param.withTargetSegments(segmentIds);
@@ -97,7 +97,7 @@ public class SecondStorageJobParamUtil {
     }
 
     public static JobParam refreshSecondaryIndexParam(String project, String model, String owner, LayoutEntity layout,
-                                                      Set<Integer> newColumns, Set<Integer> deleteColumns) {
+            Set<Integer> newColumns, Set<Integer> deleteColumns) {
         JobParam param = new JobParam(model, owner);
         param.setProject(project);
         param.setProcessLayouts(Sets.newHashSet(layout));

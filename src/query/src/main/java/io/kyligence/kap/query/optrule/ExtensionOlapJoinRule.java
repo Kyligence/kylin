@@ -36,14 +36,13 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.query.relnode.OLAPFilterRel;
 import org.apache.kylin.query.relnode.OLAPJoinRel;
 import org.apache.kylin.query.relnode.OLAPRel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class ExtensionOlapJoinRule extends ConverterRule {
     private static final Logger logger = LoggerFactory.getLogger(ExtensionOlapJoinRule.class);

@@ -18,11 +18,11 @@
 
 package io.kyligence.kap.secondstorage.test.utils;
 
+import java.util.List;
+
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.rest.response.JobInfoResponse;
 import org.apache.kylin.rest.service.ModelService;
-
-import java.util.List;
 
 public class MockedModelService extends ModelService {
     @Override

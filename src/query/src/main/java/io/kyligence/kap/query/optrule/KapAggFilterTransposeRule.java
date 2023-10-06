@@ -37,13 +37,12 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.mapping.Mappings;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.relnode.KapAggregateRel;
 import org.apache.kylin.query.relnode.KapFilterRel;
 import org.apache.kylin.query.relnode.KapJoinRel;
 import org.apache.kylin.query.util.RuleUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 /**
  * agg-filter-join -> agg-filter-agg-join

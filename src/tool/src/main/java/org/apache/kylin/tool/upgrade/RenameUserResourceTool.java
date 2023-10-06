@@ -49,22 +49,22 @@ import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.OptionsHelper;
-import org.apache.kylin.metadata.MetadataConstants;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.acl.AclTCR;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import io.kyligence.kap.metadata.user.ManagedUser;
+import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 

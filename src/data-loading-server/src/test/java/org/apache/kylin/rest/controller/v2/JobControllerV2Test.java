@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.constant.JobActionEnum;
 import org.apache.kylin.job.constant.JobStatusEnum;
 import org.apache.kylin.job.rest.JobFilter;
@@ -50,8 +51,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class JobControllerV2Test extends NLocalFileMetadataTestCase {
 
@@ -100,8 +99,8 @@ public class JobControllerV2Test extends NLocalFileMetadataTestCase {
                 .thenReturn(new ExecutableResponse());
 
         mockMvc.perform(
-                        MockMvcRequestBuilders.put("/api/jobs/{jobId}/resume", jobId).contentType(MediaType.APPLICATION_JSON)
-                                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V2_JSON)))
+                MockMvcRequestBuilders.put("/api/jobs/{jobId}/resume", jobId).contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V2_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
 
         Mockito.verify(jobControllerV2).resume(jobId);

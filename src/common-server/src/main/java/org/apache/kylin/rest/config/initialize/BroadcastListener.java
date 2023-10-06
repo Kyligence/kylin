@@ -34,6 +34,7 @@ import org.apache.kylin.common.persistence.transaction.BroadcastEventReadyNotifi
 import org.apache.kylin.common.persistence.transaction.EpochCheckBroadcastNotifier;
 import org.apache.kylin.common.persistence.transaction.LogicalViewBroadcastNotifier;
 import org.apache.kylin.common.persistence.transaction.StopQueryBroadcastEventNotifier;
+import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
 import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.rest.broadcaster.BroadcastEventHandler;
 import org.apache.kylin.rest.broadcaster.Broadcaster;
@@ -50,7 +51,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -91,6 +91,7 @@ public class BroadcastListener implements BroadcastEventHandler {
         broadcaster.close();
         broadcaster.unregister();
     }
+
     @Subscribe
     public void onEventReady(BroadcastEventReadyNotifier notifier) {
         broadcaster.announce(notifier);
@@ -118,16 +119,16 @@ public class BroadcastListener implements BroadcastEventHandler {
             AclTCRRevokeEventNotifier aclTCRRevokeEventNotifier = (AclTCRRevokeEventNotifier) notifier;
             aclTCRService.revokeAclTCR(aclTCRRevokeEventNotifier.getSid(), aclTCRRevokeEventNotifier.isPrinciple());
         } else if (notifier instanceof AddCredentialToSparkBroadcastEventNotifier) {
-            AddCredentialToSparkBroadcastEventNotifier credentialNotifier = (AddCredentialToSparkBroadcastEventNotifier) notifier;
-            SparderEnv.addCredential(
-                    new TableExtDesc.RoleCredentialInfo(credentialNotifier.getBucket(),
-                            credentialNotifier.getRole(), credentialNotifier.getEndpoint(), credentialNotifier.getType(), credentialNotifier.getRegion()),
-                    SparderEnv.getSparkSession());
+            AddCredentialToSparkBroadcastEventNotifier credentialNotifier //
+                    = (AddCredentialToSparkBroadcastEventNotifier) notifier;
+            SparderEnv.addCredential(new TableExtDesc.RoleCredentialInfo(credentialNotifier.getBucket(),
+                    credentialNotifier.getRole(), credentialNotifier.getEndpoint(), credentialNotifier.getType(),
+                    credentialNotifier.getRegion()), SparderEnv.getSparkSession());
         } else if (notifier instanceof AdminUserSyncEventNotifier) {
             AdminUserSyncEventNotifier adminUserSyncEventNotifier = (AdminUserSyncEventNotifier) notifier;
             userAclService.syncAdminUserAcl(adminUserSyncEventNotifier.getAdminUserList(),
                     adminUserSyncEventNotifier.isUseEmptyPermission());
-        } else if(notifier instanceof LogicalViewBroadcastNotifier) {
+        } else if (notifier instanceof LogicalViewBroadcastNotifier) {
             LogicalViewLoader.syncViewAsync();
         }
     }

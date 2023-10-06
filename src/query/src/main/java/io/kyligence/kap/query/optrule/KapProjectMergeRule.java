@@ -37,7 +37,6 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.Permutation;
 import org.apache.kylin.common.KylinConfig;
-
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 /**
@@ -122,8 +121,8 @@ public class KapProjectMergeRule extends RelOptRule {
 
         final List<RexNode> pushedProjects;
         if (KylinConfig.getInstanceFromEnv().isProjectMergeWithBloatEnabled()) {
-            pushedProjects = RelOptUtil.pushPastProjectUnlessBloat(topProject.getProjects(),
-                    bottomProject, KylinConfig.getInstanceFromEnv().getProjectMergeRuleBloatThreshold());
+            pushedProjects = RelOptUtil.pushPastProjectUnlessBloat(topProject.getProjects(), bottomProject,
+                    KylinConfig.getInstanceFromEnv().getProjectMergeRuleBloatThreshold());
             if (pushedProjects == null) {
                 // Merged projects are significantly more complex. Do not merge.
                 return;

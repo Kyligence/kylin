@@ -42,18 +42,17 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.kylin.common.annotation.ThirdPartyDependencies;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.OrderedProperties;
-import org.apache.kylin.common.annotation.ThirdPartyDependencies;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
 import io.kyligence.config.core.loader.IExternalConfigLoader;
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import lombok.Setter;
 
 /**
@@ -723,7 +722,7 @@ public class KylinConfig extends KylinConfigBase {
             }
         }
     }
-    
+
     public static boolean useLegacyConfig() {
         return Objects.equals(TRUE, System.getenv(USE_LEGACY_CONFIG));
     }

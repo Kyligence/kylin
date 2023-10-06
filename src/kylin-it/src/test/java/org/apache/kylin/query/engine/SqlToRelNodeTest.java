@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.query.engine;
 
 import java.util.ArrayDeque;
@@ -32,13 +31,12 @@ import org.apache.calcite.test.DiffRepository;
 import org.apache.calcite.util.Litmus;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.query.rules.CalciteRuleTestBase;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 
 public class SqlToRelNodeTest extends CalciteRuleTestBase {
 
@@ -119,7 +117,8 @@ public class SqlToRelNodeTest extends CalciteRuleTestBase {
             RelRoot relRoot = exec3.sqlToRelRoot(sql);
             RelNode rel = exec3.optimize(relRoot).rel;
             String realPlan = NL + RelOptUtil.toString(rel);
-            diff.assertEquals("bloat_merge_sql.bloat_enabled_bloat_5", "${bloat_merge_sql.bloat_enabled_bloat_5}", realPlan);
+            diff.assertEquals("bloat_merge_sql.bloat_enabled_bloat_5", "${bloat_merge_sql.bloat_enabled_bloat_5}",
+                    realPlan);
         }
 
         try (KylinConfig.SetAndUnsetThreadLocalConfig autoUnset = KylinConfig.setAndUnsetThreadLocalConfig(config)) {
@@ -137,14 +136,12 @@ public class SqlToRelNodeTest extends CalciteRuleTestBase {
      *
      * @see RelNode#isValid(Litmus, RelNode.Context)
      */
-    public static class RelValidityChecker extends RelVisitor
-            implements RelNode.Context {
+    public static class RelValidityChecker extends RelVisitor implements RelNode.Context {
         int invalidCount;
         final Deque<RelNode> stack = new ArrayDeque<>();
 
         public Set<CorrelationId> correlationIds() {
-            final ImmutableSet.Builder<CorrelationId> builder =
-                    ImmutableSet.builder();
+            final ImmutableSet.Builder<CorrelationId> builder = ImmutableSet.builder();
             for (RelNode r : stack) {
                 builder.addAll(r.getVariablesSet());
             }

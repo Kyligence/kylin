@@ -119,7 +119,7 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
     protected static final String SPARK_PLUGINS = "spark.plugins";
     protected ISparkJobHandler sparkJobHandler;
 
-    private transient final List<StageBase> stages = Lists.newCopyOnWriteArrayList();
+    private final transient List<StageBase> stages = Lists.newCopyOnWriteArrayList();
     private final Map<String, List<StageBase>> stagesMap = Maps.newConcurrentMap();
 
     public NSparkExecutable() {

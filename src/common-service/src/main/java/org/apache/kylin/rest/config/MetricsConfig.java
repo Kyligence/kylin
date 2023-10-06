@@ -28,19 +28,18 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.util.NamedThreadFactory;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.common.metrics.MetricsController;
 import org.apache.kylin.common.metrics.MetricsGroup;
+import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.cluster.ClusterManager;
 import org.apache.kylin.rest.config.initialize.MetricsRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -100,9 +99,10 @@ public class MetricsConfig {
 
         }, 0, 1, TimeUnit.MINUTES);
 
-        METRICS_SCHEDULED_EXECUTOR.scheduleAtFixedRate(MetricsRegistry::refreshTotalStorageSize,
-                0, 10, TimeUnit.MINUTES);
+        METRICS_SCHEDULED_EXECUTOR.scheduleAtFixedRate(MetricsRegistry::refreshTotalStorageSize, 0, 10,
+                TimeUnit.MINUTES);
 
-        METRICS_SCHEDULED_EXECUTOR.execute(() -> MetricsController.startReporters(KapConfig.wrap(KylinConfig.getInstanceFromEnv())));
+        METRICS_SCHEDULED_EXECUTOR
+                .execute(() -> MetricsController.startReporters(KapConfig.wrap(KylinConfig.getInstanceFromEnv())));
     }
 }

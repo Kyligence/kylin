@@ -18,13 +18,13 @@
 
 package org.apache.kylin.job;
 
-import org.apache.kylin.metadata.cube.model.NDataSegment;
+import java.util.Objects;
+import java.util.Set;
+
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.factory.JobFactory;
 import org.apache.kylin.job.model.JobParam;
-
-import java.util.Objects;
-import java.util.Set;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
 
 public class SecondStorageCleanJobBuildParams extends JobFactory.JobBuildParams {
     private String project;
@@ -33,15 +33,8 @@ public class SecondStorageCleanJobBuildParams extends JobFactory.JobBuildParams 
     private Set<Long> secondStorageDeleteLayoutIds;
 
     public SecondStorageCleanJobBuildParams(Set<NDataSegment> segments, JobParam jobParam, JobTypeEnum jobType) {
-        super(segments,
-                jobParam.getProcessLayouts(),
-                jobParam.getOwner(),
-                jobType,
-                jobParam.getJobId(),
-                null,
-                jobParam.getIgnoredSnapshotTables(),
-                null,
-                null);
+        super(segments, jobParam.getProcessLayouts(), jobParam.getOwner(), jobType, jobParam.getJobId(), null,
+                jobParam.getIgnoredSnapshotTables(), null, null);
     }
 
     public String getProject() {

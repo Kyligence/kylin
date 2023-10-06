@@ -81,6 +81,8 @@ import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.job.constant.JobStatusEnum;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -99,9 +101,6 @@ import org.apache.kylin.streaming.jobs.StreamingJobUtils;
 import org.apache.kylin.streaming.util.MetaInfoUpdater;
 import org.apache.spark.launcher.SparkLauncher;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.Getter;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;

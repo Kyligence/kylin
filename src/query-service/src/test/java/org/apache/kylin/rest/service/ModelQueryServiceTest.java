@@ -23,6 +23,8 @@ import java.util.Set;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.rest.constant.Constant;
@@ -43,9 +45,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.val;
 

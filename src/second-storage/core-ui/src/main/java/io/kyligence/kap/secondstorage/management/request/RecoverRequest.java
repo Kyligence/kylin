@@ -19,6 +19,7 @@
 package io.kyligence.kap.secondstorage.management.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 
 @Data
@@ -28,4 +29,3 @@ public class RecoverRequest {
     @JsonProperty("model_name")
     public String modelName;
 }
-

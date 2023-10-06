@@ -18,24 +18,25 @@
 
 package io.kyligence.kap.clickhouse.management;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import io.kyligence.kap.secondstorage.SecondStorageConfigLoader;
-import io.kyligence.kap.secondstorage.config.ClusterInfo;
-import io.kyligence.kap.secondstorage.config.Node;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.apache.kylin.common.ClickHouseConfig;
-import org.apache.kylin.common.Singletons;
-import org.yaml.snakeyaml.TypeDescription;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import org.apache.kylin.common.ClickHouseConfig;
+import org.apache.kylin.common.Singletons;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.yaml.snakeyaml.TypeDescription;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
+
+import io.kyligence.kap.secondstorage.SecondStorageConfigLoader;
+import io.kyligence.kap.secondstorage.config.ClusterInfo;
+import io.kyligence.kap.secondstorage.config.Node;
+import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ClickHouseConfigLoader implements SecondStorageConfigLoader {
@@ -91,7 +92,8 @@ public class ClickHouseConfigLoader implements SecondStorageConfigLoader {
             val pairSizeList = config.getCluster().values().stream().map(List::size).collect(Collectors.toSet());
             Preconditions.checkState(pairSizeList.size() <= 1, "There are different size node pair.");
             val allNodes = config.getNodes();
-            Preconditions.checkState(allNodes.size() == allNodes.stream().map(Node::getName).collect(Collectors.toSet()).size(),
+            Preconditions.checkState(
+                    allNodes.size() == allNodes.stream().map(Node::getName).collect(Collectors.toSet()).size(),
                     "There are duplicate node name");
             cluster.set(config);
         } catch (FileNotFoundException e) {

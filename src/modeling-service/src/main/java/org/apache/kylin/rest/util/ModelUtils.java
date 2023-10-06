@@ -33,13 +33,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.DateFormat;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.rest.constant.ModelAttributeEnum;
 import org.apache.kylin.rest.response.NDataModelResponse;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.val;

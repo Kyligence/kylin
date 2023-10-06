@@ -35,7 +35,6 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexDynamicParam;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 /**
@@ -81,7 +80,8 @@ public class OLAPLimitRel extends SingleRel implements OLAPRel {
         this.context = implementor.getContext();
 
         // ignore limit after having clause
-        // ignore limit after another limit, e.g. select A, count(*) from (select A,B from fact group by A,B limit 100) limit 10
+        // ignore limit after another limit, e.g.
+        //    select A, count(*) from (select A,B from fact group by A,B limit 100) limit 10
         if (!context.afterHavingClauseFilter && !context.afterLimit) {
 
             context.afterLimit = true;

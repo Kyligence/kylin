@@ -20,13 +20,13 @@ package org.apache.kylin.rest.response;
 
 import java.util.List;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
+import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.Getter;
 
 @Getter

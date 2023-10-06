@@ -20,9 +20,8 @@ package org.apache.kylin.query.relnode;
 
 import java.util.Map;
 
-import org.apache.kylin.metadata.model.FunctionDesc;
-
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.metadata.model.FunctionDesc;
 
 import lombok.Getter;
 

@@ -120,13 +120,13 @@ class CloseWaitTest {
     @Test
     void closeWaitTest() {
         AtomicBoolean shouldContinue = new AtomicBoolean(true);
-        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(5* 1000).setConnectionRequestTimeout(5 *1000)
-                .setSocketTimeout(5*1000).build();
+        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(5 * 1000)
+                .setConnectionRequestTimeout(5 * 1000).setSocketTimeout(5 * 1000).build();
         Runnable suggest = () -> {
             while (shouldContinue.get()) {
                 long start = System.currentTimeMillis();
-                try (CloseableHttpClient client = HttpClientBuilder.create()
-                        .setDefaultRequestConfig(requestConfig).build()) {
+                try (CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(requestConfig)
+                        .build()) {
                     HttpPost suggestRequest = new HttpPost("http://127.0.0.1:7077/api/suggest");
 
                     client.execute(suggestRequest);
@@ -140,8 +140,8 @@ class CloseWaitTest {
         Runnable drop = () -> {
             while (shouldContinue.get()) {
                 long start = System.currentTimeMillis();
-                try (CloseableHttpClient client = HttpClientBuilder.create()
-                        .setDefaultRequestConfig(requestConfig).build()) {
+                try (CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(requestConfig)
+                        .build()) {
                     HttpPost suggestRequest = new HttpPost("http://127.0.0.1:7077/api/drop");
 
                     client.execute(suggestRequest);

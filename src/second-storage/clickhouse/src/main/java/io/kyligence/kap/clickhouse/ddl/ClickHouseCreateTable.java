@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+
 import io.kyligence.kap.secondstorage.ddl.CreateTable;
 import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
-
 
 public class ClickHouseCreateTable extends CreateTable<ClickHouseCreateTable> {
 
@@ -46,6 +46,7 @@ public class ClickHouseCreateTable extends CreateTable<ClickHouseCreateTable> {
         this.engine = engine;
         return this;
     }
+
     public String engine() {
         return engine;
     }
@@ -72,9 +73,11 @@ public class ClickHouseCreateTable extends CreateTable<ClickHouseCreateTable> {
         this.likeTable = TableIdentifier.table(database, table);
         return this;
     }
+
     public TableIdentifier likeTable() {
         return likeTable;
     }
+
     public boolean createTableWithColumns() {
         return likeTable == null;
     }

@@ -250,7 +250,8 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
         manager.updateJobOutput(task.getId(), ExecutableState.RUNNING, null, null, null);
         manager.updateJobOutput(task.getId(), ExecutableState.SUCCEED, null, null, null);
 
-        ExecutableResponse response = ExecutableResponse.create(executable, ExecutableManager.toPO(executable, project));
+        ExecutableResponse response = ExecutableResponse.create(executable,
+                ExecutableManager.toPO(executable, project));
         Assert.assertEquals(0.99F, response.getStepRatio(), 0.001);
     }
 
@@ -264,7 +265,8 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
         params.put(NBatchConstants.P_SELECTED_PARTITION_VALUE, "[\"1\",\"2\",\"3\"]");
         params.put(NBatchConstants.P_SELECTED_PARTITION_COL, "testCol");
         snapshotJob.setParams(params);
-        ExecutableResponse response = ExecutableResponse.create(snapshotJob, ExecutableManager.toPO(snapshotJob, project));
+        ExecutableResponse response = ExecutableResponse.create(snapshotJob,
+                ExecutableManager.toPO(snapshotJob, project));
 
         params.put(NBatchConstants.P_INCREMENTAL_BUILD, "false");
         params.put(NBatchConstants.P_SELECTED_PARTITION_COL, "testCol");
@@ -719,14 +721,14 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
 
     private long getCreateTime(String name) {
         switch (name) {
-            case "1":
-                return 1560324101000L;
-            case "2":
-                return 1560324102000L;
-            case "3":
-                return 1560324103000L;
-            default:
-                return 0L;
+        case "1":
+            return 1560324101000L;
+        case "2":
+            return 1560324102000L;
+        case "3":
+            return 1560324103000L;
+        default:
+            return 0L;
         }
     }
 

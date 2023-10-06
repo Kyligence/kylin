@@ -29,10 +29,9 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.SetOp;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.query.util.ICutContextStrategy;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class KapMinusRel extends Minus implements KapRel {
 

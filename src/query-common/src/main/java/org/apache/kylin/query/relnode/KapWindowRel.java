@@ -32,11 +32,10 @@ import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.query.util.ICutContextStrategy;
 import org.apache.kylin.query.util.RexUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 /**
  */
@@ -114,7 +113,8 @@ public class KapWindowRel extends OLAPWindowRel implements KapRel {
             group.orderKeys.getFieldCollations()
                     .forEach(f -> tblColRefs.addAll(inputColumnRowType.getSourceColumnsByIndex(f.getFieldIndex())));
             group.aggCalls.stream().flatMap(call -> RexUtils.getAllInputRefs(call).stream())
-                    .filter(inRef -> inRef.getIndex() < inputColumnRowType.size()) // if idx >= input column cnt, it is referencing to come constants
+                    .filter(inRef -> inRef.getIndex() < inputColumnRowType.size())
+                    // if idx >= input column cnt, it is referencing to come constants
                     .flatMap(inRef -> inputColumnRowType.getSourceColumnsByIndex(inRef.getIndex()).stream())
                     .forEach(tblColRefs::add);
         }

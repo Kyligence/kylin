@@ -20,13 +20,15 @@ package org.apache.kylin.rest.util;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.constant.ModelAttributeEnum;
 import org.apache.kylin.rest.response.NDataModelResponse;
 import org.junit.After;
@@ -42,9 +44,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import io.kyligence.kap.secondstorage.config.Node;
 import io.kyligence.kap.secondstorage.response.SecondStorageInfo;
@@ -69,7 +68,7 @@ public class ModelUtilsTest extends NLocalFileMetadataTestCase {
     private void prepareSecondStorageInfo(List<SecondStorageInfo> secondStorageInfos) {
         val ssi = new SecondStorageInfo().setSecondStorageEnabled(true);
         Map<String, List<SecondStorageNode>> pairs = Maps.newHashMap();
-        pairs.put("ssi", Arrays.asList(new SecondStorageNode(new Node())));
+        pairs.put("ssi", Collections.singletonList(new SecondStorageNode(new Node())));
         ssi.setSecondStorageSize(1024).setSecondStorageNodes(pairs);
         secondStorageInfos.add(ssi);
         PowerMockito.stub(PowerMockito.method(SecondStorageUtil.class, "isProjectEnable")).toReturn(Boolean.TRUE);
@@ -96,12 +95,12 @@ public class ModelUtilsTest extends NLocalFileMetadataTestCase {
     @Test
     public void testAddSecondStorageInfo() {
         prepareSecondStorageInfo(new ArrayList<>());
-        val models = Arrays.asList((NDataModel) new NDataModelResponse());
+        val models = Collections.singletonList((NDataModel) new NDataModelResponse());
         ModelUtils.addSecondStorageInfo("default", models);
         val dataModelResp = ((NDataModelResponse) models.get(0));
         Assert.assertEquals(1, dataModelResp.getSecondStorageNodes().size());
         Assert.assertEquals(1024, dataModelResp.getSecondStorageSize());
-        Assert.assertEquals(true, dataModelResp.isSecondStorageEnabled());
+        Assert.assertTrue(dataModelResp.isSecondStorageEnabled());
     }
 
     @Test
@@ -111,12 +110,12 @@ public class ModelUtilsTest extends NLocalFileMetadataTestCase {
         NDataModelResponse modelSpy4 = Mockito.spy(new NDataModelResponse(new NDataModel()));
         when(modelSpy4.isSecondStorageEnabled()).thenReturn(true);
         mockedModels.add(modelSpy4);
-        val modelSets = ModelUtils.getFilteredModels("default", Arrays.asList(ModelAttributeEnum.SECOND_STORAGE),
-                mockedModels);
+        val modelSets = ModelUtils.getFilteredModels("default",
+                Collections.singletonList(ModelAttributeEnum.SECOND_STORAGE), mockedModels);
         Assert.assertEquals(1, modelSets.size());
         val dataModelResp = ((NDataModelResponse) modelSets.iterator().next());
         Assert.assertEquals(1, dataModelResp.getSecondStorageNodes().size());
         Assert.assertEquals(1024, dataModelResp.getSecondStorageSize());
-        Assert.assertEquals(true, dataModelResp.isSecondStorageEnabled());
+        Assert.assertTrue(dataModelResp.isSecondStorageEnabled());
     }
 }

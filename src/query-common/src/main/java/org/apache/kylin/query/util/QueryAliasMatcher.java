@@ -284,7 +284,8 @@ public class QueryAliasMatcher {
     private class SqlJoinCapturer extends SqlBasicVisitor<SqlNode> {
 
         private final List<JoinDesc> joinDescs;
-        private final LinkedHashMap<String, ColumnRowType> alias2CRT = Maps.newLinkedHashMap(); // aliasInQuery => ColumnRowType representing the alias table
+        // aliasInQuery => ColumnRowType representing the alias table
+        private final LinkedHashMap<String, ColumnRowType> alias2CRT = Maps.newLinkedHashMap();
         private final String modelName;
 
         private boolean foundJoinOnCC = false;

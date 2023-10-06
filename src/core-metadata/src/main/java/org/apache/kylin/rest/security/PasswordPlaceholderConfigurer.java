@@ -57,8 +57,6 @@ public class PasswordPlaceholderConfigurer extends PropertyPlaceholderConfigurer
             prop.store(new PrintWriter(writer), "kylin properties");
             propString = writer.getBuilder().toString();
         }
-//        InputStream is = IOUtils.toInputStream(propString, Charset.defaultCharset());
-//        resources[0] = new InputStreamResource(is);
 
         ByteArrayResource byteArrayResource = new ByteArrayResource(propString.getBytes(Charset.defaultCharset()));
         resources[0] = byteArrayResource;
@@ -67,8 +65,8 @@ public class PasswordPlaceholderConfigurer extends PropertyPlaceholderConfigurer
     }
 
     private static void printUsage() {
-        System.out.println(
-                "Usage: java org.apache.kylin.rest.security.PasswordPlaceholderConfigurer <EncryptMethod> <your_password>");
+        System.out.println("Usage: java org.apache.kylin.rest.security.PasswordPlaceholderConfigurer "
+                + "<EncryptMethod> <your_password>");
         System.out.println("EncryptMethod: AES or BCrypt");
     }
 

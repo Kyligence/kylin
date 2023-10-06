@@ -18,14 +18,6 @@
 
 package io.kyligence.kap.secondstorage;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import io.kyligence.kap.secondstorage.config.ClusterInfo;
-import io.kyligence.kap.secondstorage.config.Node;
-import io.kyligence.kap.secondstorage.metadata.Manager;
-import io.kyligence.kap.secondstorage.metadata.NodeGroup;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.QueryContext;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -42,6 +34,15 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.QueryContext;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+
+import io.kyligence.kap.secondstorage.config.ClusterInfo;
+import io.kyligence.kap.secondstorage.config.Node;
+import io.kyligence.kap.secondstorage.metadata.Manager;
+import io.kyligence.kap.secondstorage.metadata.NodeGroup;
+
 public class SecondStorageNodeHelper {
     private static final AtomicBoolean initialized = new AtomicBoolean(false);
     private static final ConcurrentMap<String, Node> NODE_MAP = new ConcurrentHashMap<>();
@@ -50,7 +51,8 @@ public class SecondStorageNodeHelper {
     private static Function<Node, String> node2url;
     private static BiFunction<List<Node>, QueryContext, String> shard2url;
 
-    public static void initFromCluster(ClusterInfo cluster, Function<Node, String> node2url, BiFunction<List<Node>, QueryContext, String> shard2url) {
+    public static void initFromCluster(ClusterInfo cluster, Function<Node, String> node2url,
+            BiFunction<List<Node>, QueryContext, String> shard2url) {
         synchronized (SecondStorageNodeHelper.class) {
             NODE2PAIR_INDEX.clear();
             cluster.getNodes().forEach(node -> NODE_MAP.put(node.getName(), node));
@@ -119,12 +121,11 @@ public class SecondStorageNodeHelper {
     }
 
     public static List<Node> getALlNodesInProject(String project) {
-        Optional<Manager<NodeGroup>> nodeGroupOptional = SecondStorageUtil.nodeGroupManager(KylinConfig.getInstanceFromEnv(), project);
+        Optional<Manager<NodeGroup>> nodeGroupOptional = SecondStorageUtil
+                .nodeGroupManager(KylinConfig.getInstanceFromEnv(), project);
         Preconditions.checkState(nodeGroupOptional.isPresent(), "node group manager is not init");
-        return nodeGroupOptional.get().listAll().stream()
-                .flatMap(nodeGroup -> nodeGroup.getNodeNames().stream()).map(NODE_MAP::get)
-                .distinct()
-                .collect(Collectors.toList());
+        return nodeGroupOptional.get().listAll().stream().flatMap(nodeGroup -> nodeGroup.getNodeNames().stream())
+                .map(NODE_MAP::get).distinct().collect(Collectors.toList());
     }
 
     public static List<String> getAllNames() {
@@ -139,7 +140,8 @@ public class SecondStorageNodeHelper {
 
     public static Map<Integer, List<String>> separateReplicaGroup(int replicaNum, String... pairs) {
         for (final String pair : pairs) {
-            Preconditions.checkArgument(getPair(pair).size() == replicaNum, "Pair size is different from replica number");
+            Preconditions.checkArgument(getPair(pair).size() == replicaNum,
+                    "Pair size is different from replica number");
         }
         Map<Integer, List<String>> nodeMap = new HashMap<>(replicaNum);
         for (final String pair : pairs) {

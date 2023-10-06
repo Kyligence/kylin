@@ -37,11 +37,13 @@ import org.apache.kylin.metadata.model.TableDesc;
 import org.sparkproject.guava.base.Preconditions;
 
 import lombok.SneakyThrows;
+
 public class NSparkSnapshotJob extends DefaultExecutableOnTable {
 
     static {
         JobFactory.register(JobFactoryConstant.SNAPSHOT_JOB_FACTORY, new SnapshotJobFactory());
     }
+
     public NSparkSnapshotJob() {
         super();
     }
@@ -55,8 +57,8 @@ public class NSparkSnapshotJob extends DefaultExecutableOnTable {
             boolean incrementBuild, Set<String> partitionToBuild, boolean isRefresh) {
         JobTypeEnum jobType = isRefresh ? JobTypeEnum.SNAPSHOT_REFRESH : JobTypeEnum.SNAPSHOT_BUILD;
         String partitionValueString = partitionToBuild == null ? null : JsonUtil.writeValueAsString(partitionToBuild);
-        return create(tableDesc, submitter, jobType, RandomUtil.randomUUIDStr(), partitionCol, String.valueOf(incrementBuild),
-                partitionValueString);
+        return create(tableDesc, submitter, jobType, RandomUtil.randomUUIDStr(), partitionCol,
+                String.valueOf(incrementBuild), partitionValueString);
     }
 
     public static NSparkSnapshotJob create(TableDesc tableDesc, String submitter, boolean isRefresh, String yarnQueue) {

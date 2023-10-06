@@ -17,11 +17,12 @@
  */
 package io.kyligence.kap.secondstorage.util;
 
-import io.kyligence.kap.secondstorage.config.SecondStorageProjectModelSegment;
+import java.util.Locale;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Locale;
+import io.kyligence.kap.secondstorage.config.SecondStorageProjectModelSegment;
 
 public class ConvertUtilsTest {
 
@@ -36,7 +37,8 @@ public class ConvertUtilsTest {
         SecondStorageProjectModelSegment segment = new SecondStorageProjectModelSegment();
         ConvertUtils.convertValue(segment, SecondStorageProjectModelSegment.class);
 
-        Assertions.assertThrows(IllegalArgumentException.class, () -> ConvertUtils.convertValue(segment, UnsupportedClass.class));
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> ConvertUtils.convertValue(segment, UnsupportedClass.class));
 
         ConvertUtils.convertValue(segment, SecondStorageProjectModelSegment.class);
     }
@@ -49,10 +51,10 @@ public class ConvertUtilsTest {
         Assertions.assertEquals(true, ConvertUtils.convertValue("true", Boolean.class));
         Assertions.assertEquals(false, ConvertUtils.convertValue("false", Boolean.class));
 
-        Exception exception = Assertions.assertThrows(IllegalArgumentException.class, () -> ConvertUtils.convertValue("10", Boolean.class));
+        Exception exception = Assertions.assertThrows(IllegalArgumentException.class,
+                () -> ConvertUtils.convertValue("10", Boolean.class));
         Assertions.assertEquals(exception.getMessage(), String.format(Locale.ROOT,
-                "Unrecognized option for boolean: %s. Expected either true or false(case insensitive)",
-                10));
+                "Unrecognized option for boolean: %s. Expected either true or false(case insensitive)", 10));
     }
 
     @Test
@@ -67,10 +69,10 @@ public class ConvertUtilsTest {
         Assertions.assertEquals(Integer.valueOf(10), ConvertUtils.convertValue(Integer.valueOf(10), Integer.class));
         Assertions.assertEquals(Integer.valueOf(10), ConvertUtils.convertValue(Long.valueOf(10), Integer.class));
         Assertions.assertEquals(Integer.valueOf(10), ConvertUtils.convertValue("10", Integer.class));
-        Exception exception = Assertions.assertThrows(IllegalArgumentException.class, () -> ConvertUtils.convertValue(Long.MAX_VALUE, Integer.class));
+        Exception exception = Assertions.assertThrows(IllegalArgumentException.class,
+                () -> ConvertUtils.convertValue(Long.MAX_VALUE, Integer.class));
         Assertions.assertEquals(exception.getMessage(), String.format(Locale.ROOT,
-                "Configuration value %s overflow/underflow the integer type.",
-                Long.MAX_VALUE));
+                "Configuration value %s overflow/underflow the integer type.", Long.MAX_VALUE));
     }
 
     public class UnsupportedClass {

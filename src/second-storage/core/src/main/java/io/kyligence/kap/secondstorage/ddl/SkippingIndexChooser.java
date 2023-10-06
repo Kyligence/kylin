@@ -24,9 +24,9 @@ import java.util.Set;
 
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.metadata.datatype.DataType;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import io.kyligence.kap.secondstorage.enums.SkippingIndexType;
 
 public class SkippingIndexChooser {

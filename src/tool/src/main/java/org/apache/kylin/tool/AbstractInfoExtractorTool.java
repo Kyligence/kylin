@@ -322,6 +322,7 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
                 || this instanceof StreamingJobDiagInfoTool || this instanceof QueryDiagInfoTool
                 || this instanceof DiagK8sTool;
     }
+
     private boolean isDiagFromWeb(OptionsHelper optionsHelper) {
         return isDiag() && optionsHelper.hasOption(OPTION_DIAGID);
     }
@@ -348,8 +349,9 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
 
     protected void exportSparkLog(File exportDir, long startTime, long endTime, File recordTime, String queryId) {
         QueryHistory query = new QueryDiagInfoTool().getQueryByQueryId(queryId);
-        String hostName = query == null ? null : AddressUtil.getServerInfo(
-                query.getQueryHistoryInfo().getHostName(), query.getQueryHistoryInfo().getPort());
+        String hostName = query == null ? null
+                : AddressUtil.getServerInfo(query.getQueryHistoryInfo().getHostName(),
+                        query.getQueryHistoryInfo().getPort());
 
         // job spark log
         Future sparkLogTask = executorService.submit(() -> {
@@ -448,7 +450,7 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
 
     private boolean isZenLicense() {
         try {
-            if(KylinConfig.getInstanceFromEnv().isUTEnv()) {
+            if (KylinConfig.getInstanceFromEnv().isUTEnv()) {
                 return false;
             }
             if (null == SpringContext.getApplicationContext()) {
@@ -684,7 +686,7 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
 
         scheduleTimeoutTask(recTask, REC_CANDIDATE);
     }
-    
+
     protected void exportJobInfo(String project, String jobId, File recordTime) {
         exportJobInfo(project, jobId, -1, -1, recordTime);
     }
@@ -714,7 +716,7 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
 
         scheduleTimeoutTask(jobTask, JOB_INFO);
     }
-    
+
     protected void exportFavoriteRule(String project, File recordTime) {
         val favoriteRuleTask = executorService.submit(() -> {
             recordTaskStartTime(FAVORITE_RULE);
@@ -862,8 +864,9 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
 
         scheduleTimeoutTask(confTask, SYSTEM_USAGE);
     }
-    
-    protected void exportLogFromLoki(File exportDir, Long startTime, Long endTime, List<String> instances, File recordTime) {
+
+    protected void exportLogFromLoki(File exportDir, Long startTime, Long endTime, List<String> instances,
+            File recordTime) {
         Future<?> logTask = executorService.submit(() -> {
             recordTaskStartTime(LOG);
             KylinLogTool.extractKylinLogFromLoki(exportDir, startTime, endTime, instances);
@@ -893,7 +896,8 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
         scheduleTimeoutTask(confTask, CONF);
     }
 
-    protected void exportConf(File exportDir, final File recordTime, final boolean includeConf, final boolean includeBin) {
+    protected void exportConf(File exportDir, final File recordTime, final boolean includeConf,
+            final boolean includeBin) {
         // export conf
         if (includeConf) {
             Future confTask = executorService.submit(() -> {
@@ -1002,7 +1006,7 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
     }
 
     public void exportJobSparkLog(File exportDir, final File recordTime, String project, String jobId,
-                                   ExecutablePO job) {
+            ExecutablePO job) {
         // job spark log
         Future sparkLogTask = executorService.submit(() -> {
             recordTaskStartTime(SPARK_LOGS);

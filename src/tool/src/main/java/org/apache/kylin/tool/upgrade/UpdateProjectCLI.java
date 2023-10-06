@@ -84,7 +84,8 @@ public class UpdateProjectCLI extends ExecutableApplication {
 
                 // for upgrade, set default database
                 if (StringUtils.isEmpty(copyForWrite.getDefaultDatabase())) {
-                    val schemaMap = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), copyForWrite.getName())
+                    val schemaMap = NTableMetadataManager
+                            .getInstance(KylinConfig.getInstanceFromEnv(), copyForWrite.getName())
                             .listTablesGroupBySchema();
                     String defaultDatabase = DatabaseDesc.getDefaultDatabaseByMaxTables(schemaMap);
                     copyForWrite.setDefaultDatabase(defaultDatabase.toUpperCase(Locale.ROOT));

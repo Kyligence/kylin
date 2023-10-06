@@ -70,16 +70,16 @@ public class ExtractLimitInfoTest extends NLocalWithSparkSessionTest {
     public void setup() throws Exception {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/join_opt");
-//        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-//        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-//        if (!scheduler.hasStarted()) {
-//            throw new RuntimeException("scheduler has not been started");
-//        }
+        // NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
+        // scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
+        // if (!scheduler.hasStarted()) {
+        //     throw new RuntimeException("scheduler has not been started");
+        // }
     }
 
     @After
     public void after() throws Exception {
-//        NDefaultScheduler.destroyInstance();
+        // NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
     }
 

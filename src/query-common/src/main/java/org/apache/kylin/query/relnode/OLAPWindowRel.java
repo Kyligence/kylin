@@ -36,9 +36,8 @@ import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.kylin.metadata.model.TblColRef;
-
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.metadata.model.TblColRef;
 
 /**
  */

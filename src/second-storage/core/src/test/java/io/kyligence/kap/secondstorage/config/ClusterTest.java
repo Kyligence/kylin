@@ -17,15 +17,15 @@
  */
 package io.kyligence.kap.secondstorage.config;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.common.util.EncryptUtil;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.kylin.common.util.EncryptUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class ClusterTest {
     @Test

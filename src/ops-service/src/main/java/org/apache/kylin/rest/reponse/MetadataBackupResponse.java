@@ -18,9 +18,9 @@
 
 package org.apache.kylin.rest.reponse;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.kylin.rest.service.OpsService;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class MetadataBackupResponse {
     @JsonProperty("path")
@@ -31,7 +31,6 @@ public class MetadataBackupResponse {
     private String size;
     @JsonProperty("owner")
     private String owner;
-
 
     public String getPath() {
         return path;

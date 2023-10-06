@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.kylin.common.util.ExecutorServiceUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
@@ -49,9 +51,6 @@ import org.apache.logging.log4j.core.appender.OutputStreamManager;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.spark.utils.SparkHadoopUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.util.concurrent.ThreadFactoryBuilder;
 
 import lombok.Getter;
 import lombok.Setter;

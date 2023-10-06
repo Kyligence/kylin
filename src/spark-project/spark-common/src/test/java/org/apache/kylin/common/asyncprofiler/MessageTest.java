@@ -37,7 +37,8 @@ public class MessageTest {
 
     @Test
     public void testExecutorMessage() {
-        String executorMessage = Message.createExecutorMessage(Message.START(), "-0", AsyncProfilerToolTest.DUMP_PARAMS);
+        String executorMessage = Message.createExecutorMessage(Message.START(), "-0",
+                AsyncProfilerToolTest.DUMP_PARAMS);
         Tuple3<String, String, String> tuple = Message.processMessage(executorMessage);
         Assert.assertEquals("STA-0:flamegraph", executorMessage);
         Assert.assertEquals(Message.START(), tuple._1());

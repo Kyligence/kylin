@@ -18,14 +18,15 @@
 
 package org.apache.kylin.job.execution.handler;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.job.execution.DefaultExecutableOnModel;
+import org.apache.kylin.job.execution.ExecutableHandler;
+
 import io.kyligence.kap.engine.spark.job.ExecutableAddCuboidHandler;
 import io.kyligence.kap.engine.spark.job.ExecutableAddSegmentHandler;
 import io.kyligence.kap.engine.spark.job.ExecutableMergeOrRefreshHandler;
 import lombok.val;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.kylin.job.execution.DefaultExecutableOnModel;
-import org.apache.kylin.job.execution.ExecutableHandler;
 
 public class ExecutableHandlerFactory {
 

@@ -54,20 +54,20 @@ public class JoinFilterRule extends RelOptRule {
         return join.getJoinType() == JoinRelType.LEFT;
     };
 
-    public static final JoinFilterRule JOIN_LEFT_FILTER = new JoinFilterRule(
-            operand(Join.class, null, join -> innerJoinPredicate.apply(join), operand(Filter.class, any()), operand(RelNode.class, any())),
+    public static final JoinFilterRule JOIN_LEFT_FILTER = new JoinFilterRule(operand(Join.class, null,
+            join -> innerJoinPredicate.apply(join), operand(Filter.class, any()), operand(RelNode.class, any())),
             RelFactories.LOGICAL_BUILDER, true, false);
 
-    public static final JoinFilterRule JOIN_RIGHT_FILTER = new JoinFilterRule(
-            operand(Join.class, null, join -> innerJoinPredicate.apply(join), operand(RelNode.class, any()), operand(Filter.class, any())),
+    public static final JoinFilterRule JOIN_RIGHT_FILTER = new JoinFilterRule(operand(Join.class, null,
+            join -> innerJoinPredicate.apply(join), operand(RelNode.class, any()), operand(Filter.class, any())),
             RelFactories.LOGICAL_BUILDER, false, true);
 
-    public static final JoinFilterRule JOIN_BOTH_FILTER = new JoinFilterRule(
-            operand(Join.class, null, join -> innerJoinPredicate.apply(join), operand(Filter.class, any()), operand(Filter.class, any())),
+    public static final JoinFilterRule JOIN_BOTH_FILTER = new JoinFilterRule(operand(Join.class, null,
+            join -> innerJoinPredicate.apply(join), operand(Filter.class, any()), operand(Filter.class, any())),
             RelFactories.LOGICAL_BUILDER, true, true);
 
-    public static final JoinFilterRule LEFT_JOIN_LEFT_FILTER = new JoinFilterRule(
-            operand(Join.class, null, join -> leftJoinPredicate.apply(join), operand(Filter.class, any()), operand(RelNode.class, any())),
+    public static final JoinFilterRule LEFT_JOIN_LEFT_FILTER = new JoinFilterRule(operand(Join.class, null,
+            join -> leftJoinPredicate.apply(join), operand(Filter.class, any()), operand(RelNode.class, any())),
             RelFactories.LOGICAL_BUILDER, true, false);
 
     public JoinFilterRule(RelOptRuleOperand operand, RelBuilderFactory builder, boolean pullLeft, boolean pullRight) {

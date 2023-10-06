@@ -47,15 +47,15 @@ import org.apache.kylin.common.persistence.metadata.EpochStore;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.RandomUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.guava30.shaded.common.cache.Cache;
 import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 import org.apache.kylin.guava30.shaded.common.cache.CacheLoader;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.val;
@@ -223,8 +223,7 @@ public abstract class ResourceStore implements AutoCloseable {
      * Read a resource, return null in case of not found or is a folder.
      */
     public final <T extends RootPersistentEntity> T getResource(String resPath, Serializer<T> serializer) {
-        return MemoryLockUtils.doWithLock(null, resPath, true, this,
-                () -> getResourceWithoutLock(resPath, serializer));
+        return MemoryLockUtils.doWithLock(null, resPath, true, this, () -> getResourceWithoutLock(resPath, serializer));
     }
 
     public final <T extends RootPersistentEntity> T getResourceWithoutLock(String resPath, Serializer<T> serializer) {

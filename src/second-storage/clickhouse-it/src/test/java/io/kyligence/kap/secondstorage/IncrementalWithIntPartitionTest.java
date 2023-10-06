@@ -82,13 +82,13 @@ import io.kyligence.kap.secondstorage.test.utils.JobWaiter;
 import lombok.val;
 
 public class IncrementalWithIntPartitionTest implements JobWaiter {
-    static private final String modelId = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
+    private static final String modelId = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
 
     public static String getProject() {
         return project;
     }
 
-    static private final String project = "table_index_incremental_with_int_date";
+    private static final String project = "table_index_incremental_with_int_date";
 
     @ClassRule
     public static SharedSparkSession sharedSpark = new SharedSparkSession(

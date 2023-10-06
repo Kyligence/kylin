@@ -138,7 +138,8 @@ public class EpochChangedListener {
             }
 
             if (kylinConfig.getQueryHistoryAccelerateInterval() > 0) {
-                QueryHistoryMetaUpdateScheduler qhMetaUpdateScheduler = QueryHistoryMetaUpdateScheduler.getInstance(project);
+                QueryHistoryMetaUpdateScheduler qhMetaUpdateScheduler = QueryHistoryMetaUpdateScheduler
+                        .getInstance(project);
                 qhMetaUpdateScheduler.init();
                 if (!qhMetaUpdateScheduler.hasStarted()) {
                     throw new RuntimeException(

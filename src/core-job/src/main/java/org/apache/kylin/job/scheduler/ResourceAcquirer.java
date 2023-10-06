@@ -29,16 +29,15 @@ import org.apache.kylin.job.core.AbstractJobExecutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class ResourceAcquirer {
 
     private static final Logger logger = LoggerFactory.getLogger(ResourceAcquirer.class);
 
-    private KylinConfig kylinConfig;
+    private final KylinConfig kylinConfig;
 
     private final ConcurrentMap<String, NodeResource> registers;
 
-    private static volatile Semaphore memorySemaphore = new Semaphore(Integer.MAX_VALUE);;
+    private static volatile Semaphore memorySemaphore = new Semaphore(Integer.MAX_VALUE);
 
     public ResourceAcquirer(KylinConfig kylinConfig) {
         this.kylinConfig = kylinConfig;

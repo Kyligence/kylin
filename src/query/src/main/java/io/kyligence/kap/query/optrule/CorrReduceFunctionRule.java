@@ -46,11 +46,10 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.CompositeList;
 import org.apache.calcite.util.ImmutableIntList;
-import org.apache.kylin.measure.corr.CorrMeasureType;
-
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.measure.corr.CorrMeasureType;
 
 public class CorrReduceFunctionRule extends RelOptRule {
     public static final CorrReduceFunctionRule INSTANCE = new CorrReduceFunctionRule(operand(Aggregate.class, any()),

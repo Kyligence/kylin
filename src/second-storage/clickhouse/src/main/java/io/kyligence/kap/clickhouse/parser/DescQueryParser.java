@@ -18,21 +18,21 @@
 
 package io.kyligence.kap.clickhouse.parser;
 
-import io.kyligence.kap.clickhouse.job.ClickHouseSystemQuery;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
+
+import io.kyligence.kap.clickhouse.job.ClickHouseSystemQuery;
+
 public class DescQueryParser {
-    private DescQueryParser() {}
+    private DescQueryParser() {
+    }
+
     public static final Function<ResultSet, ClickHouseSystemQuery.DescTable> Desc = rs -> {
         try {
-            return ClickHouseSystemQuery.DescTable.builder()
-                    .column(rs.getString(1))
-                    .datatype(rs.getString(2))
-                    .build();
+            return ClickHouseSystemQuery.DescTable.builder().column(rs.getString(1)).datatype(rs.getString(2)).build();
         } catch (SQLException sqlException) {
             return ExceptionUtils.rethrow(sqlException);
         }

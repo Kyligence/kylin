@@ -18,7 +18,13 @@
 
 package org.apache.kylin.tool.setup;
 
-import com.alibaba.nacos.common.JustForTest;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -30,12 +36,7 @@ import org.apache.kylin.common.util.HadoopUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.alibaba.nacos.common.JustForTest;
 
 public class YarnResourceInfoTool {
 

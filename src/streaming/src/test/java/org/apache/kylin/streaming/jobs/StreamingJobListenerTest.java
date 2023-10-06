@@ -270,7 +270,7 @@ public class StreamingJobListenerTest extends StreamingTestCase {
         };
     }
 
-    public static abstract class AbstractSparkAppHandle implements SparkAppHandle {
+    public abstract static class AbstractSparkAppHandle implements SparkAppHandle {
         @Override
         public void addListener(Listener listener) {
 

@@ -31,6 +31,8 @@ import org.apache.kylin.common.exception.code.ErrorCodeServer;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
@@ -57,9 +59,6 @@ import org.mockito.Mockito;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class TableExtServiceTest extends NLocalFileMetadataTestCase {
 
@@ -546,7 +545,7 @@ public class TableExtServiceTest extends NLocalFileMetadataTestCase {
         List<Pair<TableDesc, TableExtDesc>> lt1000 = mockTablePair(8, "TB");
         Mockito.doReturn(lt1000).when(tableService).extractTableMeta(Mockito.any(), Mockito.any());
         TableLoadRequest request = new TableLoadRequest();
-        request.setDatabases(new String[]{"DEFAULT"});
+        request.setDatabases(new String[] { "DEFAULT" });
         request.setProject("default");
         LoadTableResponse lt1000response = tableExtService.loadTablesWithShortCircuit(request);
         Assert.assertEquals(8, lt1000response.getFailed().size());
@@ -558,24 +557,24 @@ public class TableExtServiceTest extends NLocalFileMetadataTestCase {
         request.setTables(mockInputDBOrTable());
         Assert.assertThrows(KylinException.class, () -> tableExtService.loadTablesWithShortCircuit(request));
 
-        request.setTables(new String[]{"TEST_KYLIN_FACT"});
+        request.setTables(new String[] { "TEST_KYLIN_FACT" });
         Assert.assertThrows(KylinException.class, () -> tableExtService.loadTablesWithShortCircuit(request));
 
         request.setDatabases(null);
-        gt1000.forEach(t -> Mockito.doNothing().when(tableExtService).loadTable(t.getFirst(), t.getSecond(),
-                "default"));
+        gt1000.forEach(
+                t -> Mockito.doNothing().when(tableExtService).loadTable(t.getFirst(), t.getSecond(), "default"));
         Mockito.doReturn(gt1000).when(tableService).extractTableMeta(Mockito.any(), Mockito.any());
         Assert.assertThrows(KylinException.class, () -> tableExtService.loadTablesWithShortCircuit(request));
 
         request.setDatabases(null);
-        request.setTables(new String[]{"TEST_KYLIN_FACT"});
+        request.setTables(new String[] { "TEST_KYLIN_FACT" });
         List<Pair<TableDesc, TableExtDesc>> table8 = mockTablePair(8, "TB");
         Mockito.doReturn(table8).when(tableService).extractTableMeta(Mockito.any(), Mockito.any());
         LoadTableResponse response1 = tableExtService.loadTablesWithShortCircuit(request);
         Assert.assertEquals(8, response1.getFailed().size());
 
-        request.setDatabases(new String[]{"DEFAULT"});
-        request.setTables(new String[]{"TEST_KYLIN_FACT"});
+        request.setDatabases(new String[] { "DEFAULT" });
+        request.setTables(new String[] { "TEST_KYLIN_FACT" });
         LoadTableResponse response2 = tableExtService.loadTablesWithShortCircuit(request);
         Assert.assertEquals(8, response2.getFailed().size());
     }

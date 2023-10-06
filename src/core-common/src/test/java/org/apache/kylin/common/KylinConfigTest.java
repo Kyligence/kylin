@@ -31,14 +31,13 @@ import java.util.Properties;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig.SetAndUnsetThreadLocalConfig;
 import org.apache.kylin.common.util.ClusterConstant;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import lombok.val;
 
@@ -157,7 +156,7 @@ public class KylinConfigTest {
         Assert.assertEquals(newSparkJobJarPath, overrideSparkJobJarPath);
 
         if (StringUtils.isBlank(oldSparkJobJarPath)) {
-            // remove property, otherwise org.apache.kylin.common.KylinConfigBase.getOptional(java.lang.String, java.lang.String)
+            // remove property, otherwise KylinConfigBase.getOptional(java.lang.String, java.lang.String)
             // will return empty str
             System.clearProperty("kylin.engine.spark.job-jar");
         } else {

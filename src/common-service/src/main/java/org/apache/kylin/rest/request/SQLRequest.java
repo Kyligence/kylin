@@ -27,11 +27,11 @@ import javax.validation.constraints.Size;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.insensitive.ProjectInsensitiveRequest;
 import org.springframework.validation.FieldError;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -68,7 +68,7 @@ public class SQLRequest implements Serializable, ProjectInsensitiveRequest, Vali
 
     @JsonProperty("file_name")
     private String fileName = "result";
-    private Integer forcedToTieredStorage;  //0:CH->DFS; 1:CH->pushDown; 2:CH->return error
+    private Integer forcedToTieredStorage; //0:CH->DFS; 1:CH->pushDown; 2:CH->return error
     @JsonProperty("include_header")
     private boolean includeHeader;
 

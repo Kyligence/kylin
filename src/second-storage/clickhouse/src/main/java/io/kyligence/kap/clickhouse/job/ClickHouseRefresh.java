@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
 
 import org.apache.kylin.common.SegmentOnlineMode;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.job.SecondStorageJobParamUtil;
 import org.apache.kylin.job.handler.SecondStorageIndexCleanJobHandler;
 import org.apache.kylin.job.manager.JobManager;
@@ -43,8 +44,6 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 import io.kyligence.kap.secondstorage.SecondStorage;
 import io.kyligence.kap.secondstorage.SecondStorageConstants;
@@ -92,9 +91,8 @@ public class ClickHouseRefresh extends ClickHouseLoad {
     @Override
     protected void beforeDataCommit() {
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            getTableFlow().update(copied -> copied.all().forEach(tableData ->
-                    tableData.removePartitions(p -> oldSegmentIds.contains(p.getSegmentId()))
-            ));
+            getTableFlow().update(copied -> copied.all()
+                    .forEach(tableData -> tableData.removePartitions(p -> oldSegmentIds.contains(p.getSegmentId()))));
             return null;
         }, project, 1);
     }
@@ -104,20 +102,20 @@ public class ClickHouseRefresh extends ClickHouseLoad {
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             super.updateMeta();
 
-            getTableFlow().update(copied -> copied.all().forEach(tableData ->
-                    tableData.removePartitions(p -> oldSegmentIds.contains(p.getSegmentId()))
-            ));
+            getTableFlow().update(copied -> copied.all()
+                    .forEach(tableData -> tableData.removePartitions(p -> oldSegmentIds.contains(p.getSegmentId()))));
 
             Set<Long> needDeleteLayoutIds = getTableFlow().getTableDataList().stream()
-                    .filter(tableData -> tableData.getPartitions().isEmpty())
-                    .map(TableData::getLayoutID).collect(Collectors.toSet());
+                    .filter(tableData -> tableData.getPartitions().isEmpty()).map(TableData::getLayoutID)
+                    .collect(Collectors.toSet());
 
             getTableFlow().update(copied -> copied.cleanTableData(tableData -> tableData.getPartitions().isEmpty()));
             getTablePlan().update(t -> t.cleanTable(needDeleteLayoutIds));
 
             if (!needDeleteLayoutIds.isEmpty()) {
                 val jobHandler = new SecondStorageIndexCleanJobHandler();
-                final JobParam param = SecondStorageJobParamUtil.layoutCleanParam(project, getTargetSubject(), getSubmitter(), needDeleteLayoutIds, Collections.emptySet());
+                final JobParam param = SecondStorageJobParamUtil.layoutCleanParam(project, getTargetSubject(),
+                        getSubmitter(), needDeleteLayoutIds, Collections.emptySet());
                 JobManager.getInstance(getConfig(), project).addJob(param, jobHandler);
             }
 

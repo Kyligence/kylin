@@ -31,7 +31,6 @@ public class AlterTable extends DDL<AlterTable> {
 
     private ModifyColumn modifyColumn = null;
 
-
     public AlterTable(TableIdentifier table, ManipulatePartition manipulatePartition) {
         this.table = table;
         this.manipulatePartition = manipulatePartition;
@@ -104,7 +103,7 @@ public class AlterTable extends DDL<AlterTable> {
     }
 
     public enum IndexOperation {
-        ADD, MATERIALIZE, DROP;
+        ADD, MATERIALIZE, DROP
     }
 
     public static class ManipulatePartition implements Renderable {
@@ -205,6 +204,7 @@ public class AlterTable extends DDL<AlterTable> {
         public String getDatatype() {
             return datatype;
         }
+
         @Override
         public void accept(RenderVisitor visitor) {
             visitor.visit(this);

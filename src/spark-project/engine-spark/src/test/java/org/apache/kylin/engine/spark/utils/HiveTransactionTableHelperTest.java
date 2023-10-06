@@ -28,11 +28,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.PartitionDesc;
-import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
@@ -42,8 +42,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBase {
     private final ColumnDesc[] COLUMN_DESCS = new ColumnDesc[2];
@@ -80,18 +78,21 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBa
 
     @Test
     public void testDoGetQueryHiveTemporaryTableSql() {
-        System.setProperty("kylin.source.provider.9",
-                "io.kyligence.kap.engine.spark.source.NSparkDataSource");
+        System.setProperty("kylin.source.provider.9", "io.kyligence.kap.engine.spark.source.NSparkDataSource");
         System.setProperty("kylin.build.resource.read-transactional-table-enabled", "true");
         KylinBuildEnv kylinBuildEnv = new KylinBuildEnv(getTestConfig());
         NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(getTestConfig(), "tdh");
         TableDesc fact = tableMgr.getTableDesc("TDH_TEST.LINEORDER_PARTITION");
         fact.setTransactional(true);
-        String result = HiveTransactionTableHelper.doGetQueryHiveTemporaryTableSql(fact, Maps.newHashMap(), "LO_ORDERKEY", kylinBuildEnv);
-        Assert.assertTrue(result.startsWith("select LO_ORDERKEY from `TDH_TEST`.`LINEORDER_PARTITION_HIVE_TX_INTERMEDIATE`"));
+        String result = HiveTransactionTableHelper.doGetQueryHiveTemporaryTableSql(fact, Maps.newHashMap(),
+                "LO_ORDERKEY", kylinBuildEnv);
+        Assert.assertTrue(
+                result.startsWith("select LO_ORDERKEY from `TDH_TEST`.`LINEORDER_PARTITION_HIVE_TX_INTERMEDIATE`"));
 
-        result = HiveTransactionTableHelper.doGetQueryHiveTemporaryTableSql(fact, Maps.newHashMap(), "LO_ORDERKEY, LO_LINENUMBER", kylinBuildEnv);
-        Assert.assertTrue(result.startsWith("select LO_ORDERKEY, LO_LINENUMBER from `TDH_TEST`.`LINEORDER_PARTITION_HIVE_TX_INTERMEDIATE`"));
+        result = HiveTransactionTableHelper.doGetQueryHiveTemporaryTableSql(fact, Maps.newHashMap(),
+                "LO_ORDERKEY, LO_LINENUMBER", kylinBuildEnv);
+        Assert.assertTrue(result.startsWith(
+                "select LO_ORDERKEY, LO_LINENUMBER from `TDH_TEST`.`LINEORDER_PARTITION_HIVE_TX_INTERMEDIATE`"));
 
         PartitionDesc partitionDesc = new PartitionDesc();
         ColumnDesc columnDesc = new ColumnDesc();
@@ -100,7 +101,6 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBa
         columnDesc.setTable(fact);
         NDataModel nDataModel = new NDataModel();
         nDataModel.setUuid(UUID.randomUUID().toString());
-        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange = new SegmentRange.TimePartitionedSegmentRange();
         TableRef tableRef = new TableRef(nDataModel, "LINEORDER_PARTITION", fact, false);
         partitionDesc.setPartitionDateColumnRef(new TblColRef(tableRef, columnDesc));
         partitionDesc.setPartitionDateFormat("yyyy-MM-dd hh:mm:ss");
@@ -108,11 +108,12 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBa
         Map<String, String> params = Maps.newHashMap();
         params.put("segmentStart", "1637387522");
         params.put("segmentEnd", "1637905922");
-        result = HiveTransactionTableHelper.doGetQueryHiveTemporaryTableSql(fact, params, "LO_ORDERKEY, LO_LINENUMBER", kylinBuildEnv);
-        Assert.assertTrue(result.startsWith("select LO_ORDERKEY, LO_LINENUMBER from `TDH_TEST`.`LINEORDER_PARTITION_HIVE_TX_INTERMEDIATE`")
+        result = HiveTransactionTableHelper.doGetQueryHiveTemporaryTableSql(fact, params, "LO_ORDERKEY, LO_LINENUMBER",
+                kylinBuildEnv);
+        Assert.assertTrue(result.startsWith(
+                "select LO_ORDERKEY, LO_LINENUMBER from `TDH_TEST`.`LINEORDER_PARTITION_HIVE_TX_INTERMEDIATE`")
                 && result.endsWith("WHERE `LO_DATE` BETWEEN '1970-01-20 06:49:47' AND '1970-01-20 06:58:25'"));
     }
-
 
     @Test
     public void testHiveInitStatement() {
@@ -143,27 +144,31 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBa
     @Test
     public void testInsertDataStatement() {
         String queryCondition = "";
-        String statement = String.format(Locale.ROOT, "INSERT OVERWRITE TABLE `test1_hive_tx` SELECT\n" + "`ID1`\n" + ",`STR1`\n"
-                + "FROM `test1` %s\n;\n", queryCondition);
-        Assert.assertEquals(statement,
-                HiveTransactionTableHelper.generateInsertDataStatement(COLUMN_DESCS, ORIGIN_TABLE, INTERMEDIATE_TABLE, queryCondition));
+        String statement = String.format(Locale.ROOT,
+                "INSERT OVERWRITE TABLE `test1_hive_tx` SELECT\n" + "`ID1`\n" + ",`STR1`\n" + "FROM `test1` %s\n;\n",
+                queryCondition);
+        Assert.assertEquals(statement, HiveTransactionTableHelper.generateInsertDataStatement(COLUMN_DESCS,
+                ORIGIN_TABLE, INTERMEDIATE_TABLE, queryCondition));
 
         queryCondition = " where cal_dt between '2010-01-01 00:00:00' and  '2010-02-01 00:00:00'";
-        statement = String.format(Locale.ROOT, "INSERT OVERWRITE TABLE `test1_hive_tx` SELECT\n" + "`ID1`\n" + ",`STR1`\n"
-                + "FROM `test1` %s\n;\n", queryCondition);
-        Assert.assertEquals(statement,
-                HiveTransactionTableHelper.generateInsertDataStatement(COLUMN_DESCS, ORIGIN_TABLE, INTERMEDIATE_TABLE, queryCondition));
+        statement = String.format(Locale.ROOT,
+                "INSERT OVERWRITE TABLE `test1_hive_tx` SELECT\n" + "`ID1`\n" + ",`STR1`\n" + "FROM `test1` %s\n;\n",
+                queryCondition);
+        Assert.assertEquals(statement, HiveTransactionTableHelper.generateInsertDataStatement(COLUMN_DESCS,
+                ORIGIN_TABLE, INTERMEDIATE_TABLE, queryCondition));
 
-        statement = String.format(Locale.ROOT, "INSERT OVERWRITE TABLE test1_hive_tx SELECT\n" + "ID1\n" + ",STR1\n"
-                + "FROM test1 %s\n;\n", queryCondition);
-        Assert.assertNotEquals(statement,
-                HiveTransactionTableHelper.generateInsertDataStatement(COLUMN_DESCS, ORIGIN_TABLE, INTERMEDIATE_TABLE, queryCondition));
+        statement = String.format(Locale.ROOT,
+                "INSERT OVERWRITE TABLE test1_hive_tx SELECT\n" + "ID1\n" + ",STR1\n" + "FROM test1 %s\n;\n",
+                queryCondition);
+        Assert.assertNotEquals(statement, HiveTransactionTableHelper.generateInsertDataStatement(COLUMN_DESCS,
+                ORIGIN_TABLE, INTERMEDIATE_TABLE, queryCondition));
 
         queryCondition = " where cal_dt between '2010-01-01 00:00:00' and  '2010-02-01 00:00:00'";
-        statement = String.format(Locale.ROOT, "INSERT OVERWRITE TABLE test1_hive_tx SELECT\n" + "ID1\n" + ",STR1\n"
-                + "FROM test1 %s\n;\n", queryCondition);
-        Assert.assertNotEquals(statement,
-                HiveTransactionTableHelper.generateInsertDataStatement(COLUMN_DESCS, ORIGIN_TABLE, INTERMEDIATE_TABLE, queryCondition));
+        statement = String.format(Locale.ROOT,
+                "INSERT OVERWRITE TABLE test1_hive_tx SELECT\n" + "ID1\n" + ",STR1\n" + "FROM test1 %s\n;\n",
+                queryCondition);
+        Assert.assertNotEquals(statement, HiveTransactionTableHelper.generateInsertDataStatement(COLUMN_DESCS,
+                ORIGIN_TABLE, INTERMEDIATE_TABLE, queryCondition));
     }
 
     @Test
@@ -182,17 +187,15 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBa
                 + "STORED AS TEXTFILE\n" + "LOCATION '/test/test1_hive_tx';\n"
                 + "ALTER TABLE `test1_hive_tx` SET TBLPROPERTIES('auto.purge'='true');\n";
         String actual = HiveTransactionTableHelper.generateCreateTableStatement(INTERMEDIATE_TABLE,
-                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE),
-                COLUMN_DESCS, STORAGE_FORMAT, FILED_DELIMITER);
+                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), COLUMN_DESCS, STORAGE_FORMAT, FILED_DELIMITER);
         Assert.assertEquals(statement, actual);
 
-        statement = "CREATE EXTERNAL TABLE IF NOT EXISTS test1_hive_tx\n" + "(\n" + "ID1 int\n"
-                + ",STR1 string\n" + ")\n" + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'\n"
-                + "STORED AS TEXTFILE\n" + "LOCATION '/test/test1_hive_tx';\n"
+        statement = "CREATE EXTERNAL TABLE IF NOT EXISTS test1_hive_tx\n" + "(\n" + "ID1 int\n" + ",STR1 string\n"
+                + ")\n" + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'\n" + "STORED AS TEXTFILE\n"
+                + "LOCATION '/test/test1_hive_tx';\n"
                 + "ALTER TABLE test1_hive_tx SET TBLPROPERTIES('auto.purge'='true');\n";
         actual = HiveTransactionTableHelper.generateCreateTableStatement(INTERMEDIATE_TABLE,
-                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE),
-                COLUMN_DESCS, STORAGE_FORMAT, FILED_DELIMITER);
+                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), COLUMN_DESCS, STORAGE_FORMAT, FILED_DELIMITER);
         Assert.assertNotEquals(statement, actual);
     }
 
@@ -204,11 +207,12 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBa
                 + ")\n" + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'\n" + "STORED AS TEXTFILE\n"
                 + "LOCATION '/test/test1_hive_tx';\n"
                 + "ALTER TABLE `test1_hive_tx` SET TBLPROPERTIES('auto.purge'='true');\n"
-                + "INSERT OVERWRITE TABLE `test1_hive_tx` SELECT\n" + "`ID1`\n" + ",`STR1`\n" + "FROM `test1` %s\n;\n", queryCondition);
-        String actual = HiveTransactionTableHelper.getCreateTableStatement(ORIGIN_TABLE, INTERMEDIATE_TABLE, COLUMN_DESCS,
-                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), STORAGE_FORMAT, FILED_DELIMITER, queryCondition);
+                + "INSERT OVERWRITE TABLE `test1_hive_tx` SELECT\n" + "`ID1`\n" + ",`STR1`\n" + "FROM `test1` %s\n;\n",
+                queryCondition);
+        String actual = HiveTransactionTableHelper.getCreateTableStatement(ORIGIN_TABLE, INTERMEDIATE_TABLE,
+                COLUMN_DESCS, STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), STORAGE_FORMAT, FILED_DELIMITER,
+                queryCondition);
         Assert.assertNotEquals(statement, actual);
-
 
         queryCondition = " where cal_dt between '2010-01-01 00:00:00' and  '2010-02-01 00:00:00'";
         statement = String.format(Locale.ROOT, "DROP TABLE IF EXISTS `test1_hive_tx`;\n"
@@ -216,35 +220,40 @@ public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBa
                 + ")\n" + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'\n" + "STORED AS TEXTFILE\n"
                 + "LOCATION '/test/test1_hive_tx';\n"
                 + "ALTER TABLE `test1_hive_tx` SET TBLPROPERTIES('auto.purge'='true');\n"
-                + "INSERT OVERWRITE TABLE `test1_hive_tx` SELECT\n" + "`ID1`\n" + ",`STR1`\n" + "FROM `test1` %s\n;\n", queryCondition);
+                + "INSERT OVERWRITE TABLE `test1_hive_tx` SELECT\n" + "`ID1`\n" + ",`STR1`\n" + "FROM `test1` %s\n;\n",
+                queryCondition);
         actual = HiveTransactionTableHelper.getCreateTableStatement(ORIGIN_TABLE, INTERMEDIATE_TABLE, COLUMN_DESCS,
-                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), STORAGE_FORMAT, FILED_DELIMITER, queryCondition);
+                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), STORAGE_FORMAT, FILED_DELIMITER,
+                queryCondition);
         Assert.assertEquals(statement, actual);
     }
 
     @Test
     public void testCreateTableStatements2() {
         String queryCondition = "";
-        String statement = String.format(Locale.ROOT, "DROP TABLE IF EXISTS test1_hive_tx;\n"
-                + "CREATE EXTERNAL TABLE IF NOT EXISTS test1_hive_tx\n" + "(\n" + "ID1 int\n" + ",STR1 string\n"
-                + ")\n" + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'\n" + "STORED AS TEXTFILE\n"
-                + "LOCATION '/test/test1_hive_tx';\n"
-                + "ALTER TABLE test1_hive_tx SET TBLPROPERTIES('auto.purge'='true');\n"
-                + "INSERT OVERWRITE TABLE test1_hive_tx SELECT\n" + "ID1\n" + ",STR1\n" + "FROM test1 %s\n;\n", queryCondition);
-        String actual = HiveTransactionTableHelper.getCreateTableStatement(ORIGIN_TABLE, INTERMEDIATE_TABLE, COLUMN_DESCS,
-                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), STORAGE_FORMAT, FILED_DELIMITER, queryCondition);
+        String statement = String.format(Locale.ROOT,
+                "DROP TABLE IF EXISTS test1_hive_tx;\n" + "CREATE EXTERNAL TABLE IF NOT EXISTS test1_hive_tx\n" + "(\n"
+                        + "ID1 int\n" + ",STR1 string\n" + ")\n" + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'\n"
+                        + "STORED AS TEXTFILE\n" + "LOCATION '/test/test1_hive_tx';\n"
+                        + "ALTER TABLE test1_hive_tx SET TBLPROPERTIES('auto.purge'='true');\n"
+                        + "INSERT OVERWRITE TABLE test1_hive_tx SELECT\n" + "ID1\n" + ",STR1\n" + "FROM test1 %s\n;\n",
+                queryCondition);
+        String actual = HiveTransactionTableHelper.getCreateTableStatement(ORIGIN_TABLE, INTERMEDIATE_TABLE,
+                COLUMN_DESCS, STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), STORAGE_FORMAT, FILED_DELIMITER,
+                queryCondition);
         Assert.assertNotEquals(statement, actual);
 
-
         queryCondition = " where cal_dt between '2010-01-01 00:00:00' and  '2010-02-01 00:00:00'";
-        statement = String.format(Locale.ROOT, "DROP TABLE IF EXISTS test1_hive_tx;\n"
-                + "CREATE EXTERNAL TABLE IF NOT EXISTS test1_hive_tx\n" + "(\n" + "ID1 int\n" + ",STR1 string\n"
-                + ")\n" + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'\n" + "STORED AS TEXTFILE\n"
-                + "LOCATION '/test/test1_hive_tx';\n"
-                + "ALTER TABLE test1_hive_tx SET TBLPROPERTIES('auto.purge'='true');\n"
-                + "INSERT OVERWRITE TABLE test1_hive_tx SELECT\n" + "ID1\n" + ",STR1\n" + "FROM test1 %s\n;\n", queryCondition);
+        statement = String.format(Locale.ROOT,
+                "DROP TABLE IF EXISTS test1_hive_tx;\n" + "CREATE EXTERNAL TABLE IF NOT EXISTS test1_hive_tx\n" + "(\n"
+                        + "ID1 int\n" + ",STR1 string\n" + ")\n" + "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'\n"
+                        + "STORED AS TEXTFILE\n" + "LOCATION '/test/test1_hive_tx';\n"
+                        + "ALTER TABLE test1_hive_tx SET TBLPROPERTIES('auto.purge'='true');\n"
+                        + "INSERT OVERWRITE TABLE test1_hive_tx SELECT\n" + "ID1\n" + ",STR1\n" + "FROM test1 %s\n;\n",
+                queryCondition);
         actual = HiveTransactionTableHelper.getCreateTableStatement(ORIGIN_TABLE, INTERMEDIATE_TABLE, COLUMN_DESCS,
-                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), STORAGE_FORMAT, FILED_DELIMITER, queryCondition);
+                STORAGE_DFS_DIR.concat("/").concat(INTERMEDIATE_TABLE), STORAGE_FORMAT, FILED_DELIMITER,
+                queryCondition);
         Assert.assertNotEquals(statement, actual);
     }
 

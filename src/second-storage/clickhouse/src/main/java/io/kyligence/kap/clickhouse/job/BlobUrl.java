@@ -18,12 +18,13 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import lombok.Data;
+import java.net.URI;
+import java.util.Locale;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.kylin.common.util.HadoopUtil;
 
-import java.net.URI;
-import java.util.Locale;
+import lombok.Data;
 
 @Data
 public class BlobUrl {
@@ -46,8 +47,8 @@ public class BlobUrl {
         blobUrl.setHostSuffix(uri.getHost().replace(blobUrl.getAccountName() + ".", ""));
         blobUrl.setPort(uri.getPort());
         blobUrl.setPath(uri.getPath().replace("/" + blobUrl.getContainer(), ""));
-        blobUrl.setAccountKey(getAccountKeyByName(blobUrl.getAccountName(),
-                blobUrl.getHostSuffix(), blobUrl.getPort()));
+        blobUrl.setAccountKey(
+                getAccountKeyByName(blobUrl.getAccountName(), blobUrl.getHostSuffix(), blobUrl.getPort()));
         return blobUrl;
     }
 
@@ -61,8 +62,8 @@ public class BlobUrl {
         blobUrl.setHostSuffix(uri.getHost().replace(blobUrl.getAccountName() + ".", ""));
         blobUrl.setPort(uri.getPort());
         blobUrl.setPath(uri.getPath());
-        blobUrl.setAccountKey(getAccountKeyByName(blobUrl.getAccountName(),
-                blobUrl.getHostSuffix(), blobUrl.getPort()));
+        blobUrl.setAccountKey(
+                getAccountKeyByName(blobUrl.getAccountName(), blobUrl.getHostSuffix(), blobUrl.getPort()));
         return blobUrl;
     }
 
@@ -80,15 +81,14 @@ public class BlobUrl {
     private static String http2blobSchema(String httpSchema) {
         String schema;
         switch (httpSchema) {
-            case "http":
-                schema = "wasb";
-                break;
-            case "https":
-                schema = "wasbs";
-                break;
-            default:
-                throw new UnsupportedOperationException(
-                        String.format(Locale.ROOT, "Unsupported schema %s", httpSchema));
+        case "http":
+            schema = "wasb";
+            break;
+        case "https":
+            schema = "wasbs";
+            break;
+        default:
+            throw new UnsupportedOperationException(String.format(Locale.ROOT, "Unsupported schema %s", httpSchema));
         }
         return schema;
     }
@@ -96,17 +96,16 @@ public class BlobUrl {
     public static String blob2httpSchema(String blobSchema) {
         String schema;
         switch (blobSchema) {
-            case "wasb":
-                schema = "http";
-                break;
-            case "abfs":
-            case "abfss":
-            case "wasbs":
-                schema = "https";
-                break;
-            default:
-                throw new UnsupportedOperationException(
-                        String.format(Locale.ROOT, "Unsupported schema %s", blobSchema));
+        case "wasb":
+            schema = "http";
+            break;
+        case "abfs":
+        case "abfss":
+        case "wasbs":
+            schema = "https";
+            break;
+        default:
+            throw new UnsupportedOperationException(String.format(Locale.ROOT, "Unsupported schema %s", blobSchema));
         }
         return schema;
     }

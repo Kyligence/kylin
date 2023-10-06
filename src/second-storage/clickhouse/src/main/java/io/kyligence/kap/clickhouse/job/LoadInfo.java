@@ -26,11 +26,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.model.NDataModel;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 
 import io.kyligence.kap.secondstorage.metadata.PartitionType;
 import io.kyligence.kap.secondstorage.metadata.SegmentFileStatus;
@@ -187,7 +186,8 @@ public class LoadInfo {
         if (model.isIncrementBuildOnExpertMode()) {
             dateFormat = model.getPartitionDesc().getPartitionDateFormat();
         }
-        Map<String, Long> sizeInNode = metric.getByPartitions(targetDatabase, targetTable, segment.getSegRange(), dateFormat);
+        Map<String, Long> sizeInNode = metric.getByPartitions(targetDatabase, targetTable, segment.getSegRange(),
+                dateFormat);
         return TablePartition.builder().setSegmentId(segmentId).setShardNodes(Arrays.asList(nodeNames))
                 .setId(RandomUtil.randomUUIDStr()).setNodeFileMap(nodeFileMap).setSizeInNode(sizeInNode)
                 .setSecondaryIndexColumns(tableEntity.getSecondaryIndexColumns()).build();

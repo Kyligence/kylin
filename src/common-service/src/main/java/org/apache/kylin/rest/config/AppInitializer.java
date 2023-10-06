@@ -202,8 +202,10 @@ public class AppInitializer {
 
         if (kylinConfig.isAllowNonAsciiCharInUrl()) {
             // Note: DefaultHttpFirewall vs StrictHttpFirewall
-            // In order to allow Chinese chars on URL like "/{cubeName}/segments", we have to use DefaultHttpFirewall.
-            // If later we have to use StrictHttpFirewall, then StrictHttpFirewall.rejectNonPrintableAsciiCharactersInFieldName()
+            // In order to allow Chinese chars on URL like "/{cubeName}/segments", 
+            // we have to use DefaultHttpFirewall.
+            // If later we have to use StrictHttpFirewall,
+            // then StrictHttpFirewall.rejectNonPrintableAsciiCharactersInFieldName()
             // must be overridden to allow Chinese chars on URL.
             FilterChainProxy filterChainProxy = context.getBean(FilterChainProxy.class);
             filterChainProxy.setFirewall(this.getHttpFirewall());
@@ -217,9 +219,8 @@ public class AppInitializer {
         log.info("KylinConfig in env, working dir is {}", kylinConfig.getHdfsWorkingDirectory());
 
         // Init global static instances
-        CleanTaskExecutorService.getInstance().bindWorkingPool(
-            () -> PriorityExecutor.newWorkingThreadPool(
-                "clean-storages-pool", kylinConfig.getStorageCleanTaskConcurrency()));
+        CleanTaskExecutorService.getInstance().bindWorkingPool(() -> PriorityExecutor
+                .newWorkingThreadPool("clean-storages-pool", kylinConfig.getStorageCleanTaskConcurrency()));
     }
 
     private void warmUpSystemCache() {
@@ -287,5 +288,4 @@ public class AppInitializer {
     public HttpFirewall getHttpFirewall() {
         return new DefaultHttpFirewall();
     }
-
 }

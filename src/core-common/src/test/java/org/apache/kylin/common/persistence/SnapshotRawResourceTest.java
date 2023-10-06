@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +31,6 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.val;
 
 @MetadataInfo(project = "ssb")

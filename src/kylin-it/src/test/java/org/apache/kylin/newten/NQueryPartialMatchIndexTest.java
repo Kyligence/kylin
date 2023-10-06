@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.newten;
 
 import java.util.List;
@@ -25,6 +24,7 @@ import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -36,8 +36,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 
@@ -66,7 +64,7 @@ public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
         NDataflow df = dsMgr.getDataflow(dfName);
         String sql = "select count(*) from TEST_KYLIN_FACT where cal_dt > '2012-01-01' and cal_dt < '2014-01-01'";
 
-        val expectedRanges = Lists.<Pair<String, String>>newArrayList();
+        val expectedRanges = Lists.<Pair<String, String>> newArrayList();
         val segmentRange = Pair.newPair("2012-01-01", "2013-01-01");
         expectedRanges.add(segmentRange);
 
@@ -96,9 +94,8 @@ public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
         }
     }
 
-
     private void assertPrunedSegmentRange(String dfId, List<NDataSegment> prunedSegments,
-                                          List<Pair<String, String>> expectedRanges) {
+            List<Pair<String, String>> expectedRanges) {
         val model = NDataModelManager.getInstance(getTestConfig(), getProject()).getDataModelDesc(dfId);
         val partitionColDateFormat = model.getPartitionDesc().getPartitionDateFormat();
 

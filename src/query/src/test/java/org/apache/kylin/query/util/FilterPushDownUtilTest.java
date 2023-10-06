@@ -23,9 +23,9 @@ import java.util.regex.Pattern;
 
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.kylin.common.util.DateFormat;
-import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
+import org.apache.kylin.metadata.model.SegmentRange;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,8 +33,8 @@ import org.junit.Test;
 
 public class FilterPushDownUtilTest extends NLocalFileMetadataTestCase {
 
-    private final String DEFAULT_CONDITION = "kylin_sales.part_dt < '2015-08-01' and kylin_sales.part_dt > '2013-07-09'";
-    private final String DEFAULT_TABLE = "default.kylin_sales";
+    private static final String DEFAULT_CONDITION = "kylin_sales.part_dt < '2015-08-01' and kylin_sales.part_dt > '2013-07-09'";
+    private static final String DEFAULT_TABLE = "default.kylin_sales";
     private final boolean DEV_MODE = false;
 
     @Before
@@ -447,7 +447,8 @@ public class FilterPushDownUtilTest extends NLocalFileMetadataTestCase {
         NDataLoadingRange range = new NDataLoadingRange();
         range.setColumnName("kylin_sales.part_dt");
         range.setTableName("default.kylin_sales");
-        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange = new SegmentRange.TimePartitionedSegmentRange();
+        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange //
+                = new SegmentRange.TimePartitionedSegmentRange();
         timePartitionedSegmentRange.setStart(DateFormat.stringToMillis("2012-07-08"));
         timePartitionedSegmentRange.setEnd(DateFormat.stringToMillis("2015-09-23"));
 

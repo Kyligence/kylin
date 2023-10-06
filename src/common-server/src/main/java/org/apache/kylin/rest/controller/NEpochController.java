@@ -21,9 +21,12 @@ package org.apache.kylin.rest.controller;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 
+import java.util.ArrayList;
+import java.util.Objects;
+
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.request.EpochRequest;
+import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.service.EpochService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -35,9 +38,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import io.swagger.annotations.ApiOperation;
-
-import java.util.ArrayList;
-import java.util.Objects;
 
 @Controller
 @RequestMapping(value = "/api/epoch", produces = { HTTP_VND_APACHE_KYLIN_JSON })

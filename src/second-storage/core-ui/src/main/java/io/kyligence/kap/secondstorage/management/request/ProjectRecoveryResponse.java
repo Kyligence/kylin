@@ -18,11 +18,13 @@
 
 package io.kyligence.kap.secondstorage.management.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.rest.response.JobInfoResponse;
-import lombok.Data;
-
 import java.util.List;
+
+import org.apache.kylin.rest.response.JobInfoResponse;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import lombok.Data;
 
 @Data
 public class ProjectRecoveryResponse {

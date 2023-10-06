@@ -17,10 +17,10 @@
  */
 package io.kyligence.kap.secondstorage.config;
 
+import java.util.Properties;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.Properties;
 
 public class DefaultSecondStoragePropertiesTest {
 
@@ -34,18 +34,18 @@ public class DefaultSecondStoragePropertiesTest {
 
         Assertions.assertEquals("v2", secondStorageProperties.get(new ConfigOption<>("k2", "v2", String.class)));
 
-
-        Exception exception = Assertions.assertThrows(NullPointerException.class, () -> secondStorageProperties.get(new ConfigOption<>(null, String.class)));
+        Exception exception = Assertions.assertThrows(NullPointerException.class,
+                () -> secondStorageProperties.get(new ConfigOption<>(null, String.class)));
         Assertions.assertEquals(exception.getMessage(), "Key must not be null.");
 
-
-        Exception exception2 = Assertions.assertThrows(IllegalArgumentException.class, () -> secondStorageProperties.get(new ConfigOption<>("k1", MyClass.class)));
+        Exception exception2 = Assertions.assertThrows(IllegalArgumentException.class,
+                () -> secondStorageProperties.get(new ConfigOption<>("k1", MyClass.class)));
         Assertions.assertEquals(exception2.getMessage(), "Could not parse value 'v1' for key 'k1'.");
 
     }
 
     // for ut
-    public class MyClass {
+    public static class MyClass {
 
     }
 }

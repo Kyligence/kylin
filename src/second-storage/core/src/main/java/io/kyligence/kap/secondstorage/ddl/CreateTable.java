@@ -17,16 +17,16 @@
  */
 package io.kyligence.kap.secondstorage.ddl;
 
-import io.kyligence.kap.secondstorage.ddl.exp.ColumnWithType;
-import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
-import io.kyligence.kap.secondstorage.ddl.visitor.RenderVisitor;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-public class CreateTable<T extends CreateTable<T> > extends DDL<T> {
+import io.kyligence.kap.secondstorage.ddl.exp.ColumnWithType;
+import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
+import io.kyligence.kap.secondstorage.ddl.visitor.RenderVisitor;
+
+public class CreateTable<T extends CreateTable<T>> extends DDL<T> {
 
     private static class Default extends CreateTable<Default> {
         public Default(TableIdentifier table, boolean ifNotExists) {
@@ -37,7 +37,6 @@ public class CreateTable<T extends CreateTable<T> > extends DDL<T> {
     private final boolean ifNotExists;
     private final TableIdentifier table;
     private final List<ColumnWithType> columns;
-
 
     public CreateTable(TableIdentifier table, boolean ifNotExists) {
         this.ifNotExists = ifNotExists;
@@ -62,6 +61,7 @@ public class CreateTable<T extends CreateTable<T> > extends DDL<T> {
         columns.addAll(fields);
         return (T) this;
     }
+
     public final T columns(ColumnWithType... fields) {
         return columns(Arrays.asList(fields));
     }

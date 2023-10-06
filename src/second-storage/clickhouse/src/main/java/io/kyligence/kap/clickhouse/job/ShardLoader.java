@@ -125,11 +125,14 @@ public class ShardLoader {
         final CreateDatabase createDb = CreateDatabase.createDatabase(database);
         clickHouse.apply(createDb.toSql(render));
         //2. desc dest table
-        int existCode = clickHouse.query(new ExistsTable(TableIdentifier.table(database, destTableName)).toSql(), ExistsQueryParser.EXISTS).get(0);
+        int existCode = clickHouse.query(new ExistsTable(TableIdentifier.table(database, destTableName)).toSql(),
+                ExistsQueryParser.EXISTS).get(0);
         Map<String, String> columnTypeMap = new HashMap<>();
         if (existCode == 1) {
-            columnTypeMap = clickHouse.query(new Desc(TableIdentifier.table(database, destTableName)).toSql(render), DescQueryParser.Desc).stream()
-                    .collect(Collectors.toMap(ClickHouseSystemQuery.DescTable::getColumn, ClickHouseSystemQuery.DescTable::getDatatype));
+            columnTypeMap = clickHouse
+                    .query(new Desc(TableIdentifier.table(database, destTableName)).toSql(render), DescQueryParser.Desc)
+                    .stream().collect(Collectors.toMap(ClickHouseSystemQuery.DescTable::getColumn,
+                            ClickHouseSystemQuery.DescTable::getDatatype));
         }
         //3. prepare temp table
         if (newJob) {

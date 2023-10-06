@@ -184,7 +184,7 @@ public class JobInfoService extends BasicService implements JobSupporter {
             throw new KylinException(JOB_STATUS_ILLEGAL);
         }
     }
-    
+
     public List<JobStatusEnum> parseJobStatus(List<String> strValues) {
         return strValues.stream().map(strValue -> JobStatusEnum.valueOf(strValue)).collect(Collectors.toList());
     }
@@ -266,8 +266,8 @@ public class JobInfoService extends BasicService implements JobSupporter {
         if (StringUtils.isNotEmpty(jobFilter.getProject())) {
             aclEvaluate.checkProjectOperationPermission(jobFilter.getProject());
         }
-        JobMapperFilter jobMapperFilter = JobFilterUtil.getJobMapperFilter(jobFilter, offset, limit,
-                modelService, tableExtService);
+        JobMapperFilter jobMapperFilter = JobFilterUtil.getJobMapperFilter(jobFilter, offset, limit, modelService,
+                tableExtService);
         List<JobInfo> jobInfoList = jobInfoDao.getJobInfoListByFilter(jobMapperFilter);
         List<ExecutableResponse> result = jobInfoList.stream().map(JobInfoUtil::deserializeExecutablePO)
                 .map(executablePO -> {
@@ -321,13 +321,13 @@ public class JobInfoService extends BasicService implements JobSupporter {
         list.sort(comparator);
     }
 
-    public long countJobs(final JobFilter jobFilter){
+    public long countJobs(final JobFilter jobFilter) {
         // TODO check permission when 'project' is empty
         if (StringUtils.isNotEmpty(jobFilter.getProject())) {
             aclEvaluate.checkProjectOperationPermission(jobFilter.getProject());
         }
-        JobMapperFilter jobMapperFilter = JobFilterUtil.getJobMapperFilter(jobFilter, 0, 0,
-                modelService, tableExtService);
+        JobMapperFilter jobMapperFilter = JobFilterUtil.getJobMapperFilter(jobFilter, 0, 0, modelService,
+                tableExtService);
         return jobInfoDao.countByFilter(jobMapperFilter);
     }
 
@@ -392,7 +392,8 @@ public class JobInfoService extends BasicService implements JobSupporter {
                                 executableManager.getOutput(stage.getId(), segmentId));
                         if (executable.getJobSchedulerMode().equals(JobSchedulerModeEnum.DAG)
                                 && stage.getStatus(segmentId) == ExecutableState.ERROR
-                                && !org.apache.commons.lang3.StringUtils.startsWith(output.getFailedStepId(), stage.getId())) {
+                                && !org.apache.commons.lang3.StringUtils.startsWith(output.getFailedStepId(),
+                                        stage.getId())) {
                             stageResponse.setStatus(JobStatusEnum.STOPPED);
                         }
                         setStage(subStages, stageResponse);
@@ -483,7 +484,8 @@ public class JobInfoService extends BasicService implements JobSupporter {
         List<ExecutableState> filterStates = JobStatusUtil.mapJobStatusToScheduleState(filterStatuses);
         val executablePos = jobInfoDao.getExecutablePoByStatus(project, jobIds, filterStates);
         if (null == project) {
-            executablePos.forEach(executablePO -> aclEvaluate.checkProjectOperationPermission(executablePO.getProject()));
+            executablePos
+                    .forEach(executablePO -> aclEvaluate.checkProjectOperationPermission(executablePO.getProject()));
         } else {
             aclEvaluate.checkProjectOperationPermission(project);
         }
@@ -543,7 +545,7 @@ public class JobInfoService extends BasicService implements JobSupporter {
                         val statusToDisplay = segmentResponse.getStatusToDisplay();
                         return segmentHalfOnlineStatuses.contains(statusToDisplay)
                                 || (segmentMayHalfOnlineStatuses.contains(statusToDisplay)
-                                && SegmentSecondStorageStatusEnum.LOADED == statusSecondStorageToDisplay);
+                                        && SegmentSecondStorageStatusEnum.LOADED == statusSecondStorageToDisplay);
                     }).count();
             if (onlineSegmentCount != 0) {
                 throw new KylinException(JOB_RESTART_CHECK_SEGMENT_STATUS);
@@ -939,8 +941,10 @@ public class JobInfoService extends BasicService implements JobSupporter {
                 .min(Long::compare).orElse(0L);
         segmentSubStages.setExecStartTime(execStartTime);
 
-        // If this segment has running stage, this segment is running, this segment doesn't have end time
-        // If this task is running and this segment has pending stage, this segment is running, this segment doesn't have end time
+        // If this segment has running stage, this segment is running,
+        // this segment doesn't have end time
+        // If this task is running and this segment has pending stage,
+        // this segment is running, this segment doesn't have end time
         val stageStatuses = stageResponses.stream().map(ExecutableStepResponse::getStatus).collect(Collectors.toSet());
         if (!stageStatuses.contains(JobStatusEnum.RUNNING) && !(task.getStatusInMem() == ExecutableState.RUNNING
                 && stageStatuses.contains(JobStatusEnum.PENDING))) {
@@ -955,8 +959,7 @@ public class JobInfoService extends BasicService implements JobSupporter {
                 .mapToLong(Long::valueOf).sum();
         segmentSubStages.setDuration(segmentDuration);
 
-        final Segments<NDataSegment> segmentsByRange = modelService.getSegmentsByRange(targetSubject, project,
-                "", "");
+        final Segments<NDataSegment> segmentsByRange = modelService.getSegmentsByRange(targetSubject, project, "", "");
         final NDataSegment segment = segmentsByRange.stream()//
                 .filter(seg -> StringUtils.equals(seg.getId(), segmentId))//
                 .findFirst().orElse(null);

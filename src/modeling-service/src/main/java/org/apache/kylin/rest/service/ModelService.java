@@ -306,7 +306,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component("modelService")
-public class ModelService extends AbstractModelService implements TableModelSupporter, ProjectModelSupporter, MetadataContract {
+public class ModelService extends AbstractModelService
+        implements TableModelSupporter, ProjectModelSupporter, MetadataContract {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelService.class);
 
@@ -540,7 +541,8 @@ public class ModelService extends AbstractModelService implements TableModelSupp
     }
 
     private boolean isAggGroupIncludeAllJoinCol(List<Set<String>> aggIncludes, List<String> needCols) {
-        for (Set<String> includes : aggIncludes) {// if one of agggroup contains all join column then the column would return
+        for (Set<String> includes : aggIncludes) {
+            // if one of aggGroup contains all join column then the column would return
             boolean allIn = includes.containsAll(needCols);
             if (allIn) {
                 return true;
@@ -895,8 +897,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
             boolean exactMatch, String owner, String modelAliasOrOwner, Long lastModifyFrom, Long lastModifyTo) {
         return getManager(NDataflowManager.class, projectName).listAllDataflows(true).stream()
                 .map(df -> Pair.newPair(df,
-                        df.checkBrokenWithRelatedInfo()
-                                ? modelQuerySupporter.getBrokenModel(projectName, df.getId())
+                        df.checkBrokenWithRelatedInfo() ? modelQuerySupporter.getBrokenModel(projectName, df.getId())
                                 : df.getModel()))
                 .filter(p -> !(Objects.nonNull(lastModifyFrom) && lastModifyFrom > p.getValue().getLastModified())
                         && !(Objects.nonNull(lastModifyTo) && lastModifyTo <= p.getValue().getLastModified())
@@ -1331,7 +1332,8 @@ public class ModelService extends AbstractModelService implements TableModelSupp
         if (StringUtils.isBlank(contentSeg)) {
             return indices;
         }
-        return indices.stream().filter(index -> fuzzyMatched(contentSeg, isCaseSensitive, String.valueOf(index.getId())) // weird rule
+        return indices.stream().filter(index -> // weird rule
+        fuzzyMatched(contentSeg, isCaseSensitive, String.valueOf(index.getId()))
                 || index.getDimensions().stream().anyMatch(d -> fuzzyMatched(contentSeg, isCaseSensitive, d))
                 || index.getMeasures().stream().anyMatch(m -> fuzzyMatched(contentSeg, isCaseSensitive, m)))
                 .collect(Collectors.toList());
@@ -1921,7 +1923,6 @@ public class ModelService extends AbstractModelService implements TableModelSupp
         }, project);
     }
 
-
     public void updateRecommendationsCount(String project, String modelId, int size) {
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             NDataModelManager mgr = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
@@ -2016,8 +2017,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
                 val model = df.getModel();
                 Preconditions.checkState(ManagementType.TABLE_ORIENTED == model.getManagementType());
                 if (checkOnline(model, errorOrPausedJobCount) && !df.getIndexPlan().isOfflineManually()) {
-                    updateDataflowStatus(project, df.getId(),
-                            RealizationStatusEnum.ONLINE);
+                    updateDataflowStatus(project, df.getId(), RealizationStatusEnum.ONLINE);
                 }
             }
         }
@@ -2034,7 +2034,8 @@ public class ModelService extends AbstractModelService implements TableModelSupp
         val dataLoadingRangeManager = NDataLoadingRangeManager.getInstance(KylinConfig.getInstanceFromEnv(),
                 model.getProject());
         val dataLoadingRange = dataLoadingRangeManager.getDataLoadingRange(model.getRootFactTableName());
-        // In theory, dataLoadingRange can not be null, because full load table related model will build with INDEX_BUILD job or INDEX_REFRESH job.
+        // In theory, dataLoadingRange can not be null,
+        // because full load table related model will build with INDEX_BUILD job or INDEX_REFRESH job.
         Preconditions.checkState(dataLoadingRange != null);
         val querableSegmentRange = dataLoadingRangeManager.getQuerableSegmentRange(dataLoadingRange);
         Preconditions.checkState(querableSegmentRange != null);
@@ -3121,7 +3122,7 @@ public class ModelService extends AbstractModelService implements TableModelSupp
 
     @Transaction(project = 0)
     public void forceFileSegments(String project, String modelId, String storageLocation,
-                                  Optional<List<String>> fileHashs, SegmentStatusEnum initStatus) {
+            Optional<List<String>> fileHashs, SegmentStatusEnum initStatus) {
         aclEvaluate.checkProjectOperationPermission(project);
         NDataflowManager dfManager = getManager(NDataflowManager.class, project);
         FileSegments.forceFileSegments(project, modelId, storageLocation, fileHashs, (fileSegRangeToCreate) -> {
@@ -3322,8 +3323,8 @@ public class ModelService extends AbstractModelService implements TableModelSupp
             String[] segmentIds) {
         aclEvaluate.checkProjectOperationPermission(project);
         SecondStorageJobUtil.validateSegment(project, model, Arrays.asList(segmentIds));
-        UnitOfWork.get().doBeforeUpdate(
-                () -> SecondStorageJobUtil.validateSegment(project, model, Arrays.asList(segmentIds)));
+        UnitOfWork.get()
+                .doBeforeUpdate(() -> SecondStorageJobUtil.validateSegment(project, model, Arrays.asList(segmentIds)));
         checkSegmentsExistById(model, project, segmentIds);
         checkSegmentsStatus(model, project, segmentIds, SegmentStatusEnumToDisplay.LOADING,
                 SegmentStatusEnumToDisplay.REFRESHING, SegmentStatusEnumToDisplay.MERGING,

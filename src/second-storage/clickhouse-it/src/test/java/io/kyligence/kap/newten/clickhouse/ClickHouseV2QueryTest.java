@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.engine.spark.utils.RichOption;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -52,8 +53,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.testcontainers.containers.JdbcDatabaseContainer;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 
 import lombok.extern.slf4j.Slf4j;
 import scala.collection.JavaConverters;
@@ -87,7 +86,7 @@ public class ClickHouseV2QueryTest extends NLocalWithSparkSessionTest {
         JdbcDialects$.MODULE$.unregisterDialect(ClickHouseDialect$.MODULE$);
     }
 
-    static private void setupCatalog(JdbcDatabaseContainer<?> clickhouse, String catalogPrefix) {
+    private static void setupCatalog(JdbcDatabaseContainer<?> clickhouse, String catalogPrefix) {
         SQLConf conf = SparderEnv.getSparkSession().sessionState().conf();
         conf.setConfString(SQLConf.ANSI_ENABLED().key(), "true");
         conf.setConfString(catalogPrefix, ShardJDBCTableCatalog.class.getCanonicalName());

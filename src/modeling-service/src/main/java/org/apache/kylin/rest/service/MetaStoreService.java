@@ -461,9 +461,9 @@ public class MetaStoreService extends BasicService {
             if (config.isDDLLogicalViewEnabled() && missTableDesc.isLogicalView()) {
                 LogicalView logicalView = LogicalViewManager.getInstance(config).get(missTableDesc.getName());
                 if (logicalView != null && !targetProject.equalsIgnoreCase(logicalView.getCreatedProject())) {
-                    throw new KylinException(FAILED_CREATE_MODEL, String.format(Locale.ROOT,
-                        " Logical View %s can only add in project %s",
-                        missTableDesc.getName(), logicalView.getCreatedProject()));
+                    throw new KylinException(FAILED_CREATE_MODEL,
+                            String.format(Locale.ROOT, " Logical View %s can only add in project %s",
+                                    missTableDesc.getName(), logicalView.getCreatedProject()));
                 }
             }
         }
@@ -810,7 +810,8 @@ public class MetaStoreService extends BasicService {
     }
 
     public void cleanupStorage(String[] projectsToClean, boolean cleanupStorage) {
-        CleanTaskExecutorService.getInstance().cleanStorageForService(cleanupStorage, Arrays.asList(projectsToClean), 0D, 0);
+        CleanTaskExecutorService.getInstance().cleanStorageForService(cleanupStorage, Arrays.asList(projectsToClean),
+                0D, 0);
     }
 
     public void cleanupStorage(StorageCleanupRequest request, HttpServletRequest servletRequest) {

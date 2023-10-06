@@ -30,6 +30,7 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.constant.JobStatusEnum;
 import org.apache.kylin.job.dao.ExecutablePO;
@@ -72,8 +73,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import lombok.val;
@@ -200,20 +199,22 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
                 .content(JsonUtil.writeValueAsString(request))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        Mockito.verify(jobController).updateJobStatus(Mockito.any(JobUpdateRequest.class), Mockito.any(HttpHeaders.class));
+        Mockito.verify(jobController).updateJobStatus(Mockito.any(JobUpdateRequest.class),
+                Mockito.any(HttpHeaders.class));
     }
 
     @Test
     public void testUpdateGlobalJobStatus_PASS() throws Exception {
         val request = mockJobUpdateRequest();
         request.setProject(null);
-        Mockito.doNothing().when(jobInfoService).batchUpdateJobStatus(mockJobUpdateRequest().getJobIds(), null, "RESUME",
-                mockJobUpdateRequest().getStatuses());
+        Mockito.doNothing().when(jobInfoService).batchUpdateJobStatus(mockJobUpdateRequest().getJobIds(), null,
+                "RESUME", mockJobUpdateRequest().getStatuses());
         mockMvc.perform(MockMvcRequestBuilders.put("/api/jobs/status").contentType(MediaType.APPLICATION_JSON)
                 .content(JsonUtil.writeValueAsString(request))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        Mockito.verify(jobController).updateJobStatus(Mockito.any(JobUpdateRequest.class), Mockito.any(HttpHeaders.class));
+        Mockito.verify(jobController).updateJobStatus(Mockito.any(JobUpdateRequest.class),
+                Mockito.any(HttpHeaders.class));
     }
 
     @Test
@@ -226,7 +227,8 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
                 .content(JsonUtil.writeValueAsString(request))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        Mockito.verify(jobController).updateJobStatus(Mockito.any(JobUpdateRequest.class), Mockito.any(HttpHeaders.class));
+        Mockito.verify(jobController).updateJobStatus(Mockito.any(JobUpdateRequest.class),
+                Mockito.any(HttpHeaders.class));
     }
 
     @Test
@@ -318,9 +320,10 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         request.setMemory("1024");
         request.setQueueName("queue");
         Mockito.doNothing().when(jobInfoService).updateSparkJobInfo(request);
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.put("/api/jobs/spark").contentType(MediaType.APPLICATION_JSON)
-                .content(JsonUtil.writeValueAsString(request))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+        MvcResult result = mockMvc
+                .perform(MockMvcRequestBuilders.put("/api/jobs/spark").contentType(MediaType.APPLICATION_JSON)
+                        .content(JsonUtil.writeValueAsString(request))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
         Map<String, String> response = JsonUtil.readValueAsMap(result.getResponse().getContentAsString());
         Assert.assertEquals(response.get("code"), KylinException.CODE_SUCCESS);
@@ -446,9 +449,10 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         request.setYarnJobRunTime("1");
         Mockito.doNothing().when(jobInfoService).updateSparkTimeInfo(request.getProject(), request.getJobId(),
                 request.getTaskId(), request.getYarnJobWaitTime(), request.getYarnJobRunTime());
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.put("/api/jobs/wait_and_run_time")
-                .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+        MvcResult result = mockMvc
+                .perform(MockMvcRequestBuilders.put("/api/jobs/wait_and_run_time")
+                        .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
         Map<String, String> response = JsonUtil.readValueAsMap(result.getResponse().getContentAsString());
         Assert.assertEquals(response.get("code"), KylinException.CODE_SUCCESS);
@@ -463,10 +467,9 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         String params = "start,event=cpu";
 
         Mockito.doNothing().when(jobService).startProfileByProject(project, jobStepId, params);
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/jobs/profile/start_project")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .param("project", project)
-                        .param("step_id", jobStepId)
+        MvcResult mvcResult = mockMvc
+                .perform(MockMvcRequestBuilders.get("/api/jobs/profile/start_project")
+                        .contentType(MediaType.APPLICATION_JSON).param("project", project).param("step_id", jobStepId)
                         .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
 
@@ -480,14 +483,14 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         String params = "flamegraph";
 
         Mockito.doNothing().when(jobService).dumpProfileByProject(project, jobStepId, params, new Pair<>());
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/jobs/profile/dump_project")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .param("project", project)
-                        .param("step_id", jobStepId)
+        MvcResult mvcResult = mockMvc
+                .perform(MockMvcRequestBuilders.get("/api/jobs/profile/dump_project")
+                        .contentType(MediaType.APPLICATION_JSON).param("project", project).param("step_id", jobStepId)
                         .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
 
-        Mockito.verify(jobController).stopProfile(project, jobStepId, params, mvcResult.getRequest(), mvcResult.getResponse());
+        Mockito.verify(jobController).stopProfile(project, jobStepId, params, mvcResult.getRequest(),
+                mvcResult.getResponse());
     }
 
     @Test
@@ -496,9 +499,9 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         String params = "start,event=cpu";
 
         Mockito.doNothing().when(jobService).startProfileByYarnAppId(yarnAppId, params);
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/jobs/profile/start_appid")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .param("app_id", yarnAppId)
+        MvcResult mvcResult = mockMvc
+                .perform(MockMvcRequestBuilders.get("/api/jobs/profile/start_appid")
+                        .contentType(MediaType.APPLICATION_JSON).param("app_id", yarnAppId)
                         .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
 
@@ -511,13 +514,14 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         String params = "flamegraph";
 
         Mockito.doNothing().when(jobService).dumpProfileByYarnAppId(yarnAppId, params, new Pair<>());
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/jobs/profile/dump_appid")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .param("app_id", yarnAppId)
+        MvcResult mvcResult = mockMvc
+                .perform(MockMvcRequestBuilders.get("/api/jobs/profile/dump_appid")
+                        .contentType(MediaType.APPLICATION_JSON).param("app_id", yarnAppId)
                         .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
 
-        Mockito.verify(jobController).stopProfileByYarnAppId(yarnAppId, params, mvcResult.getRequest(), mvcResult.getResponse());
+        Mockito.verify(jobController).stopProfileByYarnAppId(yarnAppId, params, mvcResult.getRequest(),
+                mvcResult.getResponse());
     }
 
     private ExecutablePO mockJob(ExecutableState state) {
@@ -531,7 +535,7 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         });
         return ExecutableManager.getInstance(getTestConfig(), "default").getExecutablePO(po.getId());
     }
-    
+
     private ExecutablePO mockJob(String jobId, long start, long end) {
         val dataflowManager = NDataflowManager.getInstance(getTestConfig(), "default");
         var dataflow = dataflowManager.getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa");

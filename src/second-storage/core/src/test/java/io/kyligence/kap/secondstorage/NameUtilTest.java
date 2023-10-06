@@ -20,14 +20,12 @@ package io.kyligence.kap.secondstorage;
 import org.apache.kylin.common.KylinConfigExt;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.modules.junit4.PowerMockRunner;
-
-import org.apache.kylin.metadata.cube.model.NDataflow;
-
 
 @RunWith(PowerMockRunner.class)
 public class NameUtilTest {

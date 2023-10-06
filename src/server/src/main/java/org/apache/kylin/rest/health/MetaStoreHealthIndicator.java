@@ -30,6 +30,7 @@ import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
 import org.apache.kylin.common.util.NamedThreadFactory;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.rest.config.initialize.AfterMetadataReadyEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +38,6 @@ import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 
 @Component
 public class MetaStoreHealthIndicator implements HealthIndicator, ApplicationListener<AfterMetadataReadyEvent> {

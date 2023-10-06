@@ -40,6 +40,8 @@ import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.job.dao.JobInfoDao;
 import org.apache.kylin.job.service.JobInfoService;
 import org.apache.kylin.job.util.JobContextUtil;
@@ -96,8 +98,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 
 import io.kyligence.kap.clickhouse.ClickHouseStorage;
 import io.kyligence.kap.clickhouse.job.ClickHouseLoad;

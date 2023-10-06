@@ -29,9 +29,8 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.kylin.common.QueryContext;
-import org.apache.kylin.query.util.ICutContextStrategy;
-
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.query.util.ICutContextStrategy;
 
 /**
  */

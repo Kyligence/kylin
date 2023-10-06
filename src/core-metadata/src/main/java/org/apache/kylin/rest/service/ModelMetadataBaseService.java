@@ -23,8 +23,6 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_ID_NO
 import java.util.Locale;
 import java.util.Set;
 
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
@@ -40,6 +38,9 @@ import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.rest.request.DataFlowUpdateRequest;
+
+import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ModelMetadataBaseService {
@@ -62,7 +63,7 @@ public class ModelMetadataBaseService {
     }
 
     public void updateIndex(String project, long epochId, String modelId, Set<Long> toBeDeletedLayoutIds,
-                            boolean deleteAuto, boolean deleteManual) {
+            boolean deleteAuto, boolean deleteManual) {
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), project).updateIndexPlan(modelId,
                     copyForWrite -> copyForWrite.removeLayouts(toBeDeletedLayoutIds, deleteAuto, deleteManual));

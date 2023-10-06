@@ -187,7 +187,8 @@ public class QueryExec {
             queryContext.record("end_calcite_optimize");
 
             List<StructField> resultFields = RelColumnMetaDataExtractor.getColumnMetadata(relRoot.validatedRowType);
-            if (resultFields.isEmpty()) { // result fields size may be 0 because of ACL controls and should return immediately
+            if (resultFields.isEmpty()) {
+                // result fields size may be 0 because of ACL controls and should return immediately
                 QueryContext.fillEmptyResultSetMetrics();
                 return new QueryResult();
             }
@@ -384,7 +385,8 @@ public class QueryExec {
         if (!QueryContext.current().getQueryTagInfo().isAsyncQuery()
                 && KapConfig.wrap(kylinConfig).runConstantQueryLocally() && routeToCalcite) {
             QueryContext.current().getQueryTagInfo().setConstantQuery(true);
-            return new CalciteQueryPlanExec().executeToIterable(rels.get(0), dataContext); // if sparder is not enabled, or the sql can run locally, use the calcite engine
+            // if sparder is not enabled, or the sql can run locally, use the calcite engine
+            return new CalciteQueryPlanExec().executeToIterable(rels.get(0), dataContext);
         } else {
             return sparderQuery(rels);
         }
@@ -494,9 +496,6 @@ public class QueryExec {
 
     /**
      * Calcite is not capable for some constant queries, need to route to Sparder
-     *
-     * @param rel
-     * @return
      */
     private boolean isCalciteEngineCapable(RelNode rel) {
         if (rel instanceof Project) {

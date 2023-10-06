@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.newten;
 
 import java.io.File;
@@ -114,17 +113,10 @@ public class TableIndexTest extends NLocalWithSparkSessionTest {
         fullBuild("acfde546-2cc9-4eec-bc92-e3bd46d4e2ee");
         populateSSWithCSVData(getTestConfig(), getProject(), SparderEnv.getSparkSession());
         List<Pair<String, String>> query = new ArrayList<>();
-        query.add(Pair.newPair("query_count_distinct", "select\n"
-                + "count(\n"
-                + "    distinct(\n"
-                + "        case when (a.ORDER_ID > 0)\n"
-                + "        THEN a.ORDER_ID\n"
-                + "        ELSE NULL\n"
-                + "        end)\n"
-                + "        )\n"
-                + "from (\n"
-                + "select ORDER_ID from TEST_KYLIN_FACT\n"
-                + ") a"));
+        query.add(Pair.newPair("query_count_distinct",
+                "select\n" + "count(\n" + "    distinct(\n" + "        case when (a.ORDER_ID > 0)\n"
+                        + "        THEN a.ORDER_ID\n" + "        ELSE NULL\n" + "        end)\n" + "        )\n"
+                        + "from (\n" + "select ORDER_ID from TEST_KYLIN_FACT\n" + ") a"));
         ExecAndComp.execAndCompare(query, getProject(), CompareLevel.SAME, "left");
     }
 
@@ -178,10 +170,10 @@ public class TableIndexTest extends NLocalWithSparkSessionTest {
         List<Pair<String, String>> query = new ArrayList<>();
 
         query.add(Pair.newPair("query_table_index2", "select sum(PRICE) from TEST_KYLIN_FACT group by PRICE"
-            + " union all select sum(PRICE) from TEST_KYLIN_FACT group by PRICE"));
+                + " union all select sum(PRICE) from TEST_KYLIN_FACT group by PRICE"));
         ExecAndComp.execAndCompare(query, getProject(), CompareLevel.SAME, "left");
-        RealizationRuntimeException error = new RealizationRuntimeException("unexpected error", new RuntimeException(
-            "error"));
+        RealizationRuntimeException error = new RealizationRuntimeException("unexpected error",
+                new RuntimeException("error"));
         assert error.getMessage().contains("unexpected error");
     }
 }

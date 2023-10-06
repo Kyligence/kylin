@@ -29,6 +29,7 @@ import java.util.Set;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.helper.UpdateUserAclToolHelper;
 import org.apache.kylin.rest.config.initialize.UserAclListener;
 import org.apache.kylin.rest.constant.Constant;
@@ -60,8 +61,6 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.user.ManagedUser;

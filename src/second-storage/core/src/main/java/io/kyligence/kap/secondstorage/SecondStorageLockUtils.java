@@ -28,10 +28,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.metadata.model.SegmentRange;
-
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-
+import org.apache.kylin.metadata.model.SegmentRange;
 
 public class SecondStorageLockUtils {
     private static final Map<Pair<String, SegmentRange<Long>>, Lock> JOB_LOCKS = new ConcurrentHashMap<>();
@@ -40,14 +38,16 @@ public class SecondStorageLockUtils {
     public static boolean containsKey(String modelId) {
         return JOB_LOCKS.keySet().stream().anyMatch(item -> item.getFirst().equals(modelId));
     }
+
     public static boolean containsKey(String modelId, SegmentRange<Long> range) {
-        return JOB_LOCKS.keySet().stream().anyMatch(item -> item.getFirst().equals(modelId) && item.getSecond().overlaps(range));
+        return JOB_LOCKS.keySet().stream()
+                .anyMatch(item -> item.getFirst().equals(modelId) && item.getSecond().overlaps(range));
     }
 
     private static Optional<Pair<String, SegmentRange<Long>>> getOverlapKey(String modelId, SegmentRange<Long> range) {
-        return JOB_LOCKS.keySet().stream().filter(item -> item.getFirst().equals(modelId) && item.getSecond().overlaps(range)).findFirst();
+        return JOB_LOCKS.keySet().stream()
+                .filter(item -> item.getFirst().equals(modelId) && item.getSecond().overlaps(range)).findFirst();
     }
-
 
     public static Lock acquireLock(String modelId, SegmentRange<Long> range) {
         Preconditions.checkNotNull(modelId);

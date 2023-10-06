@@ -21,12 +21,11 @@ package org.apache.kylin.rest.service;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class CaseInsensitiveUserGroupService extends NUserGroupService {
     public static final Logger logger = LoggerFactory.getLogger(CaseInsensitiveUserGroupService.class);

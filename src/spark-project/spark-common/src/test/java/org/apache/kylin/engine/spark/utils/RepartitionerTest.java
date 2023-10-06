@@ -24,10 +24,9 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class RepartitionerTest {
 
@@ -91,6 +90,6 @@ public class RepartitionerTest {
         when(sc.getLength()).thenReturn(4 * 1024 * 1024L);
         Repartitioner helper = new Repartitioner(2, 2, 1500L, 500L, sc, null, null, true);
         // size = 2000/500
-        Assert.assertTrue(!helper.needRepartition());
+        Assert.assertFalse(helper.needRepartition());
     }
 }

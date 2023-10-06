@@ -59,13 +59,13 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.transaction.BroadcastEventReadyNotifier;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 /**
  */
@@ -170,7 +170,8 @@ public class RestClient {
             response = client.execute(post);
             if (response.getStatusLine().getStatusCode() != 200) {
                 String msg = EntityUtils.toString(response.getEntity());
-                logger.error("Invalid response {} with update user {}\n{}", response.getStatusLine().getStatusCode(), url, msg);
+                logger.error("Invalid response {} with update user {}\n{}", response.getStatusLine().getStatusCode(),
+                        url, msg);
             }
         } finally {
             cleanup(post, response);
@@ -337,7 +338,8 @@ public class RestClient {
         request.releaseConnection();
     }
 
-    public <T> T getKapHealthStatus(TypeReference<T> clz, byte[] encryptedToken) throws IOException, URISyntaxException {
+    public <T> T getKapHealthStatus(TypeReference<T> clz, byte[] encryptedToken)
+            throws IOException, URISyntaxException {
         String url = baseUrl + "/kg/health/instance_info";
 
         HttpPost httpPost = new HttpPost(url);

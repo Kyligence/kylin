@@ -26,9 +26,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.kylin.common.KylinConfig;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import org.apache.kylin.metadata.usergroup.UserGroup;
 import org.apache.kylin.rest.response.UserGroupResponseKI;
+
+import io.kyligence.kap.metadata.user.ManagedUser;
 
 public interface IUserGroupService {
     //need project to indicate user's permission.only global admin and project admin can get.

@@ -20,11 +20,13 @@ package org.apache.kylin.rest.controller;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.EpochRequest;
 import org.apache.kylin.rest.service.EpochService;
@@ -43,9 +45,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import lombok.val;
 
@@ -88,23 +87,23 @@ public class NEpochControllerTest extends NLocalFileMetadataTestCase {
         val mapRequest1 = mockStreamingEpochRequestMap1();
         val mapRequest2 = mockStreamingEpochRequestMap2();
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch")
-                .content(JsonUtil.writeValueAsString(mapRequest1))
-                .contentType(MediaType.APPLICATION_JSON).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch").content(JsonUtil.writeValueAsString(mapRequest1))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().is5xxServerError());
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch")
-                .content(JsonUtil.writeValueAsString(mapRequest2))
-                .contentType(MediaType.APPLICATION_JSON).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch").content(JsonUtil.writeValueAsString(mapRequest2))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
         request.setProjects(Lists.newArrayList());
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch")
-                .content(JsonUtil.writeValueAsString(request))
-                .contentType(MediaType.APPLICATION_JSON).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch").content(JsonUtil.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        request.setProjects(Arrays.asList("DEFAULT"));
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch")
-                .content(JsonUtil.writeValueAsString(request))
-                .contentType(MediaType.APPLICATION_JSON).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+        request.setProjects(Collections.singletonList("DEFAULT"));
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch").content(JsonUtil.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
@@ -112,18 +111,18 @@ public class NEpochControllerTest extends NLocalFileMetadataTestCase {
     public void testUpdateEpochOwnerWithEmptyProjects() throws Exception {
         val request = new EpochRequest();
         request.setForce(false);
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch")
-                        .content(JsonUtil.writeValueAsString(request))
-                        .contentType(MediaType.APPLICATION_JSON).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch").content(JsonUtil.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test
     public void testUpdateAllEpochOwner() throws Exception {
         val request = mockStreamingEpochRequest();
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch/all")
-                .content(JsonUtil.writeValueAsString(request))
-                .contentType(MediaType.APPLICATION_JSON).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/epoch/all").content(JsonUtil.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(nEpochController).updateAllEpochOwner(Mockito.any(request.getClass()));
     }
@@ -140,7 +139,7 @@ public class NEpochControllerTest extends NLocalFileMetadataTestCase {
 
     private EpochRequest mockStreamingEpochRequest() {
         val request = new EpochRequest();
-        request.setProjects(Arrays.asList("test"));
+        request.setProjects(Collections.singletonList("test"));
         request.setForce(false);
         return request;
     }
@@ -156,6 +155,5 @@ public class NEpochControllerTest extends NLocalFileMetadataTestCase {
         map.put("force", "true");
         return map;
     }
-
 
 }

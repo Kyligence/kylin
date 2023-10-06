@@ -27,12 +27,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.metadata.model.SegmentStatusEnum;
-import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.engine.spark.builder.NBuildSourceInfo;
 import org.apache.kylin.engine.spark.job.BuildJobInfos;
 import org.apache.kylin.engine.spark.job.DFBuildJob;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.metadata.cube.cuboid.NSpanningTree;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -43,7 +43,9 @@ import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.cube.utils.StreamingUtils;
+import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
+import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.streaming.common.BuildJobEntry;
 import org.apache.kylin.streaming.metadata.BuildLayoutWithRestUpdate;
 import org.apache.kylin.streaming.request.StreamingSegmentRequest;
@@ -51,9 +53,6 @@ import org.apache.kylin.streaming.rest.RestSupport;
 import org.apache.kylin.streaming.util.JobExecutionIdHolder;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.val;
 

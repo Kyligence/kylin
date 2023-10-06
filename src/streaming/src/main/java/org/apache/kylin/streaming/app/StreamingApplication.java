@@ -47,6 +47,7 @@ import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
 import org.apache.kylin.engine.spark.job.UdfManager;
 import org.apache.kylin.engine.spark.utils.JobMetricsUtils;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -68,7 +69,6 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.rules.Rule;
 import org.apache.spark.sql.execution.datasource.AlignmentTableStats;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import lombok.Getter;
 import lombok.val;
 import lombok.var;

@@ -23,10 +23,15 @@ import java.util.List;
 
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.query.relnode.ColumnRowType;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.BiMap;
+import org.apache.kylin.guava30.shaded.common.collect.HashBiMap;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
+import org.apache.kylin.query.relnode.ColumnRowType;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,12 +39,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import org.apache.kylin.guava30.shaded.common.collect.BiMap;
-import org.apache.kylin.guava30.shaded.common.collect.HashBiMap;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 public class ImplicitCCTest extends NLocalFileMetadataTestCase {
 

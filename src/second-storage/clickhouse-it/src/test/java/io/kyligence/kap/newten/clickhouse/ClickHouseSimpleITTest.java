@@ -382,10 +382,10 @@ public class ClickHouseSimpleITTest extends NLocalWithSparkSessionTest implement
                 }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
 
                 waitJobEnd(project, jobId);
-                await().until(() -> JobContextUtil.getJobContext(getTestConfig()).getJobScheduler().getRunningJob().isEmpty());
-                await().atMost(30, TimeUnit.SECONDS)
-                        .until(() -> ExecutableManager.getInstance(getTestConfig(), project)
-                                .fetchNotFinalJobsByTypes(null, null, null).isEmpty());
+                await().until(() -> JobContextUtil.getJobContext(getTestConfig()).getJobScheduler().getRunningJob()
+                        .isEmpty());
+                await().atMost(30, TimeUnit.SECONDS).until(() -> ExecutableManager.getInstance(getTestConfig(), project)
+                        .fetchNotFinalJobsByTypes(null, null, null).isEmpty());
 
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
                     val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);

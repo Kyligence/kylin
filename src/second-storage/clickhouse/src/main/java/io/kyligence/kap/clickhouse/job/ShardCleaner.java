@@ -18,8 +18,20 @@
 
 package io.kyligence.kap.clickhouse.job;
 
+import java.sql.Date;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.msgpack.core.Preconditions;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.kyligence.kap.clickhouse.database.ClickHouseOperator;
 import io.kyligence.kap.clickhouse.ddl.ClickHouseRender;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
@@ -28,18 +40,8 @@ import io.kyligence.kap.secondstorage.ddl.DropDatabase;
 import io.kyligence.kap.secondstorage.ddl.DropTable;
 import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.msgpack.core.Preconditions;
-
-import java.sql.Date;
-import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
 
 @Getter
 @Slf4j
@@ -75,7 +77,8 @@ public class ShardCleaner {
         this(node, database, table, partitions, false, dateFormat);
     }
 
-    public ShardCleaner(String node, String database, String table, List<Date> partitions, boolean isFull, String dateFormat) {
+    public ShardCleaner(String node, String database, String table, List<Date> partitions, boolean isFull,
+            String dateFormat) {
         this.node = Preconditions.checkNotNull(node);
         this.database = Preconditions.checkNotNull(database);
         this.table = table;

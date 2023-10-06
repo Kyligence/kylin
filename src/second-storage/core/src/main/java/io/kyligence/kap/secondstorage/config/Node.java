@@ -18,8 +18,9 @@
 
 package io.kyligence.kap.secondstorage.config;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.kylin.common.util.EncryptUtil;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Node {
     private String name;
@@ -29,7 +30,6 @@ public class Node {
     private String password;
     @JsonProperty("sshPort")
     private int sshPort;
-
 
     public Node(String name, String ip, int port, String user, String password) {
         this.name = name;

@@ -52,8 +52,8 @@ public class Repartitioner {
     private boolean optimizeShardEnabled;
 
     public Repartitioner(int shardSize, int fileLengthThreshold, long totalRowCount, long rowCountThreshold,
-                         ContentSummary contentSummary, List<Integer> shardByColumns, List<Integer> sortByColumns,
-                         boolean optimizeShardEnabled) {
+            ContentSummary contentSummary, List<Integer> shardByColumns, List<Integer> sortByColumns,
+            boolean optimizeShardEnabled) {
         this.shardSize = shardSize;
         this.fileLengthThreshold = fileLengthThreshold;
         this.totalRowCount = totalRowCount;

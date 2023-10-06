@@ -18,9 +18,9 @@
 
 package io.kyligence.kap.secondstorage.management.request;
 
-import lombok.Data;
-
 import java.util.List;
+
+import lombok.Data;
 
 @Data
 public class ProjectCleanRequest {

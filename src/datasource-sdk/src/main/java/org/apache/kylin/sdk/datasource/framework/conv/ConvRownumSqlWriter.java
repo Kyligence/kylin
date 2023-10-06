@@ -121,7 +121,8 @@ public class ConvRownumSqlWriter extends ConvSqlWriter {
     @Override
     public void writeWith(SqlCall call, int leftPrec, int rightPrec) {
         /*
-        For Oracle <= 11g, to add fetch rows should be:  origin sql => SELECT * FROM  ([origin sql]) WHERE ROWNUM <= [FETCH_SIZE]
+        For Oracle <= 11g, to add fetch rows should be:
+        origin sql => SELECT * FROM  ([origin sql]) WHERE ROWNUM <= [FETCH_SIZE]
         Here we should print "SELECT * FROM (" before print origin sql
         */
         printSelectForRownumInWithCLause = (this.frame != null

@@ -139,7 +139,8 @@ public class SystemService extends BasicService {
         helper.backup(getConfig(), project, path, null, compress, false);
     }
 
-    public String dumpLocalDiagPackage(String startTime, String endTime, String jobId, String queryId, String project, HttpHeaders headers) {
+    public String dumpLocalDiagPackage(String startTime, String endTime, String jobId, String queryId, String project,
+            HttpHeaders headers) {
         File exportFile = KylinConfigBase.getDiagFileName();
         String uuid = exportFile.getName();
         FileUtils.deleteQuietly(exportFile);
@@ -205,7 +206,8 @@ public class SystemService extends BasicService {
         return dumpLocalDiagPackage(null, null, null, queryId, project, headers);
     }
 
-    public String dumpLocalDiagPackage(String startTime, String endTime, String jobId, String project, HttpHeaders headers) {
+    public String dumpLocalDiagPackage(String startTime, String endTime, String jobId, String project,
+            HttpHeaders headers) {
         if (StringUtils.isEmpty(jobId)) {
             aclEvaluate.checkIsGlobalAdmin();
         } else {
@@ -216,7 +218,6 @@ public class SystemService extends BasicService {
         }
         return dumpLocalDiagPackage(startTime, endTime, jobId, null, null, headers);
     }
-
 
     private String getProjectByJobId(String jobId) {
         val projects = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).listAllProjects().stream()

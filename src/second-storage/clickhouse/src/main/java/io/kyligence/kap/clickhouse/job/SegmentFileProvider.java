@@ -18,6 +18,10 @@
 
 package io.kyligence.kap.clickhouse.job;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -27,10 +31,6 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.CommonErrorCode;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.HadoopUtil;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class SegmentFileProvider implements FileProvider {
     private final String rootPath;
@@ -55,10 +55,7 @@ public class SegmentFileProvider implements FileProvider {
                 if (!fileStatus.getPath().getName().endsWith("parquet")) {
                     continue;
                 }
-                paths.add(FileStatus.builder()
-                        .path(fileStatus.getPath().toString())
-                        .len(fileStatus.getLen())
-                        .build());
+                paths.add(FileStatus.builder().path(fileStatus.getPath().toString()).len(fileStatus.getLen()).build());
             }
         } catch (IOException e) {
             return ExceptionUtils.rethrow(new KylinException(CommonErrorCode.UNKNOWN_ERROR_CODE, e));

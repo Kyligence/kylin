@@ -17,11 +17,11 @@
  */
 package io.kyligence.kap.secondstorage.config;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ConfigOptionTest {
 
@@ -30,9 +30,9 @@ public class ConfigOptionTest {
         ConfigOption configOption1 = new ConfigOption<>("k1", "", String.class);
         ConfigOption configOption2 = new ConfigOption<>("k1", "", String.class);
 
-        Assertions.assertTrue(configOption1.equals(configOption1));
-        Assertions.assertTrue(configOption1.equals(configOption2));
-        Assertions.assertTrue(!configOption1.equals(""));
+        Assertions.assertEquals(configOption1, configOption1);
+        Assertions.assertEquals(configOption1, configOption2);
+        Assertions.assertFalse(configOption1.equals(""));
 
         Assertions.assertTrue(configOption1.hasDefaultValue());
 

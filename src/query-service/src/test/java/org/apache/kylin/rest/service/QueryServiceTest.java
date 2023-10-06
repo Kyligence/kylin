@@ -2245,7 +2245,8 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(queryContext.getUserSQL(), originSql);
         // sql after massage will transformed and filled params
         Assert.assertTrue(queryContext.getMetrics().getOlapCause().getMessage().contains(transformedFilledSql));
-        // validate sql Metrics for query history(pushdown). sql reset to filledSql after pushdown(on tryPushDownSelectQuery).
+        // validate sql Metrics for query history(pushdown).
+        // sql reset to filledSql after pushdown(on tryPushDownSelectQuery).
         QueryMetricsContext.start(queryContext.getQueryId(), "");
         Assert.assertTrue(QueryMetricsContext.isStarted());
         if (params != null) {

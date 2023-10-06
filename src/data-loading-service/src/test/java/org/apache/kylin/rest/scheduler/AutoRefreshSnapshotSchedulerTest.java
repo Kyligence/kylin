@@ -41,6 +41,8 @@ import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,8 +55,6 @@ import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 import lombok.var;

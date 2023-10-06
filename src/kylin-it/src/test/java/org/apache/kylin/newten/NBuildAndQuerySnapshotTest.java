@@ -26,6 +26,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
@@ -48,9 +50,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 import lombok.val;
@@ -98,14 +97,13 @@ public class NBuildAndQuerySnapshotTest extends NLocalWithSparkSessionTest {
         NIndexPlanManager ipMgr = NIndexPlanManager.getInstance(config, getProject());
         String cubeId = dsMgr.getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa").getIndexPlan().getUuid();
         IndexPlan cube = ipMgr.getIndexPlan(cubeId);
-        Set<Long> tobeRemovedLayouts = cube.getAllLayouts().stream()
-                .filter(layout -> layout.getId() != 10001L)
-                .map(LayoutEntity::getId)
-                .collect(Collectors.toSet());
+        Set<Long> tobeRemovedLayouts = cube.getAllLayouts().stream().filter(layout -> layout.getId() != 10001L)
+                .map(LayoutEntity::getId).collect(Collectors.toSet());
 
-        ipMgr.updateIndexPlan(dsMgr.getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa").getIndexPlan().getUuid(), copyForWrite -> {
-            copyForWrite.removeLayouts(tobeRemovedLayouts, true, true);
-        });
+        ipMgr.updateIndexPlan(dsMgr.getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa").getIndexPlan().getUuid(),
+                copyForWrite -> {
+                    copyForWrite.removeLayouts(tobeRemovedLayouts, true, true);
+                });
 
         NDataflow df = dsMgr.getDataflow(dfName);
         NDataflowUpdate update = new NDataflowUpdate(df.getUuid());
@@ -116,7 +114,8 @@ public class NBuildAndQuerySnapshotTest extends NLocalWithSparkSessionTest {
     private void buildCube(String dfName, long start, long end) throws Exception {
         NDataflow df = dsMgr.getDataflow(dfName);
         List<LayoutEntity> layouts = df.getIndexPlan().getAllLayouts();
-        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end), Sets.newLinkedHashSet(layouts), true);
+        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
+                Sets.newLinkedHashSet(layouts), true);
     }
 
     @Test

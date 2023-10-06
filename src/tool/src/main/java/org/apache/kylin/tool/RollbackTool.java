@@ -56,6 +56,9 @@ import org.apache.kylin.common.util.MetadataChecker;
 import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.helper.MetadataToolHelper;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
@@ -69,10 +72,6 @@ import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.tool.general.RollbackStatusEnum;
 import org.joda.time.format.DateTimeFormat;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
 import io.kyligence.kap.metadata.user.NKylinUserManager;
@@ -168,7 +167,8 @@ public class RollbackTool extends ExecutableApplication {
         rollbackStatus = RollbackStatusEnum.CHECK_CLUSTER_STATUS_SUCESS;
         log.info("check cluster status success");
 
-        // 3 Get the snapshot file from the backup directory to restore, then replay the auditlog to the user-specified timestamp
+        // 3 Get the snapshot file from the backup directory to restore,
+        // then replay the auditlog to the user-specified timestamp
         val restoreResourceStore = forwardToTimeStampFromSnapshot(optionsHelper);
         if (restoreResourceStore == null) {
             log.error("forward to timestamp from snapshot failed");
@@ -188,7 +188,8 @@ public class RollbackTool extends ExecutableApplication {
         rollbackStatus = RollbackStatusEnum.WAIT_USER_CONFIRM_SUCCESS;
         log.info("wait user confirm success");
 
-        // 6 Check whether the storage data pointed to by the target metadata is available, including cube data, snapshot data, dictionary data, whether the metadata is damaged, etc.
+        // 6 Check whether the storage data pointed to by the target metadata is available,
+        // including cube data, snapshot data, dictionary data, whether the metadata is damaged, etc.
         val skipCheckData = Boolean.parseBoolean(optionsHelper.getOptionValue(OPTION_SKIP_CHECK_DATA));
         if (!skipCheckData && !checkStorageDataAvailable(optionsHelper, restoreResourceStore)) {
             log.error("target snapshot storage data is unavailable");
@@ -508,7 +509,8 @@ public class RollbackTool extends ExecutableApplication {
         val maxId = currentAuditlog.getMaxId();
         val minId = currentAuditlog.getMinId();
 
-        //startId +1 is because if there is no data in the database and it is backed up once, here the startId is 0, if a piece of data is inserted, the minId here is 1
+        //startId +1 is because if there is no data in the database, and it is backed up once,
+        // here the startId is 0, if a piece of data is inserted, the minId here is 1
         if (startId + 1 < minId) {
             log.error("backup offset is less than  auditlog smallest id");
             return null;
@@ -553,10 +555,9 @@ public class RollbackTool extends ExecutableApplication {
     }
 
     private String backupCurrentMetadata(KylinConfig kylinConfig) throws Exception {
-        val currentBackupFolder = LocalDateTime.now(Clock.systemDefaultZone()).format(MetadataToolHelper.DATE_TIME_FORMATTER)
-                + "_backup";
-        helper.backup(kylinConfig, kylinConfig.getHdfsWorkingDirectory() + "_current_backup",
-                currentBackupFolder);
+        val currentBackupFolder = LocalDateTime.now(Clock.systemDefaultZone())
+                .format(MetadataToolHelper.DATE_TIME_FORMATTER) + "_backup";
+        helper.backup(kylinConfig, kylinConfig.getHdfsWorkingDirectory() + "_current_backup", currentBackupFolder);
         return currentBackupFolder;
     }
 

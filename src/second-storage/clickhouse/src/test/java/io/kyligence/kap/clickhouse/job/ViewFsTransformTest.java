@@ -18,16 +18,16 @@
 
 package io.kyligence.kap.clickhouse.job;
 
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.lang.reflect.Field;
+
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.exception.KylinException;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.lang.reflect.Field;
-
-import static org.mockito.Mockito.when;
 
 public class ViewFsTransformTest {
 
@@ -40,9 +40,11 @@ public class ViewFsTransformTest {
     @Test
     public void testGenerateFileUrl() {
         FileSystemTestHelper.MockFileSystem mockFs = new FileSystemTestHelper.MockFileSystem();
-        try{
-            when(mockFs.resolvePath(new Path("viewfs://cluster/kylin_clickhouse/ke_metadata/test/parquet/3070ef88-fa57-4ad6-9a6b-9587cfcd4140/62fea0e8-40ef-4baa-a59f-29822fc17321/20000040001/part-00000-b1920799-ef6f-4c77-b0bf-2e72edb558dd-c000.snappy.parquet"))).thenReturn(new Path("hdfs://hdfstest/snap.parquet"));
-        }catch (IOException e){
+        try {
+            when(mockFs.resolvePath(new Path(
+                    "viewfs://cluster/kylin_clickhouse/ke_metadata/test/parquet/3070ef88-fa57-4ad6-9a6b-9587cfcd4140/62fea0e8-40ef-4baa-a59f-29822fc17321/20000040001/part-00000-b1920799-ef6f-4c77-b0bf-2e72edb558dd-c000.snappy.parquet")))
+                    .thenReturn(new Path("hdfs://hdfstest/snap.parquet"));
+        } catch (IOException e) {
             Assert.fail();
         }
 
@@ -50,20 +52,22 @@ public class ViewFsTransformTest {
         Assert.assertNotNull(viewfs);
         Class c = viewfs.getClass();
 
-        try{
+        try {
             Field field = c.getDeclaredField("vfs");
             field.setAccessible(true);
             field.set(viewfs, mockFs);
-        }catch (IllegalAccessException| NoSuchFieldException | SecurityException e){
+        } catch (IllegalAccessException | NoSuchFieldException | SecurityException e) {
             Assert.fail();
         }
 
-        String url = ViewFsTransform.getInstance().generateFileUrl("viewfs://cluster/kylin_clickhouse/ke_metadata/test/parquet/3070ef88-fa57-4ad6-9a6b-9587cfcd4140/62fea0e8-40ef-4baa-a59f-29822fc17321/20000040001/part-00000-b1920799-ef6f-4c77-b0bf-2e72edb558dd-c000.snappy.parquet");
+        String url = ViewFsTransform.getInstance().generateFileUrl(
+                "viewfs://cluster/kylin_clickhouse/ke_metadata/test/parquet/3070ef88-fa57-4ad6-9a6b-9587cfcd4140/62fea0e8-40ef-4baa-a59f-29822fc17321/20000040001/part-00000-b1920799-ef6f-4c77-b0bf-2e72edb558dd-c000.snappy.parquet");
         Assert.assertEquals("hdfs://hdfstest/snap.parquet", url);
     }
 
     @Test(expected = KylinException.class)
     public void testGenerateFileFailUrl() {
-        ViewFsTransform.getInstance().generateFileUrl("viewfs://cluster/kylin_clickhouse/ke_metadata/test/parquet/3070ef88-fa57-4ad6-9a6b-9587cfcd4140/62fea0e8-40ef-4baa-a59f-29822fc17321/20000040001/part-00000-b1920799-ef6f-4c77-b0bf-2e72edb558dd-c000.snappy.parquet");
+        ViewFsTransform.getInstance().generateFileUrl(
+                "viewfs://cluster/kylin_clickhouse/ke_metadata/test/parquet/3070ef88-fa57-4ad6-9a6b-9587cfcd4140/62fea0e8-40ef-4baa-a59f-29822fc17321/20000040001/part-00000-b1920799-ef6f-4c77-b0bf-2e72edb558dd-c000.snappy.parquet");
     }
 }

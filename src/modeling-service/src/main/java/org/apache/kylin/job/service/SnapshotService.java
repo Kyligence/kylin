@@ -53,6 +53,10 @@ import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.TimeUtil;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.dao.JobStatisticsManager;
 import org.apache.kylin.job.domain.JobInfo;
 import org.apache.kylin.job.exception.JobSubmissionException;
@@ -95,11 +99,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.SneakyThrows;
 import lombok.val;
@@ -148,7 +147,8 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
         }
 
         // filter tables need loading
-        List<JobInfo> runningSnapshotTasks = fetchAllRunningSnapshotTasksByTableIds(snapshotsRequest.getProject(), null);
+        List<JobInfo> runningSnapshotTasks = fetchAllRunningSnapshotTasksByTableIds(snapshotsRequest.getProject(),
+                null);
 
         Set<String> tables = dbToTablesMap.entrySet().stream() //
                 .filter(entry -> dbs.contains(entry.getKey())) //
@@ -327,7 +327,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
 
         NTableMetadataManager tableManager = getManager(NTableMetadataManager.class, project);
         List<JobInfo> conflictJobs = fetchAllRunningSnapshotTasks(project, tables);
-        List<String> conflictJobIds = conflictJobs.stream().map(jobInfo -> jobInfo.getJobId()).collect(Collectors.toList());
+        List<String> conflictJobIds = conflictJobs.stream().map(JobInfo::getJobId).collect(Collectors.toList());
         JobContextUtil.remoteDiscardJob(project, conflictJobIds);
         SnapshotCheckResponse response = new SnapshotCheckResponse();
         conflictJobs.forEach(job -> {
@@ -441,9 +441,6 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
         checkSnapshotManualManagement(project);
         aclEvaluate.checkProjectReadPermission(project);
         NTableMetadataManager nTableMetadataManager = getManager(NTableMetadataManager.class, project);
-//        val execManager = NExecutableManager.getInstance(getConfig(), project);
-//        List<AbstractExecutable> executables = execManager.listExecByJobTypeAndStatus(ExecutableState::isRunning,
-//                SNAPSHOT_BUILD, SNAPSHOT_REFRESH);
 
         Pair<String, String> databaseAndTable = checkDatabaseAndTable(table);
 
@@ -452,7 +449,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
         Set<String> finalAuthorizedTables = getAclAuthorizedTables(project, canUseACLGreenChannel);
 
         List<JobInfo> executables = fetchAllRunningSnapshotTasksByTableIds(project, finalAuthorizedTables);
-        
+
         // Adjust the operation of adding SnapshotInfoResponse and then removing it to
         // first remove the tableDesc that does not meet the conditions, and then add SnapshotInfoResponse
         List<TableDesc> tables = getFilteredTables(nTableMetadataManager, databaseAndTable, canUseACLGreenChannel,
@@ -478,7 +475,8 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
 
         sortBy = StringUtils.isEmpty(sortBy) ? "last_modified_time" : sortBy;
         if ("last_modified_time".equalsIgnoreCase(sortBy) && isReversed) {
-            // The reverse order here needs to be cut from the beginning to the end, otherwise the initial data is always returned
+            // The reverse order here needs to be cut from the beginning to the end,
+            // otherwise the initial data is always returned
             response.sort(SnapshotInfoResponse::compareTo);
             return Pair.newPair(PagingUtil.cutPage(response, 0, offsetAndLimit.getSecond()), actualTableSize);
         } else {
@@ -558,7 +556,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
         }
 
         String username = AclPermissionUtil.getCurrentUsername();
-        AclTCRDigest userAuth = getManager(AclTCRManager.class, project).getAuthTablesAndColumns(project, username, 
+        AclTCRDigest userAuth = getManager(AclTCRManager.class, project).getAuthTablesAndColumns(project, username,
                 true);
         Set<String> allColumns = userAuth.getColumns();
         AclTCRDigest groupAuth;
@@ -597,9 +595,10 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
     }
 
     private boolean hasRunningJob(TableDesc tableDesc, List<JobInfo> executables) {
-        return executables.stream().map(JobInfo::getSubject)
-                .collect(Collectors.toList()).contains(tableDesc.getIdentity());
+        return executables.stream().map(JobInfo::getSubject).collect(Collectors.toList())
+                .contains(tableDesc.getIdentity());
     }
+
     private boolean isAuthorizedTableAndColumn(TableDesc originTable) {
         return isAuthorizedTableAndColumn(originTable, getCurrentUserGroups());
     }
@@ -647,7 +646,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
     }
 
     private boolean matchTablePattern(TableDesc tableDesc, String tablePattern, String databasePattern,
-                                      String databaseTarget) {
+            String databaseTarget) {
         if (StringUtils.isEmpty(tablePattern)) {
             return true;
         }
@@ -712,10 +711,6 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
     public List<TableNameResponse> getTableNameResponses(String project, String database, String tablePattern) {
         checkSnapshotManualManagement(project);
         aclEvaluate.checkProjectReadPermission(project);
-//        val execManager = NExecutableManager.getInstance(getConfig(), project);
-//        List<AbstractExecutable> executables = execManager.listExecByJobTypeAndStatus(ExecutableState::isRunning,
-//                SNAPSHOT_BUILD, SNAPSHOT_REFRESH);
-//        aclEvaluate.checkProjectReadPermission(project);
         NTableMetadataManager tableManager = getManager(NTableMetadataManager.class, project);
         if (tablePattern == null) {
             tablePattern = "";
@@ -738,10 +733,10 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
                         return true;
                     }
                     return tableDesc.getName().toLowerCase(Locale.ROOT).contains(finalTable.toLowerCase(Locale.ROOT));
-                }).filter(tableDesc -> isAuthorizedTableAndColumn(tableDesc, groups)).sorted(tableService::compareTableDesc)
-                .collect(Collectors.toList());
-        List<JobInfo> executables = fetchAllRunningSnapshotTasksByTableIds(project, tables.stream()
-                .map(TableDesc::getIdentity).collect(Collectors.toSet()));
+                }).filter(tableDesc -> isAuthorizedTableAndColumn(tableDesc, groups))
+                .sorted(tableService::compareTableDesc).collect(Collectors.toList());
+        List<JobInfo> executables = fetchAllRunningSnapshotTasksByTableIds(project,
+                tables.stream().map(TableDesc::getIdentity).collect(Collectors.toSet()));
         for (TableDesc tableDesc : tables) {
             TableNameResponse tableNameResponse = new TableNameResponse();
             tableNameResponse.setTableName(tableDesc.getName());
@@ -801,7 +796,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
     }
 
     public List<SnapshotColResponse> getSnapshotCol(String project, Set<String> tables, Set<String> databases,
-                                                    String tablePattern, boolean includeExistSnapshot) {
+            String tablePattern, boolean includeExistSnapshot) {
         return getSnapshotCol(project, tables, databases, tablePattern, includeExistSnapshot, true);
     }
 
@@ -813,24 +808,26 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
         Set<String> finalTables = Optional.ofNullable(tables).orElse(Sets.newHashSet());
         Set<String> finalDatabase = Optional.ofNullable(databases).orElse(Sets.newHashSet());
 
-        List<TableDesc> allTables = getManager(NTableMetadataManager.class, project).listAllTables().stream().filter(table -> {
-            if (finalDatabase.isEmpty() && finalTables.isEmpty()) {
-                return true;
-            }
-            return finalTables.contains(table.getIdentity()) || finalDatabase.contains(table.getDatabase());
-        }).filter(table -> {
-            if (StringUtils.isEmpty(tablePattern)) {
-                return true;
-            }
-            return table.getIdentity().toLowerCase(Locale.ROOT).contains(tablePattern.toLowerCase(Locale.ROOT));
-        }).collect(Collectors.toList());
+        List<TableDesc> allTables = getManager(NTableMetadataManager.class, project).listAllTables().stream()
+                .filter(table -> {
+                    if (finalDatabase.isEmpty() && finalTables.isEmpty()) {
+                        return true;
+                    }
+                    return finalTables.contains(table.getIdentity()) || finalDatabase.contains(table.getDatabase());
+                }).filter(table -> {
+                    if (StringUtils.isEmpty(tablePattern)) {
+                        return true;
+                    }
+                    return table.getIdentity().toLowerCase(Locale.ROOT).contains(tablePattern.toLowerCase(Locale.ROOT));
+                }).collect(Collectors.toList());
 
-        List<JobInfo> executables = fetchAllRunningSnapshotTasksByTableIds(project, allTables.stream()
-                .map(TableDesc::getIdentity).collect(Collectors.toSet()));
+        List<JobInfo> executables = fetchAllRunningSnapshotTasksByTableIds(project,
+                allTables.stream().map(TableDesc::getIdentity).collect(Collectors.toSet()));
 
-        return allTables.stream().filter(table -> includeExistSnapshot || !hasLoadedSnapshot(table, executables)
-                        || (!excludeBroken && table.isSnapshotHasBroken())).filter(this::isAuthorizedTableAndColumn)
-                .map(SnapshotColResponse::from).collect(Collectors.toList());
+        return allTables.stream()
+                .filter(table -> includeExistSnapshot || !hasLoadedSnapshot(table, executables)
+                        || (!excludeBroken && table.isSnapshotHasBroken()))
+                .filter(this::isAuthorizedTableAndColumn).map(SnapshotColResponse::from).collect(Collectors.toList());
     }
 
     public SnapshotColResponse reloadPartitionCol(String project, String table) {

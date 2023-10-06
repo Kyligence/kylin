@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.cache.Cache;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -43,8 +44,6 @@ import org.apache.kylin.streaming.common.MergeJobEntry;
 import org.apache.spark.sql.SparkSession;
 import org.awaitility.Awaitility;
 import org.junit.Assert;
-
-import org.apache.kylin.guava30.shaded.common.cache.Cache;
 
 import lombok.val;
 

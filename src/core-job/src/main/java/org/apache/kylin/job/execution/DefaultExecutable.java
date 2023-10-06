@@ -141,8 +141,8 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
         }
     }
 
-    private void executeNextSteps(Map<String, Executable> dagExecutablesMap, Executable executable,
-            JobContext context) throws ExecuteException {
+    private void executeNextSteps(Map<String, Executable> dagExecutablesMap, Executable executable, JobContext context)
+            throws ExecuteException {
         final Set<String> nextSteps = executable.getNextSteps();
         if (CollectionUtils.isNotEmpty(nextSteps)) {
             List<Executable> nextExecutables = nextSteps.stream().map(dagExecutablesMap::get)
@@ -208,8 +208,10 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
 
     @Override
     protected void onExecuteStart() throws JobStoppedException {
-        if (isStoppedNonVoluntarily() && ExecutableState.PENDING != getOutput().getState()) //onExecuteStart will turn PENDING to RUNNING
+        if (isStoppedNonVoluntarily() && ExecutableState.PENDING != getOutput().getState()) {
+            //onExecuteStart will turn PENDING to RUNNING
             return;
+        }
         updateJobOutput(project, getId(), ExecutableState.RUNNING, null, null, null);
     }
 
@@ -234,8 +236,8 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
         case PAUSED:
         case READY:
             if (isStoppedNonVoluntarily()) {
-                logger.info("Execute finished  {} which is stopped nonvoluntarily, state: {}",
-                        this.getDisplayName(), getOutput().getState());
+                logger.info("Execute finished  {} which is stopped nonvoluntarily, state: {}", this.getDisplayName(),
+                        getOutput().getState());
                 break;
             }
             Consumer<String> hook = null;

@@ -44,6 +44,7 @@ import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
 import org.apache.kylin.rest.service.IUserGroupService;
 import org.apache.kylin.rest.service.NUserGroupService;
+import org.apache.kylin.rest.service.task.QueryHistoryMetaUpdateScheduler.QueryHistoryMetaUpdateRunner;
 import org.apache.kylin.rest.util.SpringContext;
 import org.junit.After;
 import org.junit.Assert;
@@ -171,8 +172,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         Assert.assertEquals(0L, dataflow.getLastQueryTime());
 
         val queryHistoryAccelerateRunner = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
-        Class<? extends QueryHistoryMetaUpdateScheduler.QueryHistoryMetaUpdateRunner> clazz = queryHistoryAccelerateRunner
-                .getClass();
+        Class<? extends QueryHistoryMetaUpdateRunner> clazz = queryHistoryAccelerateRunner.getClass();
         Method method = clazz.getDeclaredMethod("updateLastQueryTime", Map.class, String.class);
         method.setAccessible(true);
         method.invoke(queryHistoryAccelerateRunner, ImmutableMap.of("aaa", 100L), PROJECT);
@@ -184,7 +184,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         long lastQueryTime = dataflow1.getLastQueryTime();
         Assert.assertEquals(100L, lastQueryTime);
     }
-    
+
     @Test
     public void testUpdateMetadataWithStringRealization() {
         qhMetaUpdateScheduler.queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
@@ -206,9 +206,8 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         Assert.assertEquals(0, idOffsetManager.get(META).getOffset());
 
         // run update
-        QueryHistoryMetaUpdateScheduler.QueryHistoryMetaUpdateRunner queryHistoryMetaUpdateRunner = //
-                qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
-        queryHistoryMetaUpdateRunner.run();
+        QueryHistoryMetaUpdateRunner qhMetaUpdater = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
+        qhMetaUpdater.run();
 
         // after update dataflow usage, layout usage and last query time
         dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT).getDataflow(DATAFLOW);
@@ -225,13 +224,13 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
 
     @Test
     public void testQueryHitSnapshotCount() {
-        QueryHistoryMetaUpdateScheduler.QueryHistoryMetaUpdateRunner queryHistoryAccelerateRunner = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
+        QueryHistoryMetaUpdateRunner qhAccUpdater = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
         TableExtDesc tableExtDesc = new TableExtDesc();
         tableExtDesc.setSnapshotHitCount(10);
         tableExtDesc.setIdentity("123");
         Map<TableExtDesc, Integer> map = Maps.newHashMap();
         map.put(tableExtDesc, 1);
-        ReflectionTestUtils.invokeMethod(queryHistoryAccelerateRunner, "incQueryHitSnapshotCount", map, PROJECT);
+        ReflectionTestUtils.invokeMethod(qhAccUpdater, "incQueryHitSnapshotCount", map, PROJECT);
     }
 
     @Test
@@ -256,7 +255,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
     @Test
     public void testUpdateStatMeta() {
         QueryHistoryMetaUpdateScheduler taskScheduler = new QueryHistoryMetaUpdateScheduler("streaming_test");
-        QueryHistoryMetaUpdateScheduler.QueryHistoryMetaUpdateRunner metaUpdateRunner = taskScheduler.new QueryHistoryMetaUpdateRunner();
+        QueryHistoryMetaUpdateRunner metaUpdateRunner = taskScheduler.new QueryHistoryMetaUpdateRunner();
         NDataflowManager manager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), "streaming_test");
         {
             var dataflow = manager.getDataflow("334671fd-e383-4fc9-b5c2-94fce832f77a");
@@ -538,8 +537,8 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         queryHistory2.setQueryTime(QUERY_TIME);
         queryHistory2.setEngineType("NATIVE");
         QueryHistoryInfo queryHistoryInfo2 = new QueryHistoryInfo();
-        QueryMetrics.RealizationMetrics realizationMetric = new QueryMetrics.RealizationMetrics(LAYOUT3,
-                "Agg Index", "error", Lists.newArrayList());
+        QueryMetrics.RealizationMetrics realizationMetric = new QueryMetrics.RealizationMetrics(LAYOUT3, "Agg Index",
+                "error", Lists.newArrayList());
         queryHistoryInfo2.setRealizationMetrics(Lists.newArrayList(realizationMetric));
         queryHistory2.setQueryHistoryInfo(queryHistoryInfo2);
         queryHistory2.setId(11);

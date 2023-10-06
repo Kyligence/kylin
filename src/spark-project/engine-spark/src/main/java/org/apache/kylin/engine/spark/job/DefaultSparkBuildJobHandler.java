@@ -42,15 +42,14 @@ import org.apache.kylin.common.util.BufferedLogger;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.util.concurrent.UncheckedTimeoutException;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
-import org.apache.kylin.guava30.shaded.common.util.concurrent.UncheckedTimeoutException;
 import lombok.val;
 
 public class DefaultSparkBuildJobHandler implements ISparkJobHandler {
@@ -65,8 +64,8 @@ public class DefaultSparkBuildJobHandler implements ISparkJobHandler {
     private static final String EQUALS = "=";
 
     @Override
-    public void killOrphanApplicationIfExists(String project, String jobStepId, KylinConfig config, Boolean isSubmitting,
-                                              Map<String, String> sparkConf) {
+    public void killOrphanApplicationIfExists(String project, String jobStepId, KylinConfig config,
+            Boolean isSubmitting, Map<String, String> sparkConf) {
         try {
             val sparkMaster = sparkConf.getOrDefault(SPARK_MASTER, "local");
             if (sparkMaster.startsWith("local")) {

@@ -17,15 +17,7 @@
  */
 package io.kyligence.kap.clickhouse.management;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import io.kyligence.kap.secondstorage.config.ClusterInfo;
-import io.kyligence.kap.secondstorage.config.Node;
-import org.apache.kylin.common.util.JsonUtil;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import static io.kyligence.kap.secondstorage.SecondStorageConstants.CONFIG_SECOND_STORAGE_CLUSTER;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,7 +28,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static io.kyligence.kap.secondstorage.SecondStorageConstants.CONFIG_SECOND_STORAGE_CLUSTER;
+import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import io.kyligence.kap.secondstorage.config.ClusterInfo;
+import io.kyligence.kap.secondstorage.config.Node;
 
 public class ClickHouseConfigLoaderTest extends NLocalFileMetadataTestCase {
     @Before
@@ -68,8 +69,7 @@ public class ClickHouseConfigLoaderTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(1, size);
 
         File file = File.createTempFile("clickhouseTemp", ".yaml");
-        ClickHouseConfigLoader.getConfigYaml().dump(
-                JsonUtil.readValue(JsonUtil.writeValueAsString(cluster), Map.class),
+        ClickHouseConfigLoader.getConfigYaml().dump(JsonUtil.readValue(JsonUtil.writeValueAsString(cluster), Map.class),
                 new PrintWriter(file, Charset.defaultCharset().name()));
         overwriteSystemProp(CONFIG_SECOND_STORAGE_CLUSTER, file.getAbsolutePath());
 

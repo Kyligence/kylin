@@ -17,14 +17,15 @@
  */
 package io.kyligence.kap.secondstorage.config;
 
-import io.kyligence.kap.secondstorage.util.ConvertUtils;
-
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Properties;
 
+import io.kyligence.kap.secondstorage.util.ConvertUtils;
+
 public class DefaultSecondStorageProperties implements SecondStorageProperties {
-    private Properties properties = new Properties();
+
+    private final Properties properties = new Properties();
 
     public DefaultSecondStorageProperties(Properties param) {
         properties.putAll(param);
@@ -44,11 +45,8 @@ public class DefaultSecondStorageProperties implements SecondStorageProperties {
         try {
             return rawValue.map(v -> ConvertUtils.convertValue(v, clazz));
         } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    String.format(Locale.ROOT,
-                            "Could not parse value '%s' for key '%s'.",
-                            rawValue.map(Object::toString).orElse(""), option.key()),
-                    e);
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "Could not parse value '%s' for key '%s'.",
+                    rawValue.map(Object::toString).orElse(""), option.key()), e);
         }
     }
 

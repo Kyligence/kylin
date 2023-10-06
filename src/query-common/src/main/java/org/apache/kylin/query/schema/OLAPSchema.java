@@ -25,11 +25,10 @@ import java.util.Map;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.metadata.model.TableDesc;
 
 /**
  * all schema info is in KapOLAPSchema, not used anymore
@@ -78,7 +77,8 @@ public class OLAPSchema extends AbstractSchema {
 
         for (TableDesc tableDesc : tables) {
             if (tableDesc.getDatabase().equals(schemaName)) {
-                final String tableName = tableDesc.getName();//safe to use tableDesc.getUuid() here, it is in a DB context now
+                final String tableName = tableDesc.getName();
+                //safe to use tableDesc.getUuid() here, it is in a DB context now
                 final OLAPTable table = new OLAPTable(this, tableDesc, modelsMap);
                 olapTables.put(tableName, table);
                 //logger.debug("Project " + projectName + " exposes table " + tableName);

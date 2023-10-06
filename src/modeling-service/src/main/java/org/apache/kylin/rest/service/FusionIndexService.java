@@ -224,14 +224,14 @@ public class FusionIndexService extends BasicService {
     }
 
     public List<IndexResponse> getIndexes(String project, String modelId, String key, List<IndexEntity.Status> status,
-                                          String orderBy, Boolean desc, List<IndexEntity.Source> sources, List<Long> ids,
-                                          List<IndexEntity.Range> range) {
+            String orderBy, Boolean desc, List<IndexEntity.Source> sources, List<Long> ids,
+            List<IndexEntity.Range> range) {
         return getIndexes(new IndexPlanParams(project, modelId, null, ids, sources, status, range),
-                new PaginationParams(null, null, orderBy, desc),
-                key);
+                new PaginationParams(null, null, orderBy, desc), key);
     }
 
-    public List<IndexResponse> getIndexes(IndexPlanParams indexPlanParams, PaginationParams paginationParams, String key) {
+    public List<IndexResponse> getIndexes(IndexPlanParams indexPlanParams, PaginationParams paginationParams,
+            String key) {
         String project = indexPlanParams.getProject();
         String modelId = indexPlanParams.getModelId();
         List<Long> ids = indexPlanParams.getIds();
@@ -573,8 +573,8 @@ public class FusionIndexService extends BasicService {
                 .collect(Collectors.toMap(Function.identity(), upperCaseMap::get, (v1, v2) -> v1, LinkedHashMap::new));
     }
 
-    private Integer[][] extractJointOrHierarchyIds(String[][] origins, Map<String, Integer> selectedDimMap, Set<String> allDims,
-            AggGroupParams aggGroupParams) {
+    private Integer[][] extractJointOrHierarchyIds(String[][] origins, Map<String, Integer> selectedDimMap,
+            Set<String> allDims, AggGroupParams aggGroupParams) {
         if (origins == null || origins.length == 0) {
             return new Integer[0][];
         }
@@ -607,7 +607,8 @@ public class FusionIndexService extends BasicService {
             String modelId) {
         if ((streamResponse.getDecreaseLayouts() > 0 || streamResponse.getIncreaseLayouts() > 0)
                 && checkStreamingJobAndSegments(project, modelId)) {
-            throw new KylinException(ServerErrorCode.STREAMING_INDEX_UPDATE_DISABLE, MsgPicker.getMsg().getStreamingIndexesEdit());
+            throw new KylinException(ServerErrorCode.STREAMING_INDEX_UPDATE_DISABLE,
+                    MsgPicker.getMsg().getStreamingIndexesEdit());
         }
     }
 
@@ -625,7 +626,8 @@ public class FusionIndexService extends BasicService {
     private static void checkStreamingIndexEnabled(String project, NDataModel model) throws KylinException {
         if (NDataModel.ModelType.STREAMING == model.getModelType()
                 && checkStreamingJobAndSegments(project, model.getUuid())) {
-            throw new KylinException(ServerErrorCode.STREAMING_INDEX_UPDATE_DISABLE, MsgPicker.getMsg().getStreamingIndexesDelete());
+            throw new KylinException(ServerErrorCode.STREAMING_INDEX_UPDATE_DISABLE,
+                    MsgPicker.getMsg().getStreamingIndexesDelete());
         }
     }
 

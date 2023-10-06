@@ -164,7 +164,8 @@ public class SparkApplicationTest extends NLocalWithSparkSessionTestBase {
         columnDesc.setTable(fact);
         NDataModel nDataModel = new NDataModel();
         nDataModel.setUuid(UUID.randomUUID().toString());
-        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange = new SegmentRange.TimePartitionedSegmentRange();
+        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange //
+                = new SegmentRange.TimePartitionedSegmentRange();
         timePartitionedSegmentRange.setStart(1637387522L);
         timePartitionedSegmentRange.setEnd(1637905922L);
         // fact.setSegmentRange(timePartitionedSegmentRange);

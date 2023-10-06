@@ -28,6 +28,8 @@ import java.util.Map;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.ProjectInstance;
@@ -58,9 +60,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import lombok.val;
 
@@ -123,7 +122,8 @@ public class OpenTableControllerTest extends NLocalFileMetadataTestCase {
             String tableName = "TEST_KYLIN_FACT";
             String database = "DEFAULT";
 
-            Mockito.when(tableService.getTableDesc(project, true, tableName, database, false, Collections.singletonList(9), 10))
+            Mockito.when(tableService.getTableDesc(project, true, tableName, database, false,
+                    Collections.singletonList(9), 10))
                     .thenReturn(Pair.newPair(Collections.singletonList(new TableDesc()), 10));
 
             mockMvc.perform(MockMvcRequestBuilders.get("/api/tables") //
@@ -140,7 +140,8 @@ public class OpenTableControllerTest extends NLocalFileMetadataTestCase {
             String tableName = "P_LINEORDER_STR";
             String database = "SSB";
 
-            Mockito.when(tableService.getTableDesc(project, true, tableName, database, false, Collections.singletonList(1), 10))
+            Mockito.when(tableService.getTableDesc(project, true, tableName, database, false,
+                    Collections.singletonList(1), 10))
                     .thenReturn(Pair.newPair(Collections.singletonList(new TableDesc()), 10));
 
             mockMvc.perform(MockMvcRequestBuilders.get("/api/tables") //
@@ -162,7 +163,7 @@ public class OpenTableControllerTest extends NLocalFileMetadataTestCase {
             String databaseUppercase = "SSB";
 
             Mockito.when(tableService.getTableDesc(project, true, tableNameUppercase, databaseUppercase, false,
-                            Collections.singletonList(9), 10))
+                    Collections.singletonList(9), 10))
                     .thenReturn(Pair.newPair(Collections.singletonList(new TableDesc()), 10));
 
             mockMvc.perform(MockMvcRequestBuilders.get("/api/tables") //
@@ -254,27 +255,27 @@ public class OpenTableControllerTest extends NLocalFileMetadataTestCase {
         Mockito.doNothing().when(openTableController).updateDataSourceType("default", 9);
         Mockito.doAnswer(x -> null).when(nTableController).loadAWSTablesCompatibleCrossAccount(tableLoadRequest);
         mockMvc.perform(MockMvcRequestBuilders.post("/api/tables/compatibility/aws") //
-                        .contentType(MediaType.APPLICATION_JSON) //
-                        .content(JsonUtil.writeValueAsString(tableLoadRequest)) //
-                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
+                .contentType(MediaType.APPLICATION_JSON) //
+                .content(JsonUtil.writeValueAsString(tableLoadRequest)) //
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(openTableController).loadAWSTablesCompatibleCrossAccount(tableLoadRequest);
 
         tableLoadRequest.setNeedSampling(true);
         tableLoadRequest.setSamplingRows(10000);
         mockMvc.perform(MockMvcRequestBuilders.post("/api/tables/compatibility/aws") //
-                        .contentType(MediaType.APPLICATION_JSON) //
-                        .content(JsonUtil.writeValueAsString(tableLoadRequest)) //
-                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
+                .contentType(MediaType.APPLICATION_JSON) //
+                .content(JsonUtil.writeValueAsString(tableLoadRequest)) //
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(openTableController).loadAWSTablesCompatibleCrossAccount(tableLoadRequest);
 
         tableLoadRequest.setNeedSampling(true);
         tableLoadRequest.setSamplingRows(1000);
         mockMvc.perform(MockMvcRequestBuilders.post("/api/tables/compatibility/aws") //
-                        .contentType(MediaType.APPLICATION_JSON) //
-                        .content(JsonUtil.writeValueAsString(tableLoadRequest)) //
-                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
+                .contentType(MediaType.APPLICATION_JSON) //
+                .content(JsonUtil.writeValueAsString(tableLoadRequest)) //
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
                 .andExpect(MockMvcResultMatchers.status().isInternalServerError());
         Mockito.verify(openTableController).loadAWSTablesCompatibleCrossAccount(tableLoadRequest);
 
@@ -299,11 +300,12 @@ public class OpenTableControllerTest extends NLocalFileMetadataTestCase {
         request.setTables(tableExtInfoList);
 
         mockMvc.perform(MockMvcRequestBuilders.put("/api/tables/ext/prop/aws") //
-                        .contentType(MediaType.APPLICATION_JSON) //
-                        .content(JsonUtil.writeValueAsString(request)) //
-                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
+                .contentType(MediaType.APPLICATION_JSON) //
+                .content(JsonUtil.writeValueAsString(request)) //
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        Mockito.verify(openTableController).updateLoadedAWSTableExtProp(Mockito.any(UpdateAWSTableExtDescRequest.class));
+        Mockito.verify(openTableController)
+                .updateLoadedAWSTableExtProp(Mockito.any(UpdateAWSTableExtDescRequest.class));
     }
 
     @Test
@@ -489,12 +491,13 @@ public class OpenTableControllerTest extends NLocalFileMetadataTestCase {
         request.setNeedSampling(false);
         request.setS3TableExtInfo(s3TableExtInfo);
 
-        Mockito.doReturn(new Pair<String, List<String>>()).when(tableService).reloadAWSTableCompatibleCrossAccount(request.getProject(),
-                request.getS3TableExtInfo(), request.getNeedSampling(), 0, false, ExecutablePO.DEFAULT_PRIORITY, null);
+        Mockito.doReturn(new Pair<String, List<String>>()).when(tableService).reloadAWSTableCompatibleCrossAccount(
+                request.getProject(), request.getS3TableExtInfo(), request.getNeedSampling(), 0, false,
+                ExecutablePO.DEFAULT_PRIORITY, null);
         mockMvc.perform(MockMvcRequestBuilders.post("/api/tables/reload/compatibility/aws") //
-                        .contentType(MediaType.APPLICATION_JSON) //
-                        .content(JsonUtil.writeValueAsString(request)) //
-                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
+                .contentType(MediaType.APPLICATION_JSON) //
+                .content(JsonUtil.writeValueAsString(request)) //
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(openTableController).reloadAWSTablesCompatibleCrossAccount(request);
 
@@ -504,12 +507,13 @@ public class OpenTableControllerTest extends NLocalFileMetadataTestCase {
         request2.setS3TableExtInfo(s3TableExtInfo);
         request2.setNeedSampling(true);
         request2.setSamplingRows(10000);
-        Mockito.doReturn(new Pair<String, List<String>>()).when(tableService).reloadAWSTableCompatibleCrossAccount(request2.getProject(),
-                request2.getS3TableExtInfo(), request2.getNeedSampling(), request2.getSamplingRows(), false, ExecutablePO.DEFAULT_PRIORITY, null);
+        Mockito.doReturn(new Pair<String, List<String>>()).when(tableService).reloadAWSTableCompatibleCrossAccount(
+                request2.getProject(), request2.getS3TableExtInfo(), request2.getNeedSampling(),
+                request2.getSamplingRows(), false, ExecutablePO.DEFAULT_PRIORITY, null);
         mockMvc.perform(MockMvcRequestBuilders.post("/api/tables/reload/compatibility/aws") //
-                        .contentType(MediaType.APPLICATION_JSON) //
-                        .content(JsonUtil.writeValueAsString(request2)) //
-                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
+                .contentType(MediaType.APPLICATION_JSON) //
+                .content(JsonUtil.writeValueAsString(request2)) //
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON))) //
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(openTableController).reloadAWSTablesCompatibleCrossAccount(request2);
     }

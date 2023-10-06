@@ -31,13 +31,13 @@ import org.apache.kylin.common.persistence.UnitMessages;
 import org.apache.kylin.common.persistence.event.Event;
 import org.apache.kylin.common.persistence.event.ResourceCreateOrUpdateEvent;
 import org.apache.kylin.common.persistence.event.ResourceDeleteEvent;
-import org.apache.kylin.junit.annotation.MetadataInfo;
-import org.apache.kylin.junit.annotation.OverwriteProp;
-import org.junit.Assert;
-import org.junit.jupiter.api.Test;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+import org.apache.kylin.junit.annotation.MetadataInfo;
+import org.apache.kylin.junit.annotation.OverwriteProp;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import lombok.SneakyThrows;
 import lombok.val;
 
@@ -53,9 +53,9 @@ public class MessageSynchronizationTest {
         synchronize.replayInTransaction(new UnitMessages(events));
         val resourceStore = ResourceStore.getKylinMetaStore(getTestConfig());
         val raw = resourceStore.getResource("/default/abc.json");
-        Assert.assertEquals(1, raw.getMvcc());
+        Assertions.assertEquals(1, raw.getMvcc());
         val empty = resourceStore.getResource("/default/abc3.json");
-        Assert.assertNull(empty);
+        Assertions.assertNull(empty);
     }
 
     @OverwriteProp(key = "kylin.server.mode", value = "query")
@@ -103,7 +103,7 @@ public class MessageSynchronizationTest {
         starter.countDown();
         latch1.await();
         latch2.await();
-        Assert.assertEquals(0, nullCount.get());
+        Assertions.assertEquals(0, nullCount.get());
     }
 
     private List<Event> createEvents() {

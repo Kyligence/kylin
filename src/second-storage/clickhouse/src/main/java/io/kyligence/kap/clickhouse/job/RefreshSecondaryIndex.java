@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -34,7 +35,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.kyligence.kap.clickhouse.ClickHouseNameUtil;
 import io.kyligence.kap.clickhouse.ddl.ClickHouseRender;
 import io.kyligence.kap.clickhouse.parser.ExistsQueryParser;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import io.kyligence.kap.secondstorage.ddl.AlterTable;
 import io.kyligence.kap.secondstorage.ddl.ExistsTable;

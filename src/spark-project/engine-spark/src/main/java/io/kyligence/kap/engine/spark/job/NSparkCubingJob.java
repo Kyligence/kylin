@@ -100,15 +100,15 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
 
     @VisibleForTesting
     public static NSparkCubingJob create(Set<NDataSegment> segments, Set<LayoutEntity> layouts, String submitter,
-                                         Set<JobBucket> buckets) {
+            Set<JobBucket> buckets) {
         return create(segments, layouts, submitter, JobTypeEnum.INDEX_BUILD, RandomUtil.randomUUIDStr(), null, null,
                 buckets);
     }
 
     @VisibleForTesting
     public static NSparkCubingJob create(Set<NDataSegment> segments, Set<LayoutEntity> layouts, String submitter,
-                                         JobTypeEnum jobType, String jobId, Set<String> ignoredSnapshotTables, Set<Long> partitions,
-                                         Set<JobBucket> buckets) {
+            JobTypeEnum jobType, String jobId, Set<String> ignoredSnapshotTables, Set<Long> partitions,
+            Set<JobBucket> buckets) {
         val params = new JobFactory.JobBuildParams(segments, layouts, submitter, jobType, jobId, null,
                 ignoredSnapshotTables, partitions, buckets, Maps.newHashMap());
         return innerCreate(params);
@@ -197,7 +197,7 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
     }
 
     private static AbstractExecutable initSecondStorageDeleteIndex(Set<LayoutEntity> toBeDeletedLayouts,
-                                                                   JobTypeEnum jobType, NDataflow df, NSparkCubingJob job, KylinConfigExt config) {
+            JobTypeEnum jobType, NDataflow df, NSparkCubingJob job, KylinConfigExt config) {
         if (!SecondStorageUtil.isModelEnable(df.getProject(), job.getTargetSubject())) {
             return null;
         }
@@ -210,7 +210,7 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
     }
 
     private static AbstractExecutable initSecondStorage(Set<LayoutEntity> layouts, JobTypeEnum jobType, NDataflow df,
-                                                        NSparkCubingJob job, KylinConfigExt config) {
+            NSparkCubingJob job, KylinConfigExt config) {
         AbstractExecutable secondStorage = null;
         if (SecondStorageUtil.isModelEnable(df.getProject(), job.getTargetSubject())) {
             // can't refresh segment when second storage do rebalanced
@@ -238,7 +238,7 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
     }
 
     private static AbstractExecutable initCleanUpTransactionalTable(KylinConfig kylinConfig, NDataflow df,
-                                                                    NSparkCubingJob job, KylinConfigExt config) {
+            NSparkCubingJob job, KylinConfigExt config) {
         AbstractExecutable cleanUpTransactionalTable = null;
         Boolean isRangePartitionTable = df.getModel().getAllTableRefs().stream()
                 .anyMatch(tableRef -> tableRef.getTableDesc().isRangePartition());
@@ -252,7 +252,8 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
         return cleanUpTransactionalTable;
     }
 
-    public static void setDAGRelations(AbstractExecutable job, KylinConfig config, NSparkCubingJob.NSparkCubingJobStep jobStep) {
+    public static void setDAGRelations(AbstractExecutable job, KylinConfig config,
+            NSparkCubingJob.NSparkCubingJobStep jobStep) {
         if (!StringUtils.equalsIgnoreCase(config.getJobSchedulerMode(), JobSchedulerModeEnum.CHAIN.toString())) {
             AbstractExecutable resourceDetect = jobStep.getResourceDetect();
             AbstractExecutable cubing = jobStep.getCubing();
@@ -284,14 +285,14 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
 
     public static void checkIfNeedBuildSnapshots(NSparkCubingJob job) {
         switch (job.getJobType()) {
-            case INC_BUILD:
-            case INDEX_REFRESH:
-            case INDEX_BUILD:
-                job.setParam(NBatchConstants.P_NEED_BUILD_SNAPSHOTS, "true");
-                break;
-            default:
-                job.setParam(NBatchConstants.P_NEED_BUILD_SNAPSHOTS, "false");
-                break;
+        case INC_BUILD:
+        case INDEX_REFRESH:
+        case INDEX_BUILD:
+            job.setParam(NBatchConstants.P_NEED_BUILD_SNAPSHOTS, "true");
+            break;
+        default:
+            job.setParam(NBatchConstants.P_NEED_BUILD_SNAPSHOTS, "false");
+            break;
         }
     }
 
@@ -372,14 +373,14 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
             existsSegments.add(segment.getId());
         }
         switch (getJobType()) {
-            case SUB_PARTITION_BUILD:
-                dataFlowUpdateRequest.setToRemoveSegmentPartitions(new Pair<>(existsSegments, partitions));
-                break;
-            case SUB_PARTITION_REFRESH:
-                dataFlowUpdateRequest.setResetToReadyPartitions(new Pair<>(existsSegments, partitions));
-                break;
-            default:
-                break;
+        case SUB_PARTITION_BUILD:
+            dataFlowUpdateRequest.setToRemoveSegmentPartitions(new Pair<>(existsSegments, partitions));
+            break;
+        case SUB_PARTITION_REFRESH:
+            dataFlowUpdateRequest.setResetToReadyPartitions(new Pair<>(existsSegments, partitions));
+            break;
+        default:
+            break;
         }
     }
 

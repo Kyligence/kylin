@@ -74,7 +74,8 @@ public class UnitOfWorkParams<T> {
     @Builder.Default
     private boolean retryMoreTimeForDeadLockException = false;
 
-    // TODO a temporary workaround for yinglong, this will use original config、skip lock in transaction、skip epoch checker、disable direct writing of metadata.
+    // TODO a temporary workaround for yinglong, this will use original config、
+    //  skip lock in transaction、skip epoch checker、disable direct writing of metadata.
     @Builder.Default
     private boolean transparent = false;
 

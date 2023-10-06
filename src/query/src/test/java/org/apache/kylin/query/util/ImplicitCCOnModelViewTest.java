@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.junit.After;
@@ -31,8 +32,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class ImplicitCCOnModelViewTest extends NLocalFileMetadataTestCase {
 

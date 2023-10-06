@@ -119,7 +119,7 @@ public class JobControllerV2 extends BaseController {
         Map<String, Object> result = getDataResponse("jobs", executables, (int)count, pageOffset, pageSize);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, result, "");
     }
-    
+
     @ApiOperation(value = "getJob", tags = { "DW" })
     @GetMapping(value = "/{jobId}")
     @ResponseBody

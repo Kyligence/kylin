@@ -35,9 +35,8 @@ import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.util.ClassUtil;
-import org.apache.kylin.query.routing.RealizationChooser;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.query.routing.RealizationChooser;
 
 import lombok.extern.slf4j.Slf4j;
 

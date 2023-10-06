@@ -18,16 +18,16 @@
 package org.apache.spark.ddl;
 
 public class DDLConstant {
-  public static final String LOGICAL_VIEW = "logic";
-  public static final String REPLACE_LOGICAL_VIEW = "replaceLogicalView";
-  public static final String CREATE_LOGICAL_VIEW = "createLogicalView";
-  public static final String DROP_LOGICAL_VIEW = "dropLogicalView";
-  public static final String HIVE_VIEW = "hive";
-  public static final String NO_RESTRICT = "noRestrict";
-  public static final Integer VIEW_RULE_PRIORITY = 1;
-  public static final Integer SOURCE_TABLE_RULE_PRIORITY = 2;
+    public static final String LOGICAL_VIEW = "logic";
+    public static final String REPLACE_LOGICAL_VIEW = "replaceLogicalView";
+    public static final String CREATE_LOGICAL_VIEW = "createLogicalView";
+    public static final String DROP_LOGICAL_VIEW = "dropLogicalView";
+    public static final String HIVE_VIEW = "hive";
+    public static final String NO_RESTRICT = "noRestrict";
+    public static final Integer VIEW_RULE_PRIORITY = 1;
+    public static final Integer SOURCE_TABLE_RULE_PRIORITY = 2;
 
-  private DDLConstant() {
+    private DDLConstant() {
 
-  }
+    }
 }

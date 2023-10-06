@@ -22,12 +22,11 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.secondstorage.SecondStorage;
 import io.kyligence.kap.secondstorage.SecondStorageConstants;
@@ -86,8 +85,8 @@ public class ClickHouseMerge extends ClickHouseLoad {
     @Override
     protected void updateMeta() {
         if (getSegmentIds().isEmpty()) {
-            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() ->
-                    getDataFlow().update(copied -> copied.getTableDataList().forEach(tableData -> {
+            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                    () -> getDataFlow().update(copied -> copied.getTableDataList().forEach(tableData -> {
                         tableData.mergePartitions(oldSegmentIds, targetSegmentId);
                     })), project, 1);
             return;

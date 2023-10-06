@@ -38,8 +38,8 @@ import org.apache.kylin.job.execution.SucceedChainedTestExecutable;
 import org.apache.kylin.job.rest.JobMapperFilter;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.junit.annotation.MetadataInfo;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -48,10 +48,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 @MetadataInfo(onlyProps = true)
 class JdbcJobSchedulerTest {
     private static final String PROJECT = "default";
-    
+
     private JobInfoDao jobInfoDao;
     private JobContext jobContext;
-    
+
     @BeforeEach
     public void setup() {
         KylinConfig config = getTestConfig();
@@ -65,11 +65,11 @@ class JdbcJobSchedulerTest {
     public void clean() {
         JobContextUtil.cleanUp();
     }
-    
+
     @Test
     void happyPath() {
         String jobId = mockJob();
-        Assert.assertEquals(jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus(),
+        Assertions.assertEquals(jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus(),
                 ExecutableState.READY.name());
         await().atMost(2, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
                 .equals(ExecutableState.PENDING.name()));
@@ -80,14 +80,14 @@ class JdbcJobSchedulerTest {
         //release lock
         await().atMost(5, TimeUnit.SECONDS).until(() -> jobContext.getJobLockMapper().selectByJobId(jobId) == null);
     }
-    
+
     @Test
     void oneJobCanNotRunOnTwoNodesTest() throws Exception {
         JobContext secondJobContext = mockJobContext("127.0.0.1:7071");
         String jobId = mockJob();
         await().atMost(5, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
                 .equals(ExecutableState.RUNNING.name()));
-        Assert.assertEquals(secondJobContext.getJobScheduler().getRunningJob().size()
+        Assertions.assertEquals(secondJobContext.getJobScheduler().getRunningJob().size()
                 + jobContext.getJobScheduler().getRunningJob().size(), 1);
 
         secondJobContext.destroy();
@@ -103,10 +103,10 @@ class JdbcJobSchedulerTest {
         JobMapperFilter filter = new JobMapperFilter();
         filter.setStatuses(ExecutableState.RUNNING);
         await().atMost(5, TimeUnit.SECONDS).until(() -> jobInfoDao.getJobInfoListByFilter(filter).size() == 3);
-        Assert.assertEquals(secondJobContext.getJobScheduler().getRunningJob().size()
+        Assertions.assertEquals(secondJobContext.getJobScheduler().getRunningJob().size()
                 + jobContext.getJobScheduler().getRunningJob().size(), 3);
-        Assert.assertTrue(jobContext.getJobScheduler().getRunningJob().size() > 0);
-        Assert.assertTrue(secondJobContext.getJobScheduler().getRunningJob().size() > 0);
+        Assertions.assertTrue(jobContext.getJobScheduler().getRunningJob().size() > 0);
+        Assertions.assertTrue(secondJobContext.getJobScheduler().getRunningJob().size() > 0);
 
         secondJobContext.destroy();
         System.clearProperty("COST_TIME");
@@ -119,9 +119,9 @@ class JdbcJobSchedulerTest {
         lock.setLockNode("mock_node");
         lock.setLockExpireTime(new Date());
         int expect = jobContext.getJobLockMapper().insert(lock);
-        Assert.assertEquals(1, expect);
-        await().atMost(5, TimeUnit.SECONDS).until(
-                () -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus().equals(ExecutableState.SUCCEED.name()));
+        Assertions.assertEquals(1, expect);
+        await().atMost(5, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
+                .equals(ExecutableState.SUCCEED.name()));
     }
 
     @Test
@@ -136,24 +136,24 @@ class JdbcJobSchedulerTest {
         String p0_1 = mockJobWithPriority(0);
         String p1_1 = mockJobWithPriority(1);
         jobContext.getJobScheduler().start();
-        await().atMost(1, TimeUnit.MINUTES).until(() ->
-                jobInfoDao.getExecutablePOByUuid(p0_0).getOutput().getStatus().equals(ExecutableState.SUCCEED.name())
+        await().atMost(1, TimeUnit.MINUTES).until(() -> jobInfoDao.getExecutablePOByUuid(p0_0).getOutput().getStatus()
+                .equals(ExecutableState.SUCCEED.name())
                 && jobInfoDao.getExecutablePOByUuid(p1_0).getOutput().getStatus().equals(ExecutableState.SUCCEED.name())
                 && jobInfoDao.getExecutablePOByUuid(p2_0).getOutput().getStatus().equals(ExecutableState.SUCCEED.name())
                 && jobInfoDao.getExecutablePOByUuid(p0_1).getOutput().getStatus().equals(ExecutableState.SUCCEED.name())
                 && jobInfoDao.getExecutablePOByUuid(p1_1).getOutput().getStatus()
                         .equals(ExecutableState.SUCCEED.name()));
-        Assert.assertTrue(jobInfoDao.getExecutablePOByUuid(p0_0).getOutput().getStartTime() < jobInfoDao
+        Assertions.assertTrue(jobInfoDao.getExecutablePOByUuid(p0_0).getOutput().getStartTime() < jobInfoDao
                 .getExecutablePOByUuid(p1_0).getOutput().getStartTime());
-        Assert.assertTrue(jobInfoDao.getExecutablePOByUuid(p0_0).getOutput().getStartTime() < jobInfoDao
+        Assertions.assertTrue(jobInfoDao.getExecutablePOByUuid(p0_0).getOutput().getStartTime() < jobInfoDao
                 .getExecutablePOByUuid(p1_1).getOutput().getStartTime());
-        Assert.assertTrue(jobInfoDao.getExecutablePOByUuid(p0_1).getOutput().getStartTime() < jobInfoDao
+        Assertions.assertTrue(jobInfoDao.getExecutablePOByUuid(p0_1).getOutput().getStartTime() < jobInfoDao
                 .getExecutablePOByUuid(p1_0).getOutput().getStartTime());
-        Assert.assertTrue(jobInfoDao.getExecutablePOByUuid(p0_1).getOutput().getStartTime() < jobInfoDao
+        Assertions.assertTrue(jobInfoDao.getExecutablePOByUuid(p0_1).getOutput().getStartTime() < jobInfoDao
                 .getExecutablePOByUuid(p1_1).getOutput().getStartTime());
-        Assert.assertTrue(jobInfoDao.getExecutablePOByUuid(p1_0).getOutput().getStartTime() < jobInfoDao
+        Assertions.assertTrue(jobInfoDao.getExecutablePOByUuid(p1_0).getOutput().getStartTime() < jobInfoDao
                 .getExecutablePOByUuid(p2_0).getOutput().getStartTime());
-        Assert.assertTrue(jobInfoDao.getExecutablePOByUuid(p1_1).getOutput().getStartTime() < jobInfoDao
+        Assertions.assertTrue(jobInfoDao.getExecutablePOByUuid(p1_1).getOutput().getStartTime() < jobInfoDao
                 .getExecutablePOByUuid(p2_0).getOutput().getStartTime());
     }
 
@@ -179,19 +179,19 @@ class JdbcJobSchedulerTest {
         jobContext.setJobScheduler(jobScheduler);
         List<String> order1 = jobContext.getJobScheduler().findNonLockIdListInOrder(20);
         List<String> order2 = jobContext.getJobScheduler().findNonLockIdListInOrder(20);
-        Boolean hasDiff = false;
+        boolean hasDiff = false;
         int currentPriority = 0;
         for (int i = 0; i < order1.size(); i++) {
             String jobId1 = order1.get(i);
             String jobId2 = order2.get(i);
             int priority1 = jobMap.get(jobId1);
             int priority2 = jobMap.get(jobId2);
-            Assert.assertEquals(priority1, priority2);
-            Assert.assertTrue(priority1 >= currentPriority);
+            Assertions.assertEquals(priority1, priority2);
+            Assertions.assertTrue(priority1 >= currentPriority);
             currentPriority = priority1;
             hasDiff |= !jobId1.equals(jobId2);
         }
-        Assert.assertTrue(hasDiff);
+        Assertions.assertTrue(hasDiff);
     }
 
     @Test
@@ -202,7 +202,7 @@ class JdbcJobSchedulerTest {
         String jobId = job.getJobId();
         JobLock lock = new JobLock(jobId);
         int expect = jobContext.getJobLockMapper().insert(lock);
-        Assert.assertEquals(1, expect);
+        Assertions.assertEquals(1, expect);
         await().atMost(60, TimeUnit.SECONDS).until(() -> jobContext.getJobLockMapper().selectByJobId(jobId) == null);
     }
 

@@ -23,8 +23,11 @@ import org.junit.jupiter.api.Test;
 public class SecondStorageConstantsTest {
     @Test
     public void test01() {
-        Assertions.assertTrue(SecondStorageConstants.SKIP_STEP_RUNNING.contains(SecondStorageConstants.STEP_EXPORT_TO_SECOND_STORAGE));
-        Assertions.assertTrue(SecondStorageConstants.SKIP_JOB_RUNNING.contains(SecondStorageConstants.STEP_SECOND_STORAGE_SEGMENT_CLEAN));
-        Assertions.assertTrue(SecondStorageConstants.SKIP_STEP_RUNNING.contains(SecondStorageConstants.STEP_SECOND_STORAGE_INDEX_CLEAN));
+        Assertions.assertTrue(SecondStorageConstants.SKIP_STEP_RUNNING
+                .contains(SecondStorageConstants.STEP_EXPORT_TO_SECOND_STORAGE));
+        Assertions.assertTrue(SecondStorageConstants.SKIP_JOB_RUNNING
+                .contains(SecondStorageConstants.STEP_SECOND_STORAGE_SEGMENT_CLEAN));
+        Assertions.assertTrue(SecondStorageConstants.SKIP_STEP_RUNNING
+                .contains(SecondStorageConstants.STEP_SECOND_STORAGE_INDEX_CLEAN));
     }
 }

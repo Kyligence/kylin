@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.FusionModel;
@@ -47,8 +48,6 @@ import org.apache.kylin.rest.util.ModelTripleComparator;
 import org.apache.kylin.rest.util.ModelUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.val;

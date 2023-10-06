@@ -18,22 +18,23 @@
 
 package io.kyligence.kap.secondstorage.util;
 
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.exception.JobErrorCode;
-import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.msg.MsgPicker;
-import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.ExecutableManager;
-import org.apache.kylin.job.execution.JobTypeEnum;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.exception.JobErrorCode;
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.execution.JobTypeEnum;
+
+import io.kyligence.kap.secondstorage.SecondStorageUtil;
 
 public class SecondStorageJobUtil {
     public static final Set<JobTypeEnum> SECOND_STORAGE_JOBS = Sets.newHashSet(JobTypeEnum.EXPORT_TO_SECOND_STORAGE,
@@ -43,19 +44,17 @@ public class SecondStorageJobUtil {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
         return executableManager.getJobs().stream().map(executableManager::getJob)
-                .filter(job -> SECOND_STORAGE_JOBS.contains(job.getJobType()))
-                .collect(Collectors.toList());
+                .filter(job -> SECOND_STORAGE_JOBS.contains(job.getJobType())).collect(Collectors.toList());
     }
 
     public static void validateSegment(String project, String modelId, List<String> segmentIds) {
         List<AbstractExecutable> jobs = findSecondStorageJobByProject(project).stream()
                 .filter(job -> SecondStorageUtil.RUNNING_STATE.contains(job.getStatus()))
-                .filter(job -> Objects.equals(job.getTargetModelId(), modelId))
-                .filter(job -> {
-                    List<String> targetSegments = Optional.ofNullable(job.getTargetSegments()).orElse(Collections.emptyList());
+                .filter(job -> Objects.equals(job.getTargetModelId(), modelId)).filter(job -> {
+                    List<String> targetSegments = Optional.ofNullable(job.getTargetSegments())
+                            .orElse(Collections.emptyList());
                     return targetSegments.stream().anyMatch(segmentIds::contains);
-                })
-                .collect(Collectors.toList());
+                }).collect(Collectors.toList());
         if (!jobs.isEmpty()) {
             throw new KylinException(JobErrorCode.SECOND_STORAGE_JOB_EXISTS,
                     MsgPicker.getMsg().getSecondStorageConcurrentOperate());
@@ -65,8 +64,7 @@ public class SecondStorageJobUtil {
     public static void validateModel(String project, String modelId) {
         List<AbstractExecutable> jobs = findSecondStorageJobByProject(project).stream()
                 .filter(job -> SecondStorageUtil.RUNNING_STATE.contains(job.getStatus()))
-                .filter(job -> Objects.equals(job.getTargetModelId(), modelId))
-                .collect(Collectors.toList());
+                .filter(job -> Objects.equals(job.getTargetModelId(), modelId)).collect(Collectors.toList());
         if (!jobs.isEmpty()) {
             throw new KylinException(JobErrorCode.SECOND_STORAGE_JOB_EXISTS,
                     MsgPicker.getMsg().getSecondStorageConcurrentOperate());

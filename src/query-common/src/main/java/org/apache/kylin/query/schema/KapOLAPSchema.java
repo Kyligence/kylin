@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.calcite.schema.Table;
-import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.TableDesc;
 
 public class KapOLAPSchema extends OLAPSchema {
     private String schemaName;
@@ -52,7 +52,8 @@ public class KapOLAPSchema extends OLAPSchema {
         Map<String, Table> olapTables = new HashMap<>();
 
         for (TableDesc tableDesc : tables) {
-            final String tableName = tableDesc.getName();//safe to use tableDesc.getUuid() here, it is in a DB context now
+            final String tableName = tableDesc.getName();
+            //safe to use tableDesc.getUuid() here, it is in a DB context now
             final KapOLAPTable table = new KapOLAPTable(this, tableDesc, modelsMap);
             olapTables.put(tableName, table);
         }

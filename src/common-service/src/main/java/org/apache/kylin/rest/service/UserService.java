@@ -75,7 +75,8 @@ public interface UserService extends UserDetailsManager {
                 .collect(Collectors.toList());
     }
 
-    //For performance consideration, list all users may be incomplete(eg. not load user's authorities until authorities has benn used).
+    //For performance consideration, list all users may be incomplete(
+    // e.g. not load user's authorities until authorities has benn used).
     //So it's an extension point that can complete user's information latter.
     //loadUserByUsername() has guarantee that the return user is complete.
     void completeUserInfo(ManagedUser user);

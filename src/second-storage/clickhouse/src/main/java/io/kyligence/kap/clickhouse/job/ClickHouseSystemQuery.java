@@ -18,6 +18,13 @@
 
 package io.kyligence.kap.clickhouse.job;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Locale;
+import java.util.function.Function;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
+
 import io.kyligence.kap.clickhouse.ddl.ClickHouseRender;
 import io.kyligence.kap.secondstorage.ddl.Select;
 import io.kyligence.kap.secondstorage.ddl.exp.ColumnWithAlias;
@@ -25,35 +32,21 @@ import io.kyligence.kap.secondstorage.ddl.exp.GroupBy;
 import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
 import lombok.Builder;
 import lombok.Data;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Locale;
-import java.util.function.Function;
 
 public class ClickHouseSystemQuery {
-    public static final Function<ResultSet, PartitionSize> TABLE_STORAGE_MAPPER= rs -> {
+    public static final Function<ResultSet, PartitionSize> TABLE_STORAGE_MAPPER = rs -> {
         try {
-            return PartitionSize.builder()
-                    .database(rs.getString(1))
-                    .table(rs.getString(2))
-                    .partition(rs.getString(3))
-                    .bytes(Long.parseLong(rs.getString(4)))
-                    .build();
+            return PartitionSize.builder().database(rs.getString(1)).table(rs.getString(2)).partition(rs.getString(3))
+                    .bytes(Long.parseLong(rs.getString(4))).build();
         } catch (SQLException sqlException) {
             return ExceptionUtils.rethrow(sqlException);
         }
     };
 
-    public static final Function<ResultSet, QueryMetric> QUERY_METRIC_MAPPER= rs -> {
+    public static final Function<ResultSet, QueryMetric> QUERY_METRIC_MAPPER = rs -> {
         try {
-            return QueryMetric.builder()
-                    .readRows(rs.getLong(1))
-                    .readBytes(rs.getLong(2))
-                    .clientName(rs.getString(3))
-                    .resultRows(rs.getLong(4))
-                    .build();
+            return QueryMetric.builder().readRows(rs.getLong(1)).readBytes(rs.getLong(2)).clientName(rs.getString(3))
+                    .resultRows(rs.getLong(4)).build();
         } catch (SQLException sqlException) {
             return ExceptionUtils.rethrow(sqlException);
         }
@@ -64,8 +57,7 @@ public class ClickHouseSystemQuery {
             .column(ColumnWithAlias.builder().name("table").build())
             .column(ColumnWithAlias.builder().name("partition").build())
             .column(ColumnWithAlias.builder().expr("sum(bytes)").build())
-            .groupby(new GroupBy()
-                    .column(ColumnWithAlias.builder().name("database").build())
+            .groupby(new GroupBy().column(ColumnWithAlias.builder().name("database").build())
                     .column(ColumnWithAlias.builder().name("table").build())
                     .column(ColumnWithAlias.builder().name("partition").build()))
             .where("active=1");
@@ -78,7 +70,8 @@ public class ClickHouseSystemQuery {
             .groupby(new GroupBy().column(ColumnWithAlias.builder().name("client_name").build()))
             .where("type = 'QueryFinish' AND event_time >= addHours(now(), -1) AND event_date >= addDays(now(), -1) AND position(client_name, '%s') = 1");
 
-    private ClickHouseSystemQuery() {}
+    private ClickHouseSystemQuery() {
+    }
 
     public static String queryTableStorageSize() {
         return tableStorageSize.toSql(new ClickHouseRender());

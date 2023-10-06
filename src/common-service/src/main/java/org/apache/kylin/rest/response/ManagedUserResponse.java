@@ -18,11 +18,10 @@
 
 package org.apache.kylin.rest.response;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
+import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.Data;
 
 @Data

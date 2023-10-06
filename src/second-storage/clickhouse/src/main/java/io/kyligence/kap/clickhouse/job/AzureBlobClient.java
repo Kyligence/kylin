@@ -18,19 +18,6 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.StorageCredentials;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
-import com.microsoft.azure.storage.blob.SharedAccessBlobPolicy;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.Singletons;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -39,6 +26,21 @@ import java.security.InvalidKeyException;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.Singletons;
+
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.CloudBlobClient;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.SharedAccessBlobPolicy;
+
+import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class AzureBlobClient {
@@ -78,8 +80,10 @@ public class AzureBlobClient {
             CloudBlobContainer container = this.cloudBlobClient.getContainerReference(blobUrl.getContainer());
             SharedAccessBlobPolicy policy = new SharedAccessBlobPolicy();
             policy.setPermissionsFromString("r");
-            policy.setSharedAccessStartTime(Date.from(OffsetDateTime.now(ZoneId.of("UTC")).minusHours(expireHours).toInstant()));
-            policy.setSharedAccessExpiryTime(Date.from(OffsetDateTime.now(ZoneId.of("UTC")).plusHours(expireHours).toInstant()));
+            policy.setSharedAccessStartTime(
+                    Date.from(OffsetDateTime.now(ZoneId.of("UTC")).minusHours(expireHours).toInstant()));
+            policy.setSharedAccessExpiryTime(
+                    Date.from(OffsetDateTime.now(ZoneId.of("UTC")).plusHours(expireHours).toInstant()));
             return container.generateSharedAccessSignature(policy, null);
         } catch (URISyntaxException | StorageException | InvalidKeyException e) {
             log.error("generate SAS key for {} failed", blobPath, e);
@@ -115,6 +119,4 @@ public class AzureBlobClient {
             return ExceptionUtils.rethrow(e);
         }
     }
-
-
 }

@@ -30,6 +30,7 @@ import org.apache.curator.x.discovery.details.ServiceCacheImpl;
 import org.apache.curator.x.discovery.details.ServiceCacheListener;
 import org.apache.curator.x.discovery.details.ServiceDiscoveryImpl;
 import org.apache.kylin.common.util.LogOutputTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,8 +43,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.springframework.cloud.client.serviceregistry.Registration;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;

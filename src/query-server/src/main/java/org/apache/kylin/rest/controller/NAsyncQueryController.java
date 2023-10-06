@@ -48,6 +48,7 @@ import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.StopQueryBroadcastEventNotifier;
 import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.util.AsyncQueryUtil;
 import org.apache.kylin.rest.exception.ForbiddenException;
@@ -77,7 +78,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.alibaba.ttl.TtlRunnable;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.swagger.annotations.ApiOperation;
 

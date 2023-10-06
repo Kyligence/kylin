@@ -32,10 +32,9 @@ import java.util.Stack;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.kylin.common.util.OrderedProperties;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 public class BackwardCompatibilityConfig {
 

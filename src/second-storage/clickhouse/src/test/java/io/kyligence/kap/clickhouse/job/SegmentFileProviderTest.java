@@ -18,6 +18,7 @@
 
 package io.kyligence.kap.clickhouse.job;
 
+import java.io.File;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
@@ -25,8 +26,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.File;
 
 public class SegmentFileProviderTest extends NLocalFileMetadataTestCase {
 

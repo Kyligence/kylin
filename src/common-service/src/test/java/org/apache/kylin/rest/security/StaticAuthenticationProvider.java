@@ -18,8 +18,9 @@
 
 package org.apache.kylin.rest.security;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import org.springframework.security.core.Authentication;
+
+import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class StaticAuthenticationProvider extends OpenAuthenticationProvider {
     @Override
@@ -27,9 +28,6 @@ public class StaticAuthenticationProvider extends OpenAuthenticationProvider {
         String name = authentication.getName();
         Object credentials = authentication.getCredentials();
         ManagedUser user = (ManagedUser) getUserService().loadUserByUsername(name);
-        if (!credentials.equals(user.getPassword())) {
-            return false;
-        }
-        return true;
+        return credentials.equals(user.getPassword());
     }
 }

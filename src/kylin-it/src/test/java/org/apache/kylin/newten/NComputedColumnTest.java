@@ -66,13 +66,13 @@ public class NComputedColumnTest extends NLocalWithSparkSessionTest {
         NDataflowManager dsMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
         NDataflow df = dsMgr.getDataflow(dfID);
         val layouts = df.getIndexPlan().getAllLayouts();
-        indexDataConstructor.buildIndex(dfID, SegmentRange.TimePartitionedSegmentRange.createInfinite(), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfID, SegmentRange.TimePartitionedSegmentRange.createInfinite(),
+                Sets.newLinkedHashSet(layouts), true);
         String sqlHitCube = "select (1+2) as c1,(LINEORDER.LO_TAX +1) as c2,(CUSTOMER.C_NAME +'USA') as c3 "
                 + "from SSB.P_LINEORDER as LINEORDER join SSB.CUSTOMER as CUSTOMER on LINEORDER.LO_CUSTKEY = CUSTOMER.C_CUSTKEY "
                 + "group by (1+2),(LINEORDER.LO_TAX +1),(CUSTOMER.C_NAME +'USA') ";
-        List<String> hitCubeResult = ExecAndComp.queryModelWithoutCompute(getProject(), sqlHitCube).collectAsList().stream()
-                .map(Row::toString).collect(Collectors.toList());
+        List<String> hitCubeResult = ExecAndComp.queryModelWithoutCompute(getProject(), sqlHitCube).collectAsList()
+                .stream().map(Row::toString).collect(Collectors.toList());
         Assert.assertEquals(9, hitCubeResult.size());
     }
 

@@ -34,6 +34,8 @@ import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.tool.util.JobMetadataWriter;
 import org.junit.After;
@@ -45,17 +47,15 @@ import org.junit.rules.TemporaryFolder;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.val;
 
 public class YarnApplicationToolTest extends NLocalFileMetadataTestCase {
 
-    private final static String project = "calories";
-    private final static String jobId = "9462fee8-e6cd-4d18-a5fc-b598a3c5edb5";
-    private final static String DATA_DIR = "src/test/resources/ut_audit_log/";
-    private final static String YARN_APPLICATION_ID = "application_1554187389076_9294\napplication_1554187389076_9295\napplication_1554187389076_9296\n";
+    private static final String project = "calories";
+    private static final String jobId = "9462fee8-e6cd-4d18-a5fc-b598a3c5edb5";
+    private static final String DATA_DIR = "src/test/resources/ut_audit_log/";
+    private static final String YARN_APPLICATION_ID = "application_1554187389076_9294\napplication_1554187389076_9295\napplication_1554187389076_9296\n";
 
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();

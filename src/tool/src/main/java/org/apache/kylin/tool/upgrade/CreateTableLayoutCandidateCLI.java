@@ -28,16 +28,15 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.StorageURL;
-import org.apache.kylin.common.util.ExecutableApplication;
-import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
+import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.OptionBuilder;
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.metadata.recommendation.util.RawRecStoreUtil;
+import org.apache.kylin.common.util.OptionsHelper;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.tool.util.MetadataUtil;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
+import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
+import io.kyligence.kap.metadata.recommendation.util.RawRecStoreUtil;
 import lombok.extern.slf4j.Slf4j;
 
 /**

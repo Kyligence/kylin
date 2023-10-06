@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.cache.Cache;
+import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -53,9 +55,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import org.apache.kylin.guava30.shaded.common.cache.Cache;
-import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 
 import lombok.val;
 
@@ -255,8 +254,7 @@ public class SystemServiceTest extends NLocalFileMetadataTestCase {
             overrideKylinProps.put("kylin.engine.spark-conf.spark.sql.shuffle.partitions", "10");
         });
         NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), project);
-        NDataModel model = NDataModelManager.getInstance(getTestConfig(), project)
-                .getDataModelDescByAlias(modelName);
+        NDataModel model = NDataModelManager.getInstance(getTestConfig(), project).getDataModelDescByAlias(modelName);
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(model.getId());
         indexPlanManager.updateIndexPlan(indexPlan.getUuid(), copyForWrite -> {
             LinkedHashMap<String, String> overrideProps = indexPlan.getOverrideProps();

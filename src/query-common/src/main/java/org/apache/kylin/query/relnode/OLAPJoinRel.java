@@ -66,7 +66,7 @@ import org.apache.kylin.query.schema.OLAPTable;
  */
 public class OLAPJoinRel extends EnumerableJoin implements OLAPRel {
 
-    final static String[] COLUMN_ARRAY_MARKER = new String[0];
+    static final String[] COLUMN_ARRAY_MARKER = new String[0];
 
     protected OLAPContext context;
     protected ColumnRowType columnRowType;
@@ -100,7 +100,8 @@ public class OLAPJoinRel extends EnumerableJoin implements OLAPRel {
 
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        // assign a huge cost on right join and cross join so that the swapped left join and inner join will win in the optimization
+        // assign a huge cost on right join and cross join so that 
+        // the swapped left join and inner join will win in the optimization
         return joinType == JoinRelType.RIGHT || condition.isAlwaysTrue()
                 ? super.computeSelfCost(planner, mq).multiplyBy(100)
                 : super.computeSelfCost(planner, mq).multiplyBy(.05);

@@ -56,13 +56,12 @@ import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.ShellException;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.source.hive.HiveCmdBuilder;
-
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -293,14 +292,14 @@ public class HiveTransactionTableHelper {
             if (intDataTypeFlag || dateDataTypeFlag || strDataTypeFlag) {
                 String partitionDateFormat = partitionDesc.getPartitionDateFormat();
                 log.info("table partition data format is :{}", partitionDateFormat);
-                String beginDate = DateFormat.formatToDateStr(Long.parseLong(params.getOrDefault("segmentStart", "0")), partitionDateFormat);
-                String endDate = DateFormat.formatToDateStr(Long.parseLong(params.getOrDefault("segmentEnd", "0")), partitionDateFormat);
+                String beginDate = DateFormat.formatToDateStr(Long.parseLong(params.getOrDefault("segmentStart", "0")),
+                        partitionDateFormat);
+                String endDate = DateFormat.formatToDateStr(Long.parseLong(params.getOrDefault("segmentEnd", "0")),
+                        partitionDateFormat);
                 log.info("segment range is :[{},{}]", beginDate, endDate);
-                if(intDataTypeFlag) {
-                    sql = String.format(Locale.ROOT,
-                            "WHERE %s BETWEEN %d AND %d", doQuote(partitionDataColumn),
-                            Integer.parseInt(beginDate),
-                            Integer.parseInt(endDate));
+                if (intDataTypeFlag) {
+                    sql = String.format(Locale.ROOT, "WHERE %s BETWEEN %d AND %d", doQuote(partitionDataColumn),
+                            Integer.parseInt(beginDate), Integer.parseInt(endDate));
                 } else {
                     sql = String.format(Locale.ROOT, "WHERE %s BETWEEN '%s' AND '%s'", doQuote(partitionDataColumn),
                             beginDate, endDate);

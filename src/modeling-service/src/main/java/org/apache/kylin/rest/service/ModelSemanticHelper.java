@@ -480,20 +480,20 @@ public class ModelSemanticHelper extends BasicService {
         return matchAlias;
     }
 
-    private Function<List<NDataModel.NamedColumn>, Map<String, NDataModel.NamedColumn>> toExistMap = allCols -> allCols
-            .stream().filter(NDataModel.NamedColumn::isExist)
-            .collect(Collectors.toMap(NDataModel.NamedColumn::getAliasDotColumn, Function.identity()));
+    private final Function<List<NDataModel.NamedColumn>, Map<String, NDataModel.NamedColumn>> toExistMap //
+            = allCols -> allCols.stream().filter(NDataModel.NamedColumn::isExist)
+                    .collect(Collectors.toMap(NDataModel.NamedColumn::getAliasDotColumn, Function.identity()));
 
-    private Function<List<NDataModel.Measure>, Map<SimplifiedMeasure, NDataModel.Measure>> toMeasureMap = allCols -> allCols
-            .stream().filter(m -> !m.isTomb())
-            .collect(Collectors.toMap(SimplifiedMeasure::fromMeasure, Function.identity(), (u, v) -> {
-                throw new KylinException(ServerErrorCode.DUPLICATE_MEASURE_EXPRESSION,
-                        String.format(Locale.ROOT, MsgPicker.getMsg().getDuplicateMeasureDefinition(), v.getName()));
-            }));
+    private final Function<List<NDataModel.Measure>, Map<SimplifiedMeasure, NDataModel.Measure>> toMeasureMap //
+            = allCols -> allCols.stream().filter(m -> !m.isTomb())
+                    .collect(Collectors.toMap(SimplifiedMeasure::fromMeasure, Function.identity(), (u, v) -> {
+                        throw new KylinException(ServerErrorCode.DUPLICATE_MEASURE_EXPRESSION, String
+                                .format(Locale.ROOT, MsgPicker.getMsg().getDuplicateMeasureDefinition(), v.getName()));
+                    }));
 
-    private Function<List<NDataModel.NamedColumn>, Map<String, NDataModel.NamedColumn>> toDimensionMap = allCols -> allCols
-            .stream().filter(NDataModel.NamedColumn::isDimension)
-            .collect(Collectors.toMap(NDataModel.NamedColumn::getAliasDotColumn, Function.identity()));
+    private final Function<List<NDataModel.NamedColumn>, Map<String, NDataModel.NamedColumn>> toDimensionMap //
+            = allCols -> allCols.stream().filter(NDataModel.NamedColumn::isDimension)
+                    .collect(Collectors.toMap(NDataModel.NamedColumn::getAliasDotColumn, Function.identity()));
 
     private boolean isValidMeasure(MeasureDesc measure) {
         val funcDesc = measure.getFunction();

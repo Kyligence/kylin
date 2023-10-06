@@ -55,7 +55,7 @@ public class ThreadViewResourceStore extends ResourceStore {
         this.overlay = new InMemResourceStore(kylinConfig);
         resources = Lists.newArrayList();
     }
-    
+
     @Override
     public MetadataStore getMetadataStore() {
         return underlying.getMetadataStore();

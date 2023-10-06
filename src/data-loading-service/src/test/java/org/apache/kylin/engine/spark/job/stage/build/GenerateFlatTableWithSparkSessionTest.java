@@ -150,9 +150,10 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
         NDataSegment segment = dataflow.getSegment(SEGMENT_ID);
         // Layouts to build
         Set<Long> layoutIDs = Sets.newHashSet(LAYOUT_ID_TO_BUILD);
-        Set<LayoutEntity> readOnlyLayouts = Collections.unmodifiableSet(NSparkCubingUtil.toLayouts(indexPlan, layoutIDs));
+        Set<LayoutEntity> readOnlyLayouts = Collections
+                .unmodifiableSet(NSparkCubingUtil.toLayouts(indexPlan, layoutIDs));
 
-        return new Object[] {indexPlan, dataflow, segment, readOnlyLayouts};
+        return new Object[] { indexPlan, dataflow, segment, readOnlyLayouts };
     }
 
     @Test
@@ -180,11 +181,7 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "1,10001",
-            "20000000001,20000010001",
-            "1,10001,20000000001,20000010001"
-    })
+    @ValueSource(strings = { "1,10001", "20000000001,20000010001", "1,10001,20000000001,20000010001" })
     void testCheckDataCount_Good_WithNonExistingLayouts(String nonExistingLayouts) throws Exception {
         // Enable data count check
         overwriteSystemProp("kylin.build.data-count-check-enabled", "true");
@@ -195,7 +192,8 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(MODEL_ID);
         // Layouts to build
         Set<Long> layoutIDs = Sets.newHashSet(LAYOUT_ID_TO_BUILD);
-        Set<LayoutEntity> readOnlyLayouts = Collections.unmodifiableSet(NSparkCubingUtil.toLayouts(indexPlan, layoutIDs));
+        Set<LayoutEntity> readOnlyLayouts = Collections
+                .unmodifiableSet(NSparkCubingUtil.toLayouts(indexPlan, layoutIDs));
         // Remove all layouts for test
         indexPlanManager.updateIndexPlan(MODEL_ID, copyForWrite -> {
             copyForWrite.removeLayouts(nonExistingLayoutsSet, true, true);
@@ -207,8 +205,7 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
         // Prepare flat table parquet
         prepareFlatTableParquet(dataflow, segment, false);
         // Prepare already existing layouts' parquet
-        prepareLayoutsParquet(indexPlan, segment, false, false, false,
-                nonExistingLayoutsSet);
+        prepareLayoutsParquet(indexPlan, segment, false, false, false, nonExistingLayoutsSet);
         // Execute job
         ExecutableState state = executeJob(segment, readOnlyLayouts);
 
@@ -248,14 +245,9 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
     }
 
     @ParameterizedTest
-    @CsvSource({
-            "true, false, false",
-            "false, true, false",
-            "false, false, true"
-    })
-    void testCheckDataCount_Failed(boolean loseOneAggLayoutRecord,
-                                   boolean loseOneTableLayoutRecord,
-                                   boolean loseTowTableLayoutRecords) throws Exception {
+    @CsvSource({ "true, false, false", "false, true, false", "false, false, true" })
+    void testCheckDataCount_Failed(boolean loseOneAggLayoutRecord, boolean loseOneTableLayoutRecord,
+            boolean loseTowTableLayoutRecords) throws Exception {
         Object[] objs = initDataCountCheckTest();
         IndexPlan indexPlan = (IndexPlan) objs[0];
         NDataflow dataflow = (NDataflow) objs[1];
@@ -265,7 +257,8 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
         // Prepare flat table parquet
         prepareFlatTableParquet(dataflow, segment, false);
         // Prepare already existing layouts' parquet
-        prepareLayoutsParquet(indexPlan, segment, loseOneAggLayoutRecord, loseOneTableLayoutRecord, loseTowTableLayoutRecords);
+        prepareLayoutsParquet(indexPlan, segment, loseOneAggLayoutRecord, loseOneTableLayoutRecord,
+                loseTowTableLayoutRecords);
         // Execute job
         ExecutableState state = executeJob(segment, readOnlyLayouts);
 
@@ -298,22 +291,19 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
         Dataset<Row> flatTableDS = ss.createDataFrame(rows, schema);
 
         ss.sessionState().conf().setLocalProperty("spark.sql.sources.repartitionWritingDataSource", "true");
-        flatTableDS.write().mode(SaveMode.Overwrite).parquet(config.getFlatTableDir(getProject(), dataflow.getId(), segment.getId()).toString());
+        flatTableDS.write().mode(SaveMode.Overwrite)
+                .parquet(config.getFlatTableDir(getProject(), dataflow.getId(), segment.getId()).toString());
     }
 
-    private void prepareLayoutsParquet(IndexPlan indexPlan, NDataSegment segment,
-                                       boolean loseOneAggLayoutRecordForTest,
-                                       boolean loseOneTableLayoutRecordForTest,
-                                       boolean loseTwoTableLayoutRecordsForTest) {
+    private void prepareLayoutsParquet(IndexPlan indexPlan, NDataSegment segment, boolean loseOneAggLayoutRecordForTest,
+            boolean loseOneTableLayoutRecordForTest, boolean loseTwoTableLayoutRecordsForTest) {
         prepareLayoutsParquet(indexPlan, segment, loseOneAggLayoutRecordForTest, loseOneTableLayoutRecordForTest,
                 loseTwoTableLayoutRecordsForTest, null);
     }
 
-    private void prepareLayoutsParquet(IndexPlan indexPlan, NDataSegment segment,
-                                       boolean loseOneAggLayoutRecordForTest,
-                                       boolean loseOneTableLayoutRecordForTest,
-                                       boolean loseTwoTableLayoutRecordsForTest,
-                                       Set<Long> nonExistingLayouts) {
+    private void prepareLayoutsParquet(IndexPlan indexPlan, NDataSegment segment, boolean loseOneAggLayoutRecordForTest,
+            boolean loseOneTableLayoutRecordForTest, boolean loseTwoTableLayoutRecordsForTest,
+            Set<Long> nonExistingLayouts) {
         StorageStore store = StorageStoreFactory.create(1);
 
         // Prepare layout 1
@@ -340,7 +330,8 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
             final long layoutId = 1L;
             LayoutEntity layoutEntity = indexPlan.getLayoutEntity(layoutId);
             if (CollectionUtils.isEmpty(nonExistingLayouts) || !nonExistingLayouts.contains(layoutId)) {
-                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())), KapConfig.wrap(config), layoutDS);
+                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())),
+                        KapConfig.wrap(config), layoutDS);
             }
         }
         // Prepare layout 10001
@@ -362,7 +353,8 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
             final long layoutId = 10001L;
             LayoutEntity layoutEntity = indexPlan.getLayoutEntity(layoutId);
             if (CollectionUtils.isEmpty(nonExistingLayouts) || !nonExistingLayouts.contains(layoutId)) {
-                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())), KapConfig.wrap(config), layoutDS);
+                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())),
+                        KapConfig.wrap(config), layoutDS);
             }
         }
         // Prepare layout 20000000001
@@ -388,7 +380,8 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
             final long layoutId = 20_000_000_001L;
             LayoutEntity layoutEntity = indexPlan.getLayoutEntity(layoutId);
             if (CollectionUtils.isEmpty(nonExistingLayouts) || !nonExistingLayouts.contains(layoutId)) {
-                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())), KapConfig.wrap(config), layoutDS);
+                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())),
+                        KapConfig.wrap(config), layoutDS);
             }
         }
         // Prepare layout 20000010001
@@ -414,7 +407,8 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
             final long layoutId = 20_000_010_001L;
             LayoutEntity layoutEntity = indexPlan.getLayoutEntity(layoutId);
             if (CollectionUtils.isEmpty(nonExistingLayouts) || !nonExistingLayouts.contains(layoutId)) {
-                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())), KapConfig.wrap(config), layoutDS);
+                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())),
+                        KapConfig.wrap(config), layoutDS);
             }
         }
     }
@@ -429,7 +423,8 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
         }).collect(Collectors.toList());
     }
 
-    private ExecutableState executeJob(NDataSegment segment, Set<LayoutEntity> readOnlyLayouts) throws InterruptedException {
+    private ExecutableState executeJob(NDataSegment segment, Set<LayoutEntity> readOnlyLayouts)
+            throws InterruptedException {
         ExecutableManager executableManager = ExecutableManager.getInstance(config, getProject());
 
         NSparkCubingJob job = NSparkCubingJob.create(Sets.newHashSet(segment), readOnlyLayouts, "ADMIN", null);

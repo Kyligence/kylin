@@ -31,7 +31,6 @@ import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.pretty.SqlPrettyWriter;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class ConvSqlWriter extends SqlPrettyWriter {
@@ -91,7 +90,8 @@ public class ConvSqlWriter extends SqlPrettyWriter {
             offset = SqlLiteral.createExactNumeric("0", SqlParserPos.ZERO);
 
         if (fetch != null && !configurer.allowNoOrderByWithFetch() && lastFrame != null
-                && lastFrame.getFrameType() != FrameTypeEnum.ORDER_BY_LIST) { // MSSQL requires ORDER_BY list for FETCH clause, so must append one here.
+                && lastFrame.getFrameType() != FrameTypeEnum.ORDER_BY_LIST) {
+            // MSSQL requires ORDER_BY list for FETCH clause, so must append one here.
             DUMMY_ORDER_BY_NODE.unparse(this, 0, 0);
         }
 

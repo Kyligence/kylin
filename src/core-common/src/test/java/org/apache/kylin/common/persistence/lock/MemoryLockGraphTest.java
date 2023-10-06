@@ -51,7 +51,7 @@ class MemoryLockGraphTest {
         ThreadViewResourceStore store = new ThreadViewResourceStore(inMemResourceStore, config);
         AtomicBoolean shouldContinue = new AtomicBoolean(true);
         Runnable suggest = () -> {
-            while(shouldContinue.get()) {
+            while (shouldContinue.get()) {
                 try {
                     UnitOfWork.doInTransactionWithRetry(() -> {
                         MemoryLockUtils.doWithLock("/default/model_desc/mDrop", true, store, () -> null);
@@ -68,7 +68,7 @@ class MemoryLockGraphTest {
             }
         };
         Runnable drop = () -> {
-            while(shouldContinue.get()) {
+            while (shouldContinue.get()) {
                 try {
                     UnitOfWork.doInTransactionWithRetry(() -> {
                         MemoryLockUtils.doWithLock("/default/model_desc/mDrop", true, store, () -> null);
@@ -93,14 +93,15 @@ class MemoryLockGraphTest {
         threads.add(new Thread(suggest));
         threads.add(new Thread(drop));
 
-
         config.setProperty("kylin.env.dead-lock-check-interval", "3");
         TransactionDeadLockHandler.getInstance().start();
 
         threads.forEach(Thread::start);
 
-        await().atMost(60, TimeUnit.SECONDS).until(() -> threads.stream().allMatch(t -> t.getState() == Thread.State.TIMED_WAITING));
-        await().atMost(4, TimeUnit.SECONDS).until(() -> threads.stream().anyMatch(t -> t.getState() != Thread.State.TIMED_WAITING));
+        await().atMost(60, TimeUnit.SECONDS)
+                .until(() -> threads.stream().allMatch(t -> t.getState() == Thread.State.TIMED_WAITING));
+        await().atMost(4, TimeUnit.SECONDS)
+                .until(() -> threads.stream().anyMatch(t -> t.getState() != Thread.State.TIMED_WAITING));
 
         shouldContinue.set(false);
     }

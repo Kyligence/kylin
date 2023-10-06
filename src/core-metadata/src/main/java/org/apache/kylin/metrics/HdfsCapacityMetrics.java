@@ -36,10 +36,9 @@ import org.apache.kylin.common.persistence.metadata.EpochStore;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -94,7 +93,8 @@ public class HdfsCapacityMetrics {
         // 1. Call a scheduled thread to maintain the data in memory
         //    - Read data from HDFS and load it into memory, only the leader node writes to HDFS, other nodes read only
         // 2. When the data in memory reaches the time of the update interval, it is stored on HDFS
-        // 3. Junk cleanup: theoretically the file will not be very large, do not need to consider cleaning up for the time
+        // 3. Junk cleanup: theoretically the file will not be very large,
+        // do not need to consider cleaning up for the time
         // being, cleaning will affect the recalculation of the directory involved
         log.info("Quota storage and HDFS metrics periodic calculation are enabled, path: {}", hdfsCapacityMetricsPath);
         scheduledThreadPoolExecutor.scheduleAtFixedRate(this::handleNodeHdfsMetrics, 0,
@@ -102,8 +102,10 @@ public class HdfsCapacityMetrics {
     }
 
     public void handleNodeHdfsMetrics() {
-        // Check whether the current KE node is the leader node, which requires repeated and continuous monitoring
-        // because the leader node may change. Update first and then overwrite, only leader nodes need to be overwritten,
+        // Check whether the current KE node is the leader node,
+        // which requires repeated and continuous monitoring
+        // because the leader node may change. Update first and then overwrite,
+        // only leader nodes need to be overwritten,
         // other nodes are read only
         if (EpochStore.isLeaderNode()) {
             writeHdfsMetrics();
@@ -119,7 +121,8 @@ public class HdfsCapacityMetrics {
         HashMap<String, Long> prepareForWorkingDirCapacity = Maps.newHashMapWithExpectedSize(allProjects.size());
         try {
             for (String project : allProjects) {
-                // Should not initialize projectTotalStorageSize outside the loop, otherwise it may affect the next calculation
+                // Should not initialize projectTotalStorageSize outside the loop,
+                // otherwise it may affect the next calculation
                 // if a project calculation throws an exception.
                 long projectTotalStorageSize = 0L;
                 Path projectPath = new Path(config.getWorkingDirectoryWithConfiguredFs(project));

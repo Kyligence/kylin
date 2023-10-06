@@ -16,13 +16,16 @@
  * limitations under the License.
  */
 package io.kyligence.kap.secondstorage.ddl;
+
+import org.apache.commons.lang3.StringUtils;
+
 import io.kyligence.kap.secondstorage.ddl.visitor.DefaultSQLRender;
 import io.kyligence.kap.secondstorage.ddl.visitor.Renderable;
-import org.apache.commons.lang3.StringUtils;
 
 public abstract class DDL<T extends DDL<T>> implements Renderable {
 
     final DefaultSQLRender queryBuilder = new DefaultSQLRender();
+
     public String toSql() {
         return toSql(queryBuilder);
     }

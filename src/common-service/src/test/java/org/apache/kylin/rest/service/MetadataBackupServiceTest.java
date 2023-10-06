@@ -79,7 +79,9 @@ public class MetadataBackupServiceTest extends NLocalFileMetadataTestCase {
         //2.execute backup()
         var backupFolder = metadataBackupService.backupAll();
 
-        //3.assert there is a metadata dir in root metadata dir after backup,the metadata dir location is junitFolder.getAbsolutePath()/metadata_backup_ut_test/backup/LocalDateTime/metadata
+        //3.assert there is a metadata dir in root metadata dir after backup,
+        // the metadata dir location is
+        // junitFolder.getAbsolutePath()/metadata_backup_ut_test/backup/LocalDateTime/metadata
         val rootMetadataPath = new Path(kylinConfig.getHdfsWorkingDirectory() + "/_backup");
         val rootMetadataFS = HadoopUtil.getWorkingFileSystem();
         Assertions.assertThat(rootMetadataFS.listStatus(rootMetadataPath)).hasSize(1);
@@ -106,16 +108,16 @@ public class MetadataBackupServiceTest extends NLocalFileMetadataTestCase {
 
         int metadataBackupCountThreshold = kylinConfig.getMetadataBackupCountThreshold();
         for (int i = 0; i < metadataBackupCountThreshold - 1; i++) {
-            fs.mkdirs(new Path(rootMetadataPath.toString() + "/test" + i));
+            fs.mkdirs(new Path(rootMetadataPath + "/test" + i));
         }
         Assertions.assertThat(fs.listStatus(rootMetadataPath)).hasSize(6);
 
         HDFSMetadataTool.cleanBeforeBackup(kylinConfig);
-        fs.mkdirs(new Path(rootMetadataPath.toString() + "/test" + (metadataBackupCountThreshold - 1)));
+        fs.mkdirs(new Path(rootMetadataPath + "/test" + (metadataBackupCountThreshold - 1)));
         Assertions.assertThat(fs.listStatus(rootMetadataPath)).hasSize(7);
 
         HDFSMetadataTool.cleanBeforeBackup(kylinConfig);
-        fs.mkdirs(new Path(rootMetadataPath.toString() + "/test" + metadataBackupCountThreshold));
+        fs.mkdirs(new Path(rootMetadataPath + "/test" + metadataBackupCountThreshold));
         Assertions.assertThat(fs.listStatus(rootMetadataPath)).hasSize(7);
 
         kylinConfig.setProperty("kylin.metadata.backup-count-threshold", "3");

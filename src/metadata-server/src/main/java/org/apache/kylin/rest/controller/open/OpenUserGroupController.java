@@ -27,16 +27,15 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.rest.constant.Constant;
+import org.apache.kylin.rest.controller.NBasicController;
+import org.apache.kylin.rest.controller.NUserGroupController;
+import org.apache.kylin.rest.request.UpdateGroupRequest;
+import org.apache.kylin.rest.request.UserGroupRequest;
 import org.apache.kylin.rest.response.DataResult;
 import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.UserInfoResponse;
 import org.apache.kylin.rest.service.IUserGroupService;
 import org.apache.kylin.rest.service.UserService;
-import io.kyligence.kap.metadata.user.ManagedUser;
-import org.apache.kylin.rest.controller.NBasicController;
-import org.apache.kylin.rest.controller.NUserGroupController;
-import org.apache.kylin.rest.request.UpdateGroupRequest;
-import org.apache.kylin.rest.request.UserGroupRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -51,6 +50,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import io.kyligence.kap.metadata.user.ManagedUser;
 import io.swagger.annotations.ApiOperation;
 
 @Controller

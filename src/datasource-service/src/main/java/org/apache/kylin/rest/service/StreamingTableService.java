@@ -31,6 +31,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
@@ -45,9 +47,6 @@ import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.TableUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 
@@ -119,8 +118,8 @@ public class StreamingTableService extends TableService {
             TableDesc batchTableDesc = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
                     .getTableDesc(batchTableName);
             if (!checkColumnsMatch(batchTableDesc.getColumns(), streamingRequest.getTableDesc().getColumns())) {
-                throw new KylinException(RELOAD_TABLE_FAILED, String.format(Locale.ROOT,
-                        MsgPicker.getMsg().getBatchStreamTableNotMatch(), batchTableName));
+                throw new KylinException(RELOAD_TABLE_FAILED,
+                        String.format(Locale.ROOT, MsgPicker.getMsg().getBatchStreamTableNotMatch(), batchTableName));
             }
             TableUtils.checkTimestampColumn(batchTableDesc);
             streamingRequest.getTableDesc().setColumns(batchTableDesc.getColumns().clone());

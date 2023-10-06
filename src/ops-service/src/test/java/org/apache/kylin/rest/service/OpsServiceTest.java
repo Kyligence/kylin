@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -70,7 +70,7 @@ import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset;
 import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ClusterManager.class, JobInfoTool.class, MetadataTool.class, QueryHistoryOffsetTool.class})
+@PrepareForTest({ ClusterManager.class, JobInfoTool.class, MetadataTool.class, QueryHistoryOffsetTool.class })
 @PowerMockIgnore({ "javax.net.ssl.*", "javax.management.*", "org.apache.hadoop.*", "javax.security.*", "javax.crypto.*",
         "javax.script.*" })
 public class OpsServiceTest extends NLocalFileMetadataTestCase {
@@ -118,7 +118,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
 
         String outPutPath = opsService.backupMetadata(project);
         await().atMost(1, TimeUnit.MINUTES).until(() -> {
-            List<MetadataBackupResponse> projectMetadataBackupList = opsService.getMetadataBackupList(project);
+            List<MetadataBackupResponse> projectMetadataBackupList = OpsService.getMetadataBackupList(project);
             for (MetadataBackupResponse response : projectMetadataBackupList) {
                 if (outPutPath.equals(response.getPath())
                         && response.getStatus() == OpsService.MetadataBackupStatu.SUCCEED) {
@@ -149,7 +149,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         jobInfoMapper.updateByJobIdSelective(jobInfo);
         JobInfo currentJobInfo = jobInfoMapper.selectByJobId(jobInfo.getJobId());
         Assert.assertNotEquals(originExecutable.getName(),
-                JobInfoUtil.deserializeExecutablePO(currentJobInfo).getName());
+                Objects.requireNonNull(JobInfoUtil.deserializeExecutablePO(currentJobInfo)).getName());
 
         opsService.doMetadataRestore(outPutPath, project, true);
         await().atMost(1, TimeUnit.MINUTES).until(() -> !opsService.hasMetadataRestoreRunning());
@@ -160,7 +160,8 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         currentOffset = offsetManager.get(ACCELERATE);
         Assert.assertEquals(originOffset.getOffset(), currentOffset.getOffset());
         currentJobInfo = jobInfoMapper.selectByJobId(jobInfo.getJobId());
-        Assert.assertEquals(originExecutable.getName(), JobInfoUtil.deserializeExecutablePO(currentJobInfo).getName());
+        Assert.assertEquals(originExecutable.getName(),
+                Objects.requireNonNull(JobInfoUtil.deserializeExecutablePO(currentJobInfo)).getName());
     }
 
     @Test
@@ -168,7 +169,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         String backupPath = opsService.backupMetadata(null);
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
         await().atMost(1, TimeUnit.MINUTES).until(() -> {
-            List<MetadataBackupResponse> projectMetadataBackupList = opsService
+            List<MetadataBackupResponse> projectMetadataBackupList = OpsService
                     .getMetadataBackupList(OpsService._GLOBAL);
             for (MetadataBackupResponse response : projectMetadataBackupList) {
                 if (backupPath.equals(response.getPath())
@@ -179,8 +180,8 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
             return false;
         });
         Assert.assertTrue(
-                opsService.deleteMetadataBackup(Lists.newArrayList(backupPath), null).contains("delete succeed"));
-        Assert.assertTrue(opsService
+                OpsService.deleteMetadataBackup(Lists.newArrayList(backupPath), null).contains("delete succeed"));
+        Assert.assertTrue(OpsService
                 .deleteMetadataBackup(Lists.newArrayList(getTestConfig().getHdfsWorkingDirectory() + "sss",
                         getTestConfig().getHdfsWorkingDirectory()), null)
                 .contains("path not exist" + " : " + "can not delete path not in metadata backup dir"));
@@ -191,8 +192,8 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         String backupPath = opsService.backupMetadata(OpsService._GLOBAL);
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
         await().atMost(1, TimeUnit.MINUTES).until(() -> {
-            List<MetadataBackupResponse> projectMetadataBackupList =
-                    opsService.getMetadataBackupList(OpsService._GLOBAL);
+            List<MetadataBackupResponse> projectMetadataBackupList = OpsService
+                    .getMetadataBackupList(OpsService._GLOBAL);
             for (MetadataBackupResponse response : projectMetadataBackupList) {
                 if (backupPath.equals(response.getPath())
                         && response.getStatus() == OpsService.MetadataBackupStatu.SUCCEED) {
@@ -211,10 +212,9 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
                 opsService.getMetadataRestoreStatus(uuid, OpsService._GLOBAL));
 
         JobInfoTool jobInfoTool = Mockito.mock(JobInfoTool.class);
-        Mockito.doThrow(new IOException()).when(jobInfoTool)
-                .restoreProject(anyString(), anyString(), anyBoolean());
-        OpsService.MetadataRestoreOperator operator =
-                new OpsService.MetadataRestoreOperator(backupPath, OpsService._GLOBAL, false);
+        Mockito.doThrow(new IOException()).when(jobInfoTool).restoreProject(anyString(), anyString(), anyBoolean());
+        OpsService.MetadataRestoreOperator operator = new OpsService.MetadataRestoreOperator(backupPath,
+                OpsService._GLOBAL, false);
         operator.setJobInfoTool(jobInfoTool);
         String uuid2 = operator.submitMetadataRestore();
 
@@ -228,7 +228,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testCancelAndDeleteMetadataBackup() throws IOException, InterruptedException, ExecutionException {
+    public void testCancelAndDeleteMetadataBackup() throws IOException {
         String backupPath = opsService.backupMetadata(OpsService._GLOBAL);
         JobContextUtil.getJobContext(getTestConfig());
         JobInfoMapper jobInfoMapper = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv()).getJobInfoMapper();
@@ -245,13 +245,10 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertTrue(HadoopUtil.getWorkingFileSystem().exists(new Path(backupPath)));
         opsService.cancelAndDeleteMetadataBackup(backupPath, OpsService._GLOBAL);
         Assert.assertEquals(OpsService.MetadataBackupStatu.CANCELED,
-                OpsService.getMetadataBackupList(OpsService._GLOBAL)
-                        .stream()
-                        .filter(backup -> backup.getPath().equals(backupPath))
-                        .findFirst()
-                        .get().getStatus());
-        await().atMost(10, TimeUnit.SECONDS).until(
-                () -> !HadoopUtil.getWorkingFileSystem().exists(new Path(backupPath)));
+                OpsService.getMetadataBackupList(OpsService._GLOBAL).stream()
+                        .filter(backup -> backup.getPath().equals(backupPath)).findFirst().get().getStatus());
+        await().atMost(10, TimeUnit.SECONDS)
+                .until(() -> !HadoopUtil.getWorkingFileSystem().exists(new Path(backupPath)));
     }
 
     @Test
@@ -259,8 +256,8 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         QueryHistoryOffsetTool queryHistoryOffsetTool = Mockito.mock(QueryHistoryOffsetTool.class);
         Mockito.doThrow(new IOException()).when(queryHistoryOffsetTool).backup(anyString(), anyString());
         OpsService.MetadataBackupOperator metadataBackupOperator = new OpsService.MetadataBackupOperator(
-                OpsService.getMetaBackupStoreDir(OpsService._GLOBAL),
-                HadoopUtil.getWorkingFileSystem(), "test_failed", OpsService._GLOBAL);
+                OpsService.getMetaBackupStoreDir(OpsService._GLOBAL), HadoopUtil.getWorkingFileSystem(), "test_failed",
+                OpsService._GLOBAL);
         metadataBackupOperator.setQueryHistoryOffsetTool(queryHistoryOffsetTool);
         String backupPath = metadataBackupOperator.startBackup();
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
@@ -280,18 +277,17 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testMetadataBackupStatusDirtyRead() throws IOException, ExecutionException, InterruptedException {
+    public void testMetadataBackupStatusDirtyRead() throws IOException {
         FileSystem fileSystem = HadoopUtil.getWorkingFileSystem();
         String username = AclPermissionUtil.getCurrentUsername();
         // to avoid JsonUtil class initialize take too long time
         new JsonUtil();
         MockedMetadataRestoreOperator operator1 = new MockedMetadataRestoreOperator(
-                OpsService.GLOBAL_METADATA_BACKUP_PATH, fileSystem,
-                username, OpsService._GLOBAL);
+                OpsService.GLOBAL_METADATA_BACKUP_PATH, fileSystem, username, OpsService._GLOBAL);
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
         String path1 = operator1.startBackup();
 
-        List<MetadataBackupResponse> projectMetadataBackupList1 = opsService.getMetadataBackupList(OpsService._GLOBAL)
+        List<MetadataBackupResponse> projectMetadataBackupList1 = OpsService.getMetadataBackupList(OpsService._GLOBAL)
                 .stream().filter(response -> response.getPath().equals(path1)).collect(Collectors.toList());
         // default retry get in progress status
         Assert.assertEquals(1, projectMetadataBackupList1.size());
@@ -301,10 +297,9 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         // for retry time is zero, status write time takes too long, will get an unknown status.
         OpsService.defaultStatusReadRetryTime = 0;
         MockedMetadataRestoreOperator operator2 = new MockedMetadataRestoreOperator(
-                OpsService.GLOBAL_METADATA_BACKUP_PATH, fileSystem,
-                username, OpsService._GLOBAL);
+                OpsService.GLOBAL_METADATA_BACKUP_PATH, fileSystem, username, OpsService._GLOBAL);
         String path2 = operator2.startBackup();
-        List<MetadataBackupResponse> projectMetadataBackupList2 = opsService.getMetadataBackupList(OpsService._GLOBAL)
+        List<MetadataBackupResponse> projectMetadataBackupList2 = OpsService.getMetadataBackupList(OpsService._GLOBAL)
                 .stream().filter(response -> response.getPath().equals(path2)).collect(Collectors.toList());
 
         // default retry get in progress status
@@ -331,7 +326,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
 
         String outPutPath = opsService.backupMetadata(project);
         await().atMost(1, TimeUnit.MINUTES).until(() -> {
-            List<MetadataBackupResponse> projectMetadataBackupList = opsService.getMetadataBackupList(project);
+            List<MetadataBackupResponse> projectMetadataBackupList = OpsService.getMetadataBackupList(project);
             for (MetadataBackupResponse response : projectMetadataBackupList) {
                 if (outPutPath.equals(response.getPath())
                         && response.getStatus() == OpsService.MetadataBackupStatu.SUCCEED) {
@@ -342,8 +337,8 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         });
         projectManager.dropProject(project);
         jobInfoMapper.deleteByJobId(jobInfo.getJobId());
-        Assert.assertEquals(projectManager.getProject(project), null);
-        Assert.assertEquals(jobInfoMapper.selectByJobId(jobInfo.getJobId()), null);
+        Assert.assertNull(projectManager.getProject(project));
+        Assert.assertNull(jobInfoMapper.selectByJobId(jobInfo.getJobId()));
 
         opsService.doMetadataRestore(outPutPath, project, false);
         await().atMost(1, TimeUnit.MINUTES).until(() -> !opsService.hasMetadataRestoreRunning());
@@ -356,14 +351,14 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         jobInfoMapper.deleteByJobId(jobInfo.getJobId());
         JobInfoTool jobInfoTool = Mockito.mock(JobInfoTool.class);
         Mockito.doThrow(new IOException()).when(jobInfoTool).restoreProject(anyString(), anyString(), anyBoolean());
-        OpsService.MetadataRestoreOperator operator =
-                new OpsService.MetadataRestoreOperator(outPutPath, project, false);
+        OpsService.MetadataRestoreOperator operator = new OpsService.MetadataRestoreOperator(outPutPath, project,
+                false);
         operator.setJobInfoTool(jobInfoTool);
         operator.submitMetadataRestore();
         await().atMost(1, TimeUnit.MINUTES).until(() -> !opsService.hasMetadataRestoreRunning());
         projectManager.reloadAll();
-        Assert.assertEquals(jobInfoMapper.selectByJobId(jobInfo.getJobId()), null);
-        Assert.assertEquals(projectManager.getProject(project), null);
+        Assert.assertNull(jobInfoMapper.selectByJobId(jobInfo.getJobId()));
+        Assert.assertNull(projectManager.getProject(project));
     }
 
     private class MockedMetadataRestoreOperator extends OpsService.MetadataBackupOperator {

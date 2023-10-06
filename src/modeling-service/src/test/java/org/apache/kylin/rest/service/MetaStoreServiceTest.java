@@ -54,6 +54,10 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.MetadataChecker;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.base.Objects;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -99,11 +103,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.apache.kylin.guava30.shaded.common.base.Objects;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
 import lombok.val;
@@ -760,8 +760,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
         Assert.assertEquals(1, checkResult.getExistTableList().size());
         Assert.assertEquals("SSB.CUSTOMER_NEW", checkResult.getExistTableList().get(0).getIdentity());
 
-        SchemaChangeCheckResult.ModelSchemaChange change = checkResult.getModels()
-                .get("missing_table_model");
+        SchemaChangeCheckResult.ModelSchemaChange change = checkResult.getModels().get("missing_table_model");
         Assert.assertNotNull(change);
         Assert.assertTrue(change.getMissingItems().isEmpty());
         Assert.assertTrue(change.importable());
@@ -795,8 +794,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
                 modelSchemaChange.getNewItems().stream().filter(sc -> sc.getType() == SchemaNodeType.WHITE_LIST_INDEX)
                         .filter(sc -> sc.getDetail().equals("20000000001"))
                         .filter(SchemaChangeCheckResult.BaseItem::isOverwritable).anyMatch(sc -> {
-                            String col_orders = String.join(",",
-                                    ((List<String>) sc.getAttributes().get("col_orders")));
+                            String col_orders = String.join(",", ((List<String>) sc.getAttributes().get("col_orders")));
                             return col_orders.equals(
                                     "P_LINEORDER.LO_LINENUMBER,P_LINEORDER.LO_SUPPKEY,P_LINEORDER.LO_QUANTITY,P_LINEORDER.LO_PARTKEY,P_LINEORDER.LO_ORDERKEY,P_LINEORDER.LO_CUSTKEY,P_LINEORDER.LO_DISCOUNT,P_LINEORDER.LO_ORDERDATE");
                         }));
@@ -805,8 +803,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
                 modelSchemaChange.getNewItems().stream().filter(sc -> sc.getType() == SchemaNodeType.WHITE_LIST_INDEX)
                         .filter(sc -> sc.getDetail().equals("20000010001"))
                         .filter(SchemaChangeCheckResult.BaseItem::isOverwritable).anyMatch(sc -> {
-                            String col_orders = String.join(",",
-                                    ((List<String>) sc.getAttributes().get("col_orders")));
+                            String col_orders = String.join(",", ((List<String>) sc.getAttributes().get("col_orders")));
                             return col_orders.equals("P_LINEORDER.LO_SUPPKEY,P_LINEORDER.LO_QUANTITY");
                         }));
     }

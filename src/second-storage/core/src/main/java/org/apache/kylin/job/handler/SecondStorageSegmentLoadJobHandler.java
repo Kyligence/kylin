@@ -56,28 +56,19 @@ public class SecondStorageSegmentLoadJobHandler extends AbstractJobHandler {
         NDataflow dataflow = NDataflowManager.getInstance(kylinConfig, jobParam.getProject())
                 .getDataflow(jobParam.getModel());
         List<String> hasBaseIndexSegmentIds = jobParam.getTargetSegments().stream().map(dataflow::getSegment)
-                .filter(segment -> segment.getLayoutsMap().values()
-                        .stream().map(NDataLayout::getLayout).anyMatch(SecondStorageUtil::isBaseTableIndex))
-                .map(NDataSegment::getId)
-                .collect(Collectors.toList());
+                .filter(segment -> segment.getLayoutsMap().values().stream().map(NDataLayout::getLayout)
+                        .anyMatch(SecondStorageUtil::isBaseTableIndex))
+                .map(NDataSegment::getId).collect(Collectors.toList());
 
         if (hasBaseIndexSegmentIds.isEmpty()) {
             throw new KylinException(BASE_TABLE_INDEX_NOT_AVAILABLE,
                     MsgPicker.getMsg().getSecondStorageSegmentWithoutBaseIndex());
         }
 
-        return JobFactory.createJob(STORAGE_JOB_FACTORY,
-                new JobFactory.JobBuildParams(
-                        jobParam.getTargetSegments().stream().map(dataflow::getSegment).collect(Collectors.toSet()),
-                        jobParam.getProcessLayouts(),
-                        jobParam.getOwner(),
-                        JobTypeEnum.EXPORT_TO_SECOND_STORAGE,
-                        jobParam.getJobId(),
-                        null,
-                        jobParam.getIgnoredSnapshotTables(),
-                        null,
-                        null,
-                        jobParam.getExtParams()));
+        return JobFactory.createJob(STORAGE_JOB_FACTORY, new JobFactory.JobBuildParams(
+                jobParam.getTargetSegments().stream().map(dataflow::getSegment).collect(Collectors.toSet()),
+                jobParam.getProcessLayouts(), jobParam.getOwner(), JobTypeEnum.EXPORT_TO_SECOND_STORAGE,
+                jobParam.getJobId(), null, jobParam.getIgnoredSnapshotTables(), null, null, jobParam.getExtParams()));
     }
 
     @Override
@@ -94,7 +85,8 @@ public class SecondStorageSegmentLoadJobHandler extends AbstractJobHandler {
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         ExecutableManager execManager = ExecutableManager.getInstance(kylinConfig, project);
         NDataflowManager dataflowManager = NDataflowManager.getInstance(kylinConfig, project);
-        List<AbstractExecutable> executables = execManager.listExecByModelAndStatus(model, ExecutableState::isRunning, JobTypeEnum.EXPORT_TO_SECOND_STORAGE);
+        List<AbstractExecutable> executables = execManager.listExecByModelAndStatus(model, ExecutableState::isRunning,
+                JobTypeEnum.EXPORT_TO_SECOND_STORAGE);
         NDataflow dataflow = dataflowManager.getDataflow(jobParam.getModel());
 
         Set<String> targetSegs = new HashSet<>(jobParam.getTargetSegments());
@@ -116,8 +108,8 @@ public class SecondStorageSegmentLoadJobHandler extends AbstractJobHandler {
                     new KylinException(SECOND_STORAGE_ADD_JOB_FAILED, MsgPicker.getMsg().getAddExportJobFail()));
         }
         noBaseIndexSegs.forEach(seg -> jobSubmissionException.addJobFailInfo(seg,
-                new KylinException(FAILED_CREATE_JOB_EXPORT_TO_TIERED_STORAGE_WITHOUT_BASE_INDEX, String.format(Locale.ROOT,
-                        MsgPicker.getMsg().getAddJobCheckFailWithoutBaseIndex(), seg))));
+                new KylinException(FAILED_CREATE_JOB_EXPORT_TO_TIERED_STORAGE_WITHOUT_BASE_INDEX,
+                        String.format(Locale.ROOT, MsgPicker.getMsg().getAddJobCheckFailWithoutBaseIndex(), seg))));
         throw jobSubmissionException;
     }
 }

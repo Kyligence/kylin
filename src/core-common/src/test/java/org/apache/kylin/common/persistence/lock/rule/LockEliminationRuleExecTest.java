@@ -55,8 +55,8 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
         {
             List<TransactionLock> projectLock = MemoryLockUtils.getProjectLock(project);
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, MODEL);
-            List<TransactionLock> pathLocks = MemoryLockUtils.getPathLocks(
-                    Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+            List<TransactionLock> pathLocks = MemoryLockUtils
+                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertFalse(lockInfo.getProjectLocks().isEmpty());
@@ -67,8 +67,8 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
         {
             List<TransactionLock> projectLock = MemoryLockUtils.getProjectLock(project);
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, TABLE);
-            List<TransactionLock> pathLocks = MemoryLockUtils.getPathLocks(
-                    Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+            List<TransactionLock> pathLocks = MemoryLockUtils
+                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertFalse(lockInfo.getProjectLocks().isEmpty());
@@ -99,8 +99,8 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
         {
             List<TransactionLock> projectLock = Collections.emptyList();
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, TABLE);
-            List<TransactionLock> pathLocks = MemoryLockUtils.getPathLocks(
-                    Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+            List<TransactionLock> pathLocks = MemoryLockUtils
+                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertTrue(lockInfo.getProjectLocks().isEmpty());
@@ -111,8 +111,8 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
         {
             List<TransactionLock> projectLock = Collections.emptyList();
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, MODEL);
-            List<TransactionLock> pathLocks = MemoryLockUtils.getPathLocks(
-                    Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+            List<TransactionLock> pathLocks = MemoryLockUtils
+                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertTrue(lockInfo.getProjectLocks().isEmpty());
@@ -133,8 +133,8 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
         {
             List<TransactionLock> projectLock = Collections.emptyList();
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, MODEL);
-            List<TransactionLock> pathLocks = MemoryLockUtils.getPathLocks(
-                    Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+            List<TransactionLock> pathLocks = MemoryLockUtils
+                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertTrue(lockInfo.getProjectLocks().isEmpty());
@@ -155,5 +155,4 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
             Assertions.assertFalse(lockInfo.getPathLocks().isEmpty());
         }
     }
-
 }

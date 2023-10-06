@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.newten;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -37,8 +37,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.sparkproject.guava.collect.Sets;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 
@@ -57,6 +55,7 @@ public class NMultiPartitionJobTest extends NLocalWithSparkSessionTest {
         cleanupTestMetadata();
         JobContextUtil.cleanUp();
     }
+
     @Override
     public String getProject() {
         return "multi_partition";

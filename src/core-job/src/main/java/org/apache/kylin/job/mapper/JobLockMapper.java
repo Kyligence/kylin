@@ -22,8 +22,8 @@ import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.kylin.job.domain.PriorityFistRandomOrderJob;
 import org.apache.kylin.job.domain.JobLock;
+import org.apache.kylin.job.domain.PriorityFistRandomOrderJob;
 
 @Mapper
 public interface JobLockMapper {

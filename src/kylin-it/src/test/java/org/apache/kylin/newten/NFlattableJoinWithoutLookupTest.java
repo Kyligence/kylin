@@ -104,7 +104,7 @@ public class NFlattableJoinWithoutLookupTest extends NLocalWithSparkSessionTest 
         }
         long start = SegmentRange.dateToLong("2009-01-01 00:00:00");
         long end = SegmentRange.dateToLong("2015-01-01 00:00:00");
-        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
+                Sets.newLinkedHashSet(layouts), true);
     }
 }

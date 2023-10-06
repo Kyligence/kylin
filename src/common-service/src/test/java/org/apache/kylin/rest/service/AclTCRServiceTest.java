@@ -311,7 +311,7 @@ public class AclTCRServiceTest extends NLocalFileMetadataTestCase {
     }
 
     private SensitiveDataMask.MaskType getColumnDataMask(AclTCRRequest acl, String database, String table,
-                                                         String column) {
+            String column) {
         if (acl.getDatabaseName().equals(database)) {
             for (val tb : acl.getTables()) {
                 if (tb.getTableName().equals(table)) {

@@ -99,7 +99,8 @@ public class ContextUtil {
     public static boolean qualifiedForAggInfoPushDown(RelNode currentRel, OLAPContext subContext) {
         // 1. the parent node of TopRel in subContext is not NULL and is instance Of KapJoinRel.
         // 2. the TopNode of subContext is NOT instance of KapAggregateRel.
-        // 3. JoinRels in the path from currentNode to the ParentOfContextTopRel node are all of the same type (left/inner/cross)
+        // 3. JoinRels in the path from currentNode to the ParentOfContextTopRel node
+        //    are all the same type (left/inner/cross)
         // 4. all aggregate is derived from the same subContext
         return (subContext.getParentOfTopNode() instanceof KapJoinRel
                 || subContext.getParentOfTopNode() instanceof KapNonEquiJoinRel)

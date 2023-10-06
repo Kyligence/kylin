@@ -32,7 +32,6 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 
-import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.cli.Option;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
@@ -42,9 +41,6 @@ import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.metadata.project.NProjectManager;
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
-import io.kyligence.kap.metadata.recommendation.entity.CCRecItemV2;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -57,7 +53,11 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
+import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
+import io.kyligence.kap.metadata.recommendation.entity.CCRecItemV2;
 import lombok.val;
+import net.jcip.annotations.NotThreadSafe;
 
 @RunWith(MockitoJUnitRunner.class)
 @NotThreadSafe

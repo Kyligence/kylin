@@ -18,20 +18,20 @@
 
 package org.apache.kylin.common.asyncprofiler;
 
-import org.apache.kylin.common.KylinConfigBase;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_ARM64;
+import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_MUSL_ARM64;
+import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_MUSL_X64;
+import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_X64;
+import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_MAC;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Objects;
 
-import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_ARM64;
-import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_MUSL_ARM64;
-import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_MUSL_X64;
-import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_LINUX_X64;
-import static org.apache.kylin.common.constant.AsyncProfilerConstants.ASYNC_PROFILER_LIB_MAC;
+import org.apache.kylin.common.KylinConfigBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AsyncProfiler {
 
@@ -63,21 +63,21 @@ public class AsyncProfiler {
                 boolean isMuslLibc = AsyncArchUtil.isMuslLibc();
                 logger.info("Machine's archType: {}, isMuslLibc: {}", archType, isMuslLibc);
                 switch (archType) {
-                    case LINUX_ARM64:
-                        if (isMuslLibc) {
-                            libName = ASYNC_PROFILER_LIB_LINUX_MUSL_ARM64;
-                        } else {
-                            libName = ASYNC_PROFILER_LIB_LINUX_ARM64;
-                        }
-                        break;
-                    case LINUX_X64:
-                    default:
-                        if (isMuslLibc) {
-                            libName = ASYNC_PROFILER_LIB_LINUX_MUSL_X64;
-                        } else {
-                            libName = ASYNC_PROFILER_LIB_LINUX_X64;
-                        }
-                        break;
+                case LINUX_ARM64:
+                    if (isMuslLibc) {
+                        libName = ASYNC_PROFILER_LIB_LINUX_MUSL_ARM64;
+                    } else {
+                        libName = ASYNC_PROFILER_LIB_LINUX_ARM64;
+                    }
+                    break;
+                case LINUX_X64:
+                default:
+                    if (isMuslLibc) {
+                        libName = ASYNC_PROFILER_LIB_LINUX_MUSL_X64;
+                    } else {
+                        libName = ASYNC_PROFILER_LIB_LINUX_X64;
+                    }
+                    break;
                 }
 
                 // Adapting load paths based on Spark deployment patterns
@@ -86,7 +86,8 @@ public class AsyncProfiler {
                 } else {
                     libPath = new File(libName);
                 }
-                logger.info("AsyncProfiler libPath: {}, exists: {}", libPath.getAbsolutePath(), Files.exists(libPath.toPath()));
+                logger.info("AsyncProfiler libPath: {}, exists: {}", libPath.getAbsolutePath(),
+                        Files.exists(libPath.toPath()));
                 // check this for ut
                 if (libPath.exists()) {
                     System.load(libPath.getAbsolutePath());
@@ -102,11 +103,10 @@ public class AsyncProfiler {
 
     private void loadLibAsyncProfilerSO(String libPath) throws IOException {
         File asyncProfilerLib = File.createTempFile("libasyncProfiler", ".so");
-        java.nio.file.Files.copy(
-                Objects.requireNonNull(AsyncProfilerTool.class.getResourceAsStream(libPath)),
-                asyncProfilerLib.toPath(),
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-        logger.info("AsyncProfiler will try to load from libPath: {}, exists: {}", asyncProfilerLib.getAbsolutePath(), asyncProfilerLib.exists());
+        java.nio.file.Files.copy(Objects.requireNonNull(AsyncProfilerTool.class.getResourceAsStream(libPath)),
+                asyncProfilerLib.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        logger.info("AsyncProfiler will try to load from libPath: {}, exists: {}", asyncProfilerLib.getAbsolutePath(),
+                asyncProfilerLib.exists());
         System.load(asyncProfilerLib.getAbsolutePath());
     }
 

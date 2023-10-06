@@ -46,13 +46,12 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.relnode.KapAggregateRel;
 import org.apache.kylin.query.relnode.KapProjectRel;
 import org.apache.kylin.query.util.AggExpressionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 /**
  * sum(cast(expr as double))  ->  cast(sum(expr) as double)
@@ -73,14 +72,14 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
  * KapOLAPToEnumerableConverter
  *   KapAggregateRel(group-set=[[]], groups=[null], EXPR$0=[SUM($0)], ctx=[])
  *     KapProjectRel($f0=[CAST($7):DOUBLE], ctx=[])
- *       KapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+ *       KapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0...38]])
  *
  * afterPlan:
  * KapOLAPToEnumerableConverter
  *   KapProjectRel(EXPR$0=[CAST($0):DOUBLE], ctx=[])
  *     KapAggregateRel(group-set=[[]], groups=[null], EXPR$0=[SUM($0)], ctx=[])
  *       KapProjectRel(SELLER_ID=[$7], ctx=[])
- *         KapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+ *         KapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0...38]])
  */
 public class KapAggSumCastRule extends RelOptRule {
 

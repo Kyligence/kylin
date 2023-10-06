@@ -22,7 +22,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.PARAMETER_I
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -44,7 +44,7 @@ public enum LockTypeEnum {
             return new ArrayList<>();
         } else {
             List<String> resultList = new ArrayList<>();
-            existLockTypes.stream().forEach(x -> {
+            existLockTypes.forEach(x -> {
                 if (!newLockTypes.contains(x)) {
                     resultList.add(x);
                 }
@@ -58,12 +58,11 @@ public enum LockTypeEnum {
             return new ArrayList<>(newLockTypes);
         } else if (CollectionUtils.isEmpty(newLockTypes)) {
             return new ArrayList<>(existLockTypes);
-        } else if (existLockTypes.contains(LockTypeEnum.ALL.name())
-                || newLockTypes.contains(LockTypeEnum.ALL.name())) {
-            return Arrays.asList(LockTypeEnum.ALL.name());
+        } else if (existLockTypes.contains(LockTypeEnum.ALL.name()) || newLockTypes.contains(LockTypeEnum.ALL.name())) {
+            return Collections.singletonList(LockTypeEnum.ALL.name());
         } else {
             List<String> resultList = new ArrayList<>(existLockTypes);
-            newLockTypes.stream().forEach(x -> {
+            newLockTypes.forEach(x -> {
                 if (!resultList.contains(x)) {
                     resultList.add(x);
                 }
@@ -85,8 +84,9 @@ public enum LockTypeEnum {
     }
 
     public static boolean locked(String requestLock, List<String> existLocks) {
-        if (requestLock == null) return false;
-        return locked(Arrays.asList(requestLock), existLocks);
+        if (requestLock == null)
+            return false;
+        return locked(Collections.singletonList(requestLock), existLocks);
     }
 
     public static boolean locked(List<String> requestLocks, List<String> existLocks) {
@@ -102,23 +102,23 @@ public enum LockTypeEnum {
 
         Set<String> existLockSet = new HashSet<>(existLocks);
 
-        if (existLockSet.contains(LockTypeEnum.ALL.name()) || CollectionUtils.intersection(requestLockSet, existLockSet).size() > 0) {
-            return true;
-        }
-
-        return false;
+        return existLockSet.contains(LockTypeEnum.ALL.name())
+                || CollectionUtils.intersection(requestLockSet, existLockSet).size() > 0;
     }
 
     public static void checkLock(String requestLock, List<String> existLocks) {
-        if (requestLock == null) return;
-        if (locked(Arrays.asList(requestLock), existLocks)) {
-            throw new KylinException(SECOND_STORAGE_PROJECT_LOCKING, String.format(Locale.ROOT, MsgPicker.getMsg().getProjectLocked()));
+        if (requestLock == null)
+            return;
+        if (locked(Collections.singletonList(requestLock), existLocks)) {
+            throw new KylinException(SECOND_STORAGE_PROJECT_LOCKING,
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getProjectLocked()));
         }
     }
 
     public static void checkLocks(List<String> requestLocks, List<String> existLocks) {
         if (locked(requestLocks, existLocks)) {
-            throw new KylinException(SECOND_STORAGE_PROJECT_LOCKING, String.format(Locale.ROOT, MsgPicker.getMsg().getProjectLocked()));
+            throw new KylinException(SECOND_STORAGE_PROJECT_LOCKING,
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getProjectLocked()));
         }
     }
 
@@ -126,7 +126,7 @@ public enum LockTypeEnum {
         if (lockTypes == null || CollectionUtils.isEmpty(lockTypes)) {
             throw new KylinException(REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY, "lockType");
         }
-        lockTypes.stream().forEach(x -> {
+        lockTypes.forEach(x -> {
             LockTypeEnum typeEnum = LockTypeEnum.parse(x);
             if (typeEnum == null) {
                 throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, "lockType", "QUERY, LOAD, ALL");

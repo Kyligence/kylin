@@ -84,8 +84,7 @@ class SegmentsRequestFilterTest {
         JsonNode jsonNode = JsonUtil.readValueAsTree(response.getContentAsString());
         Assertions.assertEquals("999", jsonNode.get("code").asText());
         Assertions.assertEquals(ARGS_TYPE_CHECK.getErrorCode().getCode(), jsonNode.get("error_code").asText());
-        Assertions.assertEquals(ARGS_TYPE_CHECK.getCodeMsg("null", "Boolean"),
-                jsonNode.get("msg").asText());
+        Assertions.assertEquals(ARGS_TYPE_CHECK.getCodeMsg("null", "Boolean"), jsonNode.get("msg").asText());
 
         chain = new MockFilterChain();
         request = new MockHttpServletRequest();
@@ -115,8 +114,7 @@ class SegmentsRequestFilterTest {
         jsonNode = JsonUtil.readValueAsTree(response.getContentAsString());
         Assertions.assertEquals("999", jsonNode.get("code").asText());
         Assertions.assertEquals(ARGS_TYPE_CHECK.getErrorCode().getCode(), jsonNode.get("error_code").asText());
-        Assertions.assertEquals(ARGS_TYPE_CHECK.getCodeMsg("123", "Boolean"),
-                jsonNode.get("msg").asText());
+        Assertions.assertEquals(ARGS_TYPE_CHECK.getCodeMsg("123", "Boolean"), jsonNode.get("msg").asText());
 
         chain = new MockFilterChain();
         request = new MockHttpServletRequest();

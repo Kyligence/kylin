@@ -217,7 +217,8 @@ public class PlannerFactory {
         planner.removeRule(JoinPushThroughJoinRule.LEFT);
         planner.removeRule(JoinPushThroughJoinRule.RIGHT);
 
-        // keep tree structure like filter -> aggregation -> project -> join/table scan, implementOLAP() rely on this tree pattern
+        // keep tree structure like filter -> aggregation -> project -> join/table scan,
+        // implementOLAP() rely on this tree pattern
         //        planner.removeRule(AggregateJoinTransposeRule.INSTANCE);
         planner.removeRule(AggregateProjectMergeRule.INSTANCE);
         planner.removeRule(FilterProjectTransposeRule.INSTANCE);

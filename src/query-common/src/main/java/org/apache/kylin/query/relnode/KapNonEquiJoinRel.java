@@ -124,12 +124,16 @@ public class KapNonEquiJoinRel extends EnumerableThetaJoin implements KapRel {
             rightState.setHasFreeTable(false);
         }
 
-        if (!leftState.hasFreeTable() && !rightState.hasFreeTable()) { // no free table, return directly
+        if (!leftState.hasFreeTable() && !rightState.hasFreeTable()) {
+            // no free table, return directly
             return;
-        } else if (leftState.hasFreeTable() && !rightState.hasFreeTable()) { // left has free tbl, alloc ctx to left only
+        }
+        if (leftState.hasFreeTable() && !rightState.hasFreeTable()) {
+            // left has free tbl, alloc ctx to left only
             olapContextImplementor.allocateContext((KapRel) left, this);
             leftState.setHasFreeTable(false);
-        } else if (rightState.hasFreeTable() && !leftState.hasFreeTable()) { // right has free tbl, alloc ctx to right only
+        } else if (rightState.hasFreeTable() && !leftState.hasFreeTable()) {
+            // right has free tbl, alloc ctx to right only
             olapContextImplementor.allocateContext((KapRel) right, this);
             rightState.setHasFreeTable(false);
         } else {

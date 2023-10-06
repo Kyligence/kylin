@@ -53,7 +53,8 @@ import org.apache.kylin.query.util.AggExpressionUtil.AggExpression;
  *
  * Limitation: issue #11663
  * Add other functions in sql could make mistake.
- * like sql: select count(distinct TEST_COUNT_DISTINCT_BITMAP),sum(case when LSTG_FORMAT_NAME='ABIN' then price else null end) from KYLIN_SALES;
+ * like sql: select count(distinct TEST_COUNT_DISTINCT_BITMAP)
+ *    ,sum(case when LSTG_FORMAT_NAME='ABIN' then price else null end) from KYLIN_SALES;
  */
 public class SumCaseWhenFunctionRule extends AbstractAggCaseWhenFunctionRule {
 

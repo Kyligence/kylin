@@ -29,10 +29,9 @@ import java.util.Set;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 public class ResourceTool {
 
@@ -103,7 +102,8 @@ public class ResourceTool {
         copy(srcConfig, dstConfig, path, false);
     }
 
-    //Do NOT invoke this method directly, unless you want to copy and possibly overwrite immutable resources such as UUID.
+    // Do not invoke this method directly, unless you want to copy 
+    // and possibly overwrite immutable resources such as UUID.
     public static void copy(KylinConfig srcConfig, KylinConfig dstConfig, String path, boolean copyImmutableResource)
             throws IOException {
         ResourceStore src = ResourceStore.getKylinMetaStore(srcConfig);
@@ -118,7 +118,8 @@ public class ResourceTool {
         copy(srcConfig, dstConfig, paths, false);
     }
 
-    //Do NOT invoke this method directly, unless you want to copy and possibly overwrite immutable resources such as UUID.
+    // Do not invoke this method directly, unless you want to copy 
+    // and possibly overwrite immutable resources such as UUID.
     public static void copy(KylinConfig srcConfig, KylinConfig dstConfig, List<String> paths,
             boolean copyImmutableResource) throws IOException {
         ResourceStore src = ResourceStore.getKylinMetaStore(srcConfig);
@@ -135,7 +136,8 @@ public class ResourceTool {
         copy(srcConfig, dstConfig, false);
     }
 
-    //Do NOT invoke this method directly, unless you want to copy and possibly overwrite immutable resources such as UUID.
+    // Do not invoke this method directly, unless you want to copy 
+    // and possibly overwrite immutable resources such as UUID.
     public static void copy(KylinConfig srcConfig, KylinConfig dstConfig, boolean copyImmutableResource)
             throws IOException {
         copy(srcConfig, dstConfig, "/", copyImmutableResource);

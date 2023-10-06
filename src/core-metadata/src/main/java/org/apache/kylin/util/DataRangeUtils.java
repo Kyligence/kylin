@@ -17,15 +17,15 @@
  */
 package org.apache.kylin.util;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.util.DateFormat;
-import org.apache.kylin.metadata.model.PartitionDesc;
-
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.TIME_INVALID_RANGE_END_LESS_THAN_EQUALS_START;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.TIME_INVALID_RANGE_LESS_THAN_ZERO;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.TIME_INVALID_RANGE_NOT_CONSISTENT;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.TIME_INVALID_RANGE_NOT_FORMAT_MS;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.util.DateFormat;
+import org.apache.kylin.metadata.model.PartitionDesc;
 
 public final class DataRangeUtils {
     private DataRangeUtils() {

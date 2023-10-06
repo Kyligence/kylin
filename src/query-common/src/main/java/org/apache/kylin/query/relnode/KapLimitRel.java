@@ -32,10 +32,9 @@ import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
-import org.apache.kylin.query.util.ICutContextStrategy;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.query.util.ICutContextStrategy;
 
 public class KapLimitRel extends OLAPLimitRel implements KapRel {
 
@@ -112,7 +111,8 @@ public class KapLimitRel extends OLAPLimitRel implements KapRel {
         olapContextImplementor.visitChild(getInput(), this);
 
         // ignore limit after having clause
-        // ignore limit after another limit, e.g. select A, count(*) from (select A,B from fact group by A,B limit 100) limit 10
+        // ignore limit after another limit,
+        //   e.g. select A, count(*) from (select A,B from fact group by A,B limit 100) limit 10
         this.columnRowType = buildColumnRowType();
         if (context != null) {
             if (!context.afterHavingClauseFilter && !context.afterLimit) {

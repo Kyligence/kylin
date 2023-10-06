@@ -22,16 +22,16 @@ import static io.kyligence.kap.secondstorage.SecondStorageConstants.STEP_SECOND_
 
 import java.sql.SQLException;
 
-import io.kyligence.kap.secondstorage.metadata.TableData;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.cube.model.NDataflowManager;
 
 import com.clearspring.analytics.util.Preconditions;
 
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
-import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import io.kyligence.kap.secondstorage.NameUtil;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import io.kyligence.kap.secondstorage.metadata.TableData;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 

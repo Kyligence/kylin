@@ -91,15 +91,15 @@ import scala.math.Ordering;
 @Slf4j
 public class TDVTTest implements JobWaiter {
 
-    static private final String project = "tdvt_new";
-    static private final String AUTO_MODEL_CALCS_1 = "d4ebc34f-ec70-4e81-830c-0d278fe064aa";
-    static private final String AUTO_MODEL_STAPLES_1 = "0dabbdd5-7246-4fdb-b2a9-5398dc4c57f7";
-    static private final int clickhouseNumber = 1;
-    static private final List<String> modelList = ImmutableList.of(AUTO_MODEL_CALCS_1, AUTO_MODEL_STAPLES_1);
-    static private final String queryCatalog = TDVTTest.class.getSimpleName();
+    private static final String project = "tdvt_new";
+    private static final String AUTO_MODEL_CALCS_1 = "d4ebc34f-ec70-4e81-830c-0d278fe064aa";
+    private static final String AUTO_MODEL_STAPLES_1 = "0dabbdd5-7246-4fdb-b2a9-5398dc4c57f7";
+    private static final int clickhouseNumber = 1;
+    private static final List<String> modelList = ImmutableList.of(AUTO_MODEL_CALCS_1, AUTO_MODEL_STAPLES_1);
+    private static final String queryCatalog = TDVTTest.class.getSimpleName();
 
-    static private final ImmutableSet<String> whiteSQLList = ImmutableSet.of();
-    static private Set<String> blackSQLList = null;
+    private static final ImmutableSet<String> whiteSQLList = ImmutableSet.of();
+    private static Set<String> blackSQLList = null;
 
     @ClassRule
     public static SharedSparkSession sharedSpark = new SharedSparkSession(

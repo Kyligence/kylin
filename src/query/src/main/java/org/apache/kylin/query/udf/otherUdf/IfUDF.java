@@ -39,7 +39,6 @@ import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class IfUDF implements UdfDef {
@@ -64,7 +63,8 @@ public class IfUDF implements UdfDef {
                         commonType = (BasicSqlType) (operandTypes[1].getSqlTypeName() == SqlTypeName.NULL
                                 ? operandTypes[2]
                                 : operandTypes[1]);
-                        if (commonType.getSqlTypeName() == SqlTypeName.NULL) { // make the type boolean if both exps are null
+                        if (commonType.getSqlTypeName() == SqlTypeName.NULL) {
+                            // make the type boolean if both exps are null
                             commonType = (BasicSqlType) typeFactory.createSqlType(SqlTypeName.BOOLEAN);
                         }
                         operandTypes[1] = callBinding.getTypeFactory().createTypeWithNullability(commonType, true);

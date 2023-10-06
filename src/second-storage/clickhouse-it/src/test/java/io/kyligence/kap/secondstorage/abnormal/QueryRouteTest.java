@@ -35,6 +35,7 @@ import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.SparkException;
@@ -56,8 +57,6 @@ import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-
 import io.kyligence.kap.newten.clickhouse.ClickHouseUtils;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import io.kyligence.kap.secondstorage.test.ClickHouseClassRule;
@@ -66,17 +65,19 @@ import io.kyligence.kap.secondstorage.test.EnableTestUser;
 import io.kyligence.kap.secondstorage.test.SharedSparkSession;
 
 /**
- * {@link QueryRouteTest} simulates the case where KE(resolving clickhouse table schema on spark driver) or worker
- * (executing query on spark executor) can not access ClickHouse.In such case, we should use table index to answer query.
+ * {@link QueryRouteTest} simulates the case where KE(resolving
+ * clickhouse table schema on spark driver) or worker
+ * (executing query on spark executor) can not access ClickHouse.
+ * In such case, we should use table index to answer query.
  * <p/>
  *  @see <a href="https://olapio.atlassian.net/browse/KE-28035">KE-28035</a> for details.
  */
 public class QueryRouteTest {
 
-    static private final String testSQL = "select sum(PRICE) from TEST_KYLIN_FACT group by PRICE";
-    static private final String cubeName = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
-    static private final String project = "table_index";
-    static private final int clickhouseNumber = 2;
+    private static final String testSQL = "select sum(PRICE) from TEST_KYLIN_FACT group by PRICE";
+    private static final String cubeName = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
+    private static final String project = "table_index";
+    private static final int clickhouseNumber = 2;
 
     @ClassRule
     public static SharedSparkSession sharedSpark = new SharedSparkSession(

@@ -28,15 +28,14 @@ import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.val;
 
@@ -302,8 +301,8 @@ public class ThreadViewResourceStoreTest {
 
             Field data1 = InMemResourceStore.class.getDeclaredField("data");
             Unsafe.changeAccessibleObject(data1, true);
-            ConcurrentSkipListMap<String, VersionedRawResource> data = (ConcurrentSkipListMap<String, VersionedRawResource>) data1
-                    .get(overlay);
+            ConcurrentSkipListMap<String, VersionedRawResource> data //
+                    = (ConcurrentSkipListMap<String, VersionedRawResource>) data1.get(overlay);
             long count = data.values().stream().filter(x -> x == TombVersionedRawResource.getINSTANCE()).count();
             assertEquals(4, count);
 

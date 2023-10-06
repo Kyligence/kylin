@@ -252,12 +252,12 @@ public class JobSyncListener {
                 .state("SUICIDAL".equalsIgnoreCase(notifier.getJobState()) ? "DISCARDED" : notifier.getJobState())
                 .jobType(notifier.getJobType()).segRanges(segRangeList)
                 .segmentPartitionInfoList(segmentPartitionsInfoList)
-                .snapshotJobInfo(getSnapshotJobInfo(tableDesc, notifier))
-                .startTime(notifier.getStartTime()).endTime(notifier.getEndTime()).tag(notifier.getTag())
-                .errorCode(errorCode).suggestion(suggestion).msg(msg).code(code).stacktrace(stacktrace).build();
+                .snapshotJobInfo(getSnapshotJobInfo(tableDesc, notifier)).startTime(notifier.getStartTime())
+                .endTime(notifier.getEndTime()).tag(notifier.getTag()).errorCode(errorCode).suggestion(suggestion)
+                .msg(msg).code(code).stacktrace(stacktrace).build();
 
     }
-    
+
     private static SnapshotJobInfo getSnapshotJobInfo(TableDesc tableDesc, JobFinishedNotifier notifier) {
         SnapshotJobInfo snapshotJobInfo = null;
         if (tableDesc != null && (JobTypeEnum.SNAPSHOT_BUILD.toString().equals(notifier.getJobType())
@@ -530,7 +530,7 @@ public class JobSyncListener {
                 DistributionSummary.builder(PrometheusMetrics.MODEL_BUILD_DURATION.getValue())
                         .tags(MetricsTag.MODEL.getVal(), modelAlias, MetricsTag.PROJECT.getVal(), notifier.getProject(),
                                 MetricsTag.JOB_TYPE.getVal(), notifier.getJobType(), MetricsTag.SUCCEED.getVal(),
-                                (ExecutableState.SUCCEED == state) + "")
+                                String.valueOf(ExecutableState.SUCCEED == state))
                         .distributionStatisticExpiry(Duration.ofDays(1))
                         .sla(KylinConfig.getInstanceFromEnv().getMetricsJobSlaMinutes()).register(meterRegistry)
                         .record((notifier.getDuration() + notifier.getWaitTime()) / (60.0 * 1000.0));

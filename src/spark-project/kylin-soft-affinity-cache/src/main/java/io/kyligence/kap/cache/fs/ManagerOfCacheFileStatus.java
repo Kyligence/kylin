@@ -17,10 +17,11 @@
  */
 package io.kyligence.kap.cache.fs;
 
-import io.kyligence.kap.cache.kylin.KylinCacheFileSystem;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.hadoop.fs.FileStatus;
@@ -32,11 +33,9 @@ import org.apache.kylin.guava30.shaded.common.cache.LoadingCache;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.util.concurrent.UncheckedExecutionException;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
+import io.kyligence.kap.cache.kylin.KylinCacheFileSystem;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * A cache of file status.
@@ -48,14 +47,10 @@ public class ManagerOfCacheFileStatus {
     private final LoadingCache<Path, FileStatusEntry> childrenCache;
     private int countOfEvict; // for test
 
-    public ManagerOfCacheFileStatus(long ttlSec, long maxSize,
-                                    Function<Path, FileStatus> statusLoader,
-                                    Function<Path, LocatedFileStatus[]> statusListLoader) {
-        this.statusCache = CacheBuilder.newBuilder()
-                .maximumSize(maxSize)
-                .expireAfterAccess(ttlSec, TimeUnit.SECONDS)
-                .recordStats()
-                .build(new CacheLoader<Path, FileStatusEntry>() {
+    public ManagerOfCacheFileStatus(long ttlSec, long maxSize, Function<Path, FileStatus> statusLoader,
+            Function<Path, LocatedFileStatus[]> statusListLoader) {
+        this.statusCache = CacheBuilder.newBuilder().maximumSize(maxSize).expireAfterAccess(ttlSec, TimeUnit.SECONDS)
+                .recordStats().build(new CacheLoader<Path, FileStatusEntry>() {
                     @Override
                     public FileStatusEntry load(Path p) {
                         StopWatch w = StopWatch.createStarted();
@@ -63,15 +58,13 @@ public class ManagerOfCacheFileStatus {
 
                         FileStatus status = statusLoader.apply(p);
 
-                        log.debug("Slow fs operation took {} ms, now cached at {}: {}({})", w.getTime(), cacheTime, "getFileStatus", p);
+                        log.debug("Slow fs operation took {} ms, now cached at {}: {}({})", w.getTime(), cacheTime,
+                                "getFileStatus", p);
                         return new FileStatusEntry(p, status, null, cacheTime);
                     }
                 });
-        this.childrenCache = CacheBuilder.newBuilder()
-                .maximumSize(maxSize)
-                .expireAfterAccess(ttlSec, TimeUnit.SECONDS)
-                .recordStats()
-                .build(new CacheLoader<Path, FileStatusEntry>() {
+        this.childrenCache = CacheBuilder.newBuilder().maximumSize(maxSize).expireAfterAccess(ttlSec, TimeUnit.SECONDS)
+                .recordStats().build(new CacheLoader<Path, FileStatusEntry>() {
                     @Override
                     public FileStatusEntry load(Path p) {
                         StopWatch w = StopWatch.createStarted();
@@ -79,10 +72,12 @@ public class ManagerOfCacheFileStatus {
 
                         LocatedFileStatus[] children = statusListLoader.apply(p);
                         for (LocatedFileStatus child : children) {
-                            statusCache.put(child.getPath(), new FileStatusEntry(child.getPath(), child, null, cacheTime));
+                            statusCache.put(child.getPath(),
+                                    new FileStatusEntry(child.getPath(), child, null, cacheTime));
                         }
 
-                        log.debug("Slow fs operation took {} ms, now cached at {}: got {} files from {}({})", w.getTime(), cacheTime, children.length, "listFileStatus", p);
+                        log.debug("Slow fs operation took {} ms, now cached at {}: got {} files from {}({})",
+                                w.getTime(), cacheTime, children.length, "listFileStatus", p);
                         return new FileStatusEntry(p, null, children, cacheTime);
                     }
                 });
@@ -127,7 +122,8 @@ public class ManagerOfCacheFileStatus {
     public LocatedFileStatus[] listChildren(Path p) throws IOException {
         try {
             FileStatusEntry entry = this.childrenCache.get(p);
-            log.trace("Return cached at {}: got {} files from {}({})", entry.cacheCreateTime, entry.children.length, "listFileStatus", p);
+            log.trace("Return cached at {}: got {} files from {}({})", entry.cacheCreateTime, entry.children.length,
+                    "listFileStatus", p);
             return entry.children;
         } catch (Exception e) {
             throw makeIOException(e);

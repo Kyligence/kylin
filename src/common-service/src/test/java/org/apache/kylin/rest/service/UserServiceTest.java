@@ -25,7 +25,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.persistence.transaction.TransactionException;
-import io.kyligence.kap.metadata.user.ManagedUser;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.security.AclPermission;
 import org.junit.Assert;
@@ -36,7 +36,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class UserServiceTest extends ServiceTestBase {
 
@@ -80,8 +80,8 @@ public class UserServiceTest extends ServiceTestBase {
             userService.createUser(user);
             Assert.fail();
         } catch (TransactionException e) {
-            Assert.assertTrue(StringUtils.contains(e.getCause().getCause().getMessage(),
-                    "Username:[ADMIN] already exists"));
+            Assert.assertTrue(
+                    StringUtils.contains(e.getCause().getCause().getMessage(), "Username:[ADMIN] already exists"));
         }
     }
 

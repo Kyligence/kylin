@@ -18,17 +18,18 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
-import lombok.val;
+import java.util.Collections;
+import java.util.Set;
+
 import org.apache.kylin.job.ProjectJob;
 import org.apache.kylin.job.SecondStorageCleanJobBuildParams;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.factory.JobFactory;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
 
-import java.util.Collections;
-import java.util.Set;
+import lombok.val;
 
 public class ClickHouseProjectCleanJob extends DefaultExecutable implements ProjectJob {
 
@@ -68,11 +69,8 @@ public class ClickHouseProjectCleanJob extends DefaultExecutable implements Proj
         @Override
         protected AbstractExecutable create(JobBuildParams jobBuildParams) {
             SecondStorageCleanJobBuildParams params = (SecondStorageCleanJobBuildParams) jobBuildParams;
-            val param = ClickHouseCleanJobParam.builder()
-                    .jobId(params.getJobId())
-                    .submitter(params.getSubmitter())
-                    .project(params.getProject())
-                    .build();
+            val param = ClickHouseCleanJobParam.builder().jobId(params.getJobId()).submitter(params.getSubmitter())
+                    .project(params.getProject()).build();
             return new ClickHouseProjectCleanJob(param);
         }
     }

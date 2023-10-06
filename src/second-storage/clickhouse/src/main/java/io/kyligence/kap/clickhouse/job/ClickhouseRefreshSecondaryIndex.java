@@ -34,6 +34,8 @@ import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.execution.AbstractExecutable;
@@ -43,8 +45,6 @@ import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import io.kyligence.kap.secondstorage.NameUtil;
 import io.kyligence.kap.secondstorage.SecondStorage;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;

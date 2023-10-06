@@ -647,13 +647,13 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     public List<IndexResponse> getIndexes(String project, String modelId, String key, List<IndexEntity.Status> status,
-                                          String orderBy, Boolean desc, List<IndexEntity.Source> sources) {
+            String orderBy, Boolean desc, List<IndexEntity.Source> sources) {
         return getIndexes(new IndexPlanParams(project, modelId, null, null, sources, status, null),
-                new PaginationParams(null, null, orderBy, desc),
-                key);
+                new PaginationParams(null, null, orderBy, desc), key);
     }
 
-    public List<IndexResponse> getIndexes(IndexPlanParams indexPlanParams, PaginationParams paginationParams, String key) {
+    public List<IndexResponse> getIndexes(IndexPlanParams indexPlanParams, PaginationParams paginationParams,
+            String key) {
         String project = indexPlanParams.getProject();
         String modelId = indexPlanParams.getModelId();
         String segmentId = indexPlanParams.getSegmentId();
@@ -672,7 +672,8 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         Map<String, Set<Long>> layoutsByRunningJobs = getLayoutsByRunningJobs(project, modelId);
         if (StringUtils.isBlank(key)) {
             return sortAndFilterLayouts(layouts.stream()
-                    .map(layoutEntity -> convertToResponse(layoutEntity, indexPlan.getModel(), layoutsByRunningJobs, segmentId))
+                    .map(layoutEntity -> convertToResponse(layoutEntity, indexPlan.getModel(), layoutsByRunningJobs,
+                            segmentId))
                     .filter(indexResponse -> statusSet.isEmpty() || statusSet.contains(indexResponse.getStatus())),
                     orderBy, desc, sources);
         }
@@ -845,19 +846,17 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
                         modelId);
 
         Map<String, Set<Long>> underConstructionLayoutsMap = new HashMap<>();
-        runningJobList.stream()
-                .filter(ae -> Objects.equals(modelId, ae.getTargetSubject()))
-                .forEach(ae -> {
-                    Set<Long> layoutIds = ae.getLayoutIds();
-                    for (String segmentId : ae.getSegmentIds()) {
-                        Set<Long> segmentLayoutIds = underConstructionLayoutsMap.get(segmentId);
-                        if (segmentLayoutIds == null) {
-                            underConstructionLayoutsMap.put(segmentId, Sets.newHashSet(layoutIds));
-                        } else {
-                            segmentLayoutIds.addAll(layoutIds);
-                        }
-                    }
-                });
+        runningJobList.stream().filter(ae -> Objects.equals(modelId, ae.getTargetSubject())).forEach(ae -> {
+            Set<Long> layoutIds = ae.getLayoutIds();
+            for (String segmentId : ae.getSegmentIds()) {
+                Set<Long> segmentLayoutIds = underConstructionLayoutsMap.get(segmentId);
+                if (segmentLayoutIds == null) {
+                    underConstructionLayoutsMap.put(segmentId, Sets.newHashSet(layoutIds));
+                } else {
+                    segmentLayoutIds.addAll(layoutIds);
+                }
+            }
+        });
         return underConstructionLayoutsMap;
     }
 
@@ -866,7 +865,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     private IndexResponse convertToResponse(LayoutEntity layoutEntity, NDataModel model,
-                                            Map<String, Set<Long>> layoutIdsOfRunningJobs, String segmentId) {
+            Map<String, Set<Long>> layoutIdsOfRunningJobs, String segmentId) {
 
         // remove all internal measures
         val colOrders = Lists.newArrayList(layoutEntity.getColOrder());
@@ -887,7 +886,8 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         boolean hasDataInconsistent = false;
 
         List<NDataSegment> segments = StringUtils.isBlank(segmentId) ? dataflow.getSegments()
-                : dataflow.getSegments().stream().filter(seg -> seg.getId().equals(segmentId)).collect(Collectors.toList());
+                : dataflow.getSegments().stream().filter(seg -> seg.getId().equals(segmentId))
+                        .collect(Collectors.toList());
         Set<Long> layoutIdsOnLoading = Sets.newHashSet();
         for (NDataSegment segment : segments) {
             Set<Long> segmentLayoutIdsOnLoading = layoutIdsOfRunningJobs.get(segment.getId());
@@ -1374,7 +1374,6 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
 
     @Override
     public Object getIndexUpdateHelper(NDataModel model, boolean createIfNotExist) {
-        val baseIndexUpdater = new BaseIndexUpdateHelper(model, false);
-        return baseIndexUpdater;
+        return new BaseIndexUpdateHelper(model, false);
     }
 }

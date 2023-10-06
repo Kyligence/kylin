@@ -68,15 +68,16 @@ public class KylinCacheFileSystem extends AbstractCacheFileSystem {
      * Returns [sql_without_cache_hint, accept_cache_time]
      */
     private static final Pattern PTN = Pattern.compile("[(]\\s*([0-9]+)");
+
     // returns [sql_with_hint_removed, the_millis_or_null]
     static String[] extractAcceptCacheTime(String sql) {
         int cut1 = sql.indexOf("ACCEPT_CACHE_TIME");
         if (cut1 < 0)
-            return new String[]{sql, null};
+            return new String[] { sql, null };
         int cut2 = sql.lastIndexOf("/*", cut1);
         int cut3 = sql.indexOf("*/", cut1);
         if (cut2 < 0 || cut3 < 0)
-            return new String[]{sql, null};
+            return new String[] { sql, null };
 
         String newSql = sql.substring(0, cut2) + sql.substring(cut3 + 2);
         String hintStr = sql.substring(cut2, cut3);
@@ -87,7 +88,7 @@ public class KylinCacheFileSystem extends AbstractCacheFileSystem {
             millis = m.group(1);
         }
 
-        return new String[]{newSql, millis};
+        return new String[] { newSql, millis };
     }
 
     public static String processAcceptCacheTimeInSql(String sql) {
@@ -97,7 +98,8 @@ public class KylinCacheFileSystem extends AbstractCacheFileSystem {
     }
 
     public static void setAcceptCacheTimeLocally(String acceptCacheTime) {
-        setAcceptCacheTimeLocally(acceptCacheTime == null ? System.currentTimeMillis() : Long.parseLong(acceptCacheTime));
+        setAcceptCacheTimeLocally(
+                acceptCacheTime == null ? System.currentTimeMillis() : Long.parseLong(acceptCacheTime));
     }
 
     /**
@@ -110,7 +112,8 @@ public class KylinCacheFileSystem extends AbstractCacheFileSystem {
 
         long now = System.currentTimeMillis();
         if (acceptCacheTime > now + 1000) { // +1000 for some error tolerance of time
-            log.error("Accept-cache-time {} is later than clock time {}. Please check the time sync across machines.", acceptCacheTime, now);
+            log.error("Accept-cache-time {} is later than clock time {}. Please check the time sync across machines.",
+                    acceptCacheTime, now);
             acceptCacheTime = now;
         }
 

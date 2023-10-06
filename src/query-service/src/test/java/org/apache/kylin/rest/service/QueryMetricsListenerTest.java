@@ -26,25 +26,24 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.rest.util.AclEvaluate;
-import org.apache.kylin.rest.util.AclUtil;
 import org.apache.kylin.common.metrics.MetricsCategory;
 import org.apache.kylin.common.metrics.MetricsGroup;
 import org.apache.kylin.common.metrics.MetricsName;
 import org.apache.kylin.common.metrics.prometheus.PrometheusMetrics;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.rest.config.initialize.QueryMetricsListener;
+import org.apache.kylin.rest.util.AclEvaluate;
+import org.apache.kylin.rest.util.AclUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -225,12 +224,12 @@ public class QueryMetricsListenerTest extends NLocalFileMetadataTestCase {
         QueryHistoryInfo queryHistoryInfo1 = new QueryHistoryInfo(true, 3, true);
         queryHistoryInfo1.setRealizationMetrics(realizationList);
         queryMetrics.setQueryHistoryInfo(queryHistoryInfo1);
-        Assert.assertEquals(false, queryMetrics.isSecondStorage());
+        Assert.assertFalse(queryMetrics.isSecondStorage());
 
         QueryMetrics.RealizationMetrics realization = new QueryMetrics.RealizationMetrics("20000001", "TABLE_INDEX",
                 "111111", null);
         realization.setSecondStorage(true);
         realizationList.add(realization);
-        Assert.assertEquals(true, queryMetrics.isSecondStorage());
+        Assert.assertTrue(queryMetrics.isSecondStorage());
     }
 }

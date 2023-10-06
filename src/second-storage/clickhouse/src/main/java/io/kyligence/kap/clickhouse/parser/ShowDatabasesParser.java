@@ -17,11 +17,11 @@
  */
 package io.kyligence.kap.clickhouse.parser;
 
-import org.apache.commons.lang3.exception.ExceptionUtils;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.function.Function;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 public class ShowDatabasesParser {
     public static final Function<ResultSet, String> SHOW_DATABASES = rs -> {

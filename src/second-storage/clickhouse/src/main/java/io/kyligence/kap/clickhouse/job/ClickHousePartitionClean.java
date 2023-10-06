@@ -24,18 +24,18 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.Objects;
 
-import io.kyligence.kap.secondstorage.metadata.TableData;
-import io.kyligence.kap.secondstorage.util.SecondStorageDateUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 
 import com.clearspring.analytics.util.Preconditions;
 
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
-import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import io.kyligence.kap.secondstorage.NameUtil;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import io.kyligence.kap.secondstorage.metadata.TableData;
+import io.kyligence.kap.secondstorage.util.SecondStorageDateUtils;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
@@ -91,7 +91,8 @@ public class ClickHousePartitionClean extends AbstractClickHouseClean {
                             ShardCleaner shardCleaner = segmentRangeMap.get(segment).isInfinite()
                                     ? new ShardCleaner(node, database, table, null, true, null)
                                     : new ShardCleaner(node, database, table,
-                                    SecondStorageDateUtils.splitByDay(segmentRangeMap.get(segment)), dateFormat);
+                                            SecondStorageDateUtils.splitByDay(segmentRangeMap.get(segment)),
+                                            dateFormat);
 
                             shardCleaners.add(shardCleaner);
                         }

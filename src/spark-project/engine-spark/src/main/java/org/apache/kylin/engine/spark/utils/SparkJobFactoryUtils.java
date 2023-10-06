@@ -18,7 +18,6 @@
 
 package org.apache.kylin.engine.spark.utils;
 
-import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
@@ -27,10 +26,12 @@ import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import io.kyligence.kap.engine.spark.job.NSparkCubingStep;
 import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
+import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 
 public class SparkJobFactoryUtils {
 
-    private SparkJobFactoryUtils() {}
+    private SparkJobFactoryUtils() {
+    }
 
     public static void initJobFactory() {
         // register jobFactory in static function

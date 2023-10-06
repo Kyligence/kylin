@@ -29,11 +29,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.kylin.metadata.cube.model.LayoutEntity;
-import org.apache.kylin.metadata.datatype.DataType;
-
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.metadata.cube.model.LayoutEntity;
+import org.apache.kylin.metadata.datatype.DataType;
+import org.apache.kylin.metadata.model.NDataModel;
 
 import io.kyligence.kap.secondstorage.ColumnMapping;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
@@ -43,7 +43,6 @@ import io.kyligence.kap.secondstorage.util.SecondStorageDateUtils;
 import lombok.Getter;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kylin.metadata.model.NDataModel;
 
 @Slf4j
 public class DataLoader {
@@ -93,18 +92,17 @@ public class DataLoader {
         throw new UnsupportedOperationException("");
     }
 
-    static List<ColumnWithType> columns(Map<String, String> columnTypeMap, LayoutEntity layout, String partitionCol, boolean addPrefix) {
+    static List<ColumnWithType> columns(Map<String, String> columnTypeMap, LayoutEntity layout, String partitionCol,
+            boolean addPrefix) {
         List<ColumnWithType> cols = new ArrayList<>();
-        layout.getOrderedDimensions()
-                .forEach((k, v) -> {
-                    String colType = columnTypeMap.get(getPrefixColumn(String.valueOf(k)));
-                    cols.add(new ColumnWithType(
-                        addPrefix ? getPrefixColumn(String.valueOf(k)) : String.valueOf(k),
-                        colType == null ? clickHouseType(v.getType()) : colType,
-                        // partition column must not be null
-                        colType == null && v.getColumnDesc().isNullable() && !String.valueOf(k).equals(partitionCol),
-                        true));
-                });
+        layout.getOrderedDimensions().forEach((k, v) -> {
+            String colType = columnTypeMap.get(getPrefixColumn(String.valueOf(k)));
+            cols.add(new ColumnWithType(addPrefix ? getPrefixColumn(String.valueOf(k)) : String.valueOf(k),
+                    colType == null ? clickHouseType(v.getType()) : colType,
+                    // partition column must not be null
+                    colType == null && v.getColumnDesc().isNullable() && !String.valueOf(k).equals(partitionCol),
+                    true));
+        });
         return cols;
     }
 
@@ -132,12 +130,8 @@ public class DataLoader {
     @Getter
     private final String segmentId;
 
-    public DataLoader(String executableId,
-                      String database,
-                      Engine tableEngine,
-                      boolean isIncremental,
-                      List<LoadInfo> loadInfoBatch,
-                      LoadContext loadContext) {
+    public DataLoader(String executableId, String database, Engine tableEngine, boolean isIncremental,
+            List<LoadInfo> loadInfoBatch, LoadContext loadContext) {
         this.executableId = executableId;
         this.database = database;
         this.tableEngine = tableEngine;
@@ -200,7 +194,8 @@ public class DataLoader {
                 builder.needDropPartition(getNeedDropPartition(loadInfo, needDropTable));
 
                 ShardLoader.ShardLoadContext context = builder.build();
-                List<ClickhouseLoadFileLoad> clickhouseLoadFileLoads = singleFileLoaderPerNode.computeIfAbsent(nodeName, k -> new ArrayList<>());
+                List<ClickhouseLoadFileLoad> clickhouseLoadFileLoads = singleFileLoaderPerNode.computeIfAbsent(nodeName,
+                        k -> new ArrayList<>());
                 ShardLoader shardLoader = new ShardLoader(context);
 
                 clickhouseLoadFileLoads.addAll(shardLoader.toSingleFileLoader());
@@ -264,14 +259,15 @@ public class DataLoader {
     private Set<String> getNeedDropTable(LoadInfo loadInfo) {
         return loadInfo.containsOldSegmentTableData.stream().filter(tableData -> {
             val all = tableData.getAllSegments();
-            return tableData.getLayoutID() != loadInfo.getLayout().getId() && all.size() == 1 && all.contains(loadInfo.oldSegmentId);
+            return tableData.getLayoutID() != loadInfo.getLayout().getId() && all.size() == 1
+                    && all.contains(loadInfo.oldSegmentId);
         }).map(TableData::getTable).collect(Collectors.toSet());
     }
 
     private Set<String> getNeedDropPartition(LoadInfo loadInfo, Set<String> needDropTable) {
         return loadInfo.containsOldSegmentTableData.stream()
-                .filter(tableData -> tableData.getLayoutID() != loadInfo.getLayout().getId() && !needDropTable.contains(tableData.getTable()))
-                .map(TableData::getTable)
-                .collect(Collectors.toSet());
+                .filter(tableData -> tableData.getLayoutID() != loadInfo.getLayout().getId()
+                        && !needDropTable.contains(tableData.getTable()))
+                .map(TableData::getTable).collect(Collectors.toSet());
     }
 }

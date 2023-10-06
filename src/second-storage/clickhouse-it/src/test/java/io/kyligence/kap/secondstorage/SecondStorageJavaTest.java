@@ -33,8 +33,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import io.kyligence.kap.secondstorage.test.utils.MockedModelService;
-import io.kyligence.kap.secondstorage.test.utils.MockedSecondStorageService;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
@@ -44,6 +42,8 @@ import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.execution.DefaultExecutable;
@@ -80,9 +80,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-
 import io.kyligence.kap.clickhouse.database.ClickHouseOperator;
 import io.kyligence.kap.clickhouse.ddl.ClickHouseCreateTable;
 import io.kyligence.kap.clickhouse.ddl.ClickHouseRender;
@@ -107,12 +104,14 @@ import io.kyligence.kap.secondstorage.test.EnableClickHouseJob;
 import io.kyligence.kap.secondstorage.test.EnableTestUser;
 import io.kyligence.kap.secondstorage.test.SharedSparkSession;
 import io.kyligence.kap.secondstorage.test.utils.JobWaiter;
+import io.kyligence.kap.secondstorage.test.utils.MockedModelService;
+import io.kyligence.kap.secondstorage.test.utils.MockedSecondStorageService;
 import lombok.val;
 
 public class SecondStorageJavaTest implements JobWaiter {
     private static final String modelName = "test_table_index";
-    static private final String modelId = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
-    static private final String project = "table_index";
+    private static final String modelId = "acfde546-2cc9-4eec-bc92-e3bd46d4e2ee";
+    private static final String project = "table_index";
 
     @ClassRule
     public static SharedSparkSession sharedSpark = new SharedSparkSession(

@@ -18,6 +18,8 @@
 
 package org.apache.kylin.job.handler;
 
+import java.util.Collections;
+
 import org.apache.kylin.job.SecondStorageCleanJobBuildParams;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.JobTypeEnum;
@@ -25,14 +27,10 @@ import org.apache.kylin.job.factory.JobFactory;
 import org.apache.kylin.job.factory.JobFactoryConstant;
 import org.apache.kylin.job.model.JobParam;
 
-import java.util.Collections;
-
 public class SecondStorageProjectCleanJobHandler extends AbstractSecondStorageJobHanlder {
     @Override
     protected AbstractExecutable createJob(JobParam jobParam) {
-        SecondStorageCleanJobBuildParams params = new SecondStorageCleanJobBuildParams(
-                Collections.emptySet(),
-                jobParam,
+        SecondStorageCleanJobBuildParams params = new SecondStorageCleanJobBuildParams(Collections.emptySet(), jobParam,
                 JobTypeEnum.SECOND_STORAGE_NODE_CLEAN);
         params.setProject(jobParam.getProject());
         return JobFactory.createJob(JobFactoryConstant.STORAGE_NODE_CLEAN_FACTORY, params);

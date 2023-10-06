@@ -108,7 +108,7 @@ public class ClickHouseLoad extends AbstractExecutable {
     private static String indexPath(String workingDir, String dataflowID, String segmentID, long layoutID) {
         return String.format(Locale.ROOT, "%s%s/%s/%d", workingDir, dataflowID, segmentID, layoutID);
     }
-    
+
     private List<List<LoadInfo>> loadInfos = null;
     private LoadContext loadContext;
 
@@ -169,7 +169,7 @@ public class ClickHouseLoad extends AbstractExecutable {
             return nodeNames;
         throw new UnsupportedOperationException();
     }
-    
+
     protected FileProvider getFileProvider(NDataflow df, String segmentId, long layoutId) {
         String segmentLayoutRoot;
         if (JobSchedulerModeEnum.CHAIN.toString().equalsIgnoreCase(df.getConfig().getJobSchedulerMode())) {
@@ -186,13 +186,11 @@ public class ClickHouseLoad extends AbstractExecutable {
     }
 
     private List<LoadInfo> distributeLoad(MethodContext mc, String[] nodeNames) {
-        return mc.layoutIds.stream()
-                .map(mc.indexPlan()::getLayoutEntity)
-                .filter(SecondStorageUtil::isBaseTableIndex)
+        return mc.layoutIds.stream().map(mc.indexPlan()::getLayoutEntity).filter(SecondStorageUtil::isBaseTableIndex)
                 .flatMap(layoutEntity -> mc.segmentIds.stream()
                         .filter(segmentId -> filterLayoutBySegmentId(mc, segmentId, layoutEntity.getId()))
-                        .map(segmentId -> getLoadInfo(segmentId, layoutEntity, mc, nodeNames))
-                ).collect(Collectors.toList());
+                        .map(segmentId -> getLoadInfo(segmentId, layoutEntity, mc, nodeNames)))
+                .collect(Collectors.toList());
     }
 
     private boolean filterLayoutBySegmentId(MethodContext mc, String segmentId, long layoutId) {
@@ -200,14 +198,15 @@ public class ClickHouseLoad extends AbstractExecutable {
     }
 
     private LoadInfo getLoadInfo(String segmentId, LayoutEntity layoutEntity, MethodContext mc, String[] nodeNames) {
-        LoadInfo loadInfo = genLoadInfoBySegmentId(segmentId, nodeNames, layoutEntity, mc.tablePlan(), mc.df, mc.tableFlow());
+        LoadInfo loadInfo = genLoadInfoBySegmentId(segmentId, nodeNames, layoutEntity, mc.tablePlan(), mc.df,
+                mc.tableFlow());
         loadInfo.setTargetDatabase(mc.database);
         loadInfo.setTargetTable(mc.prefixTableName.apply(loadInfo.getLayout()));
         return loadInfo;
     }
 
     private LoadInfo genLoadInfoBySegmentId(String segmentId, String[] nodeNames, LayoutEntity currentLayoutEntity,
-                                            TablePlan tablePlan, NDataflow dataFlow, TableFlow tableFlow) {
+            TablePlan tablePlan, NDataflow dataFlow, TableFlow tableFlow) {
         TableEntity tableEntity = tablePlan.getEntity(currentLayoutEntity).orElse(null);
         Preconditions.checkArgument(tableEntity != null);
         int shardNumber = Math.min(nodeNames.length, tableEntity.getShardNumbers());
@@ -359,7 +358,8 @@ public class ClickHouseLoad extends AbstractExecutable {
                         loadInfoBatch.add(item.get(idx));
                     }
                     return loadInfoBatch;
-                }).sorted(Comparator.comparing(infoBatch -> infoBatch.get(0).getSegmentId())).collect(Collectors.toList());
+                }).sorted(Comparator.comparing(infoBatch -> infoBatch.get(0).getSegmentId()))
+                        .collect(Collectors.toList());
 
                 loadData(mc);
                 updateMeta();
@@ -375,7 +375,8 @@ public class ClickHouseLoad extends AbstractExecutable {
         List<DataLoader> dataLoaders = loadInfos.stream()
                 .map(loadInfo -> new DataLoader(getId(), mc.getDatabase(), createTableEngine(), mc.isIncremental,
                         loadInfo, this.loadContext))
-                .filter(dataLoader -> !loadContext.getHistorySegments(dataLoader.getSegmentKey()).contains(dataLoader.getSegmentId()))
+                .filter(dataLoader -> !loadContext.getHistorySegments(dataLoader.getSegmentKey())
+                        .contains(dataLoader.getSegmentId()))
                 .collect(Collectors.toList());
         List<ShardLoader> shardLoaders = dataLoaders.stream()
                 .flatMap(dataLoader -> dataLoader.getShardLoaders().stream()).collect(Collectors.toList());
@@ -553,11 +554,11 @@ public class ClickHouseLoad extends AbstractExecutable {
     }
 
     protected void updateDFSSegmentIfNeeded(MethodContext mc) {
-        if (!SegmentOnlineMode.ANY.toString().equalsIgnoreCase(getProjectConfig().getKylinEngineSegmentOnlineMode())){
+        if (!SegmentOnlineMode.ANY.toString().equalsIgnoreCase(getProjectConfig().getKylinEngineSegmentOnlineMode())) {
             return;
         }
 
-        if (!isDAGJobScheduler()){
+        if (!isDAGJobScheduler()) {
             return;
         }
 
@@ -565,13 +566,11 @@ public class ClickHouseLoad extends AbstractExecutable {
         val dataflow = dfMgr.getDataflow(mc.getDataflowId()).copy();
 
         NDataflowUpdate update = new NDataflowUpdate(mc.getDf().getId());
-        List<NDataSegment> toUpdateSegments = mc.segmentIds.stream()
-                .map(dataflow::getSegment)
-                .filter(Objects::nonNull)
+        List<NDataSegment> toUpdateSegments = mc.segmentIds.stream().map(dataflow::getSegment).filter(Objects::nonNull)
                 .filter(segment -> segment.getStatus() == SegmentStatusEnum.NEW)
                 .peek(segment -> segment.setStatus(SegmentStatusEnum.READY)).collect(Collectors.toList());
 
-        if (!toUpdateSegments.isEmpty()){
+        if (!toUpdateSegments.isEmpty()) {
             update.setToUpdateSegs(toUpdateSegments.toArray(new NDataSegment[0]));
             dfMgr.updateDataflowWithoutIndex(update);
         }
@@ -589,12 +588,12 @@ public class ClickHouseLoad extends AbstractExecutable {
         }
     }
 
-
     public void saveState(boolean saveEmpty) {
         Preconditions.checkNotNull(loadContext, "load context can't be null");
         Map<String, String> info = new HashMap<>();
         // if save empty，will clean the
-        info.put(LoadContext.CLICKHOUSE_LOAD_CONTEXT, saveEmpty ? LoadContext.emptyState() : loadContext.serializeToString());
+        info.put(LoadContext.CLICKHOUSE_LOAD_CONTEXT,
+                saveEmpty ? LoadContext.emptyState() : loadContext.serializeToString());
         val manager = this.getManager();
         JobContextUtil.withTxAndRetry(() -> {
             manager.updateJobOutput(getParentId(), null, info, null, null);
@@ -602,10 +601,10 @@ public class ClickHouseLoad extends AbstractExecutable {
         });
     }
 
-
     public void loadState() {
         Preconditions.checkNotNull(loadContext, "load context can't be null");
-        val state = getManager().getOutputFromHDFSByJobId(getParentId()).getExtra().get(LoadContext.CLICKHOUSE_LOAD_CONTEXT);
+        val state = getManager().getOutputFromHDFSByJobId(getParentId()).getExtra()
+                .get(LoadContext.CLICKHOUSE_LOAD_CONTEXT);
         if (!StringUtils.isEmpty(state)) {
             loadContext.deserializeToString(state);
         }
@@ -621,10 +620,9 @@ public class ClickHouseLoad extends AbstractExecutable {
      * @return index of group order by size
      */
     private int[] getIndexInGroup(String[] group, Map<String, Long> nodeSizeMap) {
-        return IntStream.range(0, group.length)
-                .mapToObj(i -> new Pair<>(group[i], i))
-                .sorted(Comparator.comparing(c -> nodeSizeMap.getOrDefault(c.getFirst(), 0L)))
-                .map(Pair::getSecond).mapToInt(i -> i).toArray();
+        return IntStream.range(0, group.length).mapToObj(i -> new Pair<>(group[i], i))
+                .sorted(Comparator.comparing(c -> nodeSizeMap.getOrDefault(c.getFirst(), 0L))).map(Pair::getSecond)
+                .mapToInt(i -> i).toArray();
     }
 
     /**
@@ -635,14 +633,13 @@ public class ClickHouseLoad extends AbstractExecutable {
      * @return ordered group by index
      */
     private String[] orderGroupByIndex(String[] group, int[] index) {
-        return IntStream.range(0, group.length)
-                .mapToObj(i -> group[index[i]])
-                .collect(Collectors.toList()).toArray(new String[]{});
+        return IntStream.range(0, group.length).mapToObj(i -> group[index[i]]).collect(Collectors.toList())
+                .toArray(new String[] {});
     }
 
-
     private void waitFlatTableStepEnd() throws JobStoppedException, InterruptedException {
-        if (!isDAGJobScheduler()) return;
+        if (!isDAGJobScheduler())
+            return;
 
         long waitSecond = getConfig().getSecondStorageWaitIndexBuildSecond();
         String jobId = getParentId();

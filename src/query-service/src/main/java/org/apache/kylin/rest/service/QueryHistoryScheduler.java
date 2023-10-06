@@ -34,6 +34,7 @@ import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.Singletons;
 import org.apache.kylin.common.util.ExecutorServiceUtil;
 import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
@@ -42,8 +43,6 @@ import org.apache.kylin.query.util.SparkJobTraceMetric;
 import org.apache.kylin.rest.util.SpringContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
@@ -175,7 +174,8 @@ public class QueryHistoryScheduler {
         for (QueryMetrics metric : metrics) {
             try {
                 if (metric.isSecondStorage() && SecondStorageUtil.isProjectEnable(metric.getProjectName())) {
-                    Map<String, Object> secondStorageMetrics = updater.getQueryMetric(metric.getProjectName(), metric.getQueryId());
+                    Map<String, Object> secondStorageMetrics = updater.getQueryMetric(metric.getProjectName(),
+                            metric.getQueryId());
 
                     if (secondStorageMetrics.containsKey(QueryMetrics.TOTAL_SCAN_BYTES)) {
                         metric.setTotalScanBytes((long) secondStorageMetrics.get(QueryMetrics.TOTAL_SCAN_BYTES));
@@ -186,11 +186,13 @@ public class QueryHistoryScheduler {
                     }
 
                     if (secondStorageMetrics.containsKey(QueryMetrics.SOURCE_RESULT_COUNT)) {
-                        metric.getQueryHistoryInfo().setSourceResultCount((long) secondStorageMetrics.get(QueryMetrics.SOURCE_RESULT_COUNT));
+                        metric.getQueryHistoryInfo().setSourceResultCount(
+                                (long) secondStorageMetrics.get(QueryMetrics.SOURCE_RESULT_COUNT));
                     }
                 }
             } catch (Exception e) {
-                logger.error("Get tired storage metric fail. query_id: {}, message: {}", metric.getQueryId(), e.getMessage());
+                logger.error("Get tired storage metric fail. query_id: {}, message: {}", metric.getQueryId(),
+                        e.getMessage());
             }
         }
     }

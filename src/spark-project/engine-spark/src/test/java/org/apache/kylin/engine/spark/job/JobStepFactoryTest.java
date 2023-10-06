@@ -18,18 +18,9 @@
 
 package org.apache.kylin.engine.spark.job;
 
-import io.kyligence.kap.engine.spark.job.NResourceDetectStep;
-import io.kyligence.kap.engine.spark.job.NSparkCleanupAfterMergeStep;
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
-import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
-import io.kyligence.kap.engine.spark.job.RDSegmentBuildJob;
-import io.kyligence.kap.engine.spark.job.ResourceDetectBeforeMergingJob;
-import io.kyligence.kap.engine.spark.job.ResourceDetectBeforeSampling;
-import io.kyligence.kap.engine.spark.job.SparkCleanupTransactionalTableStep;
-import io.kyligence.kap.engine.spark.stats.analyzer.TableAnalyzerJob;
-import lombok.val;
-import lombok.var;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
@@ -56,8 +47,18 @@ import org.junit.Before;
 import org.junit.Test;
 import org.sparkproject.guava.collect.Sets;
 
-import java.util.Set;
-import java.util.stream.Collectors;
+import io.kyligence.kap.engine.spark.job.NResourceDetectStep;
+import io.kyligence.kap.engine.spark.job.NSparkCleanupAfterMergeStep;
+import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
+import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
+import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
+import io.kyligence.kap.engine.spark.job.RDSegmentBuildJob;
+import io.kyligence.kap.engine.spark.job.ResourceDetectBeforeMergingJob;
+import io.kyligence.kap.engine.spark.job.ResourceDetectBeforeSampling;
+import io.kyligence.kap.engine.spark.job.SparkCleanupTransactionalTableStep;
+import io.kyligence.kap.engine.spark.stats.analyzer.TableAnalyzerJob;
+import lombok.val;
+import lombok.var;
 
 public class JobStepFactoryTest extends NLocalWithSparkSessionTestBase {
     private KylinConfig config;

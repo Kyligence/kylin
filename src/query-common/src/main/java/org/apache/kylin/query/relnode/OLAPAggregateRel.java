@@ -75,7 +75,7 @@ import org.apache.kylin.query.schema.OLAPTable;
  */
 public class OLAPAggregateRel extends Aggregate implements OLAPRel {
 
-    final static Map<String, String> AGGR_FUNC_MAP = new HashMap<>();
+    static final Map<String, String> AGGR_FUNC_MAP = new HashMap<>();
 
     static {
         AGGR_FUNC_MAP.put("SUM", "SUM");

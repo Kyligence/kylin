@@ -22,7 +22,6 @@ import java.util.Locale;
 import java.util.Objects;
 
 import org.apache.kylin.common.KylinConfig;
-
 import org.apache.kylin.guava30.shaded.common.base.Equivalence;
 
 import lombok.experimental.UtilityClass;

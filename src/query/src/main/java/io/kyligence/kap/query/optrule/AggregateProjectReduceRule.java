@@ -37,7 +37,6 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
-
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 
 /**

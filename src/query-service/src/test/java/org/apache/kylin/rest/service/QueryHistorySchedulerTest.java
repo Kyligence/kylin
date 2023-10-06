@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.query.util.SparkJobTraceMetric;
@@ -32,8 +33,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 public class QueryHistorySchedulerTest extends NLocalFileMetadataTestCase {
 

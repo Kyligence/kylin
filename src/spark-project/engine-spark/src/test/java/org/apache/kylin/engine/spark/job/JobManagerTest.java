@@ -77,7 +77,7 @@ import lombok.val;
  */
 public class JobManagerTest extends NLocalFileMetadataTestCase {
 
-    private final static String PROJECT = "default";
+    private static final String PROJECT = "default";
 
     private static JobManager jobManager;
 

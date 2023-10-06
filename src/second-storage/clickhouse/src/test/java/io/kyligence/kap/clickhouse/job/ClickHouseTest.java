@@ -18,21 +18,22 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import io.kyligence.kap.clickhouse.ClickHouseStorage;
-import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
-import io.kyligence.kap.secondstorage.config.ClusterInfo;
-import io.kyligence.kap.secondstorage.config.Node;
-import lombok.val;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import io.kyligence.kap.clickhouse.ClickHouseStorage;
+import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
+import io.kyligence.kap.secondstorage.config.ClusterInfo;
+import io.kyligence.kap.secondstorage.config.Node;
+import lombok.val;
 
 public class ClickHouseTest extends NLocalFileMetadataTestCase {
 
@@ -46,13 +47,14 @@ public class ClickHouseTest extends NLocalFileMetadataTestCase {
         ClusterInfo cluster = new ClusterInfo();
         Map<String, List<Node>> clusterNodes = new HashMap<>();
         cluster.setCluster(clusterNodes);
-        clusterNodes.put("pair1", Collections.singletonList(new Node().setName("node01").setIp("127.0.0.1").setPort(9000).setUser("default").setPassword("123456")));
-        clusterNodes.put("pair2", Collections.singletonList(new Node().setName("node02").setIp("127.0.0.1").setPort(9000).setUser("default")));
-        clusterNodes.put("pair3", Collections.singletonList(new Node().setName("node03").setIp("127.0.0.1").setPort(9000)));
-        SecondStorageNodeHelper.initFromCluster(
-                cluster,
-                node -> ClickHouse.buildUrl(node.getIp(), node.getPort(), ClickHouseStorage.getJdbcUrlProperties(cluster, node)),
-                null);
+        clusterNodes.put("pair1", Collections.singletonList(new Node().setName("node01").setIp("127.0.0.1")
+                .setPort(9000).setUser("default").setPassword("123456")));
+        clusterNodes.put("pair2", Collections
+                .singletonList(new Node().setName("node02").setIp("127.0.0.1").setPort(9000).setUser("default")));
+        clusterNodes.put("pair3",
+                Collections.singletonList(new Node().setName("node03").setIp("127.0.0.1").setPort(9000)));
+        SecondStorageNodeHelper.initFromCluster(cluster, node -> ClickHouse.buildUrl(node.getIp(), node.getPort(),
+                ClickHouseStorage.getJdbcUrlProperties(cluster, node)), null);
     }
 
     @Test
@@ -87,6 +89,8 @@ public class ClickHouseTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(properties.get(ClickHouse.PASSWORD), node.getPassword());
 
         String url = ClickHouse.buildUrl(node.getIp(), node.getPort(), properties);
-        Assert.assertEquals("jdbc:clickhouse://127.0.0.1:9000?socket_timeout=600000&keepAliveTimeout=600000&password=123456&user=default&connect_timeout=3", url);
+        Assert.assertEquals(
+                "jdbc:clickhouse://127.0.0.1:9000?socket_timeout=600000&keepAliveTimeout=600000&password=123456&user=default&connect_timeout=3",
+                url);
     }
 }

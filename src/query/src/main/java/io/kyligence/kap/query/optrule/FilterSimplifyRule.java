@@ -41,15 +41,12 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.kylin.query.relnode.KapFilterRel;
 
-
 public class FilterSimplifyRule extends RelOptRule {
 
-    public static final FilterSimplifyRule INSTANCE = new FilterSimplifyRule(
-            operand(KapFilterRel.class, any()),
+    public static final FilterSimplifyRule INSTANCE = new FilterSimplifyRule(operand(KapFilterRel.class, any()),
             RelFactories.LOGICAL_BUILDER, "FilterSimpifyRule");
 
-    public FilterSimplifyRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory,
-                              String description) {
+    public FilterSimplifyRule(RelOptRuleOperand operand, RelBuilderFactory relBuilderFactory, String description) {
         super(operand, relBuilderFactory, description);
     }
 
@@ -70,8 +67,7 @@ public class FilterSimplifyRule extends RelOptRule {
 
         if (changed) {
             relBuilder.push(filter.getInput());
-            relBuilder.filter(
-                    RexUtil.composeConjunction(relBuilder.getRexBuilder(), conjunctions, true));
+            relBuilder.filter(RexUtil.composeConjunction(relBuilder.getRexBuilder(), conjunctions, true));
             call.transformTo(relBuilder.build());
         }
     }
@@ -105,7 +101,8 @@ public class FilterSimplifyRule extends RelOptRule {
         return RexUtil.composeDisjunction(rexBuilder, mergedTerms);
     }
 
-    private void findPattern(List<RexNode> terms, HashMap<String, List<RexNode>> equals, HashMap<String, List<Integer>> equalsIdxes) {
+    private void findPattern(List<RexNode> terms, HashMap<String, List<RexNode>> equals,
+            HashMap<String, List<Integer>> equalsIdxes) {
         for (int i = 0; i < terms.size(); i++) {
             if (!(terms.get(i) instanceof RexCall)) {
                 continue;
@@ -116,7 +113,8 @@ public class FilterSimplifyRule extends RelOptRule {
         }
     }
 
-    private void findEquals(HashMap<String, List<RexNode>> equals, HashMap<String, List<Integer>> equalsIdxes, int i, RexCall call) {
+    private void findEquals(HashMap<String, List<RexNode>> equals, HashMap<String, List<Integer>> equalsIdxes, int i,
+            RexCall call) {
         if (call.getOperator() != SqlStdOperatorTable.EQUALS) {
             return;
         }

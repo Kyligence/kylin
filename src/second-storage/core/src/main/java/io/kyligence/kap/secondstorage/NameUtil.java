@@ -22,7 +22,6 @@ import java.util.Locale;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
-
 import org.apache.kylin.metadata.cube.model.NDataflow;
 
 public class NameUtil {
@@ -50,7 +49,7 @@ public class NameUtil {
         return getTable(df.getUuid(), layoutId);
     }
 
-    public static String getTable(String modelId, long layoutId){
+    public static String getTable(String modelId, long layoutId) {
         return String.format(Locale.ROOT, "%s_%d", tablePrefix(modelId), layoutId);
     }
 

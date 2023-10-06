@@ -17,15 +17,15 @@
  */
 package io.kyligence.kap.secondstorage.management.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import lombok.Data;
 
 @Data
 public class StorageRequest {
@@ -43,19 +43,19 @@ public class StorageRequest {
     private StorageType type = StorageType.CLICKHOUSE;
 
     public List<String> getSegmentIds() {
-        return segmentIds == null ? Collections.emptyList(): segmentIds;
+        return segmentIds == null ? Collections.emptyList() : segmentIds;
     }
 
     public List<String> getSegmentNames() {
-        return segmentNames == null ? Collections.emptyList(): segmentNames;
+        return segmentNames == null ? Collections.emptyList() : segmentNames;
     }
 
     public enum StorageType {
         CLICKHOUSE
     }
 
-    private static final Set<StorageType> SUPPORTED_STORAGE =
-            Stream.of(StorageType.CLICKHOUSE).collect(Collectors.toSet());
+    private static final Set<StorageType> SUPPORTED_STORAGE = Stream.of(StorageType.CLICKHOUSE)
+            .collect(Collectors.toSet());
 
     public boolean storageTypeSupported() {
         return SUPPORTED_STORAGE.contains(type);

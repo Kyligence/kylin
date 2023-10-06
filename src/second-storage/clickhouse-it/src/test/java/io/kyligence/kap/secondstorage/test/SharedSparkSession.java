@@ -36,10 +36,10 @@ import org.junit.rules.ExternalResource;
 
 public class SharedSparkSession extends ExternalResource {
 
-    final protected SparkConf sparkConf = new SparkConf().setAppName(RandomUtil.randomUUIDStr()).setMaster("local[4]");
+    protected final SparkConf sparkConf = new SparkConf().setAppName(RandomUtil.randomUUIDStr()).setMaster("local[4]");
     protected SparkSession ss;
 
-    final private Map<String, String> extraConf;
+    private final Map<String, String> extraConf;
 
     public SharedSparkSession() {
         this(Collections.emptyMap());

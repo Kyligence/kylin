@@ -20,11 +20,10 @@ package org.apache.kylin.rest.security;
 
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.USER_LOGIN_FAILED;
 
-import org.apache.kylin.rest.constant.Constant;
-import org.apache.kylin.rest.service.UserService;
 import org.apache.kylin.common.annotation.ThirdPartyDependencies;
-import io.kyligence.kap.metadata.user.ManagedUser;
+import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.service.NUserGroupService;
+import org.apache.kylin.rest.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +33,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+
+import io.kyligence.kap.metadata.user.ManagedUser;
 
 @ThirdPartyDependencies({ @ThirdPartyDependencies.ThirdPartyDependent(repository = "static-user-manager", classes = {
         "StaticAuthenticationProvider" }) })

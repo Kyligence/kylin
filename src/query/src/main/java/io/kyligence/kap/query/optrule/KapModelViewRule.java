@@ -24,10 +24,9 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.relnode.KapModelViewRel;
 import org.apache.kylin.query.relnode.KapRel;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 /**
  */

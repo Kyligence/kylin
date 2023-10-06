@@ -21,10 +21,8 @@ package org.apache.kylin.rest.service;
 import java.util.Arrays;
 import java.util.Set;
 
-import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
+import org.apache.kylin.rest.constant.Constant;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,6 +30,9 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import io.kyligence.kap.metadata.user.ManagedUser;
+import io.kyligence.kap.metadata.user.NKylinUserManager;
 
 public class CaseInsensitiveUserGroupServiceTest extends NLocalFileMetadataTestCase {
 

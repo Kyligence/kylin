@@ -18,16 +18,15 @@
 
 package org.apache.kylin.job.handler;
 
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.job.model.JobParam;
-
-import static org.apache.kylin.guava30.shaded.common.base.Preconditions.checkNotNull;
 
 public abstract class AbstractSecondStorageJobHanlder extends AbstractJobHandler {
 
     @Override
     protected void checkBeforeHandle(JobParam jobParam) {
         String project = jobParam.getProject();
-        checkNotNull(project);
+        Preconditions.checkNotNull(project);
     }
 
     @Override

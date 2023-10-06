@@ -41,7 +41,6 @@ public class ClickhouseLoadFileLoad implements ClickhouseLoadActionUnit {
     private final ShardLoader shardLoader;
     private final LoadContext loadContext;
 
-
     public ClickhouseLoadFileLoad(ShardLoader shardLoader, String sourceTable, String parquetFile) {
         this.shardLoader = shardLoader;
         this.loadContext = shardLoader.getLoadContext();
@@ -84,7 +83,8 @@ public class ClickhouseLoadFileLoad implements ClickhouseLoadActionUnit {
             }
 
             try {
-                final InsertInto insertInto = InsertInto.insertInto(shardLoader.getDatabase(), destTable).from(shardLoader.getDatabase(), srcTable);
+                final InsertInto insertInto = InsertInto.insertInto(shardLoader.getDatabase(), destTable)
+                        .from(shardLoader.getDatabase(), srcTable);
                 clickHouse.apply(insertInto.toSql(render));
                 exception = null;
             } catch (SQLException e) {

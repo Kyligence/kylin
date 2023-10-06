@@ -18,14 +18,14 @@
 
 package org.apache.kylin.rest.util;
 
+import static io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset.OffsetType.ACCELERATE;
+import static io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset.OffsetType.META;
+
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
 
 import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset;
 import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
-
-import static io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset.OffsetType.ACCELERATE;
-import static io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset.OffsetType.META;
 
 public class QueryHistoryOffsetUtil {
 

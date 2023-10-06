@@ -25,6 +25,8 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
@@ -47,9 +49,6 @@ import org.apache.kylin.metadata.sourceusage.SourceUsageManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 import lombok.var;
@@ -78,7 +77,8 @@ public class SegmentHelper extends BasicService implements SegmentHelperSupporte
                 boolean first = true;
                 List<SegmentRange> firstRanges = Lists.newArrayList();
 
-                val loadingRange = NDataLoadingRangeManager.getInstance(kylinConfig, project).getDataLoadingRange(tableName);
+                val loadingRange = NDataLoadingRangeManager.getInstance(kylinConfig, project)
+                        .getDataLoadingRange(tableName);
                 for (val model : models) {
                     val modelId = model.getUuid();
                     IndexPlan indexPlan = NIndexPlanManager.getInstance(kylinConfig, project).getIndexPlan(modelId);
@@ -98,11 +98,12 @@ public class SegmentHelper extends BasicService implements SegmentHelperSupporte
                             //normal model to refresh must has ready segment
                             Preconditions.checkState(CollectionUtils.isNotEmpty(segments));
                             refreshSegments(segments, dfMgr, df, modelId, refreshSegmentList, project);
-                            ranges.addAll(segments.stream().map(NDataSegment::getSegRange).collect(Collectors.toList()));
+                            ranges.addAll(
+                                    segments.stream().map(NDataSegment::getSegRange).collect(Collectors.toList()));
                         }
                     } else {
-                        refreshSegments(segments.getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING), dfMgr, df,
-                                modelId, refreshSegmentList, project);
+                        refreshSegments(segments.getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING), dfMgr,
+                                df, modelId, refreshSegmentList, project);
                         ranges.addAll(segments.stream().map(NDataSegment::getSegRange).collect(Collectors.toList()));
                         //remove new segment in lag behind models and then rebuild it
                         handleRefreshLagBehindModel(project, df, segments.getSegments(SegmentStatusEnum.NEW), modelId,
@@ -131,7 +132,7 @@ public class SegmentHelper extends BasicService implements SegmentHelperSupporte
     }
 
     private void refreshSegments(Segments<NDataSegment> segments, NDataflowManager dfMgr, NDataflow df, String modelId,
-             List<JobParam> jobParamList, String project) {
+            List<JobParam> jobParamList, String project) {
         for (NDataSegment seg : segments) {
             NDataSegment newSeg = dfMgr.refreshSegment(df, seg.getSegRange());
             jobParamList.add(new JobParam(newSeg, modelId, getUsername()).withProject(project));

@@ -20,7 +20,6 @@ package org.apache.kylin.rest.security;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.USER_LOGIN_FAILED;
 
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.service.KylinUserService;
 import org.apache.kylin.rest.service.UserAclService;
@@ -46,6 +45,8 @@ import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+
+import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class LimitLoginAuthenticationProviderTest extends NLocalFileMetadataTestCase {
 

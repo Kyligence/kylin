@@ -41,7 +41,7 @@ public class JobCheckUtil {
 
     private static ScheduledExecutorService jobCheckThreadPool;
 
-    synchronized private static ScheduledExecutorService getJobCheckThreadPool() {
+    private static synchronized ScheduledExecutorService getJobCheckThreadPool() {
         if (null == jobCheckThreadPool) {
             jobCheckThreadPool = ThreadUtils.newDaemonSingleThreadScheduledExecutor("JobCheckThreadPool");
         }
@@ -59,12 +59,12 @@ public class JobCheckUtil {
 
     public static void startJobCheckRunner(JobCheckRunner jobCheckRunner) {
         int pollSecond = KylinConfig.getInstanceFromEnv().getSchedulerPollIntervalSecond();
-        getJobCheckThreadPool().scheduleWithFixedDelay(jobCheckRunner, RandomUtils.nextInt(0, pollSecond),
-                pollSecond, TimeUnit.SECONDS);
+        getJobCheckThreadPool().scheduleWithFixedDelay(jobCheckRunner, RandomUtils.nextInt(0, pollSecond), pollSecond,
+                TimeUnit.SECONDS);
     }
 
     public static boolean stopJobIfStorageQuotaLimitReached(JobContext jobContext, JobInfo jobInfo,
-                                                            AbstractJobExecutable jobExecutable) {
+            AbstractJobExecutable jobExecutable) {
         return stopJobIfStorageQuotaLimitReached(jobContext, JobInfoUtil.deserializeExecutablePO(jobInfo),
                 jobExecutable);
     }
@@ -96,7 +96,8 @@ public class JobCheckUtil {
             return JobContextUtil.withTxAndRetry(() -> {
                 JobInfo jobInfo = jobContext.getJobInfoMapper().selectByJobId(jobId);
                 String project = jobInfo.getProject();
-                ExecutableManager executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+                ExecutableManager executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                        project);
                 AbstractExecutable job = executableManager.fromPO(JobInfoUtil.deserializeExecutablePO(jobInfo));
                 if (checkSuicide(job)) {
                     executableManager.suicideJob(jobId);

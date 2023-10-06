@@ -36,12 +36,11 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 @Ignore("For collecting accuracy statistics, not for functional test")
 public class TopNCounterTest {
@@ -126,7 +125,6 @@ public class TopNCounterTest {
             outputMsg("Compare " + i);
 
             if (isClose(topResult1.get(i).getSecond(), realSequence.get(i).getSecond())) {
-                //            if (topResult1.get(i).getFirst().equals(realSequence.get(i).getFirst()) && topResult1.get(i).getSecond().doubleValue() == realSequence.get(i).getSecond().doubleValue()) {
                 outputMsg("Passed; key:" + topResult1.get(i).getFirst() + ", value:" + topResult1.get(i).getSecond());
             } else {
                 outputMsg("Failed; space saving key:" + topResult1.get(i).getFirst() + ", value:"

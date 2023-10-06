@@ -31,9 +31,9 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.common.util.Unsafe;
 
 import io.kyligence.kap.clickhouse.job.ClickHouse;
-import org.apache.kylin.common.util.Unsafe;
 import io.kyligence.kap.secondstorage.SecondStorage;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import lombok.val;
@@ -50,7 +50,8 @@ public class ClickHouseSanityCheckTool {
         log.info("{}", args);
         SecondStorage.init(true);
         int threadNum = Integer.parseInt(args[0]);
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(threadNum, threadNum, 0, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new NamedThreadFactory("CLICKHOUSE-SANITY-CHECK"));
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(threadNum, threadNum, 0, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(), new NamedThreadFactory("CLICKHOUSE-SANITY-CHECK"));
         val nodes = SecondStorageNodeHelper.getAllNames();
         List<Future<Boolean>> results = nodes.stream().map(node -> {
             val tool = new CheckTool(node);
@@ -83,7 +84,6 @@ public class ClickHouseSanityCheckTool {
             Unsafe.systemExit(status);
         }
     }
-
 
     public static class CheckTool implements Callable<Boolean> {
         private final String node;

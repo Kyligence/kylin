@@ -27,6 +27,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.util.JobContextUtil;
@@ -46,8 +47,6 @@ import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sparkproject.guava.collect.Sets;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 import lombok.val;
@@ -108,12 +107,12 @@ public class NManualBuildAndQueryTest extends NLocalWithSparkSessionTest {
         List<LayoutEntity> layouts = df.getIndexPlan().getAllLayouts();
         long start = SegmentRange.dateToLong("2010-01-01");
         long end = SegmentRange.dateToLong("2013-01-01");
-        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
+                Sets.newLinkedHashSet(layouts), true);
         start = SegmentRange.dateToLong("2013-01-01");
         end = SegmentRange.dateToLong("2015-01-01");
-        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
+                Sets.newLinkedHashSet(layouts), true);
 
         /**
          * Round2. Merge two segments
@@ -189,23 +188,23 @@ public class NManualBuildAndQueryTest extends NLocalWithSparkSessionTest {
         List<LayoutEntity> layouts = df.getIndexPlan().getAllLayouts();
         long start = SegmentRange.dateToLong("2010-01-01");
         long end = SegmentRange.dateToLong("2012-06-01");
-        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
+                Sets.newLinkedHashSet(layouts), true);
 
         start = SegmentRange.dateToLong("2012-06-01");
         end = SegmentRange.dateToLong("2013-01-01");
-        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
+                Sets.newLinkedHashSet(layouts), true);
 
         start = SegmentRange.dateToLong("2013-01-01");
         end = SegmentRange.dateToLong("2013-06-01");
-        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
+                Sets.newLinkedHashSet(layouts), true);
 
         start = SegmentRange.dateToLong("2013-06-01");
         end = SegmentRange.dateToLong("2015-01-01");
-        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end), Sets.newLinkedHashSet(layouts),
-                true);
+        indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
+                Sets.newLinkedHashSet(layouts), true);
 
         /**
          * Round2. Merge two segments

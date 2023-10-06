@@ -18,14 +18,13 @@
 
 package io.kyligence.kap.clickhouse.job;
 
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.mockito.Mockito;
 
 import lombok.val;
-import org.mockito.Mockito;
 
 public class BlobUrlTest {
 
@@ -38,7 +37,7 @@ public class BlobUrlTest {
     public void fromHttpUrl() {
         // case 1
         String accountKey = "testkey";
-        val config = Maps.<String, String>newHashMap();
+        val config = Maps.<String, String> newHashMap();
         config.put("fs.azure.account.key.account.blob.core.chinacloudapi.cn", accountKey);
         HadoopMockUtil.mockGetConfiguration(config);
         BlobUrl blobUrl = BlobUrl.fromHttpUrl("https://account.blob.core.chinacloudapi.cn/container/blob.parquet");
@@ -60,7 +59,7 @@ public class BlobUrlTest {
     public void fromBlobUrl() {
         // case1
         String accountKey = "testkey";
-        val config = Maps.<String, String>newHashMap();
+        val config = Maps.<String, String> newHashMap();
         config.put("fs.azure.account.key.account.blob.core.chinacloudapi.cn", accountKey);
         HadoopMockUtil.mockGetConfiguration(config);
         BlobUrl blobUrl = BlobUrl.fromBlobUrl("wasbs://container@account.blob.core.chinacloudapi.cn/blob.parquet");
@@ -75,6 +74,8 @@ public class BlobUrlTest {
         // case2
         BlobUrl blobUrl2 = BlobUrl.fromBlobUrl("wasb://container@account.blob.core.chinacloudapi.cn/blob.parquet");
         Assert.assertEquals("http", blobUrl2.getHttpSchema());
-        Assert.assertEquals("DefaultEndpointsProtocol=http;AccountName=account;AccountKey=testkey;EndpointSuffix=core.chinacloudapi.cn", blobUrl2.getConnectionString());
+        Assert.assertEquals(
+                "DefaultEndpointsProtocol=http;AccountName=account;AccountKey=testkey;EndpointSuffix=core.chinacloudapi.cn",
+                blobUrl2.getConnectionString());
     }
 }
