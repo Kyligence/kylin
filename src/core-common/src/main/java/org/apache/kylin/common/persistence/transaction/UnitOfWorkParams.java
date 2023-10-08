@@ -41,6 +41,8 @@ public class UnitOfWorkParams<T> {
 
     private UnitRetryContext retryContext;
 
+    private long retryUntil;
+
     @Builder.Default
     private boolean all = false;
 
@@ -67,7 +69,10 @@ public class UnitOfWorkParams<T> {
     private String tempLockName;
     
     @Builder.Default
-    protected boolean useProjectLock = false;
+    private boolean useProjectLock = false;
+
+    @Builder.Default
+    private boolean retryMoreTimeForDeadLockException = false;
 
     /**
      * only for debug or test

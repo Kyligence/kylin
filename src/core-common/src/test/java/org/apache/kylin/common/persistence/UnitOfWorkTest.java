@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.lock.DeadLockException;
 import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
 import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
@@ -362,5 +363,19 @@ public class UnitOfWorkTest {
         Assert.assertEquals(0, ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
                 .getResource("/_global/path/res1").getMvcc());
 
+    }
+
+    @Test
+    void testRetryMoreTimeForDeadLockException() {
+        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.max-seconds-for-dead-lock-retry", "2");
+        long startTime = System.currentTimeMillis();
+        try {
+            UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().retryMoreTimeForDeadLockException(true).processor(() -> {
+                throw new DeadLockException("test");
+            }).build());
+        } catch (Exception e) {
+            Assert.assertEquals(DeadLockException.class, e.getCause().getClass());
+            Assert.assertTrue(System.currentTimeMillis() - startTime > 2 * 1000);
+        }
     }
 }

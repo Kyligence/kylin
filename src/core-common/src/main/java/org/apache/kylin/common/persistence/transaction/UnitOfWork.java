@@ -90,7 +90,6 @@ public class UnitOfWork {
 
     public static <T> T doInTransactionWithRetry(UnitOfWorkParams<T> params) {
         try (SetThreadName ignore = new SetThreadName(THREAD_NAME_PREFIX)) {
-            val maxRetry = params.getMaxRetry();
             val f = params.getProcessor();
             // reused transaction, won't retry
             if (isAlreadyInTransaction()) {
@@ -109,7 +108,11 @@ public class UnitOfWork {
             // new independent transaction with retry
             int retry = 0;
             val traceId = RandomUtil.randomUUIDStr();
-            while (retry++ < maxRetry) {
+            if (params.isRetryMoreTimeForDeadLockException()) {
+                KylinConfig config = KylinConfig.getInstanceFromEnv();
+                params.setRetryUntil(System.currentTimeMillis() + config.getMaxSecondsForDeadLockRetry() * 1000);
+            }
+            while (retry++ < params.getMaxRetry()) {
 
                 val ret = doTransaction(params, retry, traceId);
                 if (ret.getSecond()) {
@@ -345,6 +348,9 @@ public class UnitOfWork {
         }
         if (throwable instanceof DeadLockException) {
             log.debug("DeadLock found in this transaction, will retry");
+            if (params.isRetryMoreTimeForDeadLockException() && System.currentTimeMillis() < params.getRetryUntil()) {
+                params.setMaxRetry(params.getMaxRetry() + 1);
+            }
         }
         if (throwable instanceof LockInterruptException) {
             // Just remove the interrupted flag.
