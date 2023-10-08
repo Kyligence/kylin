@@ -498,6 +498,7 @@ public class QueryRoutingEngineTest extends NLocalFileMetadataTestCase {
 
             try {
                 method.invoke(queryRoutingEngine, new SQLException(), null);
+                Assert.fail();
             } catch (Exception e) {
                 Assert.assertTrue(e.getCause() instanceof SQLException);
                 Assert.assertTrue(QueryContext.current().getQueryTagInfo().isPushdown());
