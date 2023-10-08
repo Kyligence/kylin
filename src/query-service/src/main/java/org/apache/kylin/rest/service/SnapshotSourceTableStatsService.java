@@ -203,7 +203,7 @@ public class SnapshotSourceTableStatsService extends BasicService {
             val table = tableCatalog.loadTable(identifier);
             var location = table.properties().get("location");
             if (tableCatalog.getClass().toString().contains("iceberg"))
-                location = location + "/data";
+                location = location + "/metadata";
             return checkTableLocation(project, location, projectConfig, catalogName + "." + identifier.toString());
         }
         throw new KylinRuntimeException("unsupported catalog:" + catalog);
