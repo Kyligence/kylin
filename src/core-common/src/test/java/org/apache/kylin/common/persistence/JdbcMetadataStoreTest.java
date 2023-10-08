@@ -50,6 +50,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import lombok.val;
 
@@ -236,6 +237,7 @@ class JdbcMetadataStoreTest {
     @Test
     void testUpdateTheDeletedResource() {
         val metadataStore = MetadataStore.createMetadataStore(getTestConfig());
+        ReflectionTestUtils.setField(metadataStore, "isUT", false);
         List<Event> events = Collections.singletonList(new ResourceCreateOrUpdateEvent(new RawResource("/p1/test",
                 ByteSource.wrap("test content".getBytes(StandardCharsets.UTF_8)), System.currentTimeMillis(), 4)));
         val unitMessages = new UnitMessages(events);
