@@ -140,7 +140,7 @@ public class QueryDetectResponse {
             KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
             IndexPlan indexPlan = NIndexPlanManager.getInstance(kylinConfig, project)
                     .getIndexPlan(realization.getModelId());
-            LayoutEntity layoutEntity = indexPlan.getLayoutEntity(realization.getLayoutId());
+            LayoutEntity layoutEntity = indexPlan == null ? null : indexPlan.getLayoutEntity(realization.getLayoutId());
 
             this.modelId = realization.getModelId();
             this.modelAlias = realization.getModelAlias();
@@ -149,7 +149,7 @@ public class QueryDetectResponse {
             this.partialMatchModel = realization.isPartialMatchModel();
             this.valid = realization.isValid();
             this.isTableIndex = IndexEntity.isTableIndex(realization.getLayoutId());
-            this.isBaseIndex = layoutEntity.isBaseIndex();
+            this.isBaseIndex = layoutEntity != null && layoutEntity.isBaseIndex();
             return this;
         }
     }

@@ -90,10 +90,6 @@ public class QueryContextCutter {
                 }
                 return olapContexts;
             } catch (NoRealizationFoundException | NoStreamingRealizationFoundException e) {
-                if (QueryContext.current().getQueryTagInfo().isQueryDetect()) {
-                    QueryContext.current().getQueryTagInfo().setPushdown(true);
-                    return Lists.newArrayList();
-                }
                 throwIfReCutBanned(isReCutBanned, e);
                 reCutStrategy.tryCutToSmallerContexts(root, e);
             } catch (UserStopQueryException | KylinTimeoutException | KylinRuntimeException e) {
