@@ -58,7 +58,8 @@ public class MetadataInvoker extends ModelMetadataBaseInvoker {
             try {
                 return ClassUtil.forName("org.apache.kylin.rest.service.ModelService", MetadataContract.class)
                         .newInstance();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
             }
         }
         return delegate;

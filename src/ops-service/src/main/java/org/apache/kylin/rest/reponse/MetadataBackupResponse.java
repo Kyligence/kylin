@@ -26,7 +26,7 @@ public class MetadataBackupResponse {
     @JsonProperty("path")
     private String path;
     @JsonProperty("status")
-    private OpsService.MetadataBackupStatu status;
+    private OpsService.MetadataBackupStatus status;
     @JsonProperty("size")
     private String size;
     @JsonProperty("owner")
@@ -40,11 +40,11 @@ public class MetadataBackupResponse {
         this.path = path;
     }
 
-    public OpsService.MetadataBackupStatu getStatus() {
+    public OpsService.MetadataBackupStatus getStatus() {
         return status;
     }
 
-    public void setStatus(OpsService.MetadataBackupStatu status) {
+    public void setStatus(OpsService.MetadataBackupStatus status) {
         this.status = status;
     }
 

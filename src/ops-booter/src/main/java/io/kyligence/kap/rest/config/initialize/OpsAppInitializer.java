@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.metadata.asynctask.AbstractAsyncTask;
 import org.apache.kylin.metadata.asynctask.MetadataRestoreTask;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -82,12 +83,11 @@ public class OpsAppInitializer {
         long startTime = System.currentTimeMillis();
         List<String> projectList = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).listAllProjects()
                 .stream().map(ProjectInstance::toString).collect(Collectors.toList());
-        projectList.add(OpsService._GLOBAL);
+        projectList.add(UnitOfWork.GLOBAL_UNIT);
         for (String project : projectList) {
             for (MetadataBackupResponse metadataBackup : OpsService.getMetadataBackupList(project)) {
-                if (OpsService.MetadataBackupStatu.IN_PROGRESS.equals(metadataBackup.getStatus())) {
-                    OpsService.MetadataBackupOperator operator = new OpsService.MetadataBackupOperator(metadataBackup,
-                            project);
+                if (OpsService.MetadataBackupStatus.IN_PROGRESS.equals(metadataBackup.getStatus())) {
+                    OpsService.MetadataBackup operator = new OpsService.MetadataBackup(metadataBackup, project);
                     operator.markFail();
                 }
             }

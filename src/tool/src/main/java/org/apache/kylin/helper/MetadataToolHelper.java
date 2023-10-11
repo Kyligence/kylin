@@ -73,7 +73,7 @@ import lombok.val;
 import lombok.var;
 
 /*
-* this class is only for removing dependency of kylin-tool module, and should be refactor later
+* this class is only for removing dependency of kylin-tool module, and should be refactored later
 */
 public class MetadataToolHelper extends CancelableTask {
 

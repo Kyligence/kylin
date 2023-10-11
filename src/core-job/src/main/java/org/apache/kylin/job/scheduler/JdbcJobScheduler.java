@@ -18,7 +18,6 @@
 
 package org.apache.kylin.job.scheduler;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +60,7 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import io.kyligence.zen.license.check.CheckResult;
 import io.kyligence.zen.license.check.LicenseChecker;
 import io.kyligence.zen.license.check.ResultType;
+import lombok.Getter;
 import lombok.val;
 
 public class JdbcJobScheduler implements JobScheduler {
@@ -81,7 +81,7 @@ public class JdbcJobScheduler implements JobScheduler {
     private ScheduledExecutorService slave;
 
     private ThreadPoolExecutor executorPool;
-    
+
     private int consumerMaxThreads;
 
     public JdbcJobScheduler(JobContext jobContext) {
@@ -133,15 +133,14 @@ public class JdbcJobScheduler implements JobScheduler {
         // subscribe job: PENDING -> RUNNING
         slave = ThreadUtils.newDaemonSingleThreadScheduledExecutor("JdbcJobScheduler-Slave");
 
-        int consumerMaxThreads = this.consumerMaxThreads <= 0 ? 1 : this.consumerMaxThreads;
+        int maxThreads = this.consumerMaxThreads <= 0 ? 1 : this.consumerMaxThreads;
         // execute job: RUNNING -> FINISHED
-        executorPool = ThreadUtils.newDaemonScalableThreadPool("JdbcJobScheduler-Executor", 1, consumerMaxThreads, 5,
+        executorPool = ThreadUtils.newDaemonScalableThreadPool("JdbcJobScheduler-Executor", 1, maxThreads, 5,
                 TimeUnit.MINUTES);
 
         publishJob();
         subscribeJob();
     }
-
 
     public void destroy() {
 
@@ -197,7 +196,7 @@ public class JdbcJobScheduler implements JobScheduler {
             if (!jobContext.getParallelLimiter().tryRelease()) {
                 return;
             }
-            
+
             int batchSize = jobContext.getKylinConfig().getJobSchedulerMasterPollBatchSize();
             List<String> readyJobIdList = jobContext.getJobInfoMapper()
                     .findJobIdListByStatusBatch(ExecutableState.READY.name(), batchSize);
@@ -270,8 +269,7 @@ public class JdbcJobScheduler implements JobScheduler {
             if (KylinConfig.getInstanceFromEnv().isUTEnv()) {
                 return null;
             }
-            LicenseChecker licenseChecker = SpringContext.getBean(LicenseChecker.class);
-            return licenseChecker;
+            return SpringContext.getBean(LicenseChecker.class);
         } catch (NoSuchBeanDefinitionException e) {
             logger.debug("LicenseChecker can not be found.");
             return null;
@@ -287,11 +285,9 @@ public class JdbcJobScheduler implements JobScheduler {
         }
         filter.setJobIds(jobIds);
         List<JobInfo> jobs = jobContext.getJobInfoMapper().selectByJobFilter(filter);
-        List<String> jobInfoIds = jobs.stream().map(jobInfo -> jobInfo.getJobId()).collect(Collectors.toList());
-        List<String> notExistJobs = Lists.newArrayList(jobIds).stream().filter(jobId -> !jobInfoIds.contains(jobId))
+        List<String> jobInfoIds = jobs.stream().map(JobInfo::getJobId).collect(Collectors.toList());
+        List<String> toRemoveLocks = Lists.newArrayList(jobIds).stream().filter(jobId -> !jobInfoIds.contains(jobId))
                 .collect(Collectors.toList());
-        List<String> toRemoveLocks = new ArrayList<>();
-        toRemoveLocks.addAll(notExistJobs);
         for (JobInfo job : jobs) {
             ExecutablePO po = JobInfoUtil.deserializeExecutablePO(job);
             if (po != null) {
@@ -512,8 +508,9 @@ public class JdbcJobScheduler implements JobScheduler {
         }
     }
 
-    private class JobAcquireListener implements LockAcquireListener {
+    private static class JobAcquireListener implements LockAcquireListener {
 
+        @Getter
         private final AbstractJobExecutable jobExecutable;
 
         JobAcquireListener(AbstractJobExecutable jobExecutable) {

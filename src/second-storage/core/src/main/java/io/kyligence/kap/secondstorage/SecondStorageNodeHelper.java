@@ -62,9 +62,9 @@ public class SecondStorageNodeHelper {
 
             // build lookup table for node to pair
             CLUSTER.forEach((pair, nodes) -> {
-                nodes.forEach(node -> {
+                for (Node node : nodes) {
                     NODE2PAIR_INDEX.put(node.getName(), pair);
-                });
+                }
             });
             initialized.set(true);
         }

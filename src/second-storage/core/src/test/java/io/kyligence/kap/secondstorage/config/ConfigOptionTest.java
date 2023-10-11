@@ -23,20 +23,20 @@ import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class ConfigOptionTest {
+class ConfigOptionTest {
 
     @Test
-    public void test01() {
-        ConfigOption configOption1 = new ConfigOption<>("k1", "", String.class);
-        ConfigOption configOption2 = new ConfigOption<>("k1", "", String.class);
+    void test01() {
+        ConfigOption<String> configOption1 = new ConfigOption<>("k1", "", String.class);
+        ConfigOption<String> configOption2 = new ConfigOption<>("k1", "", String.class);
 
-        Assertions.assertEquals(configOption1, configOption1);
         Assertions.assertEquals(configOption1, configOption2);
-        Assertions.assertFalse(configOption1.equals(""));
+        Assertions.assertNotEquals("", configOption1.toString());
 
         Assertions.assertTrue(configOption1.hasDefaultValue());
 
-        Map<ConfigOption, String> map = new HashMap<>();
+        Map<ConfigOption<String>, String> map = new HashMap<>();
         map.put(configOption1, configOption1.toString());
+        Assertions.assertFalse(map.isEmpty());
     }
 }

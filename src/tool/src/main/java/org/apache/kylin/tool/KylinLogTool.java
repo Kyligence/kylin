@@ -23,7 +23,6 @@ import static org.apache.kylin.common.constant.Constants.TRACE_ID;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -78,7 +77,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
 import lombok.val;
-import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 
 public class KylinLogTool {
     private static final Logger logger = LoggerFactory.getLogger("diag");
@@ -100,13 +99,17 @@ public class KylinLogTool {
 
     // 2019-11-11 09:30:04,628 INFO  [FetchJobWorker(project:test_fact)-p-94-t-94] //
     // threadpool.NDefaultScheduler : start check project test_fact
-    private static final String LOG_PATTERN = "([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}) ([^ ]*)[ ]+\\[(.*)\\] ([^: ]*) :([\\n\\r. ]*)";
+    private static final String LOG_PATTERN = "(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2},\\d{3}) ([^ ]*) +\\[(.*)\\] ([^: ]*) :([\\n\\r. ]*)";
 
+    private static final String YYYY_MM_DD = "yyyy-MM-dd";
     private static final String QUERY_LOG_PATTERN = "Query " + UUID_PATTERN;
 
     private static final int EXTRA_LINES = 100;
 
     private static final String ROLL_LOG_FILE_NAME_PREFIX = "events";
+    private static final String SPARK_LOGS = "spark_logs";
+    private static final String CLEAN_TMP_SPARK_LOGS_TEMPLATE = "Clean tmp spark logs {}";
+    private static final String PATH_SEP = "/";
 
     private static final String SYSTEM_PROPERTIES = "System Properties";
 
@@ -143,18 +146,11 @@ public class KylinLogTool {
         return result;
     }
 
-    // 2019-11-11 09:30:04,004 INFO  [Query 4e3350d5-1cd9-450f-ac7e-5859939bedf1-125] //
-    // service.QueryService : The original query: select * from ssb.SUPPLIER
-    private static String getQueryLogPattern(String queryId) {
-        Preconditions.checkArgument(StringUtils.isNotEmpty(queryId));
-        return String.format(Locale.ROOT, "%s(.*Query %s.*)", LOG_TIME_PATTERN, queryId);
-    }
-
     private KylinLogTool() {
     }
 
-    private static boolean checkTimeoutTask(long timeout, String task) {
-        return !KylinConfig.getInstanceFromEnv().getDiagTaskTimeoutBlackList().contains(task)
+    private static boolean checkTimeoutTask(long timeout) {
+        return !KylinConfig.getInstanceFromEnv().getDiagTaskTimeoutBlackList().contains("LOG")
                 && System.currentTimeMillis() > timeout;
     }
 
@@ -162,7 +158,7 @@ public class KylinLogTool {
         String[] allIncludeLogs = { "kylin.gc.", "shell.", "kylin.out", "diag.log" };
         for (File logFile : logFiles) {
             for (String includeLog : allIncludeLogs) {
-                if (checkTimeoutTask(timeout, "LOG")) {
+                if (checkTimeoutTask(timeout)) {
                     logger.error("Cancel 'LOG:all' task.");
                     return;
                 }
@@ -178,7 +174,7 @@ public class KylinLogTool {
         String[] partIncludeLogByDay = { "access_log." };
         for (File logFile : logFiles) {
             for (String includeLog : partIncludeLogByDay) {
-                if (checkTimeoutTask(timeout, "LOG")) {
+                if (checkTimeoutTask(timeout)) {
                     logger.error("Cancel 'LOG:partByDay' task.");
                     return;
                 }
@@ -197,7 +193,7 @@ public class KylinLogTool {
         String[] partIncludeLogByMs = { "jstack.timed.log" };
         for (File logFile : logFiles) {
             for (String includeLog : partIncludeLogByMs) {
-                if (checkTimeoutTask(timeout, "LOG")) {
+                if (checkTimeoutTask(timeout)) {
                     logger.error("Cancel 'LOG:partByMs' task.");
                     return;
                 }
@@ -213,13 +209,11 @@ public class KylinLogTool {
 
     /**
      * extract the specified log from kylin logs dir.
-     *
-     * @param exportDir
      */
-
     public static void extractOtherLogs(File exportDir, long start, long end) {
+
         File destDir = new File(exportDir, "logs");
-        SimpleDateFormat logFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault(Locale.Category.FORMAT));
+        SimpleDateFormat logFormat = new SimpleDateFormat(YYYY_MM_DD, Locale.getDefault(Locale.Category.FORMAT));
         String startDate = logFormat.format(new Date(start));
         String endDate = logFormat.format(new Date(end));
         logger.debug("logs startDate : {}, endDate : {}", startDate, endDate);
@@ -246,9 +240,6 @@ public class KylinLogTool {
     /**
      * extract kylin log by jobId
      * for job diagnosis
-     *
-     * @param exportDir
-     * @param jobId
      */
     public static void extractKylinLog(File exportDir, String jobId) {
         extractKylinLog(exportDir, jobId, null, null, null);
@@ -257,10 +248,6 @@ public class KylinLogTool {
     /**
      * extract kylin log by time range
      * for full diagnosis
-     *
-     * @param exportDir
-     * @param startTime
-     * @param endTime
      */
     public static void extractKylinLog(File exportDir, long startTime, long endTime) {
         extractKylinLog(exportDir, null, startTime, endTime, null);
@@ -269,11 +256,6 @@ public class KylinLogTool {
     /**
      * extract kylin log by time range
      * for query diagnosis
-     *
-     * @param exportDir
-     * @param startTime
-     * @param endTime
-     * @param queryId
      */
     public static void extractKylinLog(File exportDir, long startTime, long endTime, String queryId) {
         extractKylinLog(exportDir, null, startTime, endTime, queryId);
@@ -290,7 +272,7 @@ public class KylinLogTool {
 
         String dateStart = null;
         String dateEnd = null;
-        try (InputStream in = new FileInputStream(logFile);
+        try (InputStream in = Files.newInputStream(logFile.toPath());
                 BufferedReader br = new BufferedReader(new InputStreamReader(in, CHARSET_NAME))) {
             Pattern pattern = Pattern.compile(getJobLogPattern(jobId));
 
@@ -350,9 +332,9 @@ public class KylinLogTool {
     }
 
     public static class ExtractLogByRangeTool {
-        private String logPattern;
-        private String logTimePattern;
-        private String secondDateFormat;
+        private final String logPattern;
+        private final String logTimePattern;
+        private final String secondDateFormat;
 
         public ExtractLogByRangeTool(String logPattern, String logTimePattern, String secondDateFormat) {
             this.logPattern = logPattern;
@@ -367,7 +349,7 @@ public class KylinLogTool {
         }
 
         public String getFirstTimeByLogFile(File logFile) {
-            try (InputStream in = new FileInputStream(logFile);
+            try (InputStream in = Files.newInputStream(logFile.toPath());
                     BufferedReader br = new BufferedReader(new InputStreamReader(in, CHARSET_NAME))) {
                 Pattern pattern = Pattern.compile(logTimePattern);
                 String log;
@@ -409,8 +391,8 @@ public class KylinLogTool {
             Preconditions.checkArgument(timeRange.getFirst().compareTo(timeRange.getSecond()) <= 0);
 
             final String charsetName = Charset.defaultCharset().name();
-            try (InputStream in = new FileInputStream(logFile);
-                    OutputStream out = new FileOutputStream(distFile);
+            try (InputStream in = Files.newInputStream(logFile.toPath());
+                    OutputStream out = Files.newOutputStream(distFile.toPath());
                     BufferedReader br = new BufferedReader(new InputStreamReader(in, charsetName));
                     BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(out, charsetName))) {
 
@@ -466,18 +448,14 @@ public class KylinLogTool {
 
     /**
      * extract kylin query log by queryId
-     *
-     * @param queryLogFile
-     * @param queryId
-     * @param distFile
      */
     private static void extractQueryLogByQueryId(File queryLogFile, String queryId, File distFile) {
         Preconditions.checkNotNull(queryLogFile);
         Preconditions.checkNotNull(queryId);
         Preconditions.checkNotNull(distFile);
         final String charsetName = Charset.defaultCharset().name();
-        try (InputStream in = new FileInputStream(queryLogFile);
-                OutputStream out = new FileOutputStream(distFile);
+        try (InputStream in = Files.newInputStream(queryLogFile.toPath());
+                OutputStream out = Files.newOutputStream(distFile.toPath());
                 BufferedReader br = new BufferedReader(new InputStreamReader(in, charsetName));
                 BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(out, charsetName))) {
 
@@ -511,13 +489,10 @@ public class KylinLogTool {
     /**
      * extract sparder log by time range
      * for query diagnosis
-     *
-     * @param exportDir
-     * @param startTime
-     * @param endTime
      */
     public static void extractQueryDiagSparderLog(File exportDir, long startTime, long endTime) {
-        File sparkLogsDir = new File(exportDir, "spark_logs");
+
+        File sparkLogsDir = new File(exportDir, SPARK_LOGS);
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
 
         try {
@@ -534,7 +509,7 @@ public class KylinLogTool {
                 String sourceLogsPath = getSourceLogPath(kylinConfig, date);
                 FileSystem sourceFileSystem = HadoopUtil.getFileSystem(sourceLogsPath);
                 if (sourceFileSystem.exists(new Path(sourceLogsPath))) {
-                    File sparkLogsDateDir = new File(sparkLogsDir, date.toString("yyyy-MM-dd"));
+                    File sparkLogsDateDir = new File(sparkLogsDir, date.toString(YYYY_MM_DD));
                     FileUtils.forceMkdir(sparkLogsDateDir);
 
                     FileStatus[] sourceAppFiles = sourceFileSystem.listStatus(new Path(sourceLogsPath));
@@ -544,7 +519,7 @@ public class KylinLogTool {
                 }
                 if (kylinConfig.cleanDiagTmpFile()) {
                     sourceFileSystem.delete(new Path(sourceLogsPath), true);
-                    logger.info("Clean tmp spark logs {}", sourceLogsPath);
+                    logger.info(CLEAN_TMP_SPARK_LOGS_TEMPLATE, sourceLogsPath);
                 }
                 date = date.plusDays(1);
             }
@@ -591,7 +566,7 @@ public class KylinLogTool {
         final String charsetName = Charset.defaultCharset().name();
         try (FSDataInputStream in = logFile.open(path);
                 BufferedReader br = new BufferedReader(new InputStreamReader(in, charsetName));
-                OutputStream out = new FileOutputStream(distFile);
+                OutputStream out = Files.newOutputStream(distFile.toPath());
                 BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(out, charsetName))) {
             boolean extract = false;
             boolean stdLogNotFound = true;
@@ -624,11 +599,6 @@ public class KylinLogTool {
 
     /**
      * extract kylin log
-     *
-     * @param exportDir
-     * @param jobId
-     * @param startTime
-     * @param endTime
      */
     private static void extractKylinLog(File exportDir, String jobId, Long startTime, Long endTime, String queryId) {
         File destLogDir = new File(exportDir, "logs");
@@ -670,7 +640,7 @@ public class KylinLogTool {
             long duration = KylinConfig.getInstanceFromEnv().getDiagTaskTimeout() * 1000L;
             long timeout = start + duration;
             for (File logFile : kylinLogs) {
-                if (checkTimeoutTask(timeout, "LOG")) {
+                if (checkTimeoutTask(timeout)) {
                     logger.error("Cancel 'LOG:kylin.log' task.");
                     break;
                 }
@@ -727,7 +697,7 @@ public class KylinLogTool {
                         destLogDir);
             }
         } catch (Exception e) {
-            String msg = String.format(Locale.ROOT, "Error occurred when extracting kylin log from loki server:\n%s",
+            String msg = String.format(Locale.ROOT, "Error occurred when extracting kylin log from loki server:%n%s",
                     Throwables.getStackTraceAsString(e));
             DiagnosticFilesChecker.writeMsgToFile(msg, new File(destLogDir, "kylin.diag.error.log"));
             logger.error("Failed to extract kylin.log from Loki server.", e);
@@ -783,9 +753,6 @@ public class KylinLogTool {
 
     /**
      * extract kylin query log
-     *
-     * @param exportDir
-     * @param queryId
      */
     public static void extractKylinQueryLog(File exportDir, String queryId) {
         File destLogDir = new File(exportDir, "logs");
@@ -797,11 +764,7 @@ public class KylinLogTool {
             File[] kylinQueryLogs = logsDir
                     .listFiles(pathname -> StringUtils.startsWith(pathname.getName(), "kylin.query.log"));
 
-            if (kylinQueryLogs == null || kylinQueryLogs.length == 0) {
-                logger.error("Can not fond the kylin.query.log file!");
-            }
-
-            for (File kylinQueryLog : kylinQueryLogs) {
+            for (File kylinQueryLog : Objects.requireNonNull(kylinQueryLogs)) {
                 extractQueryLogByQueryId(kylinQueryLog, queryId, new File(destLogDir, kylinQueryLog.getName()));
             }
         } catch (Exception e) {
@@ -812,13 +775,9 @@ public class KylinLogTool {
     /**
      * extract the spark executor log by project and jobId.
      * for job diagnosis
-     *
-     * @param exportDir
-     * @param project
-     * @param jobId
      */
     public static void extractSparkLog(File exportDir, String project, String jobId) {
-        File sparkLogsDir = new File(exportDir, "spark_logs");
+        File sparkLogsDir = new File(exportDir, SPARK_LOGS);
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         try {
             FileUtils.forceMkdir(sparkLogsDir);
@@ -837,7 +796,7 @@ public class KylinLogTool {
                 fs.copyToLocalFile(false, fileStatus.getPath(), new Path(sparkLogsDir.getAbsolutePath()), true);
             }
             if (kylinConfig.cleanDiagTmpFile()) {
-                logger.info("Clean tmp spark logs {}", sourceLogsPath);
+                logger.info(CLEAN_TMP_SPARK_LOGS_TEMPLATE, sourceLogsPath);
                 fs.delete(new Path(sourceLogsPath), true);
             }
         } catch (Exception e) {
@@ -854,7 +813,7 @@ public class KylinLogTool {
         val sparkLogsDir = new File(exportDir, "sparder_history");
         val fs = HadoopUtil.getFileSystem(extractTool.getSparderEvenLogDir());
         val validApps = extractTool.getValidSparderApps(startTime, endTime, host);
-        JavaConversions.asJavaCollection(validApps).forEach(app -> {
+        JavaConverters.asJavaCollection(validApps).forEach(app -> {
             try {
                 if (!sparkLogsDir.exists()) {
                     FileUtils.forceMkdir(sparkLogsDir);
@@ -879,9 +838,9 @@ public class KylinLogTool {
         try {
             FileUtils.moveFile(file, tempFile);
             try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(new FileInputStream(tempFile), Charset.defaultCharset().name()));
+                    new InputStreamReader(Files.newInputStream(tempFile.toPath()), Charset.defaultCharset()));
                     BufferedWriter bw = new BufferedWriter(
-                            new OutputStreamWriter(new FileOutputStream(file), Charset.defaultCharset().name()))) {
+                            new OutputStreamWriter(Files.newOutputStream(file.toPath()), Charset.defaultCharset()))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     val map = JsonUtil.readValue(line, HashMap.class);
@@ -962,7 +921,8 @@ public class KylinLogTool {
         }
     }
 
-    private static void copyJobEventLog(FileSystem fs, String appId, String logDir, File exportDir) throws Exception {
+    private static void copyJobEventLog(FileSystem fs, String appId, String logDir, File exportDir)
+            throws InterruptedException, IOException {
         if (StringUtils.isBlank(appId)) {
             logger.warn("Failed to extract step eventLog due to the appId is empty.");
             return;
@@ -970,7 +930,7 @@ public class KylinLogTool {
         if (Thread.currentThread().isInterrupted()) {
             throw new InterruptedException("Job eventLog task is interrupt");
         }
-        String eventPath = logDir + "/" + appId + "*";
+        String eventPath = logDir + PATH_SEP + appId + "*";
 
         FileStatus[] eventLogsStatus = fs.globStatus(new Path(eventPath));
         Path[] listedPaths = FileUtil.stat2Paths(eventLogsStatus);
@@ -1001,10 +961,6 @@ public class KylinLogTool {
     /**
      * extract the job tmp by project and jobId.
      * for job diagnosis.
-     *
-     * @param exportDir
-     * @param project
-     * @param jobId
      */
     public static void extractJobTmp(File exportDir, String project, String jobId) {
         try {
@@ -1053,13 +1009,9 @@ public class KylinLogTool {
     /**
      * extract the sparder log range by startime and endtime
      * for full diagnosis
-     *
-     * @param exportDir
-     * @param startTime
-     * @param endTime
      */
     public static void extractFullDiagSparderLog(File exportDir, long startTime, long endTime) {
-        File sparkLogsDir = new File(exportDir, "spark_logs");
+        File sparkLogsDir = new File(exportDir, SPARK_LOGS);
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         try {
             FileUtils.forceMkdir(sparkLogsDir);
@@ -1085,7 +1037,8 @@ public class KylinLogTool {
                 }
                 if (kylinConfig.cleanDiagTmpFile()) {
                     fs.delete(new Path(sourceLogsPath), true);
-                    logger.info("Clean tmp spark logs {}", sourceLogsPath);
+
+                    logger.info(CLEAN_TMP_SPARK_LOGS_TEMPLATE, sourceLogsPath);
                 }
                 date = date.plusDays(1);
             }
@@ -1097,7 +1050,7 @@ public class KylinLogTool {
 
     private static String getSourceLogPath(KylinConfig kylinConfig, DateTime date) {
         return SparkLogExtractorFactory.create(kylinConfig).getSparderLogsDir(kylinConfig) + File.separator
-                + date.toString("yyyy-MM-dd");
+                + date.toString(YYYY_MM_DD);
     }
 
     private static boolean checkTimeRange(long startTime, long endTime) {

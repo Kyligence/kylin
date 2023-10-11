@@ -51,16 +51,15 @@ import org.apache.kylin.common.persistence.transaction.AuditLogReplayWorker;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.CompressionUtils;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.base.Joiner;
+import org.apache.kylin.guava30.shaded.common.base.Strings;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.TransactionDefinition;
 
-import org.apache.kylin.guava30.shaded.common.base.Joiner;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.base.Strings;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import lombok.Getter;
 import lombok.val;
 import lombok.var;
@@ -82,7 +81,7 @@ public class JdbcAuditLogStore implements AuditLogStore {
     static final String CREATE_TABLE = "create.auditlog.store.table";
     static final String META_KEY_META_MVCC_INDEX = "meta_key_meta_mvcc_index";
     static final String META_TS_INDEX = "meta_ts_index";
-    static final String[] AUDIT_LOG_INDEX_NAMES = {META_KEY_META_MVCC_INDEX, META_TS_INDEX};
+    static final String[] AUDIT_LOG_INDEX_NAMES = { META_KEY_META_MVCC_INDEX, META_TS_INDEX };
 
     static final String META_INDEX_KEY_PREFIX = "create.auditlog.store.tableindex.";
 
@@ -104,7 +103,6 @@ public class JdbcAuditLogStore implements AuditLogStore {
                     AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE)
             + " from %s where meta_key like '/%s/%%' and id > %d and id <= %d order by id";
 
-    static final String SELECT_MAX_ID_BY_PROJECT_SQL = "select max(id) from %s where id > %d and meta_key like '/%s/%%'";
     static final String SELECT_MAX_ID_SQL = "select max(id) from %s";
     static final String SELECT_MIN_ID_SQL = "select min(id) from %s";
     static final String SELECT_COUNT_ID_RANGE = "select count(id) from %s where id > %d and id <= %d";
@@ -151,7 +149,7 @@ public class JdbcAuditLogStore implements AuditLogStore {
     }
 
     public JdbcAuditLogStore(KylinConfig config, JdbcTemplate jdbcTemplate,
-            DataSourceTransactionManager transactionManager, String table) throws Exception {
+            DataSourceTransactionManager transactionManager, String table) throws SQLException, IOException {
         this.config = config;
         this.jdbcTemplate = jdbcTemplate;
         this.transactionManager = transactionManager;
@@ -257,13 +255,6 @@ public class JdbcAuditLogStore implements AuditLogStore {
                 .orElse(0L);
     }
 
-    public long getMaxIdByProject(String project, long from) {
-        return Optional
-                .ofNullable(jdbcTemplate.queryForObject(
-                        String.format(Locale.ROOT, SELECT_MAX_ID_BY_PROJECT_SQL, table, from, project), Long.class))
-                .orElse(0L);
-    }
-
     @Override
     public long getMinId() {
         return Optional
@@ -273,8 +264,10 @@ public class JdbcAuditLogStore implements AuditLogStore {
     }
 
     public long count(long startId, long endId) {
-        return jdbcTemplate.queryForObject(String.format(Locale.ROOT, SELECT_COUNT_ID_RANGE, table, startId, endId),
-                Long.class);
+        return Optional
+                .ofNullable(getJdbcTemplate().queryForObject(
+                        String.format(Locale.ROOT, SELECT_COUNT_ID_RANGE, table, startId, endId), Long.class))
+                .orElse(0L);
     }
 
     @Override
@@ -353,9 +346,10 @@ public class JdbcAuditLogStore implements AuditLogStore {
 
     private Properties loadMedataProperties() throws IOException {
         String fileName = "metadata-jdbc-default.properties";
-        if (((BasicDataSource) jdbcTemplate.getDataSource()).getDriverClassName().equals("org.postgresql.Driver")) {
+        if (((BasicDataSource) Objects.requireNonNull(getJdbcTemplate().getDataSource())).getDriverClassName()
+                .equals("org.postgresql.Driver")) {
             fileName = "metadata-jdbc-postgresql.properties";
-        } else if (((BasicDataSource) jdbcTemplate.getDataSource()).getDriverClassName()
+        } else if (((BasicDataSource) getJdbcTemplate().getDataSource()).getDriverClassName()
                 .equals("com.mysql.jdbc.Driver")) {
             fileName = "metadata-jdbc-mysql.properties";
         }
@@ -366,7 +360,7 @@ public class JdbcAuditLogStore implements AuditLogStore {
     }
 
     void createTableIfNotExist() throws SQLException, IOException {
-        if (isTableExists(jdbcTemplate.getDataSource().getConnection(), table)) {
+        if (isTableExists(Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection(), table)) {
             return;
         }
         Properties properties = loadMedataProperties();
@@ -380,8 +374,9 @@ public class JdbcAuditLogStore implements AuditLogStore {
     void createIndexIfNotExist() {
         Arrays.stream(AUDIT_LOG_INDEX_NAMES).forEach(index -> {
             try {
-                String indexName = String.format(Locale.ROOT, "%s_" + index, table);
-                if (isIndexExists(jdbcTemplate.getDataSource().getConnection(), table, indexName)) {
+                String indexName = table + "_" + index;
+                if (isIndexExists(Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection(), table,
+                        indexName)) {
                     return;
                 }
                 Properties properties = loadMedataProperties();
@@ -398,7 +393,7 @@ public class JdbcAuditLogStore implements AuditLogStore {
         });
     }
 
-    void createIfNotExist() throws Exception {
+    void createIfNotExist() throws SQLException, IOException {
         createTableIfNotExist();
         createIndexIfNotExist();
     }

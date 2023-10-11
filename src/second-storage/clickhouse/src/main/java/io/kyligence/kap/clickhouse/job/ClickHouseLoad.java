@@ -510,29 +510,26 @@ public class ClickHouseLoad extends AbstractExecutable {
         AtomicInteger currentProcessCnt = new AtomicInteger(0);
         AtomicBoolean isException = new AtomicBoolean(false);
         List<Runnable> tasks = Lists.newArrayList();
-        for (Map.Entry<String, ConcurrentLinkedQueue<ClickhouseLoadActionUnit>> entry : partitionsNode.entrySet()) {
-            String nodeName = entry.getKey();
-            IntStream.range(0, processCnt).forEach(i -> tasks.add(() -> {
-                try (ClickHouse clickHouse = new ClickHouse(SecondStorageNodeHelper.resolve(nodeName))) {
-                    ConcurrentLinkedQueue<ClickhouseLoadActionUnit> actions = partitionsNode.get(nodeName);
-                    while (!actions.isEmpty() && !isException.get() && !stopFlag.get()) {
-                        ClickhouseLoadActionUnit action = actions.poll();
-                        if (action == null) {
-                            continue;
-                        }
-                        currentProcessCnt.incrementAndGet();
-                        action.doAction(clickHouse);
-                        currentProcessCnt.decrementAndGet();
+        partitionsNode.forEach((nodeName, value) -> IntStream.range(0, processCnt).forEach(i -> tasks.add(() -> {
+            try (ClickHouse clickHouse = new ClickHouse(SecondStorageNodeHelper.resolve(nodeName))) {
+                ConcurrentLinkedQueue<ClickhouseLoadActionUnit> actions = partitionsNode.get(nodeName);
+                while (!actions.isEmpty() && !isException.get() && !stopFlag.get()) {
+                    ClickhouseLoadActionUnit action = actions.poll();
+                    if (action == null) {
+                        continue;
                     }
-                } catch (Exception e) {
-                    isException.set(true);
+                    currentProcessCnt.incrementAndGet();
+                    action.doAction(clickHouse);
                     currentProcessCnt.decrementAndGet();
-                    ExceptionUtils.rethrow(e);
-                } finally {
-                    latch.countDown();
                 }
-            }));
-        }
+            } catch (Exception e) {
+                isException.set(true);
+                currentProcessCnt.decrementAndGet();
+                ExceptionUtils.rethrow(e);
+            } finally {
+                latch.countDown();
+            }
+        })));
         // can't stop commit step
         executeTasks(executorService, tasks, stopFlag, latch, currentProcessCnt, isStop);
     }
@@ -638,8 +635,9 @@ public class ClickHouseLoad extends AbstractExecutable {
     }
 
     private void waitFlatTableStepEnd() throws JobStoppedException, InterruptedException {
-        if (!isDAGJobScheduler())
+        if (!isDAGJobScheduler()) {
             return;
+        }
 
         long waitSecond = getConfig().getSecondStorageWaitIndexBuildSecond();
         String jobId = getParentId();

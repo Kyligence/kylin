@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.asynctask.MetadataRestoreTask;
@@ -48,7 +49,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import io.kyligence.kap.metadata.epoch.EpochManager;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ClusterManager.class, JobInfoTool.class, MetadataTool.class})
+@PrepareForTest({ ClusterManager.class, JobInfoTool.class, MetadataTool.class })
 @PowerMockIgnore({ "javax.net.ssl.*", "javax.management.*", "org.apache.hadoop.*", "javax.security.*", "javax.crypto.*",
         "javax.script.*" })
 public class OpsAppInitializerTest extends NLocalFileMetadataTestCase {
@@ -67,51 +68,46 @@ public class OpsAppInitializerTest extends NLocalFileMetadataTestCase {
     @After
     public void tearDown() {
         cleanupTestMetadata();
-        OpsService.MetadataBackupOperator.runningTask.clear();
+        OpsService.MetadataBackup.getRunningTask().clear();
     }
 
     @Test
     public void testMetadataBackupInterrupted() throws IOException {
         String path = opsService.backupMetadata(null);
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
-        OpsService.MetadataBackupOperator.runningTask
-                .get(OpsService.MetadataBackupOperator.getProjectMetadataKeyFromRootPath(path))
-                .getFirst()
-                .cancel(true);
+        OpsService.MetadataBackup.getRunningTask()
+                .get(OpsService.MetadataBackup.getProjectMetadataKeyFromRootPath(path)).getFirst().cancel(true);
         OpsAppInitializer opsAppInitializer = new OpsAppInitializer();
         opsAppInitializer.checkMetadataBackupTaskStatus();
-        MetadataBackupResponse pathResponse =
-                OpsService.getMetadataBackupList(null).stream().filter(x -> x.getPath().equals(path))
-                .collect(Collectors.toList()).get(0);
-        Assert.assertEquals(OpsService.MetadataBackupStatu.FAILED, pathResponse.getStatus());
+        MetadataBackupResponse pathResponse = OpsService.getMetadataBackupList(null).stream()
+                .filter(x -> x.getPath().equals(path)).collect(Collectors.toList()).get(0);
+        Assert.assertEquals(OpsService.MetadataBackupStatus.FAILED, pathResponse.getStatus());
     }
 
     @Test
     public void testMetadataRestoreInterrupted() throws IOException {
         String path = opsService.backupMetadata(null);
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
-        await().atMost(2, TimeUnit.MINUTES)
-                .until(() -> {
-                    List<MetadataBackupResponse> projectMetadataBackupList =
-                            opsService.getMetadataBackupList(null);
-                    for (MetadataBackupResponse response : projectMetadataBackupList) {
-                        if (path.equals(response.getPath())
-                                && response.getStatus() == OpsService.MetadataBackupStatu.SUCCEED) {
-                            return true;
-                        }
-                    }
-                    return false;
-                });
-        String restoreTask = opsService.doMetadataRestore(path, null, false);
+        await().atMost(2, TimeUnit.MINUTES).until(() -> {
+            List<MetadataBackupResponse> projectMetadataBackupList = OpsService.getMetadataBackupList(null);
+            for (MetadataBackupResponse response : projectMetadataBackupList) {
+                if (path.equals(response.getPath())
+                        && response.getStatus() == OpsService.MetadataBackupStatus.SUCCEED) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        String restoreTask = opsService.restoreMetadata(path, null, false);
         await().atMost(10, TimeUnit.SECONDS).until(EpochManager.getInstance()::isMaintenanceMode);
-        OpsService.MetadataRestoreOperator.runningOperator.cancel(true);
+        OpsService.MetadataRestore.getRunningTask().cancel(true);
         Assert.assertEquals(MetadataRestoreTask.MetadataRestoreStatus.IN_PROGRESS,
-                opsService.getMetadataRestoreStatus(restoreTask, OpsService._GLOBAL));
+                opsService.getMetadataRestoreStatus(restoreTask, UnitOfWork.GLOBAL_UNIT));
         Assert.assertTrue(EpochManager.getInstance().isMaintenanceMode());
         OpsAppInitializer opsAppInitializer = new OpsAppInitializer();
         opsAppInitializer.beforeStarted();
         Assert.assertEquals(MetadataRestoreTask.MetadataRestoreStatus.FAILED,
-                opsService.getMetadataRestoreStatus(restoreTask, OpsService._GLOBAL));
+                opsService.getMetadataRestoreStatus(restoreTask, UnitOfWork.GLOBAL_UNIT));
         Assert.assertFalse(EpochManager.getInstance().isMaintenanceMode());
     }
 

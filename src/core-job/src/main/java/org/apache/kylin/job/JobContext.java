@@ -29,6 +29,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.logging.SetLogCategory;
 import org.apache.kylin.common.util.AddressUtil;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.condition.JobModeCondition;
@@ -150,7 +151,7 @@ public class JobContext implements InitializingBean, DisposableBean, ISmartAppli
         projectReachQuotaLimitMap = Maps.newConcurrentMap();
         QuotaStorageCheckRunner quotaStorageCheckRunner = new QuotaStorageCheckRunner(this);
         JobCheckUtil.startQuotaStorageCheckRunner(quotaStorageCheckRunner);
-        
+
         if (kylinConfig.isJobNode() || kylinConfig.isDataLoadingNode() || kylinConfig.isUTEnv()) {
 
             resourceAcquirer = new ResourceAcquirer(kylinConfig);
@@ -177,7 +178,6 @@ public class JobContext implements InitializingBean, DisposableBean, ISmartAppli
         return serverNode;
     }
 
-    @VisibleForTesting
     public KylinConfig getKylinConfig() {
         return kylinConfig;
     }
@@ -244,8 +244,8 @@ public class JobContext implements InitializingBean, DisposableBean, ISmartAppli
             try (SetLogCategory ignored = new SetLogCategory(LogConstant.BUILD_CATEGORY)) {
                 logger.info("Stop kyligence node, kill spark application for cluster mode");
             }
-            List<AbstractJobExecutable> runningJobs = jobScheduler.getRunningJob().values().stream()
-                    .map(pair -> pair.getFirst()).collect(Collectors.toList());
+            List<AbstractJobExecutable> runningJobs = jobScheduler.getRunningJob().values().stream().map(Pair::getFirst)
+                    .collect(Collectors.toList());
             runningJobs.forEach(jobExecutable -> {
                 ExecutableManager executableManager = ExecutableManager.getInstance(kylinConfig,
                         jobExecutable.getProject());
