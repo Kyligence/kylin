@@ -647,7 +647,8 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             sqlResponse = QueryUtils.handleTempStatement(sqlRequest, kylinConfig);
 
             // search cache
-            if (sqlResponse == null && kylinConfig.isQueryCacheEnabled() && !sqlRequest.isForcedToPushDown()) {
+            if (sqlResponse == null && kylinConfig.isQueryCacheEnabled() && !sqlRequest.isForcedToPushDown()
+                    && !queryContext.getQueryTagInfo().isAsyncQuery()) {
                 sqlResponse = searchCache(sqlRequest, kylinConfig);
             }
 
