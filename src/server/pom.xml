@@ -425,6 +425,7 @@
                                 org.apache.spark,
                                 org.apache.kafka,
                                 org.apache.zookeeper,
+                                org.eclipse.jetty.orbit,
                                 org.glassfish.jersey,
                                 org.glassfish.hk2,
                                 org.glassfish.hk2.external,
