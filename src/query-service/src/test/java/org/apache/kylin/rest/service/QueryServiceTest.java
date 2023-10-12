@@ -3004,4 +3004,23 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             Assert.assertFalse(isQueryCacheEnabled);
         }
     }
+
+    @Test
+    public void testNotHitCacheWhenIsAsyncQuery() {
+        try (QueryContext queryContext = QueryContext.current()) {
+            queryContext.getQueryTagInfo().setAsyncQuery(true);
+            String project = "default";
+            String sql = "select * from table";
+            SQLRequest sqlRequest = new SQLRequest();
+            sqlRequest.setProject(project);
+            sqlRequest.setSql(sql);
+
+            queryService.doQueryWithCache(sqlRequest);
+
+            // async query API can not search cache
+            Assert.assertFalse(queryContext.getQueryTagInfo().isStorageCacheUsed());
+            Assert.assertFalse(queryContext.getQueryTagInfo().isHitExceptionCache());
+            Assert.assertTrue(queryContext.getQueryTagInfo().isAsyncQuery());
+        }
+    }
 }
