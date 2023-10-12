@@ -350,6 +350,7 @@
         <system-lambda.version>1.2.1</system-lambda.version>
         <license.version>5.0.7</license.version>
         <okhttp.version>3.12.12</okhttp.version>
+        <okio.version>3.4.0</okio.version>
         <snappy-java.version>1.1.10.4</snappy-java.version>
         <avro.version>1.11.3</avro.version>
     </properties>
