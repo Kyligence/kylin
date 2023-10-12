@@ -57,7 +57,7 @@ public class SnapshotSourceTableStatsController extends NBasicController {
         log.debug("sourceTableStats request : {}", request);
         val project = checkProjectName(request.getProject());
         val response = snapshotSourceTableStatsService.checkSourceTableStats(project, request.getDatabase(),
-                request.getTable(), request.getSnapshotPartitionCol(), request.getCatalog());
+                request.getTable(), request.getSnapshotPartitionCol());
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
     }
 
