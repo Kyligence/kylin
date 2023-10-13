@@ -200,7 +200,7 @@ object SparkSqlClient {
       val (jobCount, stageCount, taskCount) = QueryMetricUtils.collectTaskRelatedMetrics(jobGroup, ss.sparkContext)
       QueryContext.current().getMetrics.setScanRows(scanRows)
       QueryContext.current().getMetrics.setScanBytes(scanBytes)
-      val glutenFallback = FallbackUtil.isFallback(df.queryExecution.executedPlan)
+      val glutenFallback = FallbackUtil.hasFallback(df.queryExecution.executedPlan)
       QueryContext.current().getMetrics.setGlutenFallback(glutenFallback)
       QueryContext.current().getMetrics.setQueryJobCount(jobCount)
       QueryContext.current().getMetrics.setQueryStageCount(stageCount)

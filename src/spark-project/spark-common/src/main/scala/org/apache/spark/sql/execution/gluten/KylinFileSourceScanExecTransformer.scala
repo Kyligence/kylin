@@ -63,6 +63,7 @@ class KylinFileSourceScanExecTransformer(@transient relation: HadoopFsRelation,
       relation,
       selectedPartitions,
       output,
+      bucketedScan,
       optionalBucketSet,
       optionalNumCoalescedBuckets,
       disableBucketedScan)

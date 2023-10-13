@@ -40,7 +40,7 @@ import org.apache.spark.sql.hive.QueryMetricUtils
 import org.apache.spark.sql.util.{SparderConstants, SparderTypeUtil}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparderEnv}
 import org.apache.spark.sql.execution.gluten.KylinFileSourceScanExecTransformer
-import io.glutenproject.utils.FallbackUtil
+import io.glutenproject.utils.{FallbackUtil, QueryPlanSelector}
 
 import java.io.{File, FileOutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
@@ -49,6 +49,12 @@ import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`iterator asScala`
 import scala.collection.mutable
+import org.apache.kylin.query.relnode.ContextUtil
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, AttributeSet}
+import org.apache.spark.sql.catalyst.planning.PhysicalOperation
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.execution.datasource.FilePruner
+import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
 
 // scalastyle:off
 object ResultType extends Enumeration {
@@ -128,7 +134,7 @@ object ResultPlan extends LogEx {
       QueryContext.current.record("collect_result")
 
       val (scanRows, scanBytes) = QueryMetricUtils.collectScanMetrics(df.queryExecution.executedPlan)
-      val glutenFallback = FallbackUtil.isFallback(df.queryExecution.executedPlan)
+      val glutenFallback = FallbackUtil.hasFallback(df.queryExecution.executedPlan)
       QueryContext.current().getMetrics.setGlutenFallback(glutenFallback)
       val (jobCount, stageCount, taskCount) = QueryMetricUtils.collectTaskRelatedMetrics(jobGroup, sparkContext)
       QueryContext.current().getMetrics.setScanRows(scanRows)
@@ -272,7 +278,43 @@ object ResultPlan extends LogEx {
     }
   }
 
+  def shouldPushDownFilterFallback(plan: LogicalPlan): Boolean = {
+    checkDataFilterInternal(plan) || plan.children.exists(shouldPushDownFilterFallback)
+  }
+
+  def checkDataFilterInternal(p: LogicalPlan): Boolean = p match {
+    case PhysicalOperation(projects, filters,
+    l@LogicalRelation(fsRelation@HadoopFsRelation(_: FilePruner, _, _, _, _, _), _, table, _)) =>
+
+      val normalizedFilters = filters.map { e =>
+        e transform {
+          case a: AttributeReference =>
+            a.withName(l.output.find(_.semanticEquals(a)).get.name)
+        }
+      }
+
+      val partitionColumns = l.resolve(
+        fsRelation.partitionSchema, fsRelation.sparkSession.sessionState.analyzer.resolver)
+      val partitionSet = AttributeSet(partitionColumns)
+      val dataFilters = normalizedFilters.filter(_.references.intersect(partitionSet).isEmpty)
+      val names = fsRelation.dataSchema.map(schema => schema.name)
+        .slice(0, KylinConfig.getInstanceFromEnv.queryGlutenDataFilterMinimalPosition).seq
+      // data filter should not contains minimal schema
+      dataFilters.exists(f => f.references.exists(r => names.contains(r.name)))
+    case _ => false
+  }
+
   def getResult(df: DataFrame, rowType: RelDataType): ExecuteResult = withScope(df) {
+    df.sparkSession.sparkContext.setLocalProperty(QueryPlanSelector.GLUTEN_ENABLE_FOR_THREAD_KEY, null)
+    if (!ContextUtil.getNativeRealizations.isEmpty) {
+      if (!KylinConfig.getInstanceFromEnv.queryIndexUseGluten()) {
+        df.sparkSession.sparkContext.setLocalProperty(QueryPlanSelector.GLUTEN_ENABLE_FOR_THREAD_KEY, "false")
+      } else if (KylinConfig.getInstanceFromEnv.queryGlutenDataFilterMinimalPosition > 0
+        && shouldPushDownFilterFallback(df.queryExecution.optimizedPlan)) {
+        df.sparkSession.sparkContext.setLocalProperty(QueryPlanSelector.GLUTEN_ENABLE_FOR_THREAD_KEY, "false")
+      }
+    }
+
     val queryTagInfo = QueryContext.current().getQueryTagInfo
     if (queryTagInfo.isAsyncQuery) {
       saveAsyncQueryResult(df, queryTagInfo.getFileFormat, queryTagInfo.getFileEncode, rowType)

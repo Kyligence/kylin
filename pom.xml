@@ -73,7 +73,7 @@
         <spark.version>3.3.0-kylin-4.6.26.0</spark.version>
         <delta.version>2.1.0</delta.version>
 
-        <gluten.version>1.1.0.230823</gluten.version>
+        <gluten.version>1.1.0-kylin-231109</gluten.version>
         <gluten.deps.scope>provided</gluten.deps.scope>
 
         <roaring.version>0.9.2-kylin-r4</roaring.version>
