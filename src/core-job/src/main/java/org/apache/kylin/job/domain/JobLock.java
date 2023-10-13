@@ -49,8 +49,9 @@ public class JobLock {
 
     private String database;
 
-    public JobLock(String lockId) {
+    public JobLock(String lockId, int priority) {
         this.lockId = lockId;
+        this.priority = priority;
         this.createTime = new Date();
     }
 }

@@ -169,7 +169,7 @@ public class JdbcJobScheduler implements JobScheduler {
         // init master lock
         try {
             if (jobContext.getJobLockMapper().selectByJobId(JobScheduler.MASTER_SCHEDULER) == null) {
-                jobContext.getJobLockMapper().insertSelective(new JobLock(JobScheduler.MASTER_SCHEDULER));
+                jobContext.getJobLockMapper().insertSelective(new JobLock(JobScheduler.MASTER_SCHEDULER, 0));
             }
         } catch (Exception e) {
             logger.error("Try insert 'master_scheduler' failed.", e);
@@ -224,11 +224,11 @@ public class JdbcJobScheduler implements JobScheduler {
 
                 JobContextUtil.withTxAndRetry(() -> {
                     JobLock lock = jobContext.getJobLockMapper().selectByJobId(jobId);
-                    if (lock == null && jobContext.getJobLockMapper().insertSelective(new JobLock(jobId)) == 0) {
+                    JobInfo jobInfo = jobContext.getJobInfoMapper().selectByJobId(jobId);
+                    if (lock == null && jobContext.getJobLockMapper().insertSelective(new JobLock(jobId, jobInfo.getPriority())) == 0) {
                         logger.error("Create job lock for [{}] failed!", jobId);
                         return null;
                     }
-                    JobInfo jobInfo = jobContext.getJobInfoMapper().selectByJobId(jobId);
                     ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), jobInfo.getProject())
                             .publishJob(jobId, (AbstractExecutable) getJobExecutable(jobInfo));
                     return null;

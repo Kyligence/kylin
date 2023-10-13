@@ -115,7 +115,7 @@ class JdbcJobSchedulerTest {
     @Test
     void testLockExpiredAndJobNotFinal() {
         String jobId = mockJob();
-        JobLock lock = new JobLock(jobId);
+        JobLock lock = new JobLock(jobId, 1);
         lock.setLockNode("mock_node");
         lock.setLockExpireTime(new Date());
         int expect = jobContext.getJobLockMapper().insert(lock);
@@ -200,7 +200,7 @@ class JdbcJobSchedulerTest {
         AbstractExecutable job = mockExecutable();
         // insert job lock, without lock node
         String jobId = job.getJobId();
-        JobLock lock = new JobLock(jobId);
+        JobLock lock = new JobLock(jobId, 1);
         int expect = jobContext.getJobLockMapper().insert(lock);
         Assertions.assertEquals(1, expect);
         await().atMost(60, TimeUnit.SECONDS).until(() -> jobContext.getJobLockMapper().selectByJobId(jobId) == null);
