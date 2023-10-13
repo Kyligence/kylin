@@ -80,10 +80,15 @@ public class ResourceAcquirer {
         }
         memorySemaphore.release(resource.getMemory());
         registers.remove(jobExecutable.getJobId());
+        logger.info("Release resource success {}, available: {}MB", resource, memorySemaphore.availablePermits());
     }
 
     public static double currentAvailableMem() {
         return 1.0 * memorySemaphore.availablePermits();
+    }
+
+    public static int availablePermits() {
+        return memorySemaphore.availablePermits();
     }
 
     public void start() {

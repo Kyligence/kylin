@@ -44,7 +44,12 @@ import org.apache.kylin.common.util.TimeUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.common.ShellExecutable;
 import org.apache.kylin.job.constant.JobStatusEnum;
+import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.optimization.FrequencyMap;
@@ -612,8 +617,6 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
         }, project);
         val prjManager = NProjectManager.getInstance(getTestConfig());
         Assert.assertNull(prjManager.getProject(project));
-        //TODO need to be rewritten
-        // Assert.assertNull(NDefaultScheduler.getInstanceByProject(project));
     }
 
     @Test
@@ -680,8 +683,6 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
         }, project);
     }
 
-    //TODO need to be rewritten
-    /*
     @Test
     public void testDropProjectWithAllJobsBeenKilled() {
         KylinConfig.getInstanceFromEnv().setMetadataUrl(
@@ -694,13 +695,14 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
             return null;
         }, project);
 
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        scheduler.init(new JobEngineConfig(getTestConfig()));
-        Assert.assertTrue(scheduler.hasStarted());
-        NExecutableManager jobMgr = NExecutableManager.getInstance(getTestConfig(), project);
+        // init job schedule
+        JobContextUtil.getJobContext(getTestConfig());
+
+        ExecutableManager jobMgr = ExecutableManager.getInstance(getTestConfig(), project);
 
         val job1 = new DefaultExecutable();
         job1.setProject(project);
+        job1.setJobType(JobTypeEnum.INDEX_BUILD);
         val task1 = new ShellExecutable();
         job1.addTask(task1);
         jobMgr.addJob(job1);
@@ -713,7 +715,8 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
         }, project);
         val prjManager = NProjectManager.getInstance(getTestConfig());
         Assert.assertNull(prjManager.getProject(project));
-        Assert.assertNull(NDefaultScheduler.getInstanceByProject(project));
+
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -728,39 +731,42 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
             return null;
         }, project);
 
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        scheduler.init(new JobEngineConfig(getTestConfig()));
-        Assert.assertTrue(scheduler.hasStarted());
-        NExecutableManager jobMgr = NExecutableManager.getInstance(getTestConfig(), project);
+        // init job schedule
+        JobContextUtil.getJobContext(getTestConfig());
+
+        ExecutableManager jobMgr = ExecutableManager.getInstance(getTestConfig(), project);
 
         val job1 = new DefaultExecutable();
         job1.setProject(project);
+        job1.setJobType(JobTypeEnum.INDEX_BUILD);
         val task1 = new ShellExecutable();
         job1.addTask(task1);
         jobMgr.addJob(job1);
 
         val job2 = new DefaultExecutable();
         job2.setProject(project);
+        job2.setJobType(JobTypeEnum.INDEX_BUILD);
         val task2 = new ShellExecutable();
         job2.addTask(task2);
         jobMgr.addJob(job2);
 
         val job3 = new DefaultExecutable();
         job3.setProject(project);
+        job3.setJobType(JobTypeEnum.INDEX_BUILD);
         val task3 = new ShellExecutable();
         job3.addTask(task3);
         jobMgr.addJob(job3);
 
+        jobMgr.updateJobOutput(job2.getId(), ExecutableState.PENDING, null, null, null);
         jobMgr.updateJobOutput(job2.getId(), ExecutableState.RUNNING, null, null, null);
         jobMgr.updateJobOutput(job3.getId(), ExecutableState.PAUSED, null, null, null);
 
         Assert.assertThrows(KylinException.class, () -> projectService.dropProject(project));
         val prjManager = NProjectManager.getInstance(getTestConfig());
         Assert.assertNotNull(prjManager.getProject(project));
-        Assert.assertNotNull(NDefaultScheduler.getInstanceByProject(project));
-    }
 
-     */
+        JobContextUtil.cleanUp();
+    }
 
     @Test
     public void testClearManagerCache() throws Exception {

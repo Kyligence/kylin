@@ -279,6 +279,11 @@ public class JobContextUtil {
         }
     }
 
+    // for test only
+    public static boolean hasStarted() {
+        return jobContext != null;
+    }
+
     public static Map<String, List<String>> splitJobIdsByScheduleInstance(List<String> ids) {
         Map<String, List<String>> nodeWithJobs = new HashMap<>();
         for (String jobId : ids) {

@@ -99,14 +99,9 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() throws Exception {
         createTestMetadata();
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobInfoDao(getTestConfig());
         manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), DEFAULT_PROJECT);
-
-        for (String jobPath : manager.getJobs()) {
-            System.out.println("deleting " + jobPath);
-            manager.deleteJob(jobPath);
-        }
-
     }
 
     @After

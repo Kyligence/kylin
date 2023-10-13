@@ -23,7 +23,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.util.Shell;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.query.runtime.plan.ResultPlan;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.SparkConf;
@@ -35,13 +37,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import lombok.val;
 
-//TODO need to be rewritten
-@Ignore
 public class ExtractLimitInfoTest extends NLocalWithSparkSessionTest {
 
     @BeforeClass
@@ -70,16 +69,13 @@ public class ExtractLimitInfoTest extends NLocalWithSparkSessionTest {
     public void setup() throws Exception {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/join_opt");
-        // NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        // scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        // if (!scheduler.hasStarted()) {
-        //     throw new RuntimeException("scheduler has not been started");
-        // }
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
     }
 
     @After
     public void after() throws Exception {
-        // NDefaultScheduler.destroyInstance();
+        JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }
 

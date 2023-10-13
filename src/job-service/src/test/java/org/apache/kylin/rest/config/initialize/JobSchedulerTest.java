@@ -21,6 +21,7 @@ package org.apache.kylin.rest.config.initialize;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_FAIL;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_INDEX_FAIL;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_SEGMENT_FAIL;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_EXCEPTION;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_REFRESH_CHECK_INDEX_FAIL;
 
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -53,7 +55,6 @@ import org.apache.kylin.rest.response.NDataSegmentResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -68,8 +69,6 @@ import lombok.var;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-//TODO need to be rewritten
-@Ignore
 public class JobSchedulerTest extends NLocalFileMetadataTestCase {
 
     public static final String DEFAULT_PROJECT = "default";
@@ -84,20 +83,11 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
         SparkJobFactoryUtils.initJobFactory();
         createTestMetadata();
         prepareSegment();
-        // startScheduler();
     }
 
-    //    void startScheduler() {
-    //        scheduler = NDefaultScheduler.getInstance(DEFAULT_PROJECT);
-    //        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-    //        if (!scheduler.hasStarted()) {
-    //            throw new RuntimeException("scheduler has not been started");
-    //        }
-    //    }
-
     @After
-    public void after() throws Exception {
-        // NDefaultScheduler.destroyInstance();
+    public void after() {
+        JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }
 
@@ -349,7 +339,6 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
         jobManager.mergeSegmentJob(new JobParam(seg1, MODEL_ID, "ADMIN"));
     }
 
-    /*
     @Test
     public void testMergeJob_notReadySegmentException() {
         val jobManager = JobManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
@@ -359,10 +348,6 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
         val seg1 = dfm.appendSegment(df, new SegmentRange.TimePartitionedSegmentRange(
                 SegmentRange.dateToLong("2012-09-01"), SegmentRange.dateToLong("" + "2012-10-01")));
         try {
-            scheduler.getContext().setReachQuotaLimit(false);
-            log.info("init scheduler, current quota limit state is {}", scheduler.getContext().isReachQuotaLimit());
-            log.info("start schedule, current kylin.storage.quota-in-giga-bytes is {}",
-                    KylinConfig.getInstanceFromEnv().getStorageQuotaSize());
             jobManager.mergeSegmentJob(new JobParam(seg1, MODEL_ID, "ADMIN"));
             Assert.fail();
         } catch (KylinException e) {
@@ -370,15 +355,8 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
         }
     }
 
-     */
-
-    /*
     @Test
     public void testMergeJob_timeEception() {
-        scheduler.getContext().setReachQuotaLimit(false);
-        log.info("init scheduler, current quota limit state is {}", scheduler.getContext().isReachQuotaLimit());
-        log.info("start schedule, current kylin.storage.quota-in-giga-bytes is {}",
-                KylinConfig.getInstanceFromEnv().getStorageQuotaSize());
         val jobManager = JobManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
         val dfm = NDataflowManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
         var df = dfm.getDataflow(MODEL_ID);
@@ -392,8 +370,6 @@ public class JobSchedulerTest extends NLocalFileMetadataTestCase {
         thrown.expectMessage(JOB_CREATE_CHECK_FAIL.getMsg());
         jobManager.mergeSegmentJob(new JobParam(seg1, MODEL_ID, "ADMIN"));
     }
-
-     */
 
     @Test
     public void testAddSegmentJob_selectNoSegments() {

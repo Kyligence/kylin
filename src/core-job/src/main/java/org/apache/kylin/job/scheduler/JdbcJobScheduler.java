@@ -225,7 +225,8 @@ public class JdbcJobScheduler implements JobScheduler {
                 JobContextUtil.withTxAndRetry(() -> {
                     JobLock lock = jobContext.getJobLockMapper().selectByJobId(jobId);
                     JobInfo jobInfo = jobContext.getJobInfoMapper().selectByJobId(jobId);
-                    if (lock == null && jobContext.getJobLockMapper().insertSelective(new JobLock(jobId, jobInfo.getPriority())) == 0) {
+                    if (lock == null && jobContext.getJobLockMapper()
+                            .insertSelective(new JobLock(jobId, jobInfo.getPriority())) == 0) {
                         logger.error("Create job lock for [{}] failed!", jobId);
                         return null;
                     }

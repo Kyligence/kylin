@@ -22,12 +22,16 @@ import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.datasou
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.metrics.MetricsController;
 import org.apache.kylin.common.metrics.MetricsGroup;
 import org.apache.kylin.common.metrics.MetricsName;
@@ -35,11 +39,17 @@ import org.apache.kylin.common.metrics.MetricsTag;
 import org.apache.kylin.common.metrics.prometheus.PrometheusMetrics;
 import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.job.JobContext;
+import org.apache.kylin.job.core.AbstractJobExecutable;
 import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.ExecutablePO;
+import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.scheduler.JdbcJobScheduler;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.query.util.LoadCounter;
 import org.apache.kylin.rest.response.StorageVolumeInfoResponse;
@@ -174,11 +184,13 @@ public class MetricsRegistryTest extends NLocalFileMetadataTestCase {
         gauges3.forEach(e -> Assert.assertEquals(1, e.value(), 0));
     }
 
-    // TODO need to be rewritten
-    /*
     @Test
     public void testRegisterProjectPrometheusMetrics() {
         KylinConfig kylinConfig = getTestConfig();
+        JdbcJobScheduler mockedJobScheduler = Mockito.mock(JdbcJobScheduler.class);
+        JobContext jobContext = JobContextUtil.getJobContext(kylinConfig);
+        ReflectionTestUtils.setField(jobContext, "jobScheduler", mockedJobScheduler);
+
         kylinConfig.setProperty("kylin.metrics.prometheus-enabled", "false");
         PowerMockito.when(SpringContext.getBean(MeterRegistry.class)).thenReturn(meterRegistry);
         MetricsRegistry.registerProjectPrometheusMetrics(kylinConfig, project);
@@ -194,65 +206,18 @@ public class MetricsRegistryTest extends NLocalFileMetadataTestCase {
 
         Collection<Meter> meters2 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).meters();
         meters2.forEach(meter -> meterRegistry.remove(meter));
-        NDefaultScheduler mockScheduler = PowerMockito.mock(NDefaultScheduler.class);
-        Mockito.when(mockScheduler.getContext()).thenReturn(null);
+        Mockito.doReturn(new HashMap<>()).when(mockedJobScheduler).getRunningJob();
         Collection<Gauge> gauges5 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).gauges();
         gauges5.forEach(e -> Assert.assertEquals(0, e.value(), 0));
 
         Collection<Meter> meters3 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).meters();
         meters3.forEach(meter -> meterRegistry.remove(meter));
-        Executable mockExecutable1 = Mockito.mock(Executable.class);
-        DefaultOutput defaultOutput1 = Mockito.mock(DefaultOutput.class);
-        Mockito.when(defaultOutput1.getState()).thenReturn(ExecutableState.RUNNING);
-        PowerMockito.when(NDefaultScheduler.getInstance(project)).thenReturn(mockScheduler);
-        Mockito.when(mockExecutable1.getOutput()).thenReturn(defaultOutput1);
-        Mockito.when(defaultOutput1.getState()).thenReturn(ExecutableState.RUNNING);
-        Map<String, Executable> executableMap = Maps.newHashMap();
-        executableMap.put("mockExecutable1", mockExecutable1);
-        ExecutableContext executableContext = Mockito.mock(ExecutableContext.class);
-        Mockito.when(mockScheduler.getContext()).thenReturn(executableContext);
-        Mockito.when(executableContext.getRunningJobs()).thenReturn(executableMap);
-        MetricsRegistry.registerProjectPrometheusMetrics(kylinConfig, project);
-        Collection<Gauge> gauges6 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).gauges();
-        gauges6.forEach(e -> Assert.assertEquals(1, e.value(), 0));
-    }
+        AbstractExecutable mockExecutable1 = Mockito.mock(AbstractExecutable.class);
+        ReflectionTestUtils.setField(mockExecutable1, "project", project);
+        Map<String, Pair<AbstractJobExecutable, Long>> executableMap = Maps.newHashMap();
+        executableMap.put("mockExecutable1", new Pair<>(mockExecutable1, 1L));
+        Mockito.when(mockedJobScheduler.getRunningJob()).thenReturn(executableMap);
 
-    @Test
-    public void testRegisterProjectPrometheusMetrics() {
-        KylinConfig kylinConfig = getTestConfig();
-        kylinConfig.setProperty("kylin.metrics.prometheus-enabled", "false");
-        PowerMockito.when(SpringContext.getBean(MeterRegistry.class)).thenReturn(meterRegistry);
-        MetricsRegistry.registerProjectPrometheusMetrics(kylinConfig, project);
-        List<Meter> meters1 = meterRegistry.getMeters();
-        Assert.assertEquals(0, meters1.size());
-
-        kylinConfig.setProperty("kylin.metrics.prometheus-enabled", "true");
-        MetricsRegistry.registerProjectPrometheusMetrics(kylinConfig, project);
-
-        Collection<Gauge> gauges4 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).gauges();
-        Assert.assertEquals(1, gauges4.size());
-        gauges4.forEach(Gauge::value);
-
-        Collection<Meter> meters2 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).meters();
-        meters2.forEach(meter -> meterRegistry.remove(meter));
-        NDefaultScheduler mockScheduler = PowerMockito.mock(NDefaultScheduler.class);
-        Mockito.when(mockScheduler.getContext()).thenReturn(null);
-        Collection<Gauge> gauges5 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).gauges();
-        gauges5.forEach(e -> Assert.assertEquals(0, e.value(), 0));
-
-        Collection<Meter> meters3 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).meters();
-        meters3.forEach(meter -> meterRegistry.remove(meter));
-        Executable mockExecutable1 = Mockito.mock(Executable.class);
-        DefaultOutput defaultOutput1 = Mockito.mock(DefaultOutput.class);
-        Mockito.when(defaultOutput1.getState()).thenReturn(ExecutableState.RUNNING);
-        PowerMockito.when(NDefaultScheduler.getInstance(project)).thenReturn(mockScheduler);
-        Mockito.when(mockExecutable1.getOutput()).thenReturn(defaultOutput1);
-        Mockito.when(defaultOutput1.getState()).thenReturn(ExecutableState.RUNNING);
-        Map<String, Executable> executableMap = Maps.newHashMap();
-        executableMap.put("mockExecutable1", mockExecutable1);
-        ExecutableContext executableContext = Mockito.mock(ExecutableContext.class);
-        Mockito.when(mockScheduler.getContext()).thenReturn(executableContext);
-        Mockito.when(executableContext.getRunningJobs()).thenReturn(executableMap);
         MetricsRegistry.registerProjectPrometheusMetrics(kylinConfig, project);
         Collection<Gauge> gauges6 = meterRegistry.find(PrometheusMetrics.JOB_COUNTS.getValue()).gauges();
         gauges6.forEach(e -> Assert.assertEquals(1, e.value(), 0));
@@ -261,8 +226,8 @@ public class MetricsRegistryTest extends NLocalFileMetadataTestCase {
         MetricsRegistry.registerProjectPrometheusMetrics(kylinConfig, project);
         Collection<Gauge> gauges7 = meterRegistry.find(PrometheusMetrics.JOB_LONG_RUNNING.getValue()).gauges();
         Assert.assertEquals(0, gauges7.stream().filter(e -> e.value() == 1).count());
-        NExecutableManager executableManager = PowerMockito.mock(NExecutableManager.class);
-        PowerMockito.when(NExecutableManager.getInstance(kylinConfig, "default")).thenReturn(executableManager);
+        ExecutableManager executableManager = PowerMockito.mock(ExecutableManager.class);
+        PowerMockito.when(ExecutableManager.getInstance(kylinConfig, "default")).thenReturn(executableManager);
         ExecutablePO mockExecutablePO = Mockito.mock(ExecutablePO.class);
         ExecutablePO mockExecutablePO1 = Mockito.mock(ExecutablePO.class);
         AbstractExecutable mockAbstractExecutable = Mockito.mock(AbstractExecutable.class);
@@ -284,7 +249,6 @@ public class MetricsRegistryTest extends NLocalFileMetadataTestCase {
         MetricsRegistry.refreshProjectLongRunningJobs(kylinConfig, projectSet);
         Assert.assertEquals(5, gauges7.stream().filter(e -> e.value() == 1).count());
     }
-     */
 
 
     @Test
