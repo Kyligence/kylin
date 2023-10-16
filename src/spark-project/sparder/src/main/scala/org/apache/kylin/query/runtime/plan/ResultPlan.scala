@@ -135,7 +135,8 @@ object ResultPlan extends LogEx {
       QueryContext.current().getMetrics.setQueryTaskCount(taskCount)
 
       if (!QueryContext.current().getSecondStorageUsageMap.isEmpty &&
-        KylinConfig.getInstanceFromEnv.getSecondStorageQueryMetricCollect) {
+        KylinConfig.getInstanceFromEnv.getSecondStorageQueryMetricCollect &&
+        OLAPContext.getNativeRealizations.size() < 2) {
         val executedPlan = SecondStorageUtil.collectExecutedPlan(getNormalizedExplain(df))
         val pushedPlan = SecondStorageUtil.convertExecutedPlan(executedPlan, QueryContext.current.getProject, OLAPContext.getNativeRealizations)
         QueryContext.current().getMetrics.setQueryExecutedPlan(pushedPlan)
