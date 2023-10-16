@@ -50,7 +50,7 @@ public class JobInfoUtil {
     public static ExecutablePO deserializeExecutablePO(JobInfo jobInfo) {
         ByteSource byteSource = ByteSource.wrap(jobInfo.getJobContent());
         try {
-            return deserializeExecutablePO(byteSource, jobInfo.getUpdateTime().getTime(), jobInfo.getProject());
+            return deserializeExecutablePO(byteSource, jobInfo.getUpdateTime(), jobInfo.getProject());
         } catch (IOException e) {
             log.warn("Error when deserializing jobInfo, id: {} " + jobInfo.getJobId(), e);
             return null;

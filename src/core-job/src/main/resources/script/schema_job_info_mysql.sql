@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_info (
   priority integer DEFAULT 3,
   mvcc bigint(10),
   job_content longblob NOT NULL,
-  create_time timestamp,
-  update_time timestamp,
+  create_time bigint,
+  update_time bigint,
   job_duration_millis bigint(10) NOT NULL DEFAULT '0' COMMENT 'total duration milliseconds',
   PRIMARY KEY (id),
   UNIQUE KEY uk_job_id (job_id)

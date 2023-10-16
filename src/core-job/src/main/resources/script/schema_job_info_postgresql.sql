@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_info (
   priority integer DEFAULT 3,
   mvcc bigint,
   job_content bytea NOT NULL,
-  create_time timestamptz(3),
-  update_time timestamptz(3),
+  create_time bigint,
+  update_time bigint,
   job_duration_millis bigint NOT NULL DEFAULT '0'
 );
 comment on column KE_IDENTIFIED_job_info.job_duration_millis is 'total duration milliseconds';

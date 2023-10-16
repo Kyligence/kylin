@@ -18,8 +18,6 @@
 
 package org.apache.kylin.job.domain;
 
-import java.util.Date;
-
 public class JobInfo {
     private Long id;
 
@@ -35,9 +33,9 @@ public class JobInfo {
 
     private String modelId;
 
-    private Date createTime;
+    private long createTime;
 
-    private Date updateTime;
+    private long updateTime;
 
     private Long jobDurationMillis;
 
@@ -106,19 +104,19 @@ public class JobInfo {
         this.modelId = modelId;
     }
 
-    public Date getCreateTime() {
+    public long getCreateTime() {
         return createTime;
     }
 
-    public void setCreateTime(Date createTime) {
+    public void setCreateTime(long createTime) {
         this.createTime = createTime;
     }
 
-    public Date getUpdateTime() {
+    public long getUpdateTime() {
         return updateTime;
     }
 
-    public void setUpdateTime(Date updateTime) {
+    public void setUpdateTime(long updateTime) {
         this.updateTime = updateTime;
     }
 

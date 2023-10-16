@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_lock (
   lock_node varchar(50) DEFAULT NULL COMMENT 'who locked it',
   lock_expire_time timestamp COMMENT 'when does the lock expire',
   priority integer DEFAULT 3,
-  create_time timestamp,
-  update_time timestamp,
+  create_time bigint,
+  update_time bigint,
   PRIMARY KEY (id),
   UNIQUE KEY uk_lock_id (lock_id)
 ) DEFAULT CHARSET=utf8;

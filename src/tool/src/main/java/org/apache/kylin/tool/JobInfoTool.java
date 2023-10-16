@@ -28,7 +28,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
-import java.sql.Date;
 import java.util.Arrays;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -99,9 +98,7 @@ public class JobInfoTool extends CancelableTask {
     }
 
     public void extractFull(File dir, long startTime, long endTime) {
-        Date startDate = new Date(startTime);
-        Date endDate = new Date(endTime);
-        JobMapperFilter filter = JobMapperFilter.builder().timeRange(Arrays.asList(startDate, endDate)).build();
+        JobMapperFilter filter = JobMapperFilter.builder().timeRange(Arrays.asList(startTime, endTime)).build();
         List<JobInfo> jobs = JobContextUtil.getJobInfoDao(KylinConfig.getInstanceFromEnv())
                 .getJobInfoListByFilter(filter);
         for (JobInfo job : jobs) {

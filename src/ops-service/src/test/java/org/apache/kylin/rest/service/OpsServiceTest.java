@@ -25,7 +25,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -110,7 +109,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         JobInfo jobInfo = new JobInfo();
         jobInfo.setJobId("mock_job_id");
         jobInfo.setProject(project);
-        jobInfo.setUpdateTime(new Date());
+        jobInfo.setUpdateTime(System.currentTimeMillis());
         ExecutablePO originExecutable = new ExecutablePO();
         originExecutable.setName("origin_executable");
         byte[] originJobContent = JobInfoUtil.serializeExecutablePO(originExecutable);
@@ -232,7 +231,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         JobInfo jobInfo = new JobInfo();
         jobInfo.setJobId("mock_job_id3");
         jobInfo.setProject(UnitOfWork.GLOBAL_UNIT);
-        jobInfo.setUpdateTime(new Date());
+        jobInfo.setUpdateTime(System.currentTimeMillis());
         ExecutablePO originExecutable = new ExecutablePO();
         originExecutable.setName("origin_executable");
         byte[] originJobContent = JobInfoUtil.serializeExecutablePO(originExecutable);
@@ -316,7 +315,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         JobInfo jobInfo = new JobInfo();
         jobInfo.setJobId("mock_job_id2");
         jobInfo.setProject(project);
-        jobInfo.setUpdateTime(new Date());
+        jobInfo.setUpdateTime(System.currentTimeMillis());
         ExecutablePO originExecutable = new ExecutablePO();
         originExecutable.setName("origin_executable");
         byte[] originJobContent = JobInfoUtil.serializeExecutablePO(originExecutable);

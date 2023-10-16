@@ -21,7 +21,6 @@ import static org.apache.kylin.job.util.JobInfoUtil.JOB_SERIALIZER;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -194,8 +193,8 @@ public class JobInfoDao {
 
         jobInfo.setSubject(subject);
         jobInfo.setModelId(executablePO.getTargetModel());
-        jobInfo.setCreateTime(new Date(executablePO.getCreateTime()));
-        jobInfo.setUpdateTime(new Date(executablePO.getLastModified()));
+        jobInfo.setCreateTime(executablePO.getCreateTime());
+        jobInfo.setUpdateTime(executablePO.getLastModified());
         jobInfo.setJobContent(JobInfoUtil.serializeExecutablePO(executablePO));
 
         ExecutableManager executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
@@ -241,10 +240,6 @@ public class JobInfoDao {
     }
 
     public Long getEarliestJobCreateTime(String project) {
-        Date result = jobInfoMapper.getEarliestCreateTime(project);
-        if (null == result) {
-            return null;
-        }
-        return result.getTime();
+        return jobInfoMapper.getEarliestCreateTime(project);
     }
 }

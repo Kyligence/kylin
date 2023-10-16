@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_lock (
   lock_node varchar(50) DEFAULT NULL,
   lock_expire_time timestamptz DEFAULT NULL,
   priority integer DEFAULT 3,
-  create_time timestamptz,
-  update_time timestamptz
+  create_time bigint,
+  update_time bigint
 );
 comment on column KE_IDENTIFIED_job_lock.lock_id is 'what is locked';
 comment on column KE_IDENTIFIED_job_lock.lock_node is 'who locked it';

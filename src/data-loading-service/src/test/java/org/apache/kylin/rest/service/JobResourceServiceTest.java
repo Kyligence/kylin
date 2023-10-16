@@ -18,7 +18,6 @@
 
 package org.apache.kylin.rest.service;
 
-import java.util.Date;
 import java.util.Map;
 
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
@@ -119,7 +118,7 @@ public class JobResourceServiceTest extends NLocalFileMetadataTestCase {
             theMock.when(() -> JobContextUtil.getJobInfoDao(Mockito.any())).thenReturn(jobInfoDao);
             Assert.assertEquals(0, jobResourceService.getQueueNames().size());
             JobInfo jobInfoNotTasks = new JobInfo();
-            jobInfoNotTasks.setUpdateTime(new Date());
+            jobInfoNotTasks.setUpdateTime(System.currentTimeMillis());
             jobInfoNotTasks.setJobContent(JobInfoUtil.serializeExecutablePO(new ExecutablePO()));
 
             Mockito.doReturn(Lists.newArrayList(jobInfoNotTasks)).when(jobInfoDao)
@@ -141,7 +140,7 @@ public class JobResourceServiceTest extends NLocalFileMetadataTestCase {
         info.put(ExecutableConstants.QUEUE_NAME, "test_build_queue");
         subTaskOutput.setInfo(info);
         po.setTasks(Lists.newArrayList(subTask));
-        jobInfo.setUpdateTime(new Date());
+        jobInfo.setUpdateTime(System.currentTimeMillis());
         jobInfo.setJobContent(JobInfoUtil.serializeExecutablePO(po));
         Mockito.doReturn(Lists.newArrayList(jobInfo)).when(jobInfoDao).getJobInfoListByFilter(Mockito.any());
     }

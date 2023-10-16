@@ -40,9 +40,9 @@ public class JobLock {
 
     private int priority;
 
-    private Date createTime;
+    private long createTime;
 
-    private Date updateTime;
+    private long updateTime;
 
     // placeholder for mybatis ${}
     private String jobLockTable;
@@ -52,6 +52,7 @@ public class JobLock {
     public JobLock(String lockId, int priority) {
         this.lockId = lockId;
         this.priority = priority;
-        this.createTime = new Date();
+        this.createTime = System.currentTimeMillis();
+        this.updateTime = System.currentTimeMillis();
     }
 }

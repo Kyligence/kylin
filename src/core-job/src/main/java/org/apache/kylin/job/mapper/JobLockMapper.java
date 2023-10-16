@@ -45,7 +45,7 @@ public interface JobLockMapper {
     int deleteAllJobLock();
 
     int updateLock(@Param("lockId") String lockId, @Param("lockNode") String lockNode,
-            @Param("renewalSec") long renewalSec);
+            @Param("renewalSec") long renewalSec, @Param("updateTime") long updateTime);
 
     int removeLock(@Param("lockId") String lockId, @Param("lockNode") String lockNode);
 
