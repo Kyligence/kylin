@@ -203,7 +203,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
       init(tableName, table.database) {
         val tableIdentity = table.qualifiedName.toLowerCase(Locale.ROOT)
         val locationPath = table.location.getPath
-        val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath)
+        val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath, config)
         val snapshotTablesLocationsJson = snapshotSourceTableStatsService.createSnapshotSourceTableStats(locationPath, config,
           locationFilesStatus)
         snapshotSourceTableStatsService.writeSourceTableStats(DEFAULT_PROJECT, tableIdentity, snapshotTablesLocationsJson)
@@ -233,7 +233,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
         try {
           val tableIdentity = table.qualifiedName.toLowerCase(Locale.ROOT)
           val locationPath = table.location.getPath
-          val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath)
+          val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath, config)
           val snapshotTablesLocationsJson = snapshotSourceTableStatsService.createSnapshotSourceTableStats(locationPath, config,
             locationFilesStatus)
           snapshotSourceTableStatsService.writeSourceTableStats(DEFAULT_PROJECT, tableIdentity, snapshotTablesLocationsJson)
@@ -319,7 +319,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
         val needCheckPartitions = partitions.asScala.sortBy(partition => partition.createTime).reverse
           .slice(0, config.getSnapshotAutoRefreshFetchPartitionsCount).asJava
 
-        snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus)
+        snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus, config)
         for (partition <- partitions.asScala) {
           snapshotSourceTableStatsService.createPartitionSnapshotSourceTableStats(partition, needSavePartitionsFilesStatus,
             snapshotTablesLocationsJson, config)
@@ -369,7 +369,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
           val needCheckPartitions = partitions.asScala.sortBy(partition => partition.createTime).reverse
             .slice(0, config.getSnapshotAutoRefreshFetchPartitionsCount).asJava
 
-          snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus)
+          snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus, config)
           for (partition <- partitions.asScala) {
             snapshotSourceTableStatsService.createPartitionSnapshotSourceTableStats(partition, needSavePartitionsFilesStatus,
               snapshotTablesLocationsJson, config)
