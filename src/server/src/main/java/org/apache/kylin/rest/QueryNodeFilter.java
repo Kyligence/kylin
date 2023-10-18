@@ -154,6 +154,8 @@ public class QueryNodeFilter extends BaseFilter {
 
         // spark report job stage status
         notRoutePutApiSet.add("/kylin/api/jobs/stage/status");
+        notRoutePutApiSet.add("/kylin/api/jobs/spark");
+        notRoutePutApiSet.add("/kylin/api/jobs/wait_and_run_time");
     }
 
     @Autowired

@@ -83,6 +83,7 @@ import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.ExecutablePO;
@@ -90,6 +91,7 @@ import org.apache.kylin.job.dao.JobInfoDao;
 import org.apache.kylin.job.domain.JobInfo;
 import org.apache.kylin.job.rest.JobMapperFilter;
 import org.apache.kylin.job.runners.JobCheckUtil;
+import org.apache.kylin.job.scheduler.JdbcJobScheduler;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.job.util.JobInfoUtil;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
@@ -287,15 +289,18 @@ public class ExecutableManager {
             if (ExecutableState.READY == newStatus) {
                 Optional.ofNullable(REMOVE_INFO).ifPresent(set -> set.forEach(info::remove));
             }
-            String oldNodeInfo = info.get("node_info");
-            String newNodeInfo = config.getServerAddress();
-            if (Objects.nonNull(oldNodeInfo) && !Objects.equals(oldNodeInfo, newNodeInfo)
-                    && !Objects.equals(taskOrJobId, jobId)) {
-                logger.info("The node running job has changed. Job id: {}, Step name: {}, Switch from {} to {}.", jobId,
-                        taskOrJob.getName(), oldNodeInfo, newNodeInfo);
+            // check if job is running on current node
+            if (hasRunningJob(jobId)) {
+                String oldNodeInfo = info.get("node_info");
+                String newNodeInfo = config.getServerAddress();
+                if (Objects.nonNull(oldNodeInfo) && !Objects.equals(oldNodeInfo, newNodeInfo)
+                        && !Objects.equals(taskOrJobId, jobId)) {
+                    logger.info("The node running job has changed. Job id: {}, Step name: {}, Switch from {} to {}.",
+                            jobId, taskOrJob.getName(), oldNodeInfo, newNodeInfo);
+                }
+                info.put("node_info", newNodeInfo);
+                info.put("host_name", AddressUtil.getHostName());
             }
-            info.put("node_info", newNodeInfo);
-            info.put("host_name", AddressUtil.getHostName());
             jobOutput.setInfo(info);
             String appId = info.get(ExecutableConstants.YARN_APP_ID);
             if (StringUtils.isNotEmpty(appId)) {
@@ -326,6 +331,15 @@ public class ExecutableManager {
             destroyProcess(taskOrJobId);
         }
 
+    }
+    
+    private boolean hasRunningJob(String jobId) {
+        JobContext jobContext = JobContextUtil.getJobContext(config);
+        JdbcJobScheduler jobScheduler = jobContext.getJobScheduler();
+        if (null != jobScheduler && jobScheduler.getRunningJob().containsKey(jobId)) {
+            return true;
+        }
+        return false;
     }
 
     public static String extractJobId(String taskOrJobId) {
