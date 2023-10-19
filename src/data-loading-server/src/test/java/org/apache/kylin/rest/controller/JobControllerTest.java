@@ -23,8 +23,10 @@ import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLI
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
@@ -435,6 +437,54 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(response.get("msg"), "Job has stopped.");
 
         Mockito.verify(jobController).updateStageStatus(request);
+    }
+
+    @Test
+    public void testUpdateStageStatusConcurrently() {
+        KylinConfig.getInstanceFromEnv().setProperty("kylin.job.max-transaction-retry", "10");
+        ExecutablePO job = mockJob(ExecutableState.RUNNING);
+        StageRequest request = new StageRequest();
+        request.setProject(job.getProject());
+        request.setSegmentId(job.getTargetSegments().get(0));
+        request.setTaskId(job.getId() + "_01_01");
+        request.setStatus("RUNNING");
+        request.setJobLastRunningStartTime(String.valueOf(job.getOutput().getLastRunningStartTime()));
+
+        // call real methods of joInfoService
+        ReflectionTestUtils.setField(jobController, "jobInfoService", Mockito.spy(JobInfoService.class));
+
+        AtomicInteger failedCount = new AtomicInteger();
+        Runnable runnable = () -> {
+            try {
+                MvcResult result = mockMvc.perform(MockMvcRequestBuilders.put("/api/jobs/stage/status") //
+                        .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
+                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                        .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
+                Map<String, String> response = JsonUtil.readValueAsMap(result.getResponse().getContentAsString());
+                if (!response.get("code").equals(KylinException.CODE_SUCCESS)) {
+                    failedCount.incrementAndGet();
+                }
+            } catch (Exception exception) {
+                failedCount.incrementAndGet();
+            }
+        };
+
+        int repeatTime = 10;
+        List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < repeatTime; i++) {
+            threads.add(new Thread(runnable));
+        }
+        threads.forEach(Thread::start);
+        threads.forEach(thread -> {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                failedCount.incrementAndGet();
+            }
+        });
+
+        Mockito.verify(jobController, Mockito.times(repeatTime)).updateStageStatus(request);
+        Assert.assertEquals(0, failedCount.get());
     }
 
     @Test

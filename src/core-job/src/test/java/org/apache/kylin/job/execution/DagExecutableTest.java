@@ -47,7 +47,6 @@ import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.awaitility.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import lombok.val;
@@ -258,8 +257,8 @@ class DagExecutableTest {
     }
 
     @Test
-    @Disabled("Fixed at KE-42833")
     void dagExecute() throws ExecuteException {
+        KylinConfig.getInstanceFromEnv().setProperty("kylin.job.max-transaction-retry", "23");
         val job = new DefaultExecutable();
         job.setProject(DEFAULT_PROJECT);
         val executable1 = new SucceedDagTestExecutable();

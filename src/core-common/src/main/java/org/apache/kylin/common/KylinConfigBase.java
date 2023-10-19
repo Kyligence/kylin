@@ -1157,6 +1157,10 @@ public abstract class KylinConfigBase implements Serializable {
         return getOptional("kylin.job.remote-cli-working-dir");
     }
 
+    public int getMaxTransactionRetry() {
+        return Integer.parseInt(getOptional("kylin.job.max-transaction-retry", "3"));
+    }
+    
     public int getMaxConcurrentJobLimit() {
         return Integer.parseInt(getOptional("kylin.job.max-concurrent-jobs", "20"));
     }
