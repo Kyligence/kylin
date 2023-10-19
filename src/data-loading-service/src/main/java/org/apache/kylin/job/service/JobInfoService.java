@@ -274,7 +274,9 @@ public class JobInfoService extends BasicService implements JobSupporter {
                     AbstractExecutable executable = getManager(ExecutableManager.class, executablePO.getProject())
                             .fromPO(executablePO);
                     val convert = this.convert(executable, executablePO);
-                    val segments = getSegments(executable);
+                    val segments = convert.isTargetSubjectError()
+                            ? Lists.<ExecutableResponse.SegmentResponse> newArrayList()
+                            : getSegments(executable);
                     convert.setSegments(segments);
                     return convert;
                 }).collect(Collectors.toList());
