@@ -437,14 +437,14 @@ public class JdbcJobScheduler implements JobScheduler {
         return jobLock;
     }
 
-    private boolean checkJobStatusBeforeExecute(AbstractJobExecutable jobExecutable) {
+    private boolean checkJobStatusBeforeExecute(AbstractJobExecutable jobExecutable) throws LockException {
         AbstractExecutable executable = (AbstractExecutable) jobExecutable;
         ExecutableState jobStatus = executable.getStatus();
         if (ExecutableState.PENDING == jobStatus) {
             return true;
         }
         logger.warn("Unexpected status for {} <{}>, should not execute job", jobExecutable.getJobId(), jobStatus);
-        if (ExecutableState.RUNNING == jobStatus) {
+        if (ExecutableState.RUNNING == jobStatus && tryJobLock(jobExecutable) != null) {
             // there should be other nodes crashed during job execution, resume job status from running to ready
             logger.warn("Resume <RUNNING> job {}", jobExecutable.getJobId());
             ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), executable.getProject())

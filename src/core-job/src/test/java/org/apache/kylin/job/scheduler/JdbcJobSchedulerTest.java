@@ -55,7 +55,7 @@ class JdbcJobSchedulerTest {
     @BeforeEach
     public void setup() {
         KylinConfig config = getTestConfig();
-        config.setProperty("kylin.job.slave-pull-batch-size", "1");
+        config.setProperty("kylin.job.max-concurrent-jobs", "2");
         config.setProperty("kylin.job.slave-lock-renew-sec", "3");
         jobContext = JobContextUtil.getJobContext(config);
         jobInfoDao = JobContextUtil.getJobInfoDao(config);
