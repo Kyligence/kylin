@@ -42,14 +42,18 @@ import org.apache.kylin.job.constant.JobTimeFilterEnum;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.rest.JobFilter;
 import org.apache.kylin.job.rest.JobMapperFilter;
+import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.rest.security.AclPermissionEnum;
 import org.apache.kylin.rest.service.ModelService;
+import org.apache.kylin.rest.service.ProjectService;
 import org.apache.kylin.rest.service.TableExtService;
 import org.sparkproject.guava.collect.Lists;
 
 public class JobFilterUtil {
 
     public static JobMapperFilter getJobMapperFilter(final JobFilter jobFilter, int offset, int limit,
-                                                     ModelService modelService, TableExtService tableExtService) {
+                                                     ModelService modelService, TableExtService tableExtService,
+                                                     ProjectService projectService) {
         Date queryStartTime = getQueryStartTime(jobFilter.getTimeFilter());
 
         Set<String> subjects = new HashSet<>();
@@ -63,6 +67,9 @@ public class JobFilterUtil {
                     jobFilter.getProject(), jobFilter.isExactMatch()));
             convertKeyToSubjects.addAll(tableExtService.getTableNamesByFuzzyKey(jobFilter.getProject(),
                     jobFilter.getKey(), jobFilter.isExactMatch()));
+            convertKeyToSubjects.addAll(projectService.getProjectsFilterByExactMatchAndPermission(jobFilter.getKey(),
+                    jobFilter.isExactMatch(), AclPermissionEnum.READ)
+                    .stream().map(ProjectInstance::getName).collect(Collectors.toList()));
             subjects.addAll(convertKeyToSubjects);
         }
         // if 'key' can not be transformed to 'subjects', then fuzzy query job id by 'key'
@@ -128,6 +135,7 @@ public class JobFilterUtil {
         switch (sortBy) {
         case "project":
         case "create_time":
+        case "job_status":
             return sortBy;
         case "id":
             return "job_id";
@@ -141,7 +149,8 @@ public class JobFilterUtil {
         case "last_modified":
             return "update_time";
         default:
-            throw new KylinException(INVALID_PARAMETER, msg.getJobSortByError());
+            throw new KylinException(INVALID_PARAMETER,
+                    String.format(Locale.ROOT, msg.getIllegalSortByFilter(), sortBy));
         }
     }
 }
