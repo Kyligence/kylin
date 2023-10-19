@@ -58,7 +58,9 @@ import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 @TestPropertySource(properties = {"spring.cloud.nacos.discovery.enabled = false"})
 @TestPropertySource(properties = {"spring.session.store-type = NONE"})
 @ActiveProfiles({ "testing", "test" })
-@PowerMockIgnore({ "org.w3c.*", "javax.xml.*", "org.xml.*", "org.apache.*", "org.w3c.dom.*", "org.apache.cxf.*" })
+@PowerMockIgnore({ "com.sun.security.*", "org.w3c.*", "javax.xml.*", "org.xml.*", "org.apache.*", "org.w3c.dom.*",
+        "org.apache.cxf.*", "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*",
+        "java.security.*", "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.common.asyncprofiler.AsyncProfiler" })
 public class ServiceTestBase extends NLocalFileMetadataTestCase {
 
     @Autowired

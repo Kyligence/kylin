@@ -109,8 +109,9 @@ import shaded.parquet.com.fasterxml.jackson.databind.ObjectMapper;
 @RunWith(PowerMockRunner.class)
 @PowerMockRunnerDelegate(JUnit4.class)
 @PrepareForTest({ KylinConfig.class, NProjectManager.class })
-@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*",
-        "com.sun.security.*" })
+@PowerMockIgnore({ "com.sun.security.*", "org.w3c.*", "javax.xml.*", "org.xml.*", "org.apache.cxf.*",
+        "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*",
+        "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.common.asyncprofiler.AsyncProfiler" })
 public class OpenSegmentControllerTest extends NLocalFileMetadataTestCase {
 
     private MockMvc mockMvc;

@@ -61,8 +61,9 @@ import io.kyligence.kap.secondstorage.response.SecondStorageNode;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({SecondStorageNodeHelper.class, ExecutableManager.class, SecondStorage.class,
         KylinInfoExtension.class })
-@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*",
-        "javax.crypto.*" })
+@PowerMockIgnore({ "com.sun.security.*", "org.w3c.*", "javax.xml.*", "org.xml.*", "org.w3c.dom.*", "org.apache.cxf.*",
+        "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*",
+        "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.common.asyncprofiler.AsyncProfiler" })
 public class SecondStorageUtilTest extends NLocalFileMetadataTestCase {
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
     private Manager<TableFlow> tableFlowManager = Mockito.mock(Manager.class);

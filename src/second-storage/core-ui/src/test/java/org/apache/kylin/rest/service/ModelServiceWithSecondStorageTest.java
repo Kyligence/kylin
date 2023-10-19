@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.asyncprofiler.AsyncProfiler;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
@@ -90,7 +91,9 @@ import lombok.var;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ SpringContext.class, UserGroupInformation.class })
-@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*", "com.sun.security.*" })
+@PowerMockIgnore({ "com.sun.security.*", "org.w3c.*", "javax.xml.*", "org.xml.*", "org.w3c.dom.*", "org.apache.cxf.*",
+        "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*",
+        "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.common.asyncprofiler.AsyncProfiler" })
 public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCase {
 
     @InjectMocks
@@ -123,6 +126,7 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
 
     @Before
     public void setup() throws IOException {
+        AsyncProfiler.getInstance(true);
         PowerMockito.mockStatic(SpringContext.class);
         PowerMockito.mockStatic(UserGroupInformation.class);
         UserGroupInformation userGroupInformation = Mockito.mock(UserGroupInformation.class);

@@ -71,8 +71,9 @@ import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ ClusterManager.class, JobInfoTool.class, MetadataTool.class, QueryHistoryOffsetTool.class })
-@PowerMockIgnore({ "javax.net.ssl.*", "javax.management.*", "org.apache.hadoop.*", "javax.security.*", "javax.crypto.*",
-        "javax.script.*" })
+@PowerMockIgnore({ "com.sun.security.*", "org.w3c.*", "javax.xml.*", "org.xml.*", "org.w3c.dom.*", "org.apache.cxf.*",
+        "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*",
+        "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.common.asyncprofiler.AsyncProfiler" })
 public class OpsServiceTest extends NLocalFileMetadataTestCase {
     public OpsService opsService;
 

@@ -62,7 +62,9 @@ import lombok.val;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ NProjectManager.class, SecondStorageUtil.class, ExecutableManager.class, UserGroupInformation.class,
         AbstractExecutable.class })
-@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*", "com.sun.security.*" })
+@PowerMockIgnore({ "com.sun.security.*", "org.w3c.*", "javax.xml.*", "org.xml.*", "org.w3c.dom.*", "org.apache.cxf.*",
+        "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*",
+        "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.common.asyncprofiler.AsyncProfiler" })
 public class SecondStorageServiceTest extends NLocalFileMetadataTestCase {
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
     private ExecutableManager executableManager = Mockito.mock(ExecutableManager.class);

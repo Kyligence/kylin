@@ -41,8 +41,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @RunWith(PowerMockRunner.class)
-@PowerMockIgnore({ "javax.net.ssl.*", "javax.management.*", "org.apache.hadoop.*", "javax.security.*", "javax.crypto.*",
-        "javax.script.*" })
+@PowerMockIgnore({ "com.sun.security.*", "org.w3c.*", "javax.xml.*", "org.xml.*", "org.apache.cxf.*",
+        "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*",
+        "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.common.asyncprofiler.AsyncProfiler" })
 @PrepareForTest({ InfluxDBInstance.class, InfluxDBUtils.class, UserGroupInformation.class })
 public class MetricsControllerTest extends NLocalFileMetadataTestCase {
     public static final String ROLE_ADMIN = "ROLE_ADMIN";

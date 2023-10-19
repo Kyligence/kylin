@@ -193,6 +193,7 @@ public class ModelServiceBuildTest extends SourceTestCase {
         super.setup();
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         overwriteSystemProp("kylin.model.multi-partition-enabled", "true");
+        overwriteSystemProp("kylin.env", "UT");
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", aclUtil);
         ReflectionTestUtils.setField(modelService, "aclEvaluate", aclEvaluate);
         ReflectionTestUtils.setField(modelService, "accessService", accessService);

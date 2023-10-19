@@ -66,6 +66,7 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
     }
 
     void startScheduler() {
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
     }
 
