@@ -17,15 +17,20 @@
  */
 package org.apache.kylin.job.runners;
 
+import java.util.List;
 import java.util.Map;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.core.AbstractJobExecutable;
 import org.apache.kylin.job.dao.ExecutablePO;
+import org.apache.kylin.job.domain.JobInfo;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.rest.JobMapperFilter;
 import org.apache.kylin.job.scheduler.JdbcJobScheduler;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.slf4j.Logger;
@@ -79,6 +84,7 @@ public class JobCheckRunner implements Runnable {
     public void run() {
         logger.info("Start check job pool.");
         JdbcJobScheduler jdbcJobScheduler = jobContext.getJobScheduler();
+        // for jobs running on current node
         Map<String, Pair<AbstractJobExecutable, Long>> runningJobs = jdbcJobScheduler.getRunningJob();
         for (Map.Entry<String, Pair<AbstractJobExecutable, Long>> entry : runningJobs.entrySet()) {
             String jobId = entry.getKey();
@@ -95,6 +101,20 @@ public class JobCheckRunner implements Runnable {
             }
             if (stopJobIfStorageQuotaLimitReached(jobContext, jobId, project)) {
                 logger.info("stopJobIfStorageQuotaLimitReached job = {} on checker runner", jobId);
+                continue;
+            }
+        }
+        // for error or paused jobs
+        markSuicideForErrorOrPausedJobs();
+    }
+
+    private void markSuicideForErrorOrPausedJobs() {
+        JobMapperFilter jobMapperFilter = new JobMapperFilter();
+        jobMapperFilter.setStatuses(Lists.newArrayList(ExecutableState.ERROR, ExecutableState.PAUSED));
+        List<JobInfo> jobInfoList = jobContext.getJobInfoMapper().selectByJobFilter(jobMapperFilter);
+        for (JobInfo jobInfo : jobInfoList) {
+            if (JobCheckUtil.markSuicideJob(jobInfo.getJobId(), jobContext)) {
+                logger.info("suicide job = {} on checker runner", jobInfo.getJobId());
                 continue;
             }
         }
