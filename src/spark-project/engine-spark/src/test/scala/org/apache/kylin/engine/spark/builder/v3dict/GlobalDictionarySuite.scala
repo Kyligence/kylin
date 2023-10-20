@@ -95,7 +95,7 @@ class GlobalDictionarySuite extends SparderBaseFunSuite with LocalMetadata with 
       .tableName("original")
       .addColumn(encodeColName, StringType).execute()
 
-    val buildDictTask = genBuildDictTask(spark, context)
+    val buildDictTask = genBuildDictTask(spark, context, "original")
 
     for (_ <- 0 until 10) {
       ec.submit(buildDictTask)
@@ -201,16 +201,16 @@ class GlobalDictionarySuite extends SparderBaseFunSuite with LocalMetadata with 
     overwriteSystemProp("kylin.build.v3dict-file-retention", "0h")
     val project = "p1"
     val dbName = "db1"
-    val tableName = "t1"
+    val tableName = "t3"
     val colName = "c2"
 
     val context = new DictionaryContext(project, dbName, tableName, colName, null)
     val encodeColName: String = tableName + NSparkCubingUtil.SEPARATOR + colName
     DeltaTable.createIfNotExists()
-      .tableName("original")
+      .tableName("original_t3")
       .addColumn(encodeColName, StringType).execute()
 
-    val buildDictTask = genBuildDictTask(spark, context)
+    val buildDictTask = genBuildDictTask(spark, context, "original_t3")
 
     for (_ <- 0 until 11) {
       ec.execute(buildDictTask)
@@ -229,7 +229,7 @@ class GlobalDictionarySuite extends SparderBaseFunSuite with LocalMetadata with 
       Seq(dictPath),
       spark.sparkContext.broadcast(new SerializableConfiguration(deltaLog.newDeltaHadoopConf()))
     ).count()
-    // assert(numFileRemaining < numOfFiles + deltaLog.snapshot.numOfRemoves)
+    assert(numFileRemaining < numOfFiles + deltaLog.snapshot.numOfRemoves)
   }
 
   test("KE-41980 Test failure to initialize dictionary file") {
@@ -276,13 +276,13 @@ class GlobalDictionarySuite extends SparderBaseFunSuite with LocalMetadata with 
     assert(DeltaTable.isDeltaTable(dictPath) == true)
   }
 
-  def genBuildDictTask(spark: SparkSession, context: DictionaryContext): Runnable = {
+  def genBuildDictTask(spark: SparkSession, context: DictionaryContext, tableOrViewName: String): Runnable = {
     new Runnable {
       override def run(): Unit = {
         val encodeColName: String = context.tableName + NSparkCubingUtil.SEPARATOR + context.columnName
         val originalDF = genRandomData(spark, encodeColName, 20, 1)
         val dictDF = genDataWithWrapEncodeCol(context.dbName, encodeColName, originalDF)
-        DeltaTable.forName("original")
+        DeltaTable.forName(tableOrViewName)
           .merge(originalDF, "1 != 1")
           .whenNotMatched()
           .insertAll()
