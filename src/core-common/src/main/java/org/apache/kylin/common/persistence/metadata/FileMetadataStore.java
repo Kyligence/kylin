@@ -88,7 +88,12 @@ public class FileMetadataStore extends MetadataStore {
     @Override
     public NavigableSet<String> list(String subPath) {
         TreeSet<String> result = Sets.newTreeSet();
-        val scanFolder = new File(root, subPath);
+        File scanFolder;
+        if (File.separator.equals(subPath)) {
+            scanFolder = root;
+        } else {
+            scanFolder = new File(root, subPath);
+        }
         if (!scanFolder.exists()) {
             return result;
         }
