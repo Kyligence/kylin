@@ -226,7 +226,9 @@ public class JobInfoService extends BasicService implements JobSupporter {
     public ExecutableResponse getJobInstance(String jobId) {
         Preconditions.checkNotNull(jobId);
         ExecutablePO executablePO = jobInfoDao.getExecutablePOByUuid(jobId);
-        Preconditions.checkNotNull(executablePO, "Can not find the job: {}", jobId);
+        if (executablePO == null) {
+            throw new KylinException(JOB_NOT_EXIST, jobId);
+        }
         ExecutableManager executableManager = getManager(ExecutableManager.class, executablePO.getProject());
         AbstractExecutable executable = executableManager.fromPO(executablePO);
         return convert(executable, executablePO);
