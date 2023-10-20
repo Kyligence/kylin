@@ -553,7 +553,6 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
     }
 
     @Test
-    @Ignore("Fixed at KE-41797")
     public void testDiscardErrorJobBeforeSchedule() {
         val currMem = ResourceAcquirer.currentAvailableMem();
         val dfMgr = NDataflowManager.getInstance(getTestConfig(), project);
@@ -590,7 +589,6 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
     }
 
     @Test
-    @Ignore("Fixed at KE-41797")
     public void testDiscardPausedJobBeforeSchedule() {
         val currMem = ResourceAcquirer.currentAvailableMem();
         val dfMgr = NDataflowManager.getInstance(getTestConfig(), project);
