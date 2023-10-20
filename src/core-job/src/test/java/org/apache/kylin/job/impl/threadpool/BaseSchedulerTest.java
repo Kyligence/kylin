@@ -18,6 +18,7 @@
 
 package org.apache.kylin.job.impl.threadpool;
 
+import static org.awaitility.Awaitility.await;
 import static org.awaitility.Awaitility.with;
 
 import java.util.concurrent.TimeUnit;
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -72,8 +74,10 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
 
     @After
     public void after() throws Exception {
-        JobContextUtil.cleanUp();
+        JobContext jobContext = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
+        await().atMost(30, TimeUnit.SECONDS).until(() -> jobContext.getJobScheduler().getRunningJob().size() == 0);
     }
 
     protected void waitForJobFinish(String jobId) {
