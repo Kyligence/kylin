@@ -10,7 +10,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <name>Kylin - Data loading Booter</name>
+    <name>Kylin - Data Loading Booter</name>
     <groupId>org.apache.kylin</groupId>
     <artifactId>kylin-data-loading-booter</artifactId>
 
