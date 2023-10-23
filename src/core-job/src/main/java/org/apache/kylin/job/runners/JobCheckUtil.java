@@ -42,10 +42,14 @@ public class JobCheckUtil {
     private static ScheduledExecutorService jobCheckThreadPool;
 
     private static synchronized ScheduledExecutorService getJobCheckThreadPool() {
-        if (null == jobCheckThreadPool) {
+        if (null == jobCheckThreadPool || jobCheckThreadPool.isShutdown()) {
             jobCheckThreadPool = ThreadUtils.newDaemonSingleThreadScheduledExecutor("JobCheckThreadPool");
         }
         return jobCheckThreadPool;
+    }
+
+    public static void stopJobCheckScheduler() {
+        getJobCheckThreadPool().shutdownNow();
     }
 
     public static void startQuotaStorageCheckRunner(QuotaStorageCheckRunner quotaStorageCheckRunner) {

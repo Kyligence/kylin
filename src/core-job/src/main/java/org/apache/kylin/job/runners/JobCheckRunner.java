@@ -17,9 +17,11 @@
  */
 package org.apache.kylin.job.runners;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -87,6 +89,10 @@ public class JobCheckRunner implements Runnable {
         // for jobs running on current node
         Map<String, Pair<AbstractJobExecutable, Long>> runningJobs = jdbcJobScheduler.getRunningJob();
         for (Map.Entry<String, Pair<AbstractJobExecutable, Long>> entry : runningJobs.entrySet()) {
+            if (Thread.currentThread().isInterrupted()) {
+                logger.warn("Job check thread {} is interrupted.", Thread.currentThread().getName());
+                return;
+            }
             String jobId = entry.getKey();
             AbstractJobExecutable jobExecutable = entry.getValue().getFirst();
             long startTime = entry.getValue().getSecond();
@@ -114,7 +120,15 @@ public class JobCheckRunner implements Runnable {
         jobMapperFilter.setLimit(10);
         jobMapperFilter.setOffset(0);
         List<JobInfo> jobInfoList = jobContext.getJobInfoMapper().selectByJobFilter(jobMapperFilter);
+        if (CollectionUtils.isEmpty(jobInfoList)) {
+            return;
+        }
+        Collections.shuffle(jobInfoList);
         for (JobInfo jobInfo : jobInfoList) {
+            if (Thread.currentThread().isInterrupted()) {
+                logger.warn("Job check thread {} is interrupted.", Thread.currentThread().getName());
+                return;
+            }
             if (JobCheckUtil.markSuicideJob(jobInfo.getJobId(), jobContext)) {
                 logger.info("suicide job = {} on checker runner", jobInfo.getJobId());
                 continue;

@@ -116,6 +116,8 @@ public class JobContext implements InitializingBean, DisposableBean, ISmartAppli
             lockClient.destroy();
         }
 
+        JobCheckUtil.stopJobCheckScheduler();
+
     }
 
     // for ut only
