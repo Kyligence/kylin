@@ -96,6 +96,8 @@ public class LimitLoginAuthenticationProvider extends DaoAuthenticationProvider 
             updateUserLockStatus(managedUser, userName);
             Authentication auth = super.authenticate(authentication);
 
+            // Metadata modifications need to be based on the latest metadata copy.
+            managedUser = getUser(userName);
             if (managedUser != null && managedUser.getWrongTime() > 0 && !maintenanceModeService.isMaintenanceMode()) {
                 managedUser.clearAuthenticateFailedRecord();
                 updateUser(managedUser);
@@ -105,6 +107,7 @@ public class LimitLoginAuthenticationProvider extends DaoAuthenticationProvider 
 
             return auth;
         } catch (BadCredentialsException e) {
+            managedUser = getUser(userName);
             authenticateFail(managedUser, userName);
             if (managedUser != null && managedUser.isLocked()) {
                 if (UserLockRuleUtil.isLockedPermanently(managedUser)) {
@@ -122,6 +125,15 @@ public class LimitLoginAuthenticationProvider extends DaoAuthenticationProvider 
         } catch (IllegalArgumentException e) {
             throw new BadCredentialsException(USER_LOGIN_FAILED.getMsg());
         }
+    }
+
+    private ManagedUser getUser(String userName) {
+        NKylinUserManager userManager = NKylinUserManager.getInstance(KylinConfig.getInstanceFromEnv());
+        ManagedUser managedUser = userManager.get(userName);
+        if (managedUser != null) {
+            return managedUser;
+        }
+        return (ManagedUser) userService.loadUserByUsername(userName);
     }
 
     private void buildBadCredentialsException(String userName, BadCredentialsException e) {
