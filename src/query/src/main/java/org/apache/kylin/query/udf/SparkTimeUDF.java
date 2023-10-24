@@ -106,4 +106,9 @@ public class SparkTimeUDF implements NotConstant {
     public Integer WEEKOFYEAR(@Parameter(name = "t1") Object exp1) throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }
+
+    public String DATE_FORMAT(@Parameter(name = "left") Object left, @Parameter(name = "format") String fmt)
+            throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
 }
