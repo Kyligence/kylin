@@ -85,6 +85,16 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
     }
   }
 
+  def catalogTable(database: String, table: String, f: (String, String) => Unit): Unit = {
+    SparderEnv.setSparkSession(spark)
+    val tableFullNmae = "spark_catalog." + database + "." + table
+    spark.sql("CREATE TABLE IF NOT EXISTS " + tableFullNmae + " (id long) USING DELTA")
+    spark.sql("insert into " + tableFullNmae + " values(1)")
+    withTable(tableFullNmae) {
+      f(database, table)
+    }
+  }
+
   def hiveTable(table: String, f: (KylinConfig, SessionCatalog, CatalogTable) => Unit): Unit = {
     val config = KylinConfig.getInstanceFromEnv
     SparderEnv.setSparkSession(spark)
@@ -271,6 +281,18 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
       writeEmptyJsonFile(tableIdentity)
       writeMarkFile()
       val response = snapshotSourceTableStatsService.checkSourceTableStats(DEFAULT_PROJECT, table.database, table.identifier.table, null)
+      assertTrue(response.getNeedRefresh)
+      assertTrue(CollectionUtils.isEmpty(response.getNeedRefreshPartitionsValue))
+    })
+  }
+
+  test("checkSourceTableStats - catalog table") {
+    val tableName = "hive_table_types" + RandomUtil.randomUUIDStr().replace("-", "_")
+    val catalogName = "spark_catalog"
+    catalogTable("default", tableName, (database, table) => {
+      writeEmptyJsonFile(catalogName + ".default." + table)
+      writeMarkFile()
+      val response = snapshotSourceTableStatsService.checkSourceTableStats(DEFAULT_PROJECT, database, table, null, catalogName)
       assertTrue(response.getNeedRefresh)
       assertTrue(CollectionUtils.isEmpty(response.getNeedRefreshPartitionsValue))
     })

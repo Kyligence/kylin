@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.util.FileSystemUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
@@ -53,9 +54,12 @@ import org.apache.kylin.rest.model.SnapshotSourceTableStats;
 import org.apache.kylin.rest.response.SnapshotSourceTableStatsResponse;
 import org.apache.spark.sql.SparderEnv;
 import org.apache.spark.sql.catalyst.TableIdentifier;
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException;
 import org.apache.spark.sql.catalyst.catalog.CatalogTable;
 import org.apache.spark.sql.catalyst.catalog.CatalogTablePartition;
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog;
+import org.apache.spark.sql.connector.catalog.Identifier;
+import org.apache.spark.sql.connector.catalog.TableCatalog;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -86,9 +90,8 @@ public class SnapshotSourceTableStatsService extends BasicService {
                     val sourceTables = Sets.<String> newHashSet();
                     for (String sourceTable : sourceTablesTmp) {
                         val split = StringUtils.split(sourceTable, ".");
-                        String source = split.length < 2 ? "default." + sourceTable
-                                : split[split.length - 2] + "." + split[split.length - 1];
-                        sourceTables.add(source.toLowerCase(Locale.ROOT));
+                        String source = split.length < 2 ? "default." + sourceTable : sourceTable;
+                        sourceTables.add(source);
                     }
                     viewMapping.put(tableDesc.getIdentity(), sourceTables);
                 }
@@ -112,8 +115,7 @@ public class SnapshotSourceTableStatsService extends BasicService {
         try {
             viewSourceTables = SparkSqlUtil
                     .getViewOrignalTables(tableMetadata.qualifiedName(), SparderEnv.getSparkSession()) //
-                    .stream().filter(StringUtils::isNotBlank)
-                    .map(tableIdentity -> tableIdentity.toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
+                    .stream().filter(StringUtils::isNotBlank).collect(Collectors.toSet());
             log.info("snapshot[{}] view original tables: [{}]", tableMetadata.qualifiedName(), viewSourceTables);
         } catch (Exception e) {
             log.error("snapshot[{}] get view original tables error", tableMetadata.qualifiedName(), e);
@@ -123,21 +125,31 @@ public class SnapshotSourceTableStatsService extends BasicService {
 
     public SnapshotSourceTableStatsResponse checkSourceTableStats(String project, String database, String table,
             String snapshotPartitionCol) {
-        try {
-            val catalog = SparderEnv.getSparkSession().sessionState().catalog();
-            val tableIdentifier = TableIdentifier.apply(table, Option.apply(database));
-            val tableMetadata = catalog.getTempViewOrPermanentTableMetadata(tableIdentifier);
-            val tableIdentity = tableMetadata.qualifiedName().toLowerCase(Locale.ROOT);
+        return checkSourceTableStats(project, database, table, snapshotPartitionCol, null);
+    }
 
+    public SnapshotSourceTableStatsResponse checkSourceTableStats(String project, String database, String table,
+            String snapshotPartitionCol, String catalogName) {
+        try {
             val needRefreshPartitions = Lists.<CatalogTablePartition> newCopyOnWriteArrayList();
-            val needRefresh = checkTable(project, catalog, tableMetadata, needRefreshPartitions);
+            boolean needRefresh;
+            if (StringUtils.isEmpty(catalogName)) {
+                val catalog = SparderEnv.getSparkSession().sessionState().catalog();
+                val tableIdentifier = TableIdentifier.apply(table, Option.apply(database));
+                val tableMetadata = catalog.getTempViewOrPermanentTableMetadata(tableIdentifier);
+                needRefresh = checkTable(project, catalog, tableMetadata, needRefreshPartitions);
+            } else {
+                val projectConfig = NProjectManager.getInstance(getConfig()).getProject(project).getConfig();
+                val identifier = Identifier.of(database.split("\\."), table);
+                needRefresh = checkCatalogTable(project, projectConfig, catalogName, identifier);
+            }
 
             val response = createSnapshotSourceTableStatsResponse(snapshotPartitionCol, needRefreshPartitions,
                     needRefresh);
             log.info(
                     "Project[{}] Snapshot[{}] refresh check and save snapshot table location files response:"
                             + " needRefresh[{}], needRefreshPartitions[{}]",
-                    project, tableIdentity, response.getNeedRefresh(), response.getNeedRefreshPartitionsValue());
+                    project, table, response.getNeedRefresh(), response.getNeedRefreshPartitionsValue());
             return response;
         } catch (Exception e) {
             log.info("Project[{}] [{}.{}] refresh check and save snapshot table location files failed", project,
@@ -183,8 +195,28 @@ public class SnapshotSourceTableStatsService extends BasicService {
         return checkHiveTable(project, tableMetadata, projectConfig, tableIdentity);
     }
 
+    public boolean checkCatalogTable(String project, KylinConfig projectConfig, String catalogName,
+            Identifier identifier) throws IOException, NoSuchTableException {
+        val catalog = SparderEnv.getSparkSession().sessionState().catalogManager().catalog(catalogName);
+        if (catalog instanceof TableCatalog) {
+            val tableCatalog = (TableCatalog) catalog;
+            val table = tableCatalog.loadTable(identifier);
+            var location = table.properties().get("location");
+            if (tableCatalog.getClass().toString().contains("iceberg"))
+                location = location + "/metadata";
+            return checkTableLocation(project, location, projectConfig, catalogName + "." + identifier.toString());
+        }
+        throw new KylinRuntimeException("unsupported catalog:" + catalog);
+    }
+
     public boolean checkHiveTable(String project, CatalogTable tableMetadata, KylinConfig projectConfig,
             String tableIdentity) throws IOException {
+        val location = tableMetadata.location().getPath();
+        return checkTableLocation(project, location, projectConfig, tableIdentity);
+    }
+
+    private boolean checkTableLocation(String project, String location, KylinConfig projectConfig, String tableIdentity)
+            throws IOException {
         if (checkSnapshotSourceTableStatsJsonFile(project, tableIdentity)) {
             log.info("skip checkPartitionHiveTable: last cron task was stopped manually");
             return true;
@@ -192,7 +224,6 @@ public class SnapshotSourceTableStatsService extends BasicService {
         val jsonFilePair = getSnapshotSourceTableStatsJsonFromHDFS(project, tableIdentity);
         val snapshotSourceTableStatsJsonExist = jsonFilePair.getFirst();
         val snapshotSourceTableStatsJson = jsonFilePair.getSecond();
-        val location = tableMetadata.location().getPath();
         val filesStatus = Lists.<FileStatus> newArrayList();
         if (StringUtils.isBlank(location)) {
             return projectConfig.isSnapshotNullLocationAutoRefreshEnabled();
