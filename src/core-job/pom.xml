@@ -91,6 +91,12 @@
         <dependency>
             <groupId>io.kyligence.ke</groupId>
             <artifactId>zen-license-sdk</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.tomcat.embed</groupId>
+                    <artifactId>tomcat-embed-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!--Env & Test-->

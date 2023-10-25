@@ -347,7 +347,7 @@
         <jackson-databind.version>2.13.4.2</jackson-databind.version>
         <nimbus-jose-jwt.version>9.23</nimbus-jose-jwt.version>
         <system-lambda.version>1.2.1</system-lambda.version>
-        <license.version>5.0.7</license.version>
+        <license.version>5.0.8</license.version>
         <snappy-java.version>1.1.10.4</snappy-java.version>
         <avro.version>1.11.3</avro.version>
     </properties>
