@@ -45,6 +45,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import lombok.val;
 
@@ -684,5 +685,25 @@ public class KylinLogToolTest extends NLocalFileMetadataTestCase {
         Assert.assertTrue(new File(logDir, "instance_3").exists());
         Assert.assertTrue(new File(logDir, "instance_4").exists());
         Assert.assertEquals(2, new File(logDir, "instance_4").listFiles().length);
+    }
+    
+    @Test
+    public void testGetFirstLogTime() throws IOException {
+        File mainDir = new File(temporaryFolder.getRoot(), testName.getMethodName());
+        FileUtils.forceMkdir(mainDir);
+
+        String log1 = "traceId: eba55ae6-0936-9d42-25d2-adf00a55f06d 2023-10-25T18:16:44,803 INFO  [expansion_rate] "
+                + "[Transaction-Thread-467] handler.AbstractJobHandler : Job JobParam";
+        String log2 = "2023-10-25T18:17:35,792 INFO  [JobWorker(project:expansion_rate,jobid:d9694dc4)] "
+                + "execution.AbstractExecutable : Execute in CHAIN mode.";
+        File logFile1 = new File(mainDir, "log1.log");
+        File logFile2 = new File(mainDir, "log2.log");
+        FileUtils.writeStringToFile(logFile1, log1);
+        FileUtils.writeStringToFile(logFile2, log2);
+
+        KylinLogTool.ExtractLogByRangeTool tool = (KylinLogTool.ExtractLogByRangeTool) ReflectionTestUtils
+                .getField(KylinLogTool.class, "DEFAULT_EXTRACT_LOG_BY_RANGE");
+        Assert.assertEquals("2023-10-25T18:16:44", tool.getFirstTimeByLogFile(logFile1));
+        Assert.assertEquals("2023-10-25T18:17:35", tool.getFirstTimeByLogFile(logFile2));
     }
 }

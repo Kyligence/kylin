@@ -120,7 +120,7 @@ public class KylinLogTool {
             "kylin.smart.log", "kylin.build.log", "kylin.security.log");
 
     private static final ExtractLogByRangeTool DEFAULT_EXTRACT_LOG_BY_RANGE = new ExtractLogByRangeTool(LOG_PATTERN,
-            LOG_TIME_PATTERN, SECOND_DATE_FORMAT);
+            LOG_TIME_PATTERN_WITH_TRACE_ID, SECOND_DATE_FORMAT);
 
     // 2019-11-11 03:24:52,342 DEBUG [JobWorker(prj:doc_smart,jobid:8a13964c)-965] //
     // job.NSparkExecutable : Copied metadata to the target metaUrl, //
@@ -356,7 +356,7 @@ public class KylinLogTool {
                 while ((log = br.readLine()) != null) {
                     Matcher matcher = pattern.matcher(log);
                     if (matcher.find()) {
-                        return matcher.group(1);
+                        return matcher.group(matcher.groupCount());
                     }
                 }
             } catch (Exception e) {
