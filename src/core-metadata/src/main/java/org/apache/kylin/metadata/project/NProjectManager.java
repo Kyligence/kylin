@@ -210,7 +210,7 @@ public class NProjectManager {
     }
 
     public List<MeasureDesc> listEffectiveRewriteMeasures(String project, String factTable) {
-        return projectLoader.listEffectiveRewriteMeasures(project, factTable.toUpperCase(Locale.ROOT), true);
+        return projectLoader.listEffectiveRewriteMeasures(project, factTable);
     }
 
     KylinConfig getConfig() {

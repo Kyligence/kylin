@@ -95,25 +95,10 @@ public class NProjectLoader {
             return Collections.unmodifiableSet(realizationsByTable);
     }
 
-    public List<MeasureDesc> listEffectiveRewriteMeasures(String project, String table, boolean onlyRewriteMeasure) {
-        Set<IRealization> realizations = getRealizationsByTable(project, table);
-        Set<String> modelIds = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
-                .listAllModelIds();
-        List<MeasureDesc> result = Lists.newArrayList();
-        List<IRealization> existingRealizations = realizations.stream().filter(r -> modelIds.contains(r.getUuid()))
-                .collect(Collectors.toList());
-        for (IRealization r : existingRealizations) {
-            if (!r.isOnline())
-                continue;
-            NDataModel model = r.getModel();
-            for (MeasureDesc m : r.getMeasures()) {
-                FunctionDesc func = m.getFunction();
-                if (belongToFactTable(table, model) && (!onlyRewriteMeasure || func.needRewrite())) {
-                    result.add(m);
-                }
-            }
-        }
-        return result;
+    public List<MeasureDesc> listEffectiveRewriteMeasures(String project, String table) {
+        List<MeasureDesc> effectiveRewriteMeasures = load(project).tableToMeasuresMap.get(StringUtils.upperCase(table));
+        return effectiveRewriteMeasures == null ? Collections.emptyList()
+                : Collections.unmodifiableList(effectiveRewriteMeasures);
     }
 
     private boolean belongToFactTable(String table, NDataModel model) {
@@ -174,7 +159,7 @@ public class NProjectLoader {
                 mapTableToRealization(projectBundle, realization);
             }
         });
-
+        mapEffectiveRewriteMeasuresByTable(projectBundle, project, projectAllTables);
         return projectBundle;
     }
 
@@ -218,9 +203,42 @@ public class NProjectLoader {
         }
     }
 
+    private void mapEffectiveRewriteMeasuresByTable(ProjectBundle prjCache, String project,
+            Map<String, TableDesc> projectAllTables) {
+        Set<String> modelIds = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
+                .listAllModelIds();
+
+        projectAllTables.forEach((tableKey, tableDesc) -> {
+            Set<IRealization> realizations = prjCache.realizationsByTable.get(tableKey);
+            if (realizations == null) {
+                return;
+            }
+            List<IRealization> existingRealizations = realizations.stream()
+                    .filter(realization -> modelIds.contains(realization.getUuid())).collect(Collectors.toList());
+            List<MeasureDesc> measureDescs = Lists.newArrayList();
+            for (IRealization realization : existingRealizations) {
+                if (!realization.isOnline()) {
+                    continue;
+                }
+                NDataModel model = realization.getModel();
+                if (model == null || model.isBroken()) {
+                    continue;
+                }
+                for (MeasureDesc measureDesc : realization.getMeasures()) {
+                    FunctionDesc func = measureDesc.getFunction();
+                    if (belongToFactTable(tableKey, model) && func.needRewrite()) {
+                        measureDescs.add(measureDesc);
+                    }
+                }
+            }
+            prjCache.tableToMeasuresMap.put(tableDesc.getIdentity(), measureDescs);
+        });
+    }
+
     private static class ProjectBundle {
         private String project;
         private final Map<String, Set<IRealization>> realizationsByTable = new ConcurrentHashMap<>();
+        private final Map<String, List<MeasureDesc>> tableToMeasuresMap = new ConcurrentHashMap<>();
 
         ProjectBundle(String project) {
             this.project = project;
