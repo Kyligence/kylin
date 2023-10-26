@@ -26,6 +26,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.ExecutableManager;
@@ -46,8 +47,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.clearspring.analytics.util.Lists;
 
 import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 import io.kyligence.kap.engine.spark.job.NSparkMergingStep;

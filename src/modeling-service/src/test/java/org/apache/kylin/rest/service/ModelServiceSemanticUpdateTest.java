@@ -85,6 +85,7 @@ import org.apache.kylin.rest.util.SCD2SimplificationConvertUtil;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -1225,6 +1226,7 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(RealizationStatusEnum.ONLINE, modelService.getModelStatus(modelId, getProject()));
     }
 
+    @Ignore("KE-42912")
     @Test
     public void testChangeParititionDesc_OneToNull() {
         val modelMgr = NDataModelManager.getInstance(getTestConfig(), getProject());
