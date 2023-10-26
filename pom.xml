@@ -42,7 +42,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <arthas.version>3.6.8-kyarthas-r1</arthas.version>
-        <tomcat-embed.version>9.0.76</tomcat-embed.version>
+        <tomcat-embed.version>9.0.82</tomcat-embed.version>
 
         <!-- Keep same order with dependencyManagement -->
 
@@ -107,7 +107,7 @@
         <scalatest.version>3.2.0</scalatest.version>
         <dbunit.version>2.5.2</dbunit.version>
         <h2.version>1.4.197</h2.version>
-        <jetty.version>9.4.43.v20210629</jetty.version>
+        <jetty.version>9.4.53.v20231009</jetty.version>
         <jamm.version>0.3.1</jamm.version>
         <mockito.version>3.12.4</mockito.version>
         <powermock.version>2.0.9</powermock.version>
@@ -3051,6 +3051,11 @@
                 <artifactId>avro</artifactId>
                 <version>${avro.version}</version>
                 <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-server</artifactId>
+                <version>${jetty.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
