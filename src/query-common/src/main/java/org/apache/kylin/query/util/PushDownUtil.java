@@ -280,6 +280,9 @@ public class PushDownUtil {
 
     private static List<TblColRef> getAuthorizedCols(String project, List<TblColRef> tableColRefs) {
         QueryContext.AclInfo aclInfo = QueryContext.current().getAclInfo();
+        if (aclInfo != null && aclInfo.isHasAdminPermission()) {
+            return tableColRefs;
+        }
         String user = Objects.nonNull(aclInfo) ? aclInfo.getUsername() : null;
         Set<String> groups = Objects.nonNull(aclInfo) ? aclInfo.getGroups() : null;
         KylinConfig config = NProjectManager.getProjectConfig(project);

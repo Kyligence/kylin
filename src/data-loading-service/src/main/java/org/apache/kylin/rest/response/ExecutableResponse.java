@@ -27,6 +27,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.SecondStorageCleanJobUtil;
 import org.apache.kylin.job.constant.JobStatusEnum;
 import org.apache.kylin.job.execution.AbstractExecutable;
@@ -41,11 +43,9 @@ import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentStatusEnumToDisplay;
 import org.apache.kylin.metadata.model.TableDesc;
 
-import com.clearspring.analytics.util.Lists;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 import io.kyligence.kap.engine.spark.job.NTableSamplingJob;

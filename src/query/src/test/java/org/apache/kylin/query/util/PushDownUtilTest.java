@@ -51,15 +51,25 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @MetadataInfo
 class PushDownUtilTest {
 
-    private static void prepareAdminAclInfo() {
+    private static void setAdminAuthentication() {
         TestingAuthenticationToken auth = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
         SecurityContextHolder.getContext().setAuthentication(auth);
-
-        AclTCRManager manager = AclTCRManager.getInstance(TestUtils.getTestConfig(), "default");
-        manager.updateAclTCR(new AclTCR(), "ADMIN", true);
     }
 
-    private static QueryContext.AclInfo prepareAclInfo(String project) {
+    private static void setNormalAuthenticationAndAclTcr() {
+        TestingAuthenticationToken auth = new TestingAuthenticationToken("KYLIN", "KYLIN", Constant.ROLE_MODELER);
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        AclTCRManager manager = AclTCRManager.getInstance(TestUtils.getTestConfig(), "default");
+        manager.updateAclTCR(new AclTCR(), "KYLIN", true);
+    }
+
+    private static QueryContext.AclInfo prepareRoleModelerAclInfo(String project) {
+        Set<String> groups = Sets.newHashSet();
+        groups.add(Constant.ROLE_MODELER);
+        return AclPermissionUtil.createAclInfo(project, groups);
+    }
+
+    private static QueryContext.AclInfo prepareRoleAdminAclInfo(String project) {
         Set<String> groups = Sets.newHashSet();
         groups.add("admin");
         groups.add(Constant.ROLE_ADMIN);
@@ -169,8 +179,33 @@ class PushDownUtilTest {
     void testGenerateFlatTableSql() {
         try (QueryContext context = QueryContext.current()) {
             String project = "default";
-            prepareAdminAclInfo();
-            context.setAclInfo(prepareAclInfo(project));
+            setNormalAuthenticationAndAclTcr();
+            context.setAclInfo(prepareRoleModelerAclInfo(project));
+            NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            NDataModel model = modelManager.getDataModelDescByAlias("test_bank");
+            String expected = "SELECT\n" //
+                    + "\"TEST_BANK_INCOME\".\"COUNTRY\" as \"TEST_BANK_INCOME_COUNTRY\"\n"
+                    + ", \"TEST_BANK_INCOME\".\"INCOME\" as \"TEST_BANK_INCOME_INCOME\"\n"
+                    + ", \"TEST_BANK_INCOME\".\"NAME\" as \"TEST_BANK_INCOME_NAME\"\n"
+                    + ", \"TEST_BANK_INCOME\".\"DT\" as \"TEST_BANK_INCOME_DT\"\n"
+                    + ", \"TEST_BANK_LOCATION\".\"COUNTRY\" as \"TEST_BANK_LOCATION_COUNTRY\"\n"
+                    + ", \"TEST_BANK_LOCATION\".\"OWNER\" as \"TEST_BANK_LOCATION_OWNER\"\n"
+                    + ", \"TEST_BANK_LOCATION\".\"LOCATION\" as \"TEST_BANK_LOCATION_LOCATION\"\n"
+                    + "FROM \"DEFAULT\".\"TEST_BANK_INCOME\" as \"TEST_BANK_INCOME\"\n"
+                    + "INNER JOIN \"DEFAULT\".\"TEST_BANK_LOCATION\" as \"TEST_BANK_LOCATION\"\n"
+                    + "ON \"TEST_BANK_INCOME\".\"COUNTRY\" = \"TEST_BANK_LOCATION\".\"COUNTRY\"\n" //
+                    + "WHERE\n" //
+                    + "1 = 1";
+            Assertions.assertEquals(expected, PushDownUtil.generateFlatTableSql(model, false));
+        }
+    }
+
+    @Test
+    void testGenerateFlatTableSqlOfRoleModeler() {
+        try (QueryContext context = QueryContext.current()) {
+            String project = "default";
+            setAdminAuthentication();
+            context.setAclInfo(prepareRoleAdminAclInfo(project));
             NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             NDataModel model = modelManager.getDataModelDescByAlias("test_bank");
             String expected = "SELECT\n" //
@@ -194,8 +229,8 @@ class PushDownUtilTest {
     void testGenerateFlatTableSqlWithCCJoin() {
         try (QueryContext context = QueryContext.current()) {
             String project = "default";
-            prepareAdminAclInfo();
-            context.setAclInfo(prepareAclInfo(project));
+            setNormalAuthenticationAndAclTcr();
+            context.setAclInfo(prepareRoleModelerAclInfo(project));
             NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             NDataModel model = modelManager.getDataModelDescByAlias("test_bank");
             updateModelToAddCC(project, model);
@@ -235,8 +270,8 @@ class PushDownUtilTest {
     void testGenerateFlatTableSqlWithFilterCondition() {
         try (QueryContext context = QueryContext.current()) {
             String project = "default";
-            prepareAdminAclInfo();
-            context.setAclInfo(prepareAclInfo(project));
+            setNormalAuthenticationAndAclTcr();
+            context.setAclInfo(prepareRoleModelerAclInfo(project));
             NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             NDataModel model = modelManager.getDataModelDescByAlias("test_bank");
             updateModelToAddCC(project, model);
@@ -273,8 +308,8 @@ class PushDownUtilTest {
     void testGenerateFlatTableSqlWithSpecialFunctions() {
         try (QueryContext context = QueryContext.current()) {
             String project = "default";
-            prepareAdminAclInfo();
-            context.setAclInfo(prepareAclInfo(project));
+            setNormalAuthenticationAndAclTcr();
+            context.setAclInfo(prepareRoleModelerAclInfo(project));
             NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             NDataModel model = modelManager.getDataModelDescByAlias("test_bank");
             updateModelToAddCC(project, model);
