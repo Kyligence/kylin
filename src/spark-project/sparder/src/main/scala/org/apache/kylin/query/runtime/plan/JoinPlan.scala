@@ -24,7 +24,7 @@ import org.apache.calcite.rex.RexCall
 import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.query.relnode.{OlapJoinRel, OlapNonEquiJoinRel}
 import org.apache.kylin.query.runtime.SparderRexVisitor
-import org.apache.kylin.query.util.KapRelUtil
+import org.apache.kylin.query.util.OlapRelUtil
 import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, LogicalPlan}
 import org.apache.spark.sql.catalyst.plans.{Cross, JoinType}
 import org.apache.spark.sql.functions.col
@@ -48,7 +48,7 @@ object JoinPlan extends LogEx {
       dataContext)
     val pairs = new util.ArrayList[org.apache.kylin.common.util.Pair[Integer, Integer]]()
     val filterNuls = new util.ArrayList[java.lang.Boolean]()
-    val actRemaining = KapRelUtil.isNotDistinctFrom(rel.getInput(0), rel.getInput(1), rel.getCondition, pairs, filterNuls)
+    val actRemaining = OlapRelUtil.isNotDistinctFrom(rel.getInput(0), rel.getInput(1), rel.getCondition, pairs, filterNuls)
     if (filterNuls.contains(java.lang.Boolean.FALSE)) {
       var equalCond = makeEqualCond(col(visitor.inputFieldNames.apply(pairs.get(0).getFirst)),
         col(visitor.inputFieldNames.apply(pairs.get(0).getSecond)), !filterNuls.get(0))

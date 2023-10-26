@@ -188,7 +188,7 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         ContextVisitorState tempState = ContextVisitorState.init();
         contextImpl.visitChild(getInput(), this, tempState);
         if (tempState.hasFreeTable()) {
-            // since SINGLE_VALUE agg doesn't participant in any computation, 
+            // since SINGLE_VALUE agg doesn't participant in any computation,
             // context is allocated to the input rel
             if (CollectionUtils.exists(aggregateCalls,
                     aggCall -> ((AggregateCall) aggCall).getAggregation().getKind() == SqlKind.SINGLE_VALUE)) {
@@ -225,10 +225,10 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         }
         RelOptCost cost;
         if (getGroupType() == Group.SIMPLE) {
-            cost = super.computeSelfCost(planner, mq).multiplyBy(.05);
+            cost = super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR);
         } else {
-            cost = super.computeSelfCost(planner, mq).multiplyBy(.05).plus(planner.getCost(getInput(), mq))
-                    .multiplyBy(groupSets.size() * 1.5);
+            cost = super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR)
+                    .plus(planner.getCost(getInput(), mq)).multiplyBy(groupSets.size() * 1.5);
         }
         return cost;
     }

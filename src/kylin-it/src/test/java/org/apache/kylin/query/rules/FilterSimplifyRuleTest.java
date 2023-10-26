@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.query.rules;
 
 import java.io.IOException;
@@ -27,19 +26,17 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.test.DiffRepository;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.query.optrule.FilterJoinConditionMergeRule;
+import org.apache.kylin.query.optrule.FilterSimplifyRule;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import io.kyligence.kap.query.optrule.FilterJoinConditionMergeRule;
-import io.kyligence.kap.query.optrule.FilterSimplifyRule;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class FilterSimplifyRuleTest extends CalciteRuleTestBase {
     static final String defaultProject = "default";
-    private final DiffRepository diff = DiffRepository.lookup(FilterSimplifyRuleTest.class);
-
 
     @Before
     public void setup() {
@@ -53,7 +50,7 @@ public class FilterSimplifyRuleTest extends CalciteRuleTestBase {
 
     @Override
     protected DiffRepository getDiffRepo() {
-        return diff;
+        return DiffRepository.lookup(FilterSimplifyRuleTest.class);
     }
 
     @Test

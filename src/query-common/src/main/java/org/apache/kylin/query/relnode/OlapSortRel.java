@@ -74,7 +74,7 @@ public class OlapSortRel extends Sort implements OlapRel {
 
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        return super.computeSelfCost(planner, mq).multiplyBy(.05);
+        return super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR);
     }
 
     @Override
@@ -97,8 +97,10 @@ public class OlapSortRel extends Sort implements OlapRel {
         } else if (needPushToSubCtx) {
             List<Set<TblColRef>> sourceColumns = this.columnRowType.getSourceColumns();
             if (CollectionUtils.isNotEmpty(sourceColumns)) {
-                ContextUtil.updateSubContexts(
-                        sourceColumns.stream().flatMap(Collection::stream).collect(Collectors.toSet()), subContexts);
+                Set<TblColRef> colRefs = sourceColumns.stream().flatMap(Collection::stream)
+                        .filter(tblColRef -> !tblColRef.getName().startsWith("_KY_")) //
+                        .collect(Collectors.toSet());
+                ContextUtil.updateSubContexts(colRefs, subContexts);
             }
         }
     }

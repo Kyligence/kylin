@@ -64,6 +64,7 @@ import org.apache.kylin.query.engine.exec.SparderPlanExec;
 import org.apache.kylin.query.engine.meta.SimpleDataContext;
 import org.apache.kylin.query.engine.view.ViewAnalyzer;
 import org.apache.kylin.query.mask.QueryResultMasks;
+import org.apache.kylin.query.optrule.SumConstantConvertRule;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapAggregateRel;
 import org.apache.kylin.query.relnode.OlapContext;
@@ -259,6 +260,8 @@ public class QueryExec {
      */
     public List<RelNode> postOptimize(RelNode node) {
         Collection<RelOptRule> postOptRules = new LinkedHashSet<>();
+        // It will definitely work if it were put here
+        postOptRules.add(SumConstantConvertRule.INSTANCE);
         if (kylinConfig.isConvertSumExpressionEnabled()) {
             postOptRules.addAll(HepUtils.SumExprRules);
         }

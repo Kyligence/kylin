@@ -68,29 +68,27 @@ import org.apache.kylin.common.debug.BackdoorToggles;
 import org.apache.kylin.guava30.shaded.common.base.Function;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.query.engine.meta.PlannerContext;
+import org.apache.kylin.query.optrule.AggregateMultipleExpandRule;
+import org.apache.kylin.query.optrule.AggregateProjectReduceRule;
+import org.apache.kylin.query.optrule.CorrReduceFunctionRule;
+import org.apache.kylin.query.optrule.OlapAggregateReduceFunctionsRule;
+import org.apache.kylin.query.optrule.OlapAggregateRule;
+import org.apache.kylin.query.optrule.OlapFilterJoinRule;
+import org.apache.kylin.query.optrule.OlapFilterRule;
+import org.apache.kylin.query.optrule.OlapJoinRule;
+import org.apache.kylin.query.optrule.OlapLimitRule;
+import org.apache.kylin.query.optrule.OlapMinusRule;
+import org.apache.kylin.query.optrule.OlapModelViewRule;
+import org.apache.kylin.query.optrule.OlapProjectJoinTransposeRule;
+import org.apache.kylin.query.optrule.OlapProjectMergeRule;
+import org.apache.kylin.query.optrule.OlapProjectRule;
+import org.apache.kylin.query.optrule.OlapSortRule;
+import org.apache.kylin.query.optrule.OlapToEnumerableConverterRule;
+import org.apache.kylin.query.optrule.OlapUnionRule;
+import org.apache.kylin.query.optrule.OlapValuesRule;
+import org.apache.kylin.query.optrule.OlapWindowRule;
+import org.apache.kylin.query.optrule.RightJoinToLeftJoinRule;
 import org.apache.kylin.query.relnode.ContextUtil;
-
-import io.kyligence.kap.query.optrule.AggregateMultipleExpandRule;
-import io.kyligence.kap.query.optrule.AggregateProjectReduceRule;
-import io.kyligence.kap.query.optrule.CorrReduceFunctionRule;
-import io.kyligence.kap.query.optrule.KAPValuesRule;
-import io.kyligence.kap.query.optrule.KapAggregateReduceFunctionsRule;
-import io.kyligence.kap.query.optrule.KapAggregateRule;
-import io.kyligence.kap.query.optrule.KapFilterJoinRule;
-import io.kyligence.kap.query.optrule.KapFilterRule;
-import io.kyligence.kap.query.optrule.KapJoinRule;
-import io.kyligence.kap.query.optrule.KapLimitRule;
-import io.kyligence.kap.query.optrule.KapMinusRule;
-import io.kyligence.kap.query.optrule.KapModelViewRule;
-import io.kyligence.kap.query.optrule.KapOLAPToEnumerableConverterRule;
-import io.kyligence.kap.query.optrule.KapProjectJoinTransposeRule;
-import io.kyligence.kap.query.optrule.KapProjectMergeRule;
-import io.kyligence.kap.query.optrule.KapProjectRule;
-import io.kyligence.kap.query.optrule.KapSortRule;
-import io.kyligence.kap.query.optrule.KapUnionRule;
-import io.kyligence.kap.query.optrule.KapWindowRule;
-import io.kyligence.kap.query.optrule.RightJoinToLeftJoinRule;
-import io.kyligence.kap.query.optrule.SumConstantConvertRule;
 
 /**
  * factory that create optimizers and register opt rules
@@ -113,7 +111,7 @@ public class PlannerFactory {
             AggregateStarTableRule.INSTANCE2, TableScanRule.INSTANCE, ProjectMergeRule.INSTANCE,
             FilterTableScanRule.INSTANCE, ProjectFilterTransposeRule.INSTANCE, FilterProjectTransposeRule.INSTANCE,
             FilterJoinRule.FILTER_ON_JOIN, JoinPushExpressionsRule.INSTANCE,
-            AggregateExpandDistinctAggregatesRule.INSTANCE, KapAggregateReduceFunctionsRule.INSTANCE,
+            AggregateExpandDistinctAggregatesRule.INSTANCE, OlapAggregateReduceFunctionsRule.INSTANCE,
             FilterAggregateTransposeRule.INSTANCE, ProjectWindowTransposeRule.INSTANCE, JoinCommuteRule.INSTANCE,
             JoinPushThroughJoinRule.RIGHT, JoinPushThroughJoinRule.LEFT, SortProjectTransposeRule.INSTANCE,
             SortJoinTransposeRule.INSTANCE, SortUnionTransposeRule.INSTANCE);
@@ -157,22 +155,20 @@ public class PlannerFactory {
         // force clear the query context before traversal relational operators
         ContextUtil.clearThreadLocalContexts();
         // register OLAP rules
-        //        addRules(planner, kylinConfig.getCalciteAddRule());
-        // register OLAP rules
-        planner.addRule(KapOLAPToEnumerableConverterRule.INSTANCE);
-        planner.addRule(KapFilterRule.INSTANCE);
-        planner.addRule(KapProjectRule.INSTANCE);
-        planner.addRule(KapAggregateRule.INSTANCE);
+        planner.addRule(OlapToEnumerableConverterRule.INSTANCE);
+        planner.addRule(OlapFilterRule.INSTANCE);
+        planner.addRule(OlapProjectRule.INSTANCE);
+        planner.addRule(OlapAggregateRule.INSTANCE);
         planner.addRule(selectJoinRuleByConfig());
-        planner.addRule(KapLimitRule.INSTANCE);
-        planner.addRule(KapSortRule.INSTANCE);
-        planner.addRule(KapUnionRule.INSTANCE);
-        planner.addRule(KapWindowRule.INSTANCE);
-        planner.addRule(KAPValuesRule.INSTANCE);
-        planner.addRule(KapMinusRule.INSTANCE);
-        planner.addRule(KapModelViewRule.INSTANCE);
+        planner.addRule(OlapLimitRule.INSTANCE);
+        planner.addRule(OlapSortRule.INSTANCE);
+        planner.addRule(OlapUnionRule.INSTANCE);
+        planner.addRule(OlapWindowRule.INSTANCE);
+        planner.addRule(OlapValuesRule.INSTANCE);
+        planner.addRule(OlapMinusRule.INSTANCE);
+        planner.addRule(OlapModelViewRule.INSTANCE);
         planner.removeRule(ProjectMergeRule.INSTANCE);
-        planner.addRule(KapProjectMergeRule.INSTANCE);
+        planner.addRule(OlapProjectMergeRule.INSTANCE);
 
         // Support translate the grouping aggregate into union of simple aggregates
         // if it's the auto-modeling dry run, then do not add the CorrReduceFunctionRule
@@ -184,10 +180,6 @@ public class PlannerFactory {
             planner.addRule(AggregateMultipleExpandRule.INSTANCE);
         }
         planner.addRule(AggregateProjectReduceRule.INSTANCE);
-
-        if (!kylinConfig.isConvertSumExpressionEnabled()) {
-            planner.addRule(SumConstantConvertRule.INSTANCE);
-        }
 
         // CalcitePrepareImpl.CONSTANT_REDUCTION_RULES
         if (kylinConfig.isReduceExpressionsRulesEnabled()) {
@@ -210,8 +202,8 @@ public class PlannerFactory {
         // since join is the entry point, we can't push filter past join
         planner.removeRule(FilterJoinRule.FILTER_ON_JOIN);
         planner.removeRule(FilterJoinRule.JOIN);
-        planner.addRule(KapFilterJoinRule.KAP_FILTER_ON_JOIN_JOIN);
-        planner.addRule(KapFilterJoinRule.KAP_FILTER_ON_JOIN_SCAN);
+        planner.addRule(OlapFilterJoinRule.OLAP_FILTER_ON_JOIN_JOIN);
+        planner.addRule(OlapFilterJoinRule.OLAP_FILTER_ON_JOIN_SCAN);
         // since we don't have statistic of table, the optimization of join is too cost
         planner.removeRule(JoinCommuteRule.INSTANCE);
         planner.removeRule(JoinPushThroughJoinRule.LEFT);
@@ -243,11 +235,11 @@ public class PlannerFactory {
         planner.removeRule(UnionMergeRule.INSTANCE);
 
         if (!kylinConfig.isConvertSumExpressionEnabled()) {
-            planner.addRule(KapProjectJoinTransposeRule.INSTANCE);
+            planner.addRule(OlapProjectJoinTransposeRule.INSTANCE);
         }
         planner.removeRule(ProjectRemoveRule.INSTANCE);
 
-        // skip corr expandsion during model suggestion
+        // skip corr expansion during model suggestion
         if (!KylinConfig.getInstanceFromEnv().getSkipCorrReduceRule()) {
             planner.addRule(CorrReduceFunctionRule.INSTANCE);
         }
@@ -256,8 +248,8 @@ public class PlannerFactory {
     private ConverterRule selectJoinRuleByConfig() {
         return (kylinConfig.isQueryNonEquiJoinModelEnabled() && !BackdoorToggles.getIsQueryFromAutoModeling())
                 || (kylinConfig.isNonEquiJoinRecommendationEnabled() && BackdoorToggles.getIsQueryFromAutoModeling()) //
-                        ? KapJoinRule.NON_EQUI_INSTANCE
-                        : KapJoinRule.INSTANCE;
+                        ? OlapJoinRule.NON_EQUI_INSTANCE
+                        : OlapJoinRule.INSTANCE;
     }
 
     protected void removeRules(final RelOptPlanner planner, List<String> rules) {

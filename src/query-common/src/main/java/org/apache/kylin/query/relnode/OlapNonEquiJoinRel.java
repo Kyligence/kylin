@@ -381,7 +381,7 @@ public class OlapNonEquiJoinRel extends EnumerableThetaJoin implements OlapRel {
     public boolean pushRelInfoToContext(OlapContext context) {
         if (this.context != null)
             return false;
-        // if non-equiv-join is the direct parent of the context, 
+        // if non-equiv-join is the direct parent of the context,
         // there is no need to push context further down
         // otherwise try push context down to both side
         if (this == context.getParentOfTopNode() || ((OlapRel) getLeft()).pushRelInfoToContext(context)
@@ -416,8 +416,9 @@ public class OlapNonEquiJoinRel extends EnumerableThetaJoin implements OlapRel {
 
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        return joinType == JoinRelType.RIGHT ? super.computeSelfCost(planner, mq).multiplyBy(100)
-                : super.computeSelfCost(planner, mq).multiplyBy(.05);
+        return joinType == JoinRelType.RIGHT //
+                ? super.computeSelfCost(planner, mq).multiplyBy(OlapJoinRel.LARGE_JOIN_FACTOR)
+                : super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR);
     }
 
     @Override

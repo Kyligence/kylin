@@ -218,10 +218,23 @@ public class OlapProjectRel extends Project implements OlapRel {
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         boolean hasRexOver = RexOver.containsOver(getProjects(), null);
-        RelOptCost relOptCost = super.computeSelfCost(planner, mq).multiplyBy(.05)
+        RelOptCost relOptCost = super.computeSelfCost(planner, mq) //
+                .multiplyBy(OlapRel.OLAP_COST_FACTOR) //
+                .multiplyBy(getComplexity()) //
                 .multiplyBy(getProjects().size() * (hasRexOver ? 50.0 : 1.0))
                 .plus(planner.getCostFactory().makeCost(0.1 * caseCount, 0, 0));
         return planner.getCostFactory().makeCost(relOptCost.getRows(), 0, 0);
+    }
+
+    // Simplified OlapProjectRel has lower cost. For example:
+    // RexNode(1+1) will be converted to RexNode(2) by ReduceExpressionRule,
+    // thus we should choose the latter because it has lower complexity.
+    private double getComplexity() {
+        int complexity = 1;
+        for (RexNode rexNode : getProjects()) {
+            complexity += rexNode.toString().length();
+        }
+        return Math.exp(-1.0 / complexity);
     }
 
     @Override

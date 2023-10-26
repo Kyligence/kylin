@@ -28,16 +28,16 @@ import org.apache.calcite.test.DiffRepository;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.query.optrule.AggregateProjectReduceRule;
+import org.apache.kylin.query.optrule.OlapAggregateRule;
+import org.apache.kylin.query.optrule.OlapJoinRule;
+import org.apache.kylin.query.optrule.OlapProjectRule;
+import org.apache.kylin.query.optrule.ScalarSubqueryJoinRule;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import io.kyligence.kap.query.optrule.AggregateProjectReduceRule;
-import io.kyligence.kap.query.optrule.KapAggregateRule;
-import io.kyligence.kap.query.optrule.KapJoinRule;
-import io.kyligence.kap.query.optrule.KapProjectRule;
-import io.kyligence.kap.query.optrule.ScalarSubqueryJoinRule;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -97,9 +97,9 @@ public class ScalarSubqueryJoinRuleTest extends CalciteRuleTestBase {
 
     private List<RelOptRule> getTransformRules() {
         return ImmutableList.of(// basic rules
-                KapAggregateRule.INSTANCE, //
-                KapProjectRule.INSTANCE, //
-                KapJoinRule.INSTANCE, //
+                OlapAggregateRule.INSTANCE, //
+                OlapProjectRule.INSTANCE, //
+                OlapJoinRule.INSTANCE, //
                 // relative rules
                 ProjectMergeRule.INSTANCE, //
                 AggregateProjectMergeRule.INSTANCE, //

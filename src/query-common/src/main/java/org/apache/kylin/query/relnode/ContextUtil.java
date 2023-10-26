@@ -85,27 +85,27 @@ public class ContextUtil {
         _resultType.remove();
     }
 
-    public static void amendAllColsIfNoAgg(RelNode kapRel) {
-        if (kapRel == null || ((OlapRel) kapRel).getContext() == null || kapRel instanceof OlapTableScan) {
+    public static void amendAllColsIfNoAgg(RelNode rel) {
+        if (rel == null || ((OlapRel) rel).getContext() == null || rel instanceof OlapTableScan) {
             return;
         }
 
-        OlapContext context = ((OlapRel) kapRel).getContext();
+        OlapContext context = ((OlapRel) rel).getContext();
         // add columns of context's TopNode to context when there are no agg rel
-        if (kapRel instanceof OlapProjectRel && !((OlapProjectRel) kapRel).isMerelyPermutation()) {
-            ((OlapRel) kapRel).getColumnRowType().getSourceColumns().stream().flatMap(Collection::stream)
+        if (rel instanceof OlapProjectRel && !((OlapProjectRel) rel).isMerelyPermutation()) {
+            ((OlapRel) rel).getColumnRowType().getSourceColumns().stream().flatMap(Collection::stream)
                     .filter(context::isOriginAndBelongToCtxTables).forEach(context.getAllColumns()::add);
-        } else if (kapRel instanceof OlapValuesRel) {
-            ((OlapRel) kapRel).getColumnRowType().getAllColumns().stream().filter(context::isOriginAndBelongToCtxTables)
+        } else if (rel instanceof OlapValuesRel) {
+            ((OlapRel) rel).getColumnRowType().getAllColumns().stream().filter(context::isOriginAndBelongToCtxTables)
                     .forEach(context.getAllColumns()::add);
-        } else if (kapRel instanceof OlapWindowRel) {
-            ((OlapWindowRel) kapRel).getGroupingColumns().stream().filter(context::isOriginAndBelongToCtxTables)
+        } else if (rel instanceof OlapWindowRel) {
+            ((OlapWindowRel) rel).getGroupingColumns().stream().filter(context::isOriginAndBelongToCtxTables)
                     .forEach(context.getAllColumns()::add);
-        } else if (kapRel instanceof OlapJoinRel) {
-            amendAllColsIfNoAgg(kapRel.getInput(0));
-            amendAllColsIfNoAgg(kapRel.getInput(1));
+        } else if (rel instanceof OlapJoinRel) {
+            amendAllColsIfNoAgg(rel.getInput(0));
+            amendAllColsIfNoAgg(rel.getInput(1));
         } else {
-            amendAllColsIfNoAgg(kapRel.getInput(0));
+            amendAllColsIfNoAgg(rel.getInput(0));
         }
     }
 
@@ -304,8 +304,8 @@ public class ContextUtil {
 
     public static boolean qualifiedForAggInfoPushDown(RelNode currentRel, OlapContext subContext) {
         // 1. the parent node of TopRel in subContext is not NULL and is instance Of OlapJoinRel.
-        // 2. the TopNode of subContext is NOT instance of KapAggregateRel.
-        // 3. JoinRels in the path from currentNode to the ParentOfContextTopRel 
+        // 2. the TopNode of subContext is NOT instance of OlapAggregateRel.
+        // 3. JoinRels in the path from currentNode to the ParentOfContextTopRel
         //    node are all the same type (left/inner/cross)
         // 4. all aggregate is derived from the same subContext
         return (subContext.getParentOfTopNode() instanceof OlapJoinRel
@@ -414,7 +414,7 @@ public class ContextUtil {
                     }
                 });
             } else {
-                // non-equiv-join rel: treat the left and right subtrees as a context, 
+                // non-equiv-join rel: treat the left and right subtrees as a context,
                 // and refuse to push agg down.
                 OlapNonEquiJoinRel nonEquivJoinRel = (OlapNonEquiJoinRel) joinRel;
                 if (!nonEquivJoinRel.isScd2Rel()) {

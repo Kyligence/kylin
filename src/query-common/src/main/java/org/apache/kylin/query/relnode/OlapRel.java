@@ -55,6 +55,8 @@ public interface OlapRel extends RelNode {
 
     // Calling convention for relational operations that occur in OLAP.
     Convention CONVENTION = new Convention.Impl("OLAP", OlapRel.class);
+    // olapRel default cost factor
+    double OLAP_COST_FACTOR = 0.05;
 
     /** get olap context */
     OlapContext getContext();

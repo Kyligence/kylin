@@ -76,6 +76,7 @@ import lombok.val;
 @Getter
 public class OlapJoinRel extends EnumerableJoin implements OlapRel {
 
+    static final double LARGE_JOIN_FACTOR = 100.0;
     static final String[] COLUMN_ARRAY_MARKER = new String[0];
 
     private OlapContext context;
@@ -101,11 +102,11 @@ public class OlapJoinRel extends EnumerableJoin implements OlapRel {
 
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        // assign a huge cost on right join and cross join so that the swapped 
+        // assign a huge cost on right join and cross join so that the swapped
         // left join and inner join will win in the optimization
         return joinType == JoinRelType.RIGHT || condition.isAlwaysTrue()
-                ? super.computeSelfCost(planner, mq).multiplyBy(100)
-                : super.computeSelfCost(planner, mq).multiplyBy(.05);
+                ? super.computeSelfCost(planner, mq).multiplyBy(OlapJoinRel.LARGE_JOIN_FACTOR)
+                : super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR);
     }
 
     @Override

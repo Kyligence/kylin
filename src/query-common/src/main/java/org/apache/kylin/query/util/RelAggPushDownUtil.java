@@ -116,23 +116,23 @@ public class RelAggPushDownUtil {
         }
     }
 
-    public static OlapJoinRel collectFirstJoinRel(RelNode kapRel) {
-        if (kapRel == null || CollectionUtils.isEmpty(kapRel.getInputs())) {
+    public static OlapJoinRel collectFirstJoinRel(RelNode relNode) {
+        if (relNode == null || CollectionUtils.isEmpty(relNode.getInputs())) {
             return null;
         }
-        if (kapRel instanceof OlapJoinRel) {
-            return (OlapJoinRel) kapRel;
+        if (relNode instanceof OlapJoinRel) {
+            return (OlapJoinRel) relNode;
         } else {
-            return collectFirstJoinRel(kapRel.getInput(0));
+            return collectFirstJoinRel(relNode.getInput(0));
         }
     }
 
     // only for test
-    public static void collectAllJoinRel(RelNode kapRel) {
-        if (kapRel instanceof OlapJoinRel) {
-            QueryContext.current().getUnmatchedJoinDigest().put(handleDigest(kapRel.getDigest()), true);
+    public static void collectAllJoinRel(RelNode relNode) {
+        if (relNode instanceof OlapJoinRel) {
+            QueryContext.current().getUnmatchedJoinDigest().put(handleDigest(relNode.getDigest()), true);
         }
-        for (RelNode rel : kapRel.getInputs()) {
+        for (RelNode rel : relNode.getInputs()) {
             collectAllJoinRel(rel);
         }
     }

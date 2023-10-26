@@ -20,7 +20,7 @@ package org.apache.kylin.query.engine;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import org.apache.calcite.plan.RelOptRule;
@@ -59,7 +59,7 @@ public class SumCastDoublePlannerTest extends CalciteRuleTestBase {
 
     protected void checkSQL(String project, String sql, String prefix, StringOutput StrOut,
             Collection<RelOptRule>... ruleSets) {
-        Collection<RelOptRule> rules = new HashSet<>();
+        Collection<RelOptRule> rules = new LinkedHashSet<>();
         for (Collection<RelOptRule> ruleSet : ruleSets) {
             rules.addAll(ruleSet);
         }

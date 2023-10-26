@@ -40,7 +40,7 @@ public class OlapToEnumerableConverter extends ConverterImpl implements Enumerab
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
         // huge cost to ensure OlapToEnumerableConverter only appears once in rel tree
-        return super.computeSelfCost(planner, mq).multiplyBy(0.05);
+        return super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR);
     }
 
     public OlapToEnumerableConverter(RelOptCluster cluster, RelTraitSet traits, RelNode input) {
@@ -53,7 +53,7 @@ public class OlapToEnumerableConverter extends ConverterImpl implements Enumerab
     }
 
     /**
-     * The implement of CalciteQueryExec (compared with the current SparderQueryExec), 
+     * The implement of CalciteQueryExec (compared with the current SparderQueryExec),
      * pay less attention.
      */
     @Override

@@ -64,7 +64,7 @@ public class OlapValuesRel extends Values implements OlapRel {
 
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        RelOptCost relOptCost = super.computeSelfCost(planner, mq).multiplyBy(0.05);
+        RelOptCost relOptCost = super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR);
         return planner.getCostFactory().makeCost(relOptCost.getRows(), 0, 0);
     }
 

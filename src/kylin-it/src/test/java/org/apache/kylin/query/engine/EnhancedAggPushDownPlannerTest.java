@@ -18,20 +18,24 @@
 
 package org.apache.kylin.query.engine;
 
+import static org.hamcrest.CoreMatchers.notNullValue;
+
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.test.DiffRepository;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.query.rules.CalciteRuleTestBase;
 import org.apache.kylin.query.util.HepUtils;
+import org.apache.kylin.query.util.RelAggPushDownUtil;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,13 +65,19 @@ public class EnhancedAggPushDownPlannerTest extends CalciteRuleTestBase {
         return diff;
     }
 
-    protected void checkSQL(String project, String sql, String prefix, StringOutput StrOut,
-            Collection<RelOptRule>... ruleSets) {
-        Collection<RelOptRule> rules = new HashSet<>();
+    protected void checkSQL(String sql, String prefix, Collection<RelOptRule>... ruleSets) {
+        // should be LinkedHashSet, otherwise the result is unstable
+        Collection<RelOptRule> rules = new LinkedHashSet<>();
         for (Collection<RelOptRule> ruleSet : ruleSets) {
             rules.addAll(ruleSet);
         }
-        super.checkSQLAfterRule(project, sql, prefix, StrOut, rules);
+        RelNode relBefore = toCalcitePlan(defaultProject, sql, KylinConfig.getInstanceFromEnv());
+        Assert.assertThat(relBefore, notNullValue());
+        RelAggPushDownUtil.clearUnmatchedJoinDigest();
+        RelAggPushDownUtil.collectAllJoinRel(relBefore);
+        RelNode relAfter = HepUtils.runRuleCollection(relBefore, rules, false);
+        Assert.assertThat(relAfter, notNullValue());
+        checkDiff(relBefore, relAfter, prefix);
     }
 
     @Test
@@ -79,7 +89,7 @@ public class EnhancedAggPushDownPlannerTest extends CalciteRuleTestBase {
         postOptRules.addAll(HepUtils.SumExprRules);
         postOptRules.addAll(HepUtils.CountDistinctExprRules);
         postOptRules.addAll(HepUtils.AggPushDownRules);
-        queries.forEach(e -> checkSQL(defaultProject, e.getSecond(), e.getFirst(), null, postOptRules));
+        queries.forEach(e -> checkSQL(e.getSecond(), e.getFirst(), postOptRules));
     }
 
 }

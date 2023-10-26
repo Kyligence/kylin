@@ -245,7 +245,16 @@ public class OlapFilterRel extends Filter implements OlapRel {
 
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        return super.computeSelfCost(planner, mq).multiplyBy(.05);
+        return super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR).multiplyBy(calcComplexity());
+    }
+
+    // For example:
+    // 1) AND(>=($11, 2021-10-28 00:00:00), <($11, 2021-11-05 00:00:00))
+    // 2) AND(>=($11, CAST('2021-10-28'):TIMESTAMP(3) NOT NULL), <($11, CAST('2021-11-05'):TIMESTAMP(3) NOT NULL))
+    // the first condition is better than the second condition.
+    private double calcComplexity() {
+        int complexity = 1 + getCondition().toString().length();
+        return Math.exp(-1.0 / complexity);
     }
 
     @Override
@@ -415,8 +424,8 @@ public class OlapFilterRel extends Filter implements OlapRel {
             FilterVisitor visitor = new FilterVisitor(this.columnRowType, filterColumns);
             this.condition.accept(visitor);
             if (isHeterogeneousSegmentOrMultiPartEnabled(subCtx)) {
-                subCtx.getExpandedFilterConditions()
-                        .addAll(new FilterConditionExpander(subCtx, this).convert(this.condition));
+                List<RexNode> convert = new FilterConditionExpander(subCtx, this).convert(this.condition);
+                subCtx.getExpandedFilterConditions().addAll(convert);
             }
             if (isJoinMatchOptimizationEnabled()) {
                 collectNotNullTableWithFilterCondition(subCtx);

@@ -1891,7 +1891,7 @@ public abstract class KylinConfigBase implements Serializable {
     public List<String> getCalciteAddRule() {
         String rules = getOptional("kylin.query.calcite.add-rule");
         if (StringUtils.isEmpty(rules)) {
-            return Lists.newArrayList("io.kyligence.kap.query.optrule.ExtensionOlapJoinRule#INSTANCE");
+            return Lists.newArrayList("org.apache.kylin.query.optrule.ExtensionOlapJoinRule#INSTANCE");
         }
         return Lists.newArrayList(rules.split(","));
     }
@@ -1903,7 +1903,7 @@ public abstract class KylinConfigBase implements Serializable {
     public List<String> getCalciteRemoveRule() {
         String rules = getOptional("kylin.query.calcite.remove-rule");
         if (StringUtils.isEmpty(rules)) {
-            return Lists.newArrayList("io.kyligence.kap.query.optrule.OLAPJoinRule#INSTANCE");
+            return Lists.newArrayList();
         }
         return Lists.newArrayList(rules.split(","));
     }
@@ -2840,6 +2840,7 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isFlatTableRedistributionEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.engine.redistribution-flattable-enabled", FALSE));
     }
+
     public boolean isPersistFlatViewEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.engine.persist-flatview", FALSE));
     }
@@ -2847,6 +2848,7 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isPersistFlatUseSnapshotEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.engine.persist-flat-use-snapshot-enabled", TRUE));
     }
+
     public boolean isBuildExcludedTableEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.engine.build-excluded-table", FALSE));
     }
@@ -2931,8 +2933,8 @@ public abstract class KylinConfigBase implements Serializable {
         File libArm64 = new File(kylinHome + "/lib/" + ASYNC_PROFILER_LIB_LINUX_ARM64);
         File libX64Musl = new File(kylinHome + "/lib/" + ASYNC_PROFILER_LIB_LINUX_MUSL_X64);
         File libArm64Musl = new File(kylinHome + "/lib/" + ASYNC_PROFILER_LIB_LINUX_MUSL_ARM64);
-        return libX64.getCanonicalPath() + "," + libArm64.getCanonicalPath()
-                + "," + libX64Musl.getCanonicalPath() + "," + libArm64Musl.getCanonicalPath();
+        return libX64.getCanonicalPath() + "," + libArm64.getCanonicalPath() + "," + libX64Musl.getCanonicalPath() + ","
+                + libArm64Musl.getCanonicalPath();
     }
 
     private String getLogPropertyFile(String filename) {
@@ -4123,6 +4125,7 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isJobTmpDirALLPermissionEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.engine.job-tmp-dir-all-permission-enabled", FALSE));
     }
+
     public boolean isProjectMergeWithBloatEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.query.project-merge-with-bloat-enabled", "true"));
     }
