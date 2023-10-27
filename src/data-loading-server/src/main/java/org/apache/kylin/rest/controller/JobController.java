@@ -33,7 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.JsonUtil;
@@ -356,12 +356,13 @@ public class JobController extends BaseController {
         String jobId = ExecutableManager.extractJobId(jobOrTaskId);
         AbstractExecutable job = execMgr.getJob(jobId);
         if (job.getOutput().getState() != ExecutableState.RUNNING) {
-            throw new IllegalStateException(String.format("Job's state is : %s instead of %s !",
+            throw new IllegalStateException(String.format(Locale.ROOT, "Job's state is : %s instead of %s !",
                     job.getOutput().getState(), ExecutableState.RUNNING));
         }
         if (!String.valueOf(job.getOutput().getLastRunningStartTime()).equals(jobLastRunningStartTime)) {
-            throw new IllegalStateException(String.format("Job's lastRunningStartTime is : %s instead of %s !",
-                    job.getOutput().getLastRunningStartTime(), jobLastRunningStartTime));
+            throw new IllegalStateException(
+                    String.format(Locale.ROOT, "Job's lastRunningStartTime is : %s instead of %s !",
+                            job.getOutput().getLastRunningStartTime(), jobLastRunningStartTime));
         }
     }
 

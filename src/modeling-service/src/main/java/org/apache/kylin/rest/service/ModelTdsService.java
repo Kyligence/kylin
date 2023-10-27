@@ -219,7 +219,7 @@ public class ModelTdsService extends AbstractModelService {
                 .count();
 
         if (jointCount != model.getJoinTables().size() || singleTableCount == 0
-                || (modelElement.equals(SyncContext.ModelElement.CUSTOM_COLS)
+                || (modelElement == SyncContext.ModelElement.CUSTOM_COLS
                         && !checkColumnPermission(model, authColumns, dimensions, measures))) {
             throw new KylinException(ServerErrorCode.INVALID_TABLE_AUTH,
                     MsgPicker.getMsg().getTableNoColumnsPermission());

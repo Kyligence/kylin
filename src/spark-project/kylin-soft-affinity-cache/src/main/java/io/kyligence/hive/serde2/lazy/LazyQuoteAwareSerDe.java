@@ -28,7 +28,7 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.serde.serdeConstants;
@@ -67,7 +67,7 @@ import org.apache.hive.common.util.TimestampParser;
 import org.apache.kylin.common.exception.KylinRuntimeException;
 
 /**
- * This class contains ALL of our enhancement to Hive's LazySimpleSerDe, 
+ * This class contains ALL of our enhancement to Hive's LazySimpleSerDe,
  * for <a href="https://github.com/Kyligence/Diting/blob/release-2.0.0/insight-core/src/main/java/org/apache/hadoop/hive/serde2/lazy/LazyQuoteAwareSerDe.java">
  * a copy of this file</a> is placed into project Diting, module insight-core, to
  * ensure the consistent behavior of uploading and querying a CSV file.

@@ -604,7 +604,7 @@ public class ProjectService extends BasicService {
         response.setJobErrorNotificationEnabled(config.getJobErrorNotificationEnabled());
 
         List<String> jobStatesNotification = config.getJobNotificationStates() == null ? Lists.newArrayList()
-                : Arrays.stream(config.getJobNotificationStates()).map(String::toLowerCase)
+                : Arrays.stream(config.getJobNotificationStates()).map(StringUtils::lowerCase)
                         .collect(Collectors.toList());
         boolean jobErrorNotificationEnabled = config.getJobErrorNotificationEnabled();
         if (jobErrorNotificationEnabled && !jobStatesNotification.contains("error")) {
@@ -663,8 +663,8 @@ public class ProjectService extends BasicService {
         }
         val fields = org.springframework.util.StringUtils.tokenizeToStringArray(cron, " ");
         if (fields.length != 6) {
-            throw new IllegalArgumentException(String
-                    .format("Cron expression must consist of 6 fields (found %d in \"%s\")", fields.length, cron));
+            throw new IllegalArgumentException(String.format(Locale.ROOT,
+                    "Cron expression must consist of 6 fields (found %d in \"%s\")", fields.length, cron));
         }
         if (StringUtils.contains(fields[1], "*/")) {
             response.setSnapshotAutoRefreshTimeMode(SNAPSHOT_AUTO_REFRESH_TIME_MODE_MINUTE);

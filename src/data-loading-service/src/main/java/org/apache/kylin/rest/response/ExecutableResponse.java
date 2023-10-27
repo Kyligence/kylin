@@ -132,7 +132,7 @@ public class ExecutableResponse implements Comparable<ExecutableResponse> {
         int completedStepCount = 0;
 
         for (ExecutableStepResponse step : this.getSteps()) {
-            if (step.getStatus().equals(JobStatusEnum.FINISHED)) {
+            if (step.getStatus() == JobStatusEnum.FINISHED) {
                 completedStepCount++;
             }
         }

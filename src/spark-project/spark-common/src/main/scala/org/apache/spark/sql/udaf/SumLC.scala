@@ -18,7 +18,8 @@
 
 package org.apache.spark.sql.udaf
 
-import com.esotericsoftware.kryo.io.{Input, KryoDataInput, KryoDataOutput, Output}
+import java.util.Locale
+
 import org.apache.kylin.common.util.DateFormat
 import org.apache.kylin.measure.sumlc.SumLCCounter
 import org.apache.spark.internal.Logging
@@ -26,6 +27,8 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.aggregate.{ImperativeAggregate, TypedImperativeAggregate}
 import org.apache.spark.sql.types._
+
+import com.esotericsoftware.kryo.io.{Input, KryoDataInput, KryoDataOutput, Output}
 
 /**
  * Build sum_lc measure, has two implements，
@@ -125,7 +128,7 @@ case class EncodeSumLC(
         columnEvalVal.asInstanceOf[Number]
     }
     val dateEvalVal = dateCol.eval(input)
-    if (dateEvalVal == null || dateEvalVal.toString.toUpperCase().equals("NULL")) {
+    if (dateEvalVal == null || dateEvalVal.toString.toUpperCase(Locale.ROOT).equals("NULL")) {
       buffer
     } else {
       val dateValStr = String.valueOf(dateEvalVal).trim

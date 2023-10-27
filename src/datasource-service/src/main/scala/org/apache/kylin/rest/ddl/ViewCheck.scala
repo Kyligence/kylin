@@ -18,25 +18,25 @@
 package org.apache.kylin.rest.ddl
 
 import java.security.PrivilegedExceptionAction
-
-import scala.collection.convert.ImplicitConversions.{`collection AsScalaIterable`, `map AsScala`}
-import scala.collection.mutable.ListBuffer
+import java.util.Locale
 
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.security.UserGroupInformation
-import org.apache.kylin.common.msg.MsgPicker
 import org.apache.kylin.common.KylinConfig
+import org.apache.kylin.common.msg.MsgPicker
 import org.apache.kylin.engine.spark.source.NSparkMetadataExplorer
 import org.apache.kylin.metadata.model.NTableMetadataManager
 import org.apache.kylin.metadata.view.LogicalViewManager
 import org.apache.kylin.rest.security.KerberosLoginManager
-import org.slf4j.LoggerFactory
-
 import org.apache.spark.ddl.{DDLCheck, DDLCheckContext, DDLConstant}
 import org.apache.spark.sql.SparderEnv
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.execution.{CommandExecutionMode, CommandResultExec, SparkPlan}
 import org.apache.spark.sql.execution.command._
+import org.apache.spark.sql.execution.{CommandExecutionMode, CommandResultExec, SparkPlan}
+import org.slf4j.LoggerFactory
+
+import scala.collection.convert.ImplicitConversions.{`collection AsScalaIterable`, `map AsScala`}
+import scala.collection.mutable.ListBuffer
 
 class ViewCheck extends DDLCheck {
   private val LOGGER = LoggerFactory.getLogger(classOf[ViewCheck])
@@ -158,7 +158,7 @@ class ViewCheck extends DDLCheck {
   }
 
   private def checkHiveTableName(identifier: TableIdentifier, context: DDLCheckContext): Unit = {
-    if (!identifier.table.toUpperCase().startsWith(PREFIX)) {
+    if (!identifier.table.toUpperCase(Locale.ROOT).startsWith(PREFIX)) {
       throwException(MsgPicker.getMsg.getDDLViewNameError)
     }
   }

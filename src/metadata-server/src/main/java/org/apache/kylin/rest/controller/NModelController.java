@@ -35,8 +35,8 @@ import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.constant.Constant;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.KylinRuntimeException;
@@ -162,8 +162,8 @@ public class NModelController extends NBasicController {
         checkProjectName(project);
         status = formatStatus(status, ModelStatusToDisplayEnum.class);
 
-        ModelQueryParams request = new ModelQueryParams(modelId, modelAlias, exactMatch, project, owner, status,
-                table, offset, limit, sortBy, reverse, modelAliasOrOwner, modelAttributes, lastModifyFrom, lastModifyTo,
+        ModelQueryParams request = new ModelQueryParams(modelId, modelAlias, exactMatch, project, owner, status, table,
+                offset, limit, sortBy, reverse, modelAliasOrOwner, modelAttributes, lastModifyFrom, lastModifyTo,
                 onlyNormalDim, lite);
         DataResult<List<NDataModel>> filterModels = modelService.getModels(request);
         fusionModelService.setModelUpdateEnabled(filterModels);
@@ -736,7 +736,7 @@ public class NModelController extends NBasicController {
     @PostMapping(value = "/feign/update_recommendations_count")
     @ResponseBody
     public void updateRecommendationsCount(@RequestParam("project") String project,
-                                           @RequestParam("modelId") String modelId, @RequestParam("size") int size) {
+            @RequestParam("modelId") String modelId, @RequestParam("size") int size) {
         modelService.updateRecommendationsCount(project, modelId, size);
     }
 
@@ -756,14 +756,14 @@ public class NModelController extends NBasicController {
     @PostMapping(value = "/feign/update_index_plan")
     @ResponseBody
     public void updateIndexPlan(@RequestParam("project") String project, @RequestParam("uuid") String uuid,
-                                @RequestBody IndexPlan indexplan, @RequestParam("action") String action) {
+            @RequestBody IndexPlan indexplan, @RequestParam("action") String action) {
         modelService.updateIndexPlan(project, uuid, indexplan, action);
     }
 
     @PostMapping(value = "/feign/update_dataflow_status")
     @ResponseBody
     public void updateDataflowStatus(@RequestParam("project") String project, @RequestParam("uuid") String uuid,
-                                     @RequestParam("status") RealizationStatusEnum status) {
+            @RequestParam("status") RealizationStatusEnum status) {
         modelService.updateDataflowStatus(project, uuid, status);
     }
 
@@ -791,8 +791,8 @@ public class NModelController extends NBasicController {
 
     @PostMapping(value = "/feign/check_and_auto_merge_segments")
     @ResponseBody
-    public void checkAndAutoMergeSegments(@RequestParam("project") String project, @RequestParam("modelId") String modelId,
-                                          @RequestParam("owner") String owner) {
+    public void checkAndAutoMergeSegments(@RequestParam("project") String project,
+            @RequestParam("modelId") String modelId, @RequestParam("owner") String owner) {
         modelService.checkAndAutoMergeSegments(project, modelId, owner);
     }
 }

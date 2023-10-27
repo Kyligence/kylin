@@ -20,7 +20,7 @@ package org.apache.kylin.source.kafka
 import java.util.Map
 import java.util.concurrent.ArrayBlockingQueue
 
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.engine.spark.NSparkCubingEngine
 import org.apache.kylin.metadata.model.{IBuildable, SegmentRange, TableDesc}

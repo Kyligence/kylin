@@ -82,8 +82,8 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
         NIndexPlanManager ipMgr = NIndexPlanManager.getInstance(config, getProject());
         String cubeId = dsMgr.getDataflow(DF_NAME1).getIndexPlan().getUuid();
         IndexPlan cube = ipMgr.getIndexPlan(cubeId);
-        Set<Long> tobeRemovedLayouts = cube.getAllLayouts().stream().filter(layout -> layout.getId() != 10001L)
-                .map(LayoutEntity::getId).collect(Collectors.toSet());
+        Set<Long> tobeRemovedLayouts = cube.getAllLayouts().stream() //
+                .map(LayoutEntity::getId).filter(id -> id != 10001L).collect(Collectors.toSet());
 
         cube = ipMgr.updateIndexPlan(dsMgr.getDataflow(DF_NAME1).getIndexPlan().getUuid(), copyForWrite -> {
             copyForWrite.removeLayouts(tobeRemovedLayouts, true, true);
@@ -141,7 +141,7 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
         NDataflow df = dsMgr.getDataflow(dfName);
         List<LayoutEntity> layouts = df.getIndexPlan().getAllLayouts();
         indexDataConstructor.buildIndex(dfName, new SegmentRange.TimePartitionedSegmentRange(start, end),
-                Sets.<LayoutEntity> newLinkedHashSet(layouts), true);
+                Sets.newLinkedHashSet(layouts), true);
     }
 
     private void mergeSegments(String start, String end, boolean force) throws Exception {

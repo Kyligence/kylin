@@ -27,9 +27,8 @@ import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.metadata.datatype.DataType;
-
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.metadata.datatype.DataType;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -44,7 +43,7 @@ public class TblColRef implements Serializable {
     public static final String DYNAMIC_DATA_TYPE = "_dynamic_type";
     public static final String UNKNOWN_ALIAS = "UNKNOWN_ALIAS";
 
-    // used by projection rewrite, see OLAPProjectRel
+    // used by projection rewrite, see OlapProjectRel
     public enum InnerDataTypeEnum {
 
         LITERAL("_literal_type"), DERIVED("_derived_type"), AGGREGATION_TYPE("_aggregation_type");
@@ -96,12 +95,12 @@ public class TblColRef implements Serializable {
 
     }
 
-    // used by projection rewrite, see OLAPProjectRel
+    // used by projection rewrite, see OlapProjectRel
     public static TblColRef newInnerColumn(String columnName, InnerDataTypeEnum dataType) {
         return newInnerColumn(columnName, dataType, null);
     }
 
-    // used by projection rewrite, see OLAPProjectRel
+    // used by projection rewrite, see OlapProjectRel
     public static TblColRef newInnerColumn(String columnName, InnerDataTypeEnum dataType, String parserDescription) {
         return newInnerColumn(columnName, dataType, parserDescription, null, null);
     }

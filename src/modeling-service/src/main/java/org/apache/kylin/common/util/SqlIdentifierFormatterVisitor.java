@@ -61,7 +61,7 @@ public class SqlIdentifierFormatterVisitor extends SqlBasicVisitor<Void> {
             Set<String> cols = table2cols.get(table);
             if (cols.contains(column)) {
                 throw new KylinException(ServerErrorCode.DUPLICATED_COLUMN_NAME,
-                        String.format("Found duplicate stored column %s for table %s!", column, table));
+                        String.format(Locale.ROOT, "Found duplicate stored column %s for table %s!", column, table));
             }
             cols.add(column);
             col2tables.putIfAbsent(column, Sets.newHashSet());
@@ -75,10 +75,9 @@ public class SqlIdentifierFormatterVisitor extends SqlBasicVisitor<Void> {
             String column = id.names.get(0).toUpperCase(Locale.ROOT).trim();
             Set<String> targetTbls = col2tables.getOrDefault(column, Sets.newHashSet());
             if (targetTbls.size() != 1) {
-                throw new KylinException(ServerErrorCode.COLUMN_NOT_EXIST,
-                        String.format(
-                        "Found unrecognized or ambiguous column: %s in candidate tables [%s] in expression '%s'.",
-                        id, targetTbls.stream().reduce(", ", String::join), expr));
+                throw new KylinException(ServerErrorCode.COLUMN_NOT_EXIST, String.format(Locale.ROOT,
+                        "Found unrecognized or ambiguous column: %s in candidate tables [%s] in expression '%s'.", id,
+                        targetTbls.stream().reduce(", ", String::join), expr));
             }
             id.names = ImmutableList.of(targetTbls.iterator().next(), column);
         } else if (id.names.size() >= 2) {
@@ -88,7 +87,7 @@ public class SqlIdentifierFormatterVisitor extends SqlBasicVisitor<Void> {
             // TODO: Support 3 or more name parts, like: database.table.name?
             if (id.names.size() > 2 || cols == null || !cols.contains(column)) {
                 throw new KylinException(ServerErrorCode.COLUMN_NOT_EXIST,
-                        String.format("Found unrecognized column: %s in expression '%s'.", id, expr));
+                        String.format(Locale.ROOT, "Found unrecognized column: %s in expression '%s'.", id, expr));
             }
             id.names = ImmutableList.of(table, column);
         }
@@ -99,8 +98,8 @@ public class SqlIdentifierFormatterVisitor extends SqlBasicVisitor<Void> {
     public Void visit(SqlCall call) {
         if (call instanceof SqlBasicCall
                 && (call.getOperator() instanceof SqlAsOperator || call.getOperator() instanceof SqlAggFunction)) {
-                throw new KylinException(ServerErrorCode.INVALID_PARAMETER,
-                        String.format("Unsupported SqlNode %s in expression %s", call, expr));
+            throw new KylinException(ServerErrorCode.INVALID_PARAMETER,
+                    String.format(Locale.ROOT, "Unsupported SqlNode %s in expression %s", call, expr));
         }
         return super.visit(call);
     }

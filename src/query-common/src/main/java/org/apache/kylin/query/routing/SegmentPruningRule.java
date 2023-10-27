@@ -222,14 +222,17 @@ public class SegmentPruningRule extends PruningRule {
                 }
 
             } catch (InterruptedException ie) {
-                log.error(String.format("Interrupted on pruning segments from %s!", dataSegment.toString()), ie);
+                log.error(
+                        String.format(Locale.ROOT, "Interrupted on pruning segments from %s!", dataSegment.toString()),
+                        ie);
                 Thread.currentThread().interrupt();
                 throw new KylinRuntimeException(ie);
             } catch (UserStopQueryException | KylinTimeoutException e) {
-                log.error(String.format("Stop pruning segments from %s!", dataSegment.toString()), e);
+                log.error(String.format(Locale.ROOT, "Stop pruning segments from %s!", dataSegment.toString()), e);
                 throw e;
             } catch (Exception ex) {
-                log.warn(String.format("To skip the exception on pruning segment %s!", dataSegment.toString()), ex);
+                log.warn(String.format(Locale.ROOT, "To skip the exception on pruning segment %s!",
+                        dataSegment.toString()), ex);
                 selectedSegments.add(dataSegment);
             }
         }

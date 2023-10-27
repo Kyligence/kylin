@@ -186,7 +186,7 @@ public class SystemService extends BasicService {
                             StringUtils.join(arguments, " "));
                     commandExecutor.execute(finalCommand, patternedLogger, uuid);
                 } else {
-                    val packageType = diagPackageType.toString().toLowerCase();
+                    val packageType = diagPackageType.toString().toLowerCase(Locale.ROOT);
                     new DiagK8sTool(headers, packageType).execute(arguments);
                 }
                 DiagInfo diagInfo = diagMap.getIfPresent(uuid);

@@ -21,6 +21,7 @@ package org.apache.kylin.query.routing;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -183,11 +184,13 @@ public class PartitionPruningRule extends PruningRule {
                     continue;
                 }
             } catch (InterruptedException ie) {
-                log.error(String.format("Interrupted on pruning partitions from %s!", partition.toString()), ie);
+                log.error(
+                        String.format(Locale.ROOT, "Interrupted on pruning partitions from %s!", partition.toString()),
+                        ie);
                 Thread.currentThread().interrupt();
                 throw new KylinRuntimeException(ie);
             } catch (UserStopQueryException | KylinTimeoutException e) {
-                log.error(String.format("Stop pruning partitions from %s!", partition.toString()), e);
+                log.error(String.format(Locale.ROOT, "Stop pruning partitions from %s!", partition.toString()), e);
                 throw e;
             } catch (Exception ex) {
                 log.warn("Multi-partition pruning error: ", ex);

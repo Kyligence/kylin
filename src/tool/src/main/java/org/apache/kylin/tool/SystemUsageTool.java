@@ -77,7 +77,8 @@ public class SystemUsageTool {
         List<String> lines = Lists.newArrayList();
         lines.add(
                 "date,active_users,number_of_queries,number_of_successful_queries,average_time_spent_seconds,number_of_queries_within_1s,number_of_queries_within_3s,number_of_queries_within_5s,number_of_queries_within_10s,number_of_queries_within_15s");
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd",
+                Locale.getDefault(Locale.Category.FORMAT));
         queryDailyStatisticList.forEach(e -> lines.add(String.format(Locale.ROOT, "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
                 simpleDateFormat.format(new Date(e.getQueryDay())), e.getActiveUserNum(), e.getTotalNum(),
                 e.getSucceedNum(), divide(e.getTotalDuration(), e.getSucceedNum() * 1000.0, "%.1f"), e.getLt1sNum(),
@@ -93,7 +94,8 @@ public class SystemUsageTool {
                     ExecutableManager.class);
             allJobs.addAll(executableManager.getAllJobs(startTime, endTime));
         });
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd",
+                Locale.getDefault(Locale.Category.FORMAT));
         Map<String, List<ExecutablePO>> dailyBuildExecutableMap = allJobs.stream()
                 .filter(e -> JobTypeEnum.Category.BUILD.equals(e.getJobType().getCategory()))
                 .collect(Collectors.groupingBy(e -> simpleDateFormat.format(new Date(e.getLastModified()))));
@@ -121,7 +123,7 @@ public class SystemUsageTool {
     }
 
     public static String divide(double molecular, double denominator, String format) {
-        return String.format(format, denominator == 0 ? 0.0 : molecular / denominator);
+        return String.format(Locale.ROOT, format, denominator == 0 ? 0.0 : molecular / denominator);
     }
 
     private static void baseInfo(File exportDir) throws IOException {

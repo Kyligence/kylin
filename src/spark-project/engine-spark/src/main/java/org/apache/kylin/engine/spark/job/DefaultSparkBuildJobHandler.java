@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -188,9 +189,11 @@ public class DefaultSparkBuildJobHandler implements ISparkJobHandler {
             return;
         }
 
-        String msg = String.format("Not allowed to specify injected command through "
-                + "java options (like: %s). Vulnerabilities would allow attackers to trigger "
-                + "such a crash or crippling of the service.", String.join(", ", illegals));
+        String msg = String.format(Locale.ROOT,
+                "Not allowed to specify injected command through "
+                        + "java options (like: %s). Vulnerabilities would allow attackers to trigger "
+                        + "such a crash or crippling of the service.",
+                String.join(", ", illegals));
         throw new IllegalArgumentException(msg);
     }
 

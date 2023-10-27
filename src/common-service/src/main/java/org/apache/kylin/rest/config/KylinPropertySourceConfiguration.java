@@ -21,6 +21,7 @@ import java.util.Properties;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
+import org.apache.kylin.common.util.Unsafe;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -68,7 +69,7 @@ public class KylinPropertySourceConfiguration implements EnvironmentPostProcesso
         for (String propertyName : properties.stringPropertyNames()) {
             if (propertyName.startsWith(SYSTEM_PROPERTY_PREFIX)) {
                 String propertyValue = properties.getProperty(propertyName);
-                System.setProperty(propertyName.replaceFirst(SYSTEM_PROPERTY_PREFIX, ""), propertyValue);
+                Unsafe.setProperty(propertyName.replaceFirst(SYSTEM_PROPERTY_PREFIX, ""), propertyValue);
             }
         }
     }

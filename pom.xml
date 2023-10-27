@@ -3494,11 +3494,28 @@
                             **/org/apache/spark/sql/execution/columnar/ColumnarCachedBatchSerializer$FromCachedBatch.class
                         </exclude>
                         <exclude>**/org/apache/kylin/tool/kerberos/DelegationTokenManager.class</exclude>
+                        <exclude>**/org/apache/kylin/rest/controller/BaseController.class</exclude>
+                        <exclude>**/org/apache/kylin/rest/controller/NBasicController.class</exclude>
+                        <exclude>**/org/apache/kylin/rest/QueryNodeFilter.class</exclude>
+                        <exclude>**/org/apache/kylin/rest/BaseFilter.class</exclude>
+                        <exclude>**/org/apache/kylin/rest/util/HttpUtil.class</exclude>
+                        <exclude>**/org/apache/kylin/rest/util/SparkUIUtil.class</exclude>
+                        <exclude>**/org/apache/kylin/rest/filter/SegmentsRequestFilter.class</exclude>
+                        <exclude>**/org/apache/kylin/rest/interceptor/ReloadAuthoritiesInterceptor.class</exclude>
+                        <exclude>**/org/apache/kylin/spark/common/logging/AbstractHdfsLogAppender.class</exclude>
                     </excludes>
                     <signaturesFiles>
                         <signaturesFile>${user.dir}/dev-support/forbidden-signatures.txt</signaturesFile>
                     </signaturesFiles>
                 </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                            <!--<goal>testCheck</goal>-->
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

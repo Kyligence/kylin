@@ -37,6 +37,9 @@ import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.measure.MeasureTypeFactory;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
@@ -46,9 +49,6 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -215,7 +215,7 @@ public class ComputedColumnDesc implements Serializable {
     }
 
     public String getUniqueContent() {
-        return String.format("%s_%s", innerExpression, tableIdentity);
+        return String.format(Locale.ROOT, "%s_%s", innerExpression, tableIdentity);
     }
 
     public boolean isAutoCC() {

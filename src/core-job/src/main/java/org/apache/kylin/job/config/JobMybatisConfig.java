@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
@@ -76,7 +77,7 @@ public class JobMybatisConfig implements InitializingBean {
         dataSource = JdbcDataSource.getDataSource(props);
 
         String keIdentified = url.getIdentifier();
-        if (StringUtils.isEmpty(url.getScheme())){
+        if (StringUtils.isEmpty(url.getScheme())) {
             log.info("metadata from file");
             keIdentified = "file";
         }
@@ -109,7 +110,8 @@ public class JobMybatisConfig implements InitializingBean {
                 jobLockFile = "script/schema_job_lock_h2.sql";
                 database = Database.H2.databaseId;
             } else {
-                String errorMsg = String.format("driver class name = %1, should add support", driverClassName);
+                String errorMsg = String.format(Locale.ROOT, "driver class name = %s, should add support",
+                        driverClassName);
                 log.error(errorMsg);
                 throw new RuntimeException(errorMsg);
             }
@@ -143,16 +145,13 @@ public class JobMybatisConfig implements InitializingBean {
     }
 
     enum Database {
-        MYSQL("mysql"),
-        POSTGRESQL("postgresql"),
-        H2("h2");
+        MYSQL("mysql"), POSTGRESQL("postgresql"), H2("h2");
 
         String databaseId;
 
         Database(String databaseId) {
             this.databaseId = databaseId;
         }
-
 
     }
 }

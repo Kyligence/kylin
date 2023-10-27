@@ -114,7 +114,7 @@ public class StreamingTableService extends TableService {
     public void checkColumns(StreamingRequest streamingRequest) {
         String batchTableName = streamingRequest.getKafkaConfig().getBatchTable();
         String project = streamingRequest.getProject();
-        if (!org.apache.commons.lang.StringUtils.isEmpty(batchTableName)) {
+        if (!StringUtils.isEmpty(batchTableName)) {
             TableDesc batchTableDesc = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
                     .getTableDesc(batchTableName);
             if (!checkColumnsMatch(batchTableDesc.getColumns(), streamingRequest.getTableDesc().getColumns())) {

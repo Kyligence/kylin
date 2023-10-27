@@ -18,14 +18,14 @@
 
 package org.apache.kylin.engine.spark.job.stage
 
+import java.util.concurrent.TimeUnit
+
+import org.apache.commons.lang3.StringUtils
 import org.apache.kylin.engine.spark.application.SparkApplication
 import org.apache.kylin.engine.spark.job.KylinBuildEnv
 import org.apache.kylin.metadata.cube.model.NDataSegment
-import org.apache.commons.lang.StringUtils
 import org.apache.spark.application.NoRetryException
 import org.apache.spark.utils.ResourceUtils
-
-import java.util.concurrent.TimeUnit
 
 class WaiteForResource(jobContext: SparkApplication) extends StageExec {
 

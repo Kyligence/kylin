@@ -1191,8 +1191,8 @@ public class SecondStorageService extends BasicService implements SecondStorageU
         isProjectAdmin(project);
         logger.info("Start to modify second storage low cardinality on model {}.", model);
         if (!SecondStorageUtil.isProjectEnable(project) || !SecondStorageUtil.isModelEnable(project, model)) {
-            throw new KylinException(INVALID_PARAMETER,
-                    String.format("The model does not have tiered storage enabled on project %s.", project));
+            throw new KylinException(INVALID_PARAMETER, String.format(Locale.ROOT,
+                    "The model does not have tiered storage enabled on project %s.", project));
         }
         SecondStorageUtil.validateProjectLock(project,
                 Arrays.asList(LockTypeEnum.LOAD.name(), LockTypeEnum.ALL.name()));
@@ -1212,16 +1212,17 @@ public class SecondStorageService extends BasicService implements SecondStorageU
                 }
             });
             if (StringUtils.isEmpty(colPrefix.get()))
-                throw new KylinException(INVALID_PARAMETER,
-                        String.format("There is no column %s in model %s", column, df.getModel().getAlias()));
+                throw new KylinException(INVALID_PARAMETER, String.format(Locale.ROOT,
+                        "There is no column %s in model %s", column, df.getModel().getAlias()));
 
             val tablePlanManager = SecondStorageUtil.tablePlanManager(config, project);
             TablePlan tablePlan = tablePlanManager.get().get(model).get();
             TableEntity tableEntity = tablePlan.getEntity(SecondStorageUtil.getBaseIndex(df).getId()).orElse(null);
+            assert tableEntity != null;
             if (tableEntity.getSecondaryIndexColumns()
-                    .contains(Integer.valueOf(ColumnMapping.secondStorageColumnToKapColumn(colPrefix.get()))))
+                    .contains(Integer.parseInt(ColumnMapping.secondStorageColumnToKapColumn(colPrefix.get()))))
                 throw new KylinException(INVALID_PARAMETER,
-                        String.format("The column %s is Secondary Index Column.", column));
+                        String.format(Locale.ROOT, "The column %s is Secondary Index Column.", column));
 
             val destTableName = NameUtil.getTable(df, layout.getId());
             queryOperator.modifyColumnByCardinality(database, destTableName, colPrefix.get(), datatype);

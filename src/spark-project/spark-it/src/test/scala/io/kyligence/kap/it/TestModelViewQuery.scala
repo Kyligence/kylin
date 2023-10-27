@@ -29,7 +29,7 @@ import java.sql.SQLException
 import java.util.TimeZone
 
 import org.apache.commons.io.IOUtils
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.common.persistence.{JsonSerializer, RootPersistentEntity}
 import org.apache.kylin.engine.spark.utils.LogEx

@@ -1065,7 +1065,7 @@ public class ModelService extends AbstractModelService
         }
         val segmentIds = Sets.newHashSet(job.getSegmentIds());
         val segs = dataflow == null ? Segments.empty() : dataflow.getSegments(segmentIds);
-        List<AbstractExecutable> runningJob = job.getStatus().equals(ExecutableState.RUNNING) ? Lists.newArrayList(job)
+        List<AbstractExecutable> runningJob = job.getStatus() == ExecutableState.RUNNING ? Lists.newArrayList(job)
                 : Lists.newArrayList();
         return segs.stream().map(segment -> new NDataSegmentResponse(dataflow, segment, runningJob))
                 .collect(Collectors.toList());

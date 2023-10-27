@@ -709,8 +709,8 @@ public class KylinLogTool {
         for (String serverId : NacosClusterManager.SERVER_IDS) {
             logger.info("Extract logs for {}", serverId);
             tags.put("component", serverId);
-            String logUrl = String.format("/log/download?query=%s&start=%d&end=%d", mapsToUrlStr(tags), startTimeInSec,
-                    endTImeInSec);
+            String logUrl = String.format(Locale.ROOT, "/log/download?query=%s&start=%d&end=%d", mapsToUrlStr(tags),
+                    startTimeInSec, endTImeInSec);
             HttpResponse response = restClient.forwardGet(new HttpHeaders(), logUrl, false);
             saveResponseToFile(response, new File(destLogDir, serverId + ".kylin.log.zip"));
         }
@@ -721,8 +721,8 @@ public class KylinLogTool {
         for (String instance : instances) {
             logger.info("Extract logs for {}", instance);
             tags.put("instance", instance);
-            String logUrl = String.format("/log/download?query=%s&start=%d&end=%d", mapsToUrlStr(tags), startTimeInSec,
-                    endTImeInSec);
+            String logUrl = String.format(Locale.ROOT, "/log/download?query=%s&start=%d&end=%d", mapsToUrlStr(tags),
+                    startTimeInSec, endTImeInSec);
             HttpResponse response = restClient.forwardGet(new HttpHeaders(), logUrl, false);
             saveResponseToFile(response, new File(destLogDir, instance + ".kylin.log.zip"));
         }

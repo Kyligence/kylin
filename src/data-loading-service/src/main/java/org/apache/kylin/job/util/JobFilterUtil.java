@@ -31,7 +31,7 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
@@ -52,8 +52,7 @@ import org.sparkproject.guava.collect.Lists;
 public class JobFilterUtil {
 
     public static JobMapperFilter getJobMapperFilter(final JobFilter jobFilter, int offset, int limit,
-                                                     ModelService modelService, TableExtService tableExtService,
-                                                     ProjectService projectService) {
+            ModelService modelService, TableExtService tableExtService, ProjectService projectService) {
         Date queryStartTime = getQueryStartTime(jobFilter.getTimeFilter());
 
         Set<String> subjects = new HashSet<>();
@@ -67,8 +66,9 @@ public class JobFilterUtil {
                     jobFilter.getProject(), jobFilter.isExactMatch()));
             convertKeyToSubjects.addAll(tableExtService.getTableNamesByFuzzyKey(jobFilter.getProject(),
                     jobFilter.getKey(), jobFilter.isExactMatch()));
-            convertKeyToSubjects.addAll(projectService.getProjectsFilterByExactMatchAndPermission(jobFilter.getKey(),
-                    jobFilter.isExactMatch(), AclPermissionEnum.READ)
+            convertKeyToSubjects.addAll(projectService
+                    .getProjectsFilterByExactMatchAndPermission(jobFilter.getKey(), jobFilter.isExactMatch(),
+                            AclPermissionEnum.READ)
                     .stream().map(ProjectInstance::getName).collect(Collectors.toList()));
             subjects.addAll(convertKeyToSubjects);
         }

@@ -18,6 +18,12 @@
 
 package org.apache.spark.sql
 
+import java.io._
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import java.util.UUID
+
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.kylin.common.util.{AddressUtil, HadoopUtil, Unsafe}
@@ -36,10 +42,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.springframework.expression.common.TemplateParserContext
 import org.springframework.expression.spel.standard.SpelExpressionParser
 
-import java.io._
-import java.net.URI
-import java.nio.file.Paths
-import java.util.UUID
 import scala.collection.JavaConverters._
 
 class KylinSession(
@@ -242,7 +244,7 @@ object KylinSession extends Logging {
         sparkConf.set("hive.metastore.sasl.enabled", "true")
       }
 
-      kapConfig.getSparkConf.asScala.foreach{
+      kapConfig.getSparkConf.asScala.foreach {
         case (k, v) =>
           sparkConf.set(k, v)
       }
@@ -464,9 +466,11 @@ object KylinSession extends Logging {
     params.put("vipTaskPoolMinShare", Math.pow(sparkSlots, 2).toInt + 1)
 
     val confTemplateFile = new File(fairSchedulerConfPath + ".template")
-    val fileReader = new BufferedReader(new FileReader(confTemplateFile))
+    val fileReader = new BufferedReader(
+      new InputStreamReader(Files.newInputStream(confTemplateFile.toPath), StandardCharsets.UTF_8))
     val confFile = new File(fairSchedulerConfPath)
-    val fileWriter = new BufferedWriter(new FileWriter(confFile))
+    val fileWriter = new BufferedWriter(
+      new OutputStreamWriter(Files.newOutputStream(confFile.toPath), StandardCharsets.UTF_8))
     var templateLine: String = null
     var processedLine: String = null
     val parser = new SpelExpressionParser()

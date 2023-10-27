@@ -20,13 +20,12 @@ package org.apache.kylin.tool;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Objects;
@@ -78,7 +77,7 @@ public class QueryHistoryOffsetTool extends CancelableTask {
         List<QueryHistoryIdOffset> offsets = Lists.newArrayList();
         QueryHistoryIdOffsetManager manager = QueryHistoryIdOffsetManager.getInstance(project);
         try (ZipInputStream zis = new ZipInputStream(fs.open(path));
-                BufferedReader br = new BufferedReader(new InputStreamReader(zis))) {
+                BufferedReader br = new BufferedReader(new InputStreamReader(zis, StandardCharsets.UTF_8))) {
             while (zis.getNextEntry() != null) {
                 String value = br.readLine();
                 QueryHistoryIdOffset offset = JsonUtil.readValue(value, QueryHistoryIdOffset.class);
@@ -148,8 +147,11 @@ public class QueryHistoryOffsetTool extends CancelableTask {
         QueryHistoryIdOffsetManager manager = QueryHistoryIdOffsetManager.getInstance(project);
         for (QueryHistoryIdOffset.OffsetType type : QueryHistoryIdOffsetManager.ALL_OFFSET_TYPE) {
             QueryHistoryIdOffset offset = manager.get(type);
-            try (FileWriter fw = new FileWriter(extractDir + offset.getId() + "_" + type.getName() + ".json")) {
-                fw.write(JsonUtil.writeValueAsString(offset));
+            String pathname = extractDir + offset.getId() + "_" + type.getName() + ".json";
+            try (BufferedWriter bf = new BufferedWriter(new OutputStreamWriter(
+                    Files.newOutputStream(new File(pathname).toPath()), StandardCharsets.UTF_8))) {
+                bf.write(JsonUtil.writeValueAsString(offset));
+                bf.flush();
             }
         }
     }
@@ -195,7 +197,8 @@ public class QueryHistoryOffsetTool extends CancelableTask {
         List<QueryHistoryIdOffset> offsets = Lists.newArrayList();
         QueryHistoryIdOffsetManager manager = QueryHistoryIdOffsetManager.getInstance(project);
         for (File jsonFile : Objects.requireNonNull(jsonFiles)) {
-            try (BufferedReader br = new BufferedReader(new FileReader(jsonFile))) {
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(Files.newInputStream(jsonFile.toPath()), StandardCharsets.UTF_8))) {
                 String value = br.readLine();
                 QueryHistoryIdOffset offset = JsonUtil.readValue(value, QueryHistoryIdOffset.class);
                 offset.setProject(project);

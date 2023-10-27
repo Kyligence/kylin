@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -135,8 +136,8 @@ public class SparkDDLService extends BasicService {
     public List<LogicalViewResponse> listAll(String project, String tableName) {
         List<LogicalView> logicalViews = LogicalViewManager.getInstance(KylinConfig.getInstanceFromEnv()).list();
         if (StringUtils.isNotBlank(tableName)) {
-            logicalViews = logicalViews.stream()
-                    .filter(table -> table.getTableName().toLowerCase().contains(tableName.toLowerCase()))
+            logicalViews = logicalViews.stream().filter(
+                    table -> table.getTableName().toLowerCase(Locale.ROOT).contains(tableName.toLowerCase(Locale.ROOT)))
                     .collect(Collectors.toList());
         }
         List<LogicalViewResponse> viewResponses = Lists.newArrayList();

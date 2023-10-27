@@ -92,7 +92,7 @@ public class ResourcePathParser {
 
     public static List<String> transformPath(String originPath, ModuleLockEnum moduleLockEnum,
             ResourcePathParser.ResourcePath resourcePath) {
-        if (moduleLockEnum.equals(DEFAULT) || Objects.isNull(resourcePath)) {
+        if (moduleLockEnum == DEFAULT || Objects.isNull(resourcePath)) {
             // can not parse module
             return Collections.singletonList(originPath);
         }

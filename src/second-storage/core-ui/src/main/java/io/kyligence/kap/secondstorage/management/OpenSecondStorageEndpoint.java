@@ -25,6 +25,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_EMP
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
@@ -185,7 +186,7 @@ public class OpenSecondStorageEndpoint extends NBasicController {
         checkDatatype(request.getDatatype());
         if (StringUtils.isEmpty(request.getColumn())) {
             throw new KylinException(INVALID_PARAMETER,
-                    String.format(MsgPicker.getMsg().getParameterEmpty(), "column"));
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getParameterEmpty(), "column"));
         }
         secondStorageService.modifyColumn(projectName, model.getId(), request.getColumn(), request.getDatatype());
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, null, "");
@@ -194,11 +195,10 @@ public class OpenSecondStorageEndpoint extends NBasicController {
     public void checkDatatype(String datatype) {
         if (StringUtils.isEmpty(datatype)) {
             throw new KylinException(INVALID_PARAMETER,
-                    String.format(MsgPicker.getMsg().getParameterEmpty(), "datatype"));
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getParameterEmpty(), "datatype"));
         }
         if (!NULLABLE_STRING.equals(datatype) && !LOW_CARDINALITY_STRING.equals(datatype)) {
-            throw new KylinException(INVALID_PARAMETER,
-                    String.format(MsgPicker.getMsg().getInvalidLowCardinalityDataType()));
+            throw new KylinException(INVALID_PARAMETER, MsgPicker.getMsg().getInvalidLowCardinalityDataType());
         }
     }
 }

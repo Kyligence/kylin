@@ -113,9 +113,8 @@ public class PasswordPlaceholderConfigurer extends PropertyPlaceholderConfigurer
             try {
                 return EncryptUtil.decrypt(props.getProperty(placeholder));
             } catch (Exception e) {
-                throw new PasswordDecryptionException(
-                        String.format("[%s] Encrypted configuration item decryption failed, please check for errors",
-                                placeholder),
+                throw new PasswordDecryptionException(String.format(Locale.ROOT,
+                        "[%s] Encrypted configuration item decryption failed, please check for errors", placeholder),
                         e.getCause());
             }
         } else {

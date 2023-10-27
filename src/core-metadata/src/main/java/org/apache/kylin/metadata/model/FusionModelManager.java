@@ -21,6 +21,7 @@ package org.apache.kylin.metadata.model;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
@@ -74,7 +75,7 @@ public class FusionModelManager {
     }
 
     public FusionModel getFusionModel(String modelId) {
-        if (org.apache.commons.lang.StringUtils.isEmpty(modelId)) {
+        if (StringUtils.isEmpty(modelId)) {
             return null;
         }
         return crud.get(modelId);

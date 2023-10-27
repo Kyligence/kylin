@@ -400,7 +400,7 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
     protected List<AbstractExecutable> getOtherPipelineRunningStep() {
         val parent = getParent();
         val previousStepId = getPreviousStep();
-        if (parent instanceof DefaultExecutable && parent.getJobSchedulerMode().equals(JobSchedulerModeEnum.DAG)) {
+        if (parent instanceof DefaultExecutable && parent.getJobSchedulerMode() == JobSchedulerModeEnum.DAG) {
             val otherPipelineTasks = getOtherPipelineTasks((DefaultExecutable) parent, previousStepId);
             val dagExecutablesMap = ((DefaultExecutable) parent).getTasks().stream()
                     .collect(Collectors.toMap(AbstractExecutable::getId, task -> task));
@@ -419,7 +419,7 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
 
     protected List<AbstractExecutable> getStepOrNextStepsWithStatus(AbstractExecutable executable,
             Map<String, AbstractExecutable> dagExecutablesMap, ExecutableState state) {
-        if (executable.getStatus().equals(state)) {
+        if (executable.getStatus() == state) {
             return Lists.newArrayList(executable);
         }
         return executable.getNextSteps().stream().map(dagExecutablesMap::get)
@@ -626,7 +626,7 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
     }
 
     public void checkParentJobStatus() {
-        if (!getParent().getStatus().equals(ExecutableState.RUNNING)) {
+        if (getParent().getStatus() != ExecutableState.RUNNING) {
             throw new IllegalStateException("invalid parent job state, parent job:" + getParent().getDisplayName()
                     + ", state:" + getParent().getStatus());
         }
@@ -691,7 +691,7 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
     // just using to get job duration in get job list
     public long getDurationFromStepOrStageDurationSum(ExecutablePO executablePO) {
         var duration = getDuration(executablePO);
-        if (this instanceof DagExecutable && getJobSchedulerMode().equals(JobSchedulerModeEnum.DAG)) {
+        if (this instanceof DagExecutable && getJobSchedulerMode() == JobSchedulerModeEnum.DAG) {
             duration = calculateDagExecutableDuration(executablePO);
         } else if (this instanceof ChainedExecutable) {
             duration = calculateChainedExecutableDuration(executablePO);

@@ -332,14 +332,11 @@ public class ExecutableManager {
         }
 
     }
-    
+
     private boolean hasRunningJob(String jobId) {
         JobContext jobContext = JobContextUtil.getJobContext(config);
         JdbcJobScheduler jobScheduler = jobContext.getJobScheduler();
-        if (null != jobScheduler && jobScheduler.getRunningJob().containsKey(jobId)) {
-            return true;
-        }
-        return false;
+        return null != jobScheduler && jobScheduler.getRunningJob().containsKey(jobId);
     }
 
     public static String extractJobId(String taskOrJobId) {
@@ -662,8 +659,8 @@ public class ExecutableManager {
             ExecutableOutputPO jobOutput = job.getOutput();
             val subTasks = job.getTasks();
             if (null != subTasks) {
-                val errorTaskAndNotFailedStepIdTaskCount = subTasks.stream().filter(
-                        task -> ExecutableState.valueOf(task.getOutput().getStatus()).equals(ExecutableState.ERROR))
+                val errorTaskAndNotFailedStepIdTaskCount = subTasks.stream()
+                        .filter(task -> ExecutableState.valueOf(task.getOutput().getStatus()) == ExecutableState.ERROR)
                         .filter(task -> !StringUtils.startsWith(failedStepId, task.getId())).count();
                 if (errorTaskAndNotFailedStepIdTaskCount != 0) {
                     return false;
@@ -697,7 +694,7 @@ public class ExecutableManager {
 
     public void cancelRemoteJob(ExecutablePO executablePO) {
         if (executablePO.getOutput().getStatus().equalsIgnoreCase(ExecutableState.RUNNING.toString())) {
-            // when start or restart KE, will resumeAllRunningJobs, 
+            // when start or restart KE, will resumeAllRunningJobs,
             // don't need to interrupt job thread, so job id is null
             //TODO KE-37319
             // cancelJob(executablePO, null);

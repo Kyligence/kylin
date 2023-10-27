@@ -18,16 +18,18 @@
 
 package io.kyligence.kap.clickhouse.ddl;
 
+import java.util.Locale;
+
 public enum TableSetting {
     NON_REPLICATED_DEDUPLICATION_WINDOW {
         public String toSql(Object value) {
-            return this.name().toLowerCase() + "=" + value;
+            return this.name().toLowerCase(Locale.ROOT) + "=" + value;
         }
     },
 
     ALLOW_NULLABLE_KEY {
         public String toSql(Object value) {
-            return this.name().toLowerCase() + "=" + value;
+            return this.name().toLowerCase(Locale.ROOT) + "=" + value;
         }
     };
 

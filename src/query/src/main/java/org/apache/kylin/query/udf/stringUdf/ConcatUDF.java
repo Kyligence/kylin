@@ -19,6 +19,7 @@
 package org.apache.kylin.query.udf.stringUdf;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.apache.calcite.adapter.enumerable.CallImplementor;
@@ -53,7 +54,7 @@ public class ConcatUDF implements UdfDef {
             OperandTypes.repeat(SqlOperandCountRanges.from(0), OperandTypes.ANY), null,
             SqlFunctionCategory.USER_DEFINED_FUNCTION);
 
-    public static final CallImplementor IMPLEMENTOR = new UdfMethodNameImplementor(FUNC_NAME.toLowerCase(),
+    public static final CallImplementor IMPLEMENTOR = new UdfMethodNameImplementor(FUNC_NAME.toLowerCase(Locale.ROOT),
             ConcatUDF.class);
 
     public static String concat(Object... args) {

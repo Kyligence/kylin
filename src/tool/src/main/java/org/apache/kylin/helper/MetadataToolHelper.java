@@ -400,7 +400,7 @@ public class MetadataToolHelper extends CancelableTask {
             String errorMsg = duplicateUuidModelByProject.entrySet().stream()
                     .map(m -> "[" + m.getKey() + "]:" + String.join(",", m.getValue()))
                     .collect(Collectors.joining(";"));
-            String info = String.format(
+            String info = String.format(Locale.ROOT,
                     "[UNEXPECTED_THINGS_HAPPENED] There will be models with the same name after recovery, please rename these models first:[project]:models: %s ",
                     errorMsg);
             logger.error(info);

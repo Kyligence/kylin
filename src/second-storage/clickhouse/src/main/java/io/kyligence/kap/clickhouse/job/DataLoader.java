@@ -178,7 +178,7 @@ public class DataLoader {
                     String partitionColName = loadInfo.model.getPartitionDesc().getPartitionDateColumn();
                     val dateCol = loadInfo.model.getAllNamedColumns().stream()
                             .filter(column -> column.getAliasDotColumn().equals(partitionColName)
-                                    && NDataModel.ColumnStatus.DIMENSION.equals(column.getStatus()))
+                                    && NDataModel.ColumnStatus.DIMENSION == column.getStatus())
                             .findFirst().orElseThrow(
                                     () -> new IllegalStateException("can't find partition column " + partitionColName));
                     Preconditions.checkState(loadInfo.getLayout().getColumns().stream()

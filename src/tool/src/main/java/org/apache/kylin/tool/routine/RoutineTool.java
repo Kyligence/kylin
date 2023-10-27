@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.OptionsHelper;
@@ -106,7 +106,6 @@ public class RoutineTool extends ExecutableApplication {
             return instances.stream().map(ProjectInstance::getName).collect(Collectors.toList());
         }
     }
-
 
     @Override
     protected void execute(OptionsHelper optionsHelper) throws Exception {
@@ -200,6 +199,5 @@ public class RoutineTool extends ExecutableApplication {
                         + (projects.length > 0 ? " projects: " + optionsHelper.getOptionValue(OPTION_PROJECTS) : "")
                         + " Request FileSystem rate: " + requestFSRate + " Retry Times: " + retryTimes);
     }
-
 
 }

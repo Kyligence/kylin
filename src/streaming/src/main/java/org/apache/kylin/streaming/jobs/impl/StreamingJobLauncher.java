@@ -335,7 +335,7 @@ public class StreamingJobLauncher extends AbstractSparkJobLauncher {
 
     private void rewriteKafkaJaasConf(StringBuilder sb, String existOptStr, String value) {
         KapConfig kapConfig = KapConfig.getInstanceFromEnv();
-        if (!kapConfig.isKafkaJaasEnabled() || !jobType.equals(JobTypeEnum.STREAMING_BUILD)
+        if (!kapConfig.isKafkaJaasEnabled() || jobType != JobTypeEnum.STREAMING_BUILD
                 || existOptStr.contains(JAASCONF_PROPS)) {
             return;
         }
@@ -354,7 +354,7 @@ public class StreamingJobLauncher extends AbstractSparkJobLauncher {
 
     private void addParserJar(SparkLauncher sparkLauncher) {
         String parserName = getParserName();
-        if (jobType.equals(JobTypeEnum.STREAMING_BUILD) && !StringUtils.equals(DEFAULT_PARSER_NAME, parserName)) {
+        if (jobType == JobTypeEnum.STREAMING_BUILD && !StringUtils.equals(DEFAULT_PARSER_NAME, parserName)) {
             DataParserInfo parserInfo = getDataParser(parserName);
             String jarPath = getParserJarPath(parserInfo);
             sparkLauncher.addJar(jarPath);
@@ -372,10 +372,10 @@ public class StreamingJobLauncher extends AbstractSparkJobLauncher {
             sparkLauncher.setConf(SPARK_KERBEROS_KEYTAB, kapConfig.getKerberosKeytabPath());
             sparkLauncher.setConf(SPARK_KERBEROS_PRINCIPAL, kapConfig.getKerberosPrincipal());
         }
-        if (kapConfig.isKafkaJaasEnabled() && jobType.equals(JobTypeEnum.STREAMING_BUILD)) {
+        if (kapConfig.isKafkaJaasEnabled() && jobType == JobTypeEnum.STREAMING_BUILD) {
             String keyTabAbsPath = StreamingJobUtils.getJaasKeyTabAbsPath();
             if (StringUtils.isNotEmpty(keyTabAbsPath)) {
-                // upload keytab in kafka jaas 
+                // upload keytab in kafka jaas
                 sparkLauncher.addFile(keyTabAbsPath);
             }
         }

@@ -18,6 +18,7 @@
 
 package io.kyligence.kap.metadata.recommendation.util;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -137,7 +138,7 @@ public class RawRecUtil {
     }
 
     public static String computeMD5(String content) {
-        return DigestUtils.md5DigestAsHex(content.getBytes());
+        return DigestUtils.md5DigestAsHex(content.getBytes(Charset.defaultCharset()));
     }
 
     public static Map<String, List<String>> uniqueFlagsToMd5Map(Set<String> uniqueFlags) {
@@ -154,7 +155,7 @@ public class RawRecUtil {
     }
 
     public static Pair<String, RawRecItem> getRawRecItemFromMap(String md5, String content,
-                                                                Map<String, List<String>> md5ToFlags, Map<String, RawRecItem> layoutRecommendations) {
+            Map<String, List<String>> md5ToFlags, Map<String, RawRecItem> layoutRecommendations) {
         List<String> flags = md5ToFlags.getOrDefault(md5, new ArrayList<>());
         int maxItemId = 0;
         for (String flag : flags) {
@@ -167,7 +168,7 @@ public class RawRecUtil {
         if (!flags.contains(md5)) {
             return Pair.newPair(md5, null);
         } else {
-            String uniqueFlag = String.format("%s_%d", md5, maxItemId);
+            String uniqueFlag = String.format(Locale.ROOT, "%s_%d", md5, maxItemId);
             return Pair.newPair(uniqueFlag, null);
         }
     }

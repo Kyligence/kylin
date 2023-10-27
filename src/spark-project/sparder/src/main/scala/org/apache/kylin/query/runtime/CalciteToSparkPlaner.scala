@@ -29,8 +29,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.{DataFrame, SparderEnv, SparkInternalAgent}
 
 class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with LogEx {
-  private val stack = new util.Stack[LogicalPlan]()
-  private val setOpStack = new util.Stack[Int]()
+  private val stack = new util.ArrayDeque[LogicalPlan]()
+  private val setOpStack = new util.ArrayDeque[Int]()
   private var unionLayer = 0
 
   // clear cache before any op
@@ -41,47 +41,47 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
       unionLayer = unionLayer + 1
     }
     if (node.isInstanceOf[OlapUnionRel] || node.isInstanceOf[OlapMinusRel]) {
-      setOpStack.push(stack.size())
+      setOpStack.offerLast(stack.size())
     }
     // skip non runtime joins children
     // cases to skip children visit
-    // 1. current node is a KapJoinRel and is not a runtime join
-    // 2. current node is a KapNonEquiJoinRel and is not a runtime join
+    // 1. current node is a OlapJoinRel and is not a runtime join
+    // 2. current node is a OlapNonEquiJoinRel and is not a runtime join
     if (!(node.isInstanceOf[OlapJoinRel] && !node.asInstanceOf[OlapJoinRel].isRuntimeJoin) &&
       !(node.isInstanceOf[OlapNonEquiJoinRel] && !node.asInstanceOf[OlapNonEquiJoinRel].isRuntimeJoin)) {
       node.childrenAccept(this)
     }
-    stack.push(node match {
+    stack.offerLast(node match {
       case rel: OlapTableScan => convertTableScan(rel)
       case rel: OlapFilterRel =>
         logTime("filter") {
-          FilterPlan.filter(stack.pop(), rel, dataContext)
+          FilterPlan.filter(stack.pollLast(), rel, dataContext)
         }
       case rel: OlapProjectRel =>
         logTime("project") {
-          ProjectPlan.select(stack.pop(), rel, dataContext)
+          ProjectPlan.select(stack.pollLast(), rel, dataContext)
         }
       case rel: OlapLimitRel =>
         logTime("limit") {
-          LimitPlan.limit(stack.pop(), rel, dataContext)
+          LimitPlan.limit(stack.pollLast(), rel, dataContext)
         }
       case rel: OlapSortRel =>
         logTime("sort") {
-          SortPlan.sort(stack.pop(), rel, dataContext)
+          SortPlan.sort(stack.pollLast(), rel, dataContext)
         }
       case rel: OlapWindowRel =>
         logTime("window") {
-          WindowPlan.window(stack.pop(), rel, dataContext)
+          WindowPlan.window(stack.pollLast(), rel, dataContext)
         }
       case rel: OlapAggregateRel =>
         logTime("agg") {
-          AggregatePlan.agg(stack.pop(), rel)
+          AggregatePlan.agg(stack.pollLast(), rel)
         }
       case rel: OlapJoinRel => convertJoinRel(rel)
       case rel: OlapNonEquiJoinRel => convertNonEquiJoinRel(rel)
       case rel: OlapUnionRel =>
-        val size = setOpStack.pop()
-        var unionBlocks = Range(0, stack.size() - size).map(a => stack.pop())
+        val size = setOpStack.pollLast()
+        var unionBlocks = Range(0, stack.size() - size).map(_ => stack.pollLast())
         if (KylinConfig.getInstanceFromEnv.isCollectUnionInOrder) {
           unionBlocks = unionBlocks.reverse
         }
@@ -89,9 +89,9 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
           plan.UnionPlan.union(unionBlocks, rel, dataContext)
         }
       case rel: OlapMinusRel =>
-        val size = setOpStack.pop()
+        val size = setOpStack.pollLast()
         logTime("minus") {
-          plan.MinusPlan.minus(Range(0, stack.size() - size).map(a => stack.pop()).reverse, rel, dataContext)
+          plan.MinusPlan.minus(Range(0, stack.size() - size).map(_ => stack.pollLast()).reverse, rel, dataContext)
         }
       case rel: OlapValuesRel =>
         logTime("values") {
@@ -99,7 +99,7 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
         }
       case rel: OlapModelViewRel =>
         logTime("modelview") {
-          stack.pop()
+          stack.pollLast()
         }
     })
     if (node.isInstanceOf[OlapUnionRel]) {
@@ -141,8 +141,8 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
           }
       }
     } else {
-      val right = stack.pop()
-      val left = stack.pop()
+      val right = stack.pollLast()
+      val left = stack.pollLast()
       logTime("join") {
         plan.JoinPlan.join(Seq.apply(left, right), rel)
       }
@@ -155,8 +155,8 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
         TableScanPlan.createOlapTable(rel)
       }
     } else {
-      val right = stack.pop()
-      val left = stack.pop()
+      val right = stack.pollLast()
+      val left = stack.pollLast()
       logTime("non-equi join") {
         plan.JoinPlan.nonEquiJoin(Seq.apply(left, right), rel, dataContext)
       }
@@ -168,7 +168,7 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
   }
 
   def getResult(): DataFrame = {
-    val logicalPlan = stack.pop()
+    val logicalPlan = stack.pollLast()
     SparkInternalAgent.getDataFrame(SparderEnv.getSparkSession, logicalPlan)
   }
 }

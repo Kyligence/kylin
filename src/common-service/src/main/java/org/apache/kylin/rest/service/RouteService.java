@@ -140,7 +140,7 @@ public class RouteService extends BasicService {
         val servers = Maps.<String, List<KylinInstance>> newHashMap();
         val allResourceGroups = rgManager.getResourceGroup();
         val queryResourceGroups = allResourceGroups.getResourceGroupMappingInfoList().stream()
-                .filter(resourceGroupMappingInfo -> resourceGroupMappingInfo.getRequestType().equals(requestType))
+                .filter(resourceGroupMappingInfo -> resourceGroupMappingInfo.getRequestType() == requestType)
                 .map(ResourceGroupMappingInfo::getResourceGroupId).collect(Collectors.toSet());
         allResourceGroups.getKylinInstances().stream()
                 .filter(kylinInstance -> queryResourceGroups.contains(kylinInstance.getResourceGroupId()))

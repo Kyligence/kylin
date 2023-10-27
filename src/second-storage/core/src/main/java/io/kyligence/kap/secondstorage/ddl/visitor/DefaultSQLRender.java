@@ -17,13 +17,12 @@
  */
 package io.kyligence.kap.secondstorage.ddl.visitor;
 
-import static org.apache.commons.lang.StringUtils.join;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.map.ListOrderedMap;
+import org.apache.commons.lang3.StringUtils;
 
 import io.kyligence.kap.secondstorage.ddl.AlterTable;
 import io.kyligence.kap.secondstorage.ddl.CreateDatabase;
@@ -208,7 +207,7 @@ public class DefaultSQLRender implements BaseRender {
         } else {
             result.append(OPEN_BRACKET);
             final ListOrderedMap columnValues = insert.getColumnsValues();
-            result.append(join(columnValues.keyList(), ", "));
+            result.append(StringUtils.join(columnValues.keyList(), ", "));
             result.append(CLOSE_BRACKET).append(" ");
             result.append(KeyWord.VALUES).append(" ").append(OPEN_BRACKET);
             boolean firstClause = true;

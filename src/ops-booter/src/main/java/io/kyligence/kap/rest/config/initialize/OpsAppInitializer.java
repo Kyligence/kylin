@@ -58,7 +58,7 @@ public class OpsAppInitializer {
         List<AbstractAsyncTask> asyncTask = manger.getAllAsyncTaskByType(AsyncTaskManager.METADATA_RECOVER_TASK);
         for (AbstractAsyncTask abstractAsyncTask : asyncTask) {
             MetadataRestoreTask task = MetadataRestoreTask.copyFromAbstractTask(abstractAsyncTask);
-            if (MetadataRestoreTask.MetadataRestoreStatus.IN_PROGRESS.equals(task.getStatus())) {
+            if (MetadataRestoreTask.MetadataRestoreStatus.IN_PROGRESS == task.getStatus()) {
                 log.info("mark in progress metadata restore task {} as failed.", task.getTaskKey());
                 task.setStatus(MetadataRestoreTask.MetadataRestoreStatus.FAILED);
                 manger.save(task);
@@ -86,7 +86,7 @@ public class OpsAppInitializer {
         projectList.add(UnitOfWork.GLOBAL_UNIT);
         for (String project : projectList) {
             for (MetadataBackupResponse metadataBackup : OpsService.getMetadataBackupList(project)) {
-                if (OpsService.MetadataBackupStatus.IN_PROGRESS.equals(metadataBackup.getStatus())) {
+                if (OpsService.MetadataBackupStatus.IN_PROGRESS == metadataBackup.getStatus()) {
                     OpsService.MetadataBackup operator = new OpsService.MetadataBackup(metadataBackup, project);
                     operator.markFail();
                 }

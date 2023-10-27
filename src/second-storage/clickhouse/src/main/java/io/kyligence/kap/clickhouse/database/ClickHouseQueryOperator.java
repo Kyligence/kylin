@@ -181,14 +181,14 @@ public class ClickHouseQueryOperator implements QueryOperator {
         val tableColumns = getFilterDescTable(maxRowsNode, database, destTableName, projectInstance.getConfig());
         val modifyColumns = tableColumns.stream()
                 .filter(col -> !secondaryIndex
-                        .contains(Integer.valueOf(ColumnMapping.secondStorageColumnToKapColumn(col.getColumn()))))
+                        .contains(Integer.parseInt(ColumnMapping.secondStorageColumnToKapColumn(col.getColumn()))))
                 .collect(Collectors.toList());
         if (CollectionUtils.isEmpty(modifyColumns))
             return;
 
         for (String node : nodes) {
             try (ClickHouse clickHouse = new ClickHouse(SecondStorageNodeHelper.resolve(node))) {
-                modifyColumns.stream().forEach(c -> {
+                modifyColumns.forEach(c -> {
                     String targetType = NULLABLE_STRING.equals(c.getDatatype()) ? LOW_CARDINALITY_STRING
                             : NULLABLE_STRING;
                     modifyColumn(clickHouse, database, destTableName, c.getColumn(), targetType);

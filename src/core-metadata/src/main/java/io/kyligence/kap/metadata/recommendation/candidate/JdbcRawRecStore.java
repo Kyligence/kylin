@@ -54,6 +54,9 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.schema.ImportModelContext;
@@ -68,10 +71,6 @@ import org.mybatis.dynamic.sql.select.render.SelectStatementProvider;
 import org.mybatis.dynamic.sql.update.render.UpdateStatementProvider;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import io.kyligence.kap.metadata.favorite.FavoriteRule;
 import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
@@ -222,7 +221,7 @@ public class JdbcRawRecStore {
     }
 
     public List<RawRecItem> chooseTopNCandidates(String project, String model, double minCost, int topN, int offset,
-                                                 RawRecItem.RawRecState state) {
+            RawRecItem.RawRecState state) {
         int semanticVersion = getSemanticVersion(project, model);
         if (semanticVersion == NON_EXIST_MODEL_SEMANTIC_VERSION) {
             log.debug("chooseTopNCandidates - model({}/{}) does not exist.", project, model);
@@ -252,7 +251,7 @@ public class JdbcRawRecStore {
     }
 
     public List<RawRecItem> chooseTopNCandidates(String project, String model, int topN, int offset,
-                                                 RawRecItem.RawRecState state) {
+            RawRecItem.RawRecState state) {
         return chooseTopNCandidates(project, model, -1, topN, offset, state);
     }
 
@@ -336,10 +335,10 @@ public class JdbcRawRecStore {
                 if (recItem == null) {
                     result = new Pair<>(md5, null);
                 } else if (recItems.isEmpty()) {
-                    String newUniqueFlag = String.format("%s_%d", md5, recItem.getId());
+                    String newUniqueFlag = String.format(Locale.ROOT, "%s_%d", md5, recItem.getId());
                     result = new Pair<>(newUniqueFlag, null);
                 } else {
-                    String newUniqueFlag = String.format("%s_%d", md5, maxItemId);
+                    String newUniqueFlag = String.format(Locale.ROOT, "%s_%d", md5, maxItemId);
                     result = new Pair<>(newUniqueFlag, null);
                 }
             }
@@ -574,8 +573,8 @@ public class JdbcRawRecStore {
     public Set<String> updateAllCost(String project) {
         final int batchToUpdate = 1000;
         long currentTime = System.currentTimeMillis();
-        int effectiveDays = Integer.parseInt(FavoriteRuleManager.getInstance(project)
-                .getValue(FavoriteRule.EFFECTIVE_DAYS));
+        int effectiveDays = Integer
+                .parseInt(FavoriteRuleManager.getInstance(project).getValue(FavoriteRule.EFFECTIVE_DAYS));
         RawRecItem.CostMethod costMethod = getCostMethod(project);
         Set<String> updateModels = Sets.newHashSet();
         return JdbcUtil.withTransaction(transactionManager, () -> {
@@ -620,8 +619,8 @@ public class JdbcRawRecStore {
         return rawRecItems;
     }
 
-    private void updateCost(int effectiveDays, RawRecItem.CostMethod costMethod, long currentTime, RawRecItemMapper mapper,
-                            List<RawRecItem> oneBatch) {
+    private void updateCost(int effectiveDays, RawRecItem.CostMethod costMethod, long currentTime,
+            RawRecItemMapper mapper, List<RawRecItem> oneBatch) {
         if (oneBatch.isEmpty()) {
             return;
         }
@@ -640,7 +639,7 @@ public class JdbcRawRecStore {
     }
 
     private SelectStatementProvider getSelectLayoutProvider(String project, int limit, int offset,
-                                                            RawRecItem.RawRecState... states) {
+            RawRecItem.RawRecState... states) {
         return select(getSelectFields(table)) //
                 .from(table).where(table.project, isEqualTo(project)) //
                 .and(table.type, isEqualTo(RawRecItem.RawRecType.ADDITIONAL_LAYOUT)) //
@@ -669,7 +668,7 @@ public class JdbcRawRecStore {
     }
 
     SelectStatementProvider getSelectUniqueFlagIdStatementProvider(String project, String modelId, String uniqueFlag,
-                                                                   Integer semanticVersion) {
+            Integer semanticVersion) {
         return select(getSelectFields(table)) //
                 .from(table) //
                 .where(table.uniqueFlag, isEqualTo(uniqueFlag)) //

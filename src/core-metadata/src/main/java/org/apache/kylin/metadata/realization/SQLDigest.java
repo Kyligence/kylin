@@ -104,8 +104,8 @@ public class SQLDigest {
     private boolean isRawQuery() {
         return this.groupByColumns.isEmpty() && // select a group by a -> not raw
                 this.aggregations.isEmpty(); // has aggr -> not raw
-        // the reason to choose aggregations rather than metricColumns 
-        // is that the former is set earlier at implOLAP
+        // the reason to choose aggregations rather than metricColumns
+        // is that the former is set earlier at implementOlap
     }
 
     public void includeSubqueryJoinParticipants() {

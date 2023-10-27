@@ -34,7 +34,6 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.text.StrBuilder;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.CommonErrorCode;
 import org.apache.kylin.common.exception.KylinException;
@@ -104,7 +103,7 @@ public class ColumnToConds extends CaseInsensitiveStringMap<List<ColumnToConds.C
 
     public static String concatConds(ColumnToConds condsWithCol, ColumnToConds likeCondsWithCol,
             Map<String, String> columnWithType) {
-        StrBuilder result = new StrBuilder();
+        StringBuilder result = new StringBuilder();
         Set<String> conditionCols = new HashSet<>();
         conditionCols.addAll(condsWithCol.keySet());
         conditionCols.addAll(likeCondsWithCol.keySet());
@@ -147,7 +146,7 @@ public class ColumnToConds extends CaseInsensitiveStringMap<List<ColumnToConds.C
         }
 
         if (!conditionCols.isEmpty()) {
-            result.setLength(result.size() - 5);
+            result.setLength(result.length() - 5);
         }
 
         if (conditionCols.size() > 1) {

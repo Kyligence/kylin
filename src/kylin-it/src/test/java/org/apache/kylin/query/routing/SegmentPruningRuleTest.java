@@ -105,7 +105,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
     }
 
     private List<NDataSegment> startRealizationPruner(NDataflowManager dataflowManager, String dataflowId, String sql,
-                                                      String project, KylinConfig kylinConfig) throws Exception {
+            String project, KylinConfig kylinConfig) throws Exception {
         NDataflow dataflow = dataflowManager.getDataflow(dataflowId);
         List<OlapContext> olapContexts = OlapContextTestUtil.getOlapContexts(getProject(), sql);
         OlapContext context = olapContexts.get(0);

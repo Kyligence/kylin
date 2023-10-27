@@ -649,8 +649,8 @@ public class MetaStoreService extends BasicService {
             }
             Set<String> modelTables = Sets.newHashSet();
             change.getNewItems().stream()//
-                    .filter(item -> item.getSchemaNode().getType().equals(MODEL_DIM)
-                            || item.getSchemaNode().getType().equals(MODEL_FACT))
+                    .filter(item -> item.getSchemaNode().getType() == MODEL_DIM
+                            || item.getSchemaNode().getType() == MODEL_FACT)
                     .map(SchemaChangeCheckResult.ChangedItem::getDetail).filter(existTableList::contains)
                     .forEach(table -> {
                         needLoadTableSet.add(table);
@@ -758,8 +758,7 @@ public class MetaStoreService extends BasicService {
             }
         } else if (modelImport.getImportType() == ImportType.NEW) {
 
-            if (!org.apache.commons.lang.StringUtils.containsOnly(modelImport.getTargetName(),
-                    ModelService.VALID_NAME_FOR_MODEL)) {
+            if (!StringUtils.containsOnly(modelImport.getTargetName(), ModelService.VALID_NAME_FOR_MODEL)) {
                 throw new KylinException(MODEL_NAME_INVALID, modelImport.getTargetName());
             }
 

@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.cluster.ClusterManagerFactory;
 import org.apache.kylin.cluster.IClusterManager;
 import org.apache.kylin.common.KylinConfig;
@@ -138,7 +138,7 @@ public class JobService extends BasicService {
 
         AbstractExecutable job = getManager(ExecutableManager.class, project).getJob(jobId);
         if (SecondStorageUtil.isModelEnable(project, job.getTargetModelId())
-                && job.getJobSchedulerMode().equals(JobSchedulerModeEnum.DAG)) {
+                && job.getJobSchedulerMode() == JobSchedulerModeEnum.DAG) {
             checkSegmentState(project, action, job);
         }
     }
@@ -149,7 +149,7 @@ public class JobService extends BasicService {
     }
 
     public void checkSegmentState(String project, String action, AbstractExecutable job) {
-        if (!JobActionEnum.RESTART.equals(JobActionEnum.valueOf(action))) {
+        if (JobActionEnum.RESTART != JobActionEnum.valueOf(action)) {
             return;
         }
 
@@ -170,7 +170,7 @@ public class JobService extends BasicService {
                         val statusToDisplay = segmentResponse.getStatusToDisplay();
                         return segmentHalfOnlineStatuses.contains(statusToDisplay)
                                 || (segmentMayHalfOnlineStatuses.contains(statusToDisplay)
-                                && SegmentSecondStorageStatusEnum.LOADED == statusSecondStorageToDisplay);
+                                        && SegmentSecondStorageStatusEnum.LOADED == statusSecondStorageToDisplay);
                     }).count();
             if (onlineSegmentCount != 0) {
                 throw new KylinException(JOB_RESTART_CHECK_SEGMENT_STATUS);
@@ -244,7 +244,7 @@ public class JobService extends BasicService {
     }
 
     public void dumpProfileByProject(String project, String jobStepId, String params,
-                                     Pair<InputStream, String> jobOutputAndDownloadFile) {
+            Pair<InputStream, String> jobOutputAndDownloadFile) {
         if (!KylinConfig.getInstanceFromEnv().buildJobProfilingEnabled()) {
             throw new KylinException(JobErrorCode.PROFILING_NOT_ENABLED, String.format(Locale.ROOT,
                     MsgPicker.getMsg().getProfilingNotEnabled(), BUILD_JOB_PROFILING_PARAMETER));
@@ -266,7 +266,7 @@ public class JobService extends BasicService {
     }
 
     public void dumpProfileByYarnAppId(String yarnAppId, String params,
-                                       Pair<InputStream, String> jobOutputAndDownloadFile) {
+            Pair<InputStream, String> jobOutputAndDownloadFile) {
         if (!KylinConfig.getInstanceFromEnv().buildJobProfilingEnabled()) {
             throw new KylinException(JobErrorCode.PROFILING_NOT_ENABLED, String.format(Locale.ROOT,
                     MsgPicker.getMsg().getProfilingNotEnabled(), BUILD_JOB_PROFILING_PARAMETER));

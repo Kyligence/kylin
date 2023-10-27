@@ -69,19 +69,29 @@ public enum ModuleLockEnum {
 
     public enum ResourceEnum {
         EXECUTE,
+
         MODEL_DESC,
+
         DATAFLOW,
+
         DATAFLOW_DETAILS,
+
         INDEX_PLAN,
+
         TABLE,
+
         TABLE_EXD,
+
         HISTORY_SOURCE_USAGE,
+
         PROJECT,
+
         COMPUTE_COLUMN_NAME,
+
         COMPUTE_COLUMN_EXPRESSION;
 
         public String value() {
-            return name().toLowerCase();
+            return StringUtils.lowerCase(name());
         }
     }
 }

@@ -85,8 +85,8 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -265,7 +265,6 @@ public class ModelServiceTest extends SourceTestCase {
 
     private final ModelBrokenListener modelBrokenListener = new ModelBrokenListener();
     private StreamingJobListener eventListener = new StreamingJobListener();
-
 
     protected String getProject() {
         return "default";

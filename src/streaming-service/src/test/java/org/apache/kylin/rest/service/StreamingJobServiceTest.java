@@ -855,8 +855,7 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
         String[] exceptLines = createStreamingLogTmpFile(project, jobId);
 
         String verboseMsg = streamingJobService.getStreamingJobSimpleLog(project, jobId);
-        String[] actualVerboseMsgLines = org.apache.commons.lang.StringUtils
-                .splitByWholeSeparatorPreserveAllTokens(verboseMsg, "\n");
+        String[] actualVerboseMsgLines = StringUtils.splitByWholeSeparatorPreserveAllTokens(verboseMsg, "\n");
         ArrayList<String> exceptLinesL = Lists.newArrayList(exceptLines);
         exceptLinesL.add("================================================================");
         Assert.assertTrue(Sets.newHashSet(exceptLinesL).containsAll(Sets.newHashSet(actualVerboseMsgLines)));
@@ -884,8 +883,7 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
 
             sampleLog = sampleData.toString();
         }
-        String[] actualLines = org.apache.commons.lang.StringUtils.splitByWholeSeparatorPreserveAllTokens(sampleLog,
-                "\n");
+        String[] actualLines = StringUtils.splitByWholeSeparatorPreserveAllTokens(sampleLog, "\n");
         Assert.assertTrue(Arrays.deepEquals(exceptLines, actualLines));
     }
 

@@ -21,6 +21,7 @@ package org.apache.kylin.rest.interceptor;
 import static org.apache.kylin.common.constant.Constants.TRACE_ID;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -65,7 +66,7 @@ public class KEFilter extends OncePerRequestFilter {
 
         // Set traceId for KE
         String traceId = RandomUtil.randomUUIDStr();
-        ThreadContext.put(TRACE_ID, String.format(TRACE_ID + ": %s ", traceId));
+        ThreadContext.put(TRACE_ID, String.format(Locale.ROOT, TRACE_ID + ": %s ", traceId));
 
         filterChain.doFilter(request, response);
 

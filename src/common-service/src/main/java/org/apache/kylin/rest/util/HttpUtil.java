@@ -23,6 +23,7 @@ import static org.apache.kylin.common.constant.Constants.TRACE_ID;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -85,7 +86,7 @@ public class HttpUtil {
     }
 
     public static String formatSession(HttpSession session) {
-        return String.format("Id=%s; createTime=%s; lastAccessedTime=%s", session.getId(), session.getCreationTime(),
-                session.getLastAccessedTime());
+        return String.format(Locale.ROOT, "Id=%s; createTime=%s; lastAccessedTime=%s", session.getId(),
+                session.getCreationTime(), session.getLastAccessedTime());
     }
 }

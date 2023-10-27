@@ -1833,7 +1833,7 @@ public class CnMessage extends Message {
 
     @Override
     public String getIllegalNegative(String parameter) {
-        return String.format(PARAMETER_MUST_BE_POSITIVE_NUMBER, parameter);
+        return String.format(Locale.ROOT, PARAMETER_MUST_BE_POSITIVE_NUMBER, parameter);
     }
 
     @Override

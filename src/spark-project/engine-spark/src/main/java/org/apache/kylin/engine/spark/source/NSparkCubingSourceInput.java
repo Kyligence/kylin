@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NSparkCubingEngine;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
@@ -70,7 +71,7 @@ public class NSparkCubingSourceInput implements NSparkCubingEngine.NSparkCubingS
     private List<ColumnDesc> extractEffectiveColumns(TableDesc table, SparkSession ss) {
         List<ColumnDesc> ret = new ArrayList<>();
         Dataset<Row> sourceTableDS = ss.table(table.getBackTickIdentity());
-        Set<String> sourceTableColumns = Arrays.stream(sourceTableDS.columns()).map(String::toUpperCase)
+        Set<String> sourceTableColumns = Arrays.stream(sourceTableDS.columns()).map(StringUtils::upperCase)
                 .collect(Collectors.toSet());
         for (ColumnDesc col : table.getColumns()) {
             if (!col.isComputedColumn()) {

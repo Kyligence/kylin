@@ -22,7 +22,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Map;
 
-import org.apache.commons.dbcp.BasicDataSource;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
@@ -62,14 +62,14 @@ public class JdbcPushDownConnectionManager {
         dataSource.setUrl(config.getJdbcUrl());
         dataSource.setUsername(config.getJdbcUsername());
         dataSource.setPassword(config.getJdbcPassword());
-        dataSource.setMaxActive(config.getPoolMaxTotal());
+        dataSource.setMaxTotal(config.getPoolMaxTotal());
         dataSource.setMaxIdle(config.getPoolMaxIdle());
         dataSource.setMinIdle(config.getPoolMinIdle());
 
         // Default settings
         dataSource.setTestOnBorrow(true);
         dataSource.setValidationQuery("select 1");
-        dataSource.setRemoveAbandoned(true);
+        dataSource.setRemoveAbandonedOnBorrow(true);
         dataSource.setRemoveAbandonedTimeout(300);
     }
 

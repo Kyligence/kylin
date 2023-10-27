@@ -45,7 +45,7 @@ public class PartitionDictionaryBuilderHelper extends DictionaryBuilderHelper {
         List<LayoutEntity> buildedLayouts = Lists.newArrayList();
         if (seg.getSegDetails() != null) {
             Set<SegmentPartition> newPartitions = seg.getMultiPartitions().stream()
-                    .filter(partition -> !partition.getStatus().equals(PartitionStatusEnum.READY))
+                    .filter(partition -> partition.getStatus() != PartitionStatusEnum.READY)
                     .collect(Collectors.toSet());
             if (CollectionUtils.isEmpty(newPartitions)) {
                 for (NDataLayout cuboid : seg.getSegDetails().getEffectiveLayouts()) {

@@ -59,7 +59,7 @@ public class RawSqlParser {
         StringBuilder fullText = new StringBuilder();
         for (RawSqlBlock block : allBlockList) {
             String text = block.getText();
-            if (block.getType().equals(RawSqlBlock.Type.STATEMENT) && block.equals(stmtBlockList.get(stmtBlockList.size() - 1))) {
+            if (block.getType() == RawSqlBlock.Type.STATEMENT && block.equals(stmtBlockList.get(stmtBlockList.size() - 1))) {
                 for (int i = text.length() - 1; i >= 0; i--) {
                     char c = text.charAt(i);
                     if (c == '\'' || c == '"') {

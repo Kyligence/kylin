@@ -19,6 +19,7 @@ package org.apache.spark.sql;
 
 import static org.apache.kylin.common.exception.ServerErrorCode.DDL_CHECK_ERROR;
 
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -78,7 +79,7 @@ public class LogicalViewLoader {
                 dropLogicalViewIfExist(toLoadView.getTableName(), spark);
                 spark.sql(toLoadView.getCreatedSql());
             }
-            LOADED_LOGICAL_VIEWS.put(toLoadView.getTableName().toUpperCase(), toLoadView);
+            LOADED_LOGICAL_VIEWS.put(toLoadView.getTableName().toUpperCase(Locale.ROOT), toLoadView);
             LOGGER.info("The new table loaded successfully is {}", viewName);
         } catch (Throwable e) {
             LOGGER.error("Error when load new Logical View {}", viewName, e);
@@ -86,7 +87,7 @@ public class LogicalViewLoader {
     }
 
     public static synchronized void unloadView(String viewName, SparkSession spark) {
-        LOADED_LOGICAL_VIEWS.remove(viewName.toUpperCase());
+        LOADED_LOGICAL_VIEWS.remove(viewName.toUpperCase(Locale.ROOT));
         dropLogicalViewIfExist(viewName, spark);
     }
 

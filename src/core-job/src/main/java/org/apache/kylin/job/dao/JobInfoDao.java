@@ -22,6 +22,7 @@ import static org.apache.kylin.job.util.JobInfoUtil.JOB_SERIALIZER;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -114,8 +115,8 @@ public class JobInfoDao {
             copyForWrite.setLastModified(System.currentTimeMillis());
             int updateAffect = jobInfoMapper.updateByJobIdSelective(constructJobInfo(copyForWrite, jobInfo.getMvcc()));
             if (updateAffect == 0) {
-                String errorMeg = String.format("job_info update fail for mvcc, job_id = %1s, mvcc = %2d", job.getId(),
-                        jobInfo.getMvcc());
+                String errorMeg = String.format(Locale.ROOT, "job_info update fail for mvcc, job_id = %1s, mvcc = %2d",
+                        job.getId(), jobInfo.getMvcc());
                 logger.warn(errorMeg);
                 throw new OptimisticLockingFailureException(errorMeg);
             }
@@ -210,7 +211,7 @@ public class JobInfoDao {
         int count = jobInfoMapper.deleteByProject(project);
         logger.info("delete {} jobs for project {}", count, project);
     }
-    
+
     public List<JobLock> fetchAllJobLock() {
         return jobLockMapper.fetchAll();
     }

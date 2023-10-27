@@ -146,7 +146,7 @@ public class ModelMetadataBaseService {
                 NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), project).updateIndexPlan(uuid,
                         IndexPlan::removeTobeDeleteIndexIfNecessary);
             } else {
-                throw new IllegalStateException(String.format("action {%s} is nor illegal !!", action));
+                throw new IllegalStateException(String.format(Locale.ROOT, "action {%s} is nor illegal !!", action));
             }
             return null;
         }, project);

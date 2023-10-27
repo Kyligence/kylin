@@ -369,7 +369,7 @@ public class AclTCRManager {
 
             final Map<String, String> columnType = Optional.ofNullable(tableDesc.getColumns()).map(Arrays::stream)
                     .orElseGet(Stream::empty)
-                    .map(columnDesc -> new AbstractMap.SimpleEntry<>(columnDesc.getName().toUpperCase(),
+                    .map(columnDesc -> new AbstractMap.SimpleEntry<>(StringUtils.upperCase(columnDesc.getName()),
                             columnDesc.getTypeName()))
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 

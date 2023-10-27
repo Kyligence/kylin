@@ -67,15 +67,11 @@ public class Message {
     private static final String DDL_DROP_ERROR = "Only support drop view";
     private static final String DDL_TABLE_NOT_LOADED = "Table '%s' is not loaded into the data source ";
     private static final String DDL_TABLE_NOT_SUPPORT = "Only support hive table, but '%s' is not hive table";
-    private static final String DDL_DATABASE_ACCESSN_DENIED = "The user does not have the database permission to "
-        + "which the view belongs.";
-    private static final String DDL_LOGICAL_VIEW_HAS_USED = "Table %s has already been loaded in project %s, please "
-        + "unload it before deleting this table.";
-    private static final String DDL_LOGICAL_VIEW_SOURCETABLE_ERROR = "Source table %s is a logical view and is not "
-        + "allowed to be used in SQL";
+    private static final String DDL_DATABASE_ACCESSN_DENIED = "The user does not have the database permission to which the view belongs.";
+    private static final String DDL_LOGICAL_VIEW_HAS_USED = "Table %s has already been loaded in project %s, please unload it before deleting this table.";
+    private static final String DDL_LOGICAL_VIEW_SOURCETABLE_ERROR = "Source table %s is a logical view and is not allowed to be used in SQL";
     private static final String DDL_RESTRICT = "Only support %s syntax";
-    private static final String LOAD_LOGICAL_VIEW_ERROR = "Can't load table %s, table can only be loaded in "
-        + "project %s";
+    private static final String LOAD_LOGICAL_VIEW_ERROR = "Can't load table %s, table can only be loaded in project %s";
 
     protected Message() {
 
@@ -1671,7 +1667,7 @@ public class Message {
     }
 
     public String getIllegalNegative(String parameter) {
-        return String.format(PARAMETER_MUST_BE_POSITIVE_NUMBER, parameter);
+        return String.format(Locale.ROOT, PARAMETER_MUST_BE_POSITIVE_NUMBER, parameter);
 
     }
 

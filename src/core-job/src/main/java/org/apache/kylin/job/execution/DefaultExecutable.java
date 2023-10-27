@@ -155,9 +155,9 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
         while (true) {
             try {
                 val runningCount = dagExecutables.stream()
-                        .filter(executable -> executable.getStatus().equals(ExecutableState.RUNNING)
-                                || executable.getStatus().equals(ExecutableState.PENDING)
-                                || executable.getStatus().equals(ExecutableState.READY))
+                        .filter(executable -> executable.getStatus() == ExecutableState.RUNNING
+                                || executable.getStatus() == ExecutableState.PENDING
+                                || executable.getStatus() == ExecutableState.READY)
                         .count();
                 if (runningCount == 0) {
                     logger.debug("{} all next step finished", dagExecutables.get(0).getPreviousStep());

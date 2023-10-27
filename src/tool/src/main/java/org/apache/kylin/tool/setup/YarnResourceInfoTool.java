@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.util.HadoopUtil;
+import org.apache.kylin.common.util.Unsafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,9 +119,9 @@ public class YarnResourceInfoTool {
 
     public static void initKerberosENV(Configuration conf) {
         KapConfig kapConfig = KapConfig.getInstanceFromEnv();
-        System.setProperty("java.security.krb5.conf", kapConfig.getKerberosKrb5ConfPath());
-        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
-        System.setProperty("sun.security.krb5.debug", "false");
+        Unsafe.setProperty("java.security.krb5.conf", kapConfig.getKerberosKrb5ConfPath());
+        Unsafe.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+        Unsafe.setProperty("sun.security.krb5.debug", "false");
         logger.info("Init Kerberos with Principal:{}, Krb5Conf:{} and KeytabPath:{}", kapConfig.getKerberosPrincipal(),
                 kapConfig.getKerberosKrb5ConfPath(), kapConfig.getKerberosKeytabPath());
         try {

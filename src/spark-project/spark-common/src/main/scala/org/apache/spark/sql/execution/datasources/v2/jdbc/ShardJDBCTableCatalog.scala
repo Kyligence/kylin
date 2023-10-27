@@ -19,14 +19,15 @@ package org.apache.spark.sql.execution.datasources.v2.jdbc
 
 import java.sql.SQLException
 
-import scala.collection.JavaConverters._
-
+import org.apache.kylin.common.util.Unsafe
 import org.apache.spark.sql.connector.catalog.{Identifier, Table}
 import org.apache.spark.sql.connector.read.sqlpushdown.SupportsSQL
-import org.apache.spark.sql.execution.datasources.jdbc.{JDBCOptions, JDBCRDD}
 import org.apache.spark.sql.errors.QueryCompilationErrors
+import org.apache.spark.sql.execution.datasources.jdbc.{JDBCOptions, JDBCRDD}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
+
+import scala.collection.JavaConverters._
 
 class ShardJDBCTableCatalog extends JDBCTableCatalog with SupportsSQL {
   private val DEFAULT_CLICKHOUSE_URL = "jdbc:clickhouse://localhost:9000"
@@ -44,7 +45,7 @@ class ShardJDBCTableCatalog extends JDBCTableCatalog with SupportsSQL {
     super.initialize(name, newOptions)
 
     val optionsField = classOf[JDBCTableCatalog].getDeclaredField("options")
-    optionsField.setAccessible(true)
+    Unsafe.changeAccessibleObject(optionsField, true)
     this.options = optionsField.get(this).asInstanceOf[JDBCOptions]
   }
 
@@ -68,13 +69,13 @@ class ShardJDBCTableCatalog extends JDBCTableCatalog with SupportsSQL {
 
   private lazy val methodGetTableName = {
     val method = jdbcTableCatalog.getDeclaredMethod("getTableName", classOf[Identifier])
-    method.setAccessible(true)
+    Unsafe.changeAccessibleObject(method, true)
     method
   }
 
   private lazy val methodCheckNamespace = {
     val method = jdbcTableCatalog.getDeclaredMethod("checkNamespace", classOf[Array[String]])
-    method.setAccessible(true)
+    Unsafe.changeAccessibleObject(method, true)
     method
   }
 

@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.exception.ErrorCode;
@@ -268,8 +268,8 @@ public class JobInfoService extends BasicService implements JobSupporter {
         if (StringUtils.isNotEmpty(jobFilter.getProject())) {
             aclEvaluate.checkProjectOperationPermission(jobFilter.getProject());
         }
-        JobMapperFilter jobMapperFilter = JobFilterUtil.getJobMapperFilter(jobFilter, offset, limit,
-                modelService, tableExtService, projectService);
+        JobMapperFilter jobMapperFilter = JobFilterUtil.getJobMapperFilter(jobFilter, offset, limit, modelService,
+                tableExtService, projectService);
         List<JobInfo> jobInfoList = jobInfoDao.getJobInfoListByFilter(jobMapperFilter);
         List<ExecutableResponse> result = jobInfoList.stream().map(JobInfoUtil::deserializeExecutablePO)
                 .map(executablePO -> {
@@ -330,8 +330,8 @@ public class JobInfoService extends BasicService implements JobSupporter {
         if (StringUtils.isNotEmpty(jobFilter.getProject())) {
             aclEvaluate.checkProjectOperationPermission(jobFilter.getProject());
         }
-        JobMapperFilter jobMapperFilter = JobFilterUtil.getJobMapperFilter(jobFilter, 0, 0,
-                modelService, tableExtService, projectService);
+        JobMapperFilter jobMapperFilter = JobFilterUtil.getJobMapperFilter(jobFilter, 0, 0, modelService,
+                tableExtService, projectService);
         return jobInfoDao.countByFilter(jobMapperFilter);
     }
 
@@ -373,7 +373,7 @@ public class JobInfoService extends BasicService implements JobSupporter {
 
                 setExceptionResolveAndCodeAndReason(output, executableStepResponse);
             }
-            if (executable.getJobSchedulerMode().equals(JobSchedulerModeEnum.DAG)
+            if (executable.getJobSchedulerMode() == JobSchedulerModeEnum.DAG
                     && task.getStatus() == ExecutableState.ERROR
                     && !org.apache.commons.lang3.StringUtils.startsWith(output.getFailedStepId(), task.getId())) {
                 executableStepResponse.setStatus(JobStatusEnum.STOPPED);
@@ -394,7 +394,7 @@ public class JobInfoService extends BasicService implements JobSupporter {
                     for (StageBase stage : stageBases) {
                         val stageResponse = parseStageToExecutableStep(task, stage,
                                 executableManager.getOutput(stage.getId(), segmentId));
-                        if (executable.getJobSchedulerMode().equals(JobSchedulerModeEnum.DAG)
+                        if (executable.getJobSchedulerMode() == JobSchedulerModeEnum.DAG
                                 && stage.getStatus(segmentId) == ExecutableState.ERROR
                                 && !org.apache.commons.lang3.StringUtils.startsWith(output.getFailedStepId(),
                                         stage.getId())) {
@@ -517,7 +517,7 @@ public class JobInfoService extends BasicService implements JobSupporter {
 
         AbstractExecutable job = getManager(ExecutableManager.class, project).getJob(jobId);
         if (SecondStorageUtil.isModelEnable(project, job.getTargetModelId())
-                && job.getJobSchedulerMode().equals(JobSchedulerModeEnum.DAG)) {
+                && job.getJobSchedulerMode() == JobSchedulerModeEnum.DAG) {
             checkSegmentState(project, action, job);
         }
     }
@@ -528,7 +528,7 @@ public class JobInfoService extends BasicService implements JobSupporter {
     }
 
     public void checkSegmentState(String project, String action, AbstractExecutable job) {
-        if (!JobActionEnum.RESTART.equals(JobActionEnum.valueOf(action))) {
+        if (JobActionEnum.RESTART != JobActionEnum.valueOf(action)) {
             return;
         }
 
