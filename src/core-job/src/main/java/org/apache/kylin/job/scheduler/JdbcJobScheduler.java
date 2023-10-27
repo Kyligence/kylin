@@ -402,8 +402,21 @@ public class JdbcJobScheduler implements JobScheduler {
         JdbcJobLock jobLock = null;
         try (JobExecutor jobExecutor = new JobExecutor(jobContext, jobExecutable);
                 SetLogCategory ignore = new SetLogCategory(LogConstant.BUILD_CATEGORY)) {
-            // Must do this check before tryJobLock
-            if (!checkJobStatusBeforeExecute(jobExecutable)) {
+            // Check job status
+            AbstractExecutable executable = (AbstractExecutable) jobExecutable;
+            ExecutableState jobStatus = executable.getStatus();
+            if (ExecutableState.PENDING != jobStatus) {
+                logger.warn("Unexpected status for {} <{}>, should not execute job", jobExecutable.getJobId(),
+                        jobStatus);
+                if (ExecutableState.RUNNING == jobStatus) {
+                    jobLock = tryJobLock(jobExecutable);
+                    if (jobLock != null) {
+                        //Maybe other node crashed during job execution, resume job status from running to ready.
+                        logger.warn("Resume <RUNNING> job {}", jobExecutable.getJobId());
+                        ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), executable.getProject())
+                                .resumeJob(jobExecutable.getJobId(), true);
+                    }
+                }
                 return;
             }
 
@@ -437,22 +450,6 @@ public class JdbcJobScheduler implements JobScheduler {
             return null;
         }
         return jobLock;
-    }
-
-    private boolean checkJobStatusBeforeExecute(AbstractJobExecutable jobExecutable) throws LockException {
-        AbstractExecutable executable = (AbstractExecutable) jobExecutable;
-        ExecutableState jobStatus = executable.getStatus();
-        if (ExecutableState.PENDING == jobStatus) {
-            return true;
-        }
-        logger.warn("Unexpected status for {} <{}>, should not execute job", jobExecutable.getJobId(), jobStatus);
-        if (ExecutableState.RUNNING == jobStatus && tryJobLock(jobExecutable) != null) {
-            // there should be other nodes crashed during job execution, resume job status from running to ready
-            logger.warn("Resume <RUNNING> job {}", jobExecutable.getJobId());
-            ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), executable.getProject())
-                    .resumeJob(jobExecutable.getJobId(), true);
-        }
-        return false;
     }
 
     private void stopJobLockRenewAfterExecute(JdbcJobLock jobLock) {

@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.JobContext;
+import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.JobInfoDao;
 import org.apache.kylin.job.domain.JobLock;
 import org.apache.kylin.job.execution.AbstractExecutable;
@@ -35,6 +36,7 @@ import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.execution.SucceedChainedTestExecutable;
+import org.apache.kylin.job.mapper.JobLockMapper;
 import org.apache.kylin.job.rest.JobMapperFilter;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.junit.annotation.MetadataInfo;
@@ -204,6 +206,39 @@ class JdbcJobSchedulerTest {
         int expect = jobContext.getJobLockMapper().insert(lock);
         Assertions.assertEquals(1, expect);
         await().atMost(60, TimeUnit.SECONDS).until(() -> jobContext.getJobLockMapper().selectByJobId(jobId) == null);
+    }
+
+    @Test
+    void testResumeRunningJobs() {
+        KylinConfig config = getTestConfig();
+        // Stop schedule
+        JobContextUtil.cleanUp();
+        // Init job mappers without schedule
+        JobInfoDao dao = JobContextUtil.getJobInfoDao(config);
+        JobLockMapper mapper = (JobLockMapper) ReflectionTestUtils.getField(dao, "jobLockMapper");
+
+        String jobId = mockJob();
+        jobInfoDao.updateJob(jobId, job -> {
+            ExecutableOutputPO jobOutput = job.getOutput();
+            jobOutput.setStatus(ExecutableState.RUNNING.name());
+            jobOutput.addStartTime(System.currentTimeMillis());
+            job.getTasks().forEach(task -> task.getOutput().setStatus(ExecutableState.PENDING.name()));
+            return true;
+        });
+        mapper.insertSelective(new JobLock(jobId, 3));
+        // init schedule
+        JobContextUtil.getJobContext(config);
+
+        await().atMost(2, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
+                .equals(ExecutableState.READY.name()));
+        await().atMost(2, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
+                .equals(ExecutableState.PENDING.name()));
+        await().atMost(5, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
+                .equals(ExecutableState.RUNNING.name()));
+        await().atMost(2, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
+                .equals(ExecutableState.SUCCEED.name()));
+        //release lock
+        await().atMost(5, TimeUnit.SECONDS).until(() -> jobContext.getJobLockMapper().selectByJobId(jobId) == null);
     }
 
     private String mockJob() {
