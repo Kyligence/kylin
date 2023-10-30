@@ -75,8 +75,8 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
     @After
     public void after() throws Exception {
         JobContext jobContext = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
         await().atMost(30, TimeUnit.SECONDS).until(() -> jobContext.getJobScheduler().getRunningJob().size() == 0);
     }
 

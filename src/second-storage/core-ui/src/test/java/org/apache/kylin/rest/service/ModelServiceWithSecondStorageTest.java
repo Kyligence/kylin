@@ -198,8 +198,8 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
         EventBusFactory.getInstance().unregister(eventListener);
         EventBusFactory.getInstance().unregister(modelBrokenListener);
         EventBusFactory.getInstance().restart();
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

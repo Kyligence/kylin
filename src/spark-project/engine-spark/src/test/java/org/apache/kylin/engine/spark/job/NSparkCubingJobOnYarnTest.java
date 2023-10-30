@@ -57,8 +57,8 @@ public class NSparkCubingJobOnYarnTest extends NLocalFileMetadataTestCase {
 
     @After
     public void after() throws Exception {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

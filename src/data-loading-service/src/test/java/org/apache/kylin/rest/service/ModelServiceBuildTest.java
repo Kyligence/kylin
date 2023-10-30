@@ -248,8 +248,8 @@ public class ModelServiceBuildTest extends SourceTestCase {
         EventBusFactory.getInstance().unregister(eventListener);
         EventBusFactory.getInstance().unregister(modelBrokenListener);
         EventBusFactory.getInstance().restart();
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
 
         if (!TimeZone.getDefault().equals(defaultTimeZone)) {
             TimeZone.setDefault(defaultTimeZone);

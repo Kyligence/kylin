@@ -80,8 +80,8 @@ public class NManualBuildAndQueryCuboidTest extends NManualBuildAndQueryTest {
 
     @After
     public void after() throws Exception {
-        super.cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        super.cleanupTestMetadata();
     }
 
     @Override

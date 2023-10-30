@@ -111,8 +111,8 @@ public class FusionIndexServiceTest extends SourceTestCase {
 
     @After
     public void tearDown() {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     private UpdateRuleBasedCuboidRequest createUpdateRuleRequest(String project, String modelId,

@@ -32,6 +32,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.logging.SetLogCategory;
+import org.apache.kylin.common.util.ExecutorServiceUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.ThreadUtils;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -163,7 +164,7 @@ public class JdbcJobScheduler implements JobScheduler {
         }
 
         if (Objects.nonNull(executorPool)) {
-            executorPool.shutdownNow();
+            ExecutorServiceUtil.shutdownGracefully(executorPool, 60);
         }
     }
 

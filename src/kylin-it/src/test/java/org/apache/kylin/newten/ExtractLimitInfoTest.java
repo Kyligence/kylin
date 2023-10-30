@@ -75,8 +75,8 @@ public class ExtractLimitInfoTest extends NLocalWithSparkSessionTest {
 
     @After
     public void after() throws Exception {
-        JobContextUtil.cleanUp();
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test

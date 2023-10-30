@@ -48,9 +48,9 @@ public class NBitmapFunctionTest extends NLocalWithSparkSessionTest {
 
     @After
     public void after() throws Exception {
+        JobContextUtil.cleanUp();
         cleanupTestMetadata();
         FileUtils.deleteQuietly(new File("../kylin-it/metastore_db"));
-        JobContextUtil.cleanUp();
     }
 
     @Override

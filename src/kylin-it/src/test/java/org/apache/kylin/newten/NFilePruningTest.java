@@ -103,8 +103,8 @@ public class NFilePruningTest extends NLocalWithSparkSessionTest implements Adap
 
     @After
     public void after() throws Exception {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

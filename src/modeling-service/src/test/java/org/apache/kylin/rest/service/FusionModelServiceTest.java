@@ -136,8 +136,8 @@ public class FusionModelServiceTest extends SourceTestCase {
 
     @After
     public void tearDown() {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

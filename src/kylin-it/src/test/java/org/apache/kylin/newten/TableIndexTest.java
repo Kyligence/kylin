@@ -46,9 +46,9 @@ public class TableIndexTest extends NLocalWithSparkSessionTest {
 
     @After
     public void after() throws Exception {
+        JobContextUtil.cleanUp();
         cleanupTestMetadata();
         FileUtils.deleteQuietly(new File("../kap-it/metastore_db"));
-        JobContextUtil.cleanUp();
     }
 
     @Override

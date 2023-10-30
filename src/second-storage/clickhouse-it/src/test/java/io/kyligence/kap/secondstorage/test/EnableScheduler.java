@@ -38,8 +38,8 @@ public class EnableScheduler extends EnableLocalMeta {
 
     @Override
     protected void after() {
-        super.after();
         JobContextUtil.cleanUp();
+        super.after();
     }
 
 }

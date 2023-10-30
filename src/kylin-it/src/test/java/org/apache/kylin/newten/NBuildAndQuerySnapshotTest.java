@@ -69,8 +69,8 @@ public class NBuildAndQuerySnapshotTest extends NLocalWithSparkSessionTest {
 
     @After
     public void cleanup() throws Exception {
-        super.cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        super.cleanupTestMetadata();
     }
 
     @Test

@@ -51,8 +51,8 @@ public class NComputedColumnTest extends NLocalWithSparkSessionTest {
 
     @After
     public void after() {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Override

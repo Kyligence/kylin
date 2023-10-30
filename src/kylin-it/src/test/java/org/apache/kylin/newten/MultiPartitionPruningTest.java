@@ -89,8 +89,8 @@ public class MultiPartitionPruningTest extends NLocalWithSparkSessionTest implem
 
     @After
     public void after() throws Exception {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Override

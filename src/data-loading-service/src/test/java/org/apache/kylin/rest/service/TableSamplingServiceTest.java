@@ -95,8 +95,8 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
 
     @After
     public void tearDown() {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

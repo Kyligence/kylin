@@ -47,8 +47,8 @@ public class NMultipleColumnsInTest extends NLocalWithSparkSessionTest {
 
     @After
     public void after() throws Exception {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Override

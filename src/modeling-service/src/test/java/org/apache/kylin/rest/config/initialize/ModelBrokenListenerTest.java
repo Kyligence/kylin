@@ -102,9 +102,8 @@ public class ModelBrokenListenerTest extends SourceTestCase {
         logger.info("ModelBrokenListenerTest cleanup");
         EventBusFactory.getInstance().unregister(modelBrokenListener);
         EventBusFactory.getInstance().restart();
-        super.cleanup();
-
         JobContextUtil.cleanUp();
+        super.cleanup();
     }
 
     private void generateJob(String modelId, String project) {
