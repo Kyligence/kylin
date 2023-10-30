@@ -19,6 +19,7 @@
 
 CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_lock (
   id bigint(10) NOT NULL AUTO_INCREMENT,
+  project varchar(100) NOT NULL,
   lock_id varchar(100) NOT NULL COMMENT 'what is locked',
   lock_node varchar(50) DEFAULT NULL COMMENT 'who locked it',
   lock_expire_time timestamp COMMENT 'when does the lock expire',

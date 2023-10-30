@@ -4,6 +4,7 @@
   <resultMap id="BaseResultMap" type="org.apache.kylin.job.domain.JobLock">
     <id column="id" jdbcType="BIGINT" property="id" />
     <result column="lock_id" jdbcType="VARCHAR" property="lockId" />
+    <result column="project" jdbcType="VARCHAR" property="project" />
     <result column="lock_node" jdbcType="VARCHAR" property="lockNode" />
     <result column="lock_expire_time" jdbcType="TIMESTAMP" property="lockExpireTime" />
     <result column="priority" jdbcType="INTEGER" property="priority" />
@@ -37,10 +38,10 @@
     delete from ${jobLockTable}
   </delete>
   <insert id="insert" parameterType="org.apache.kylin.job.domain.JobLock">
-    insert into ${jobLockTable} (id, lock_id, lock_node, 
+    insert into ${jobLockTable} (id, lock_id, project, lock_node,
       lock_expire_time, priority, create_time, update_time
       )
-    values (#{id,jdbcType=BIGINT}, #{lockId,jdbcType=VARCHAR}, #{lockNode,jdbcType=VARCHAR}, 
+    values (#{id,jdbcType=BIGINT}, #{lockId,jdbcType=VARCHAR}, #{project,jdbcType=VARCHAR}, #{lockNode,jdbcType=VARCHAR},
       #{lockExpireTime,jdbcType=TIMESTAMP}, #{priority,jdbcType=INTEGER}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT}
       )
   </insert>
@@ -52,6 +53,9 @@
       </if>
       <if test="lockId != null">
         lock_id,
+      </if>
+      <if test="project != null">
+        project,
       </if>
       <if test="lockNode != null">
         lock_node,
@@ -75,6 +79,9 @@
       </if>
       <if test="lockId != null">
         #{lockId,jdbcType=VARCHAR},
+      </if>
+      <if test="project != null">
+        #{project,jdbcType=VARCHAR},
       </if>
       <if test="lockNode != null">
         #{lockNode,jdbcType=VARCHAR},
@@ -135,6 +142,12 @@
     SELECT lock_id, priority
     FROM ${jobLockTable}
     WHERE lock_node IS NULL OR lock_expire_time <![CDATA[<]]> CURRENT_TIMESTAMP
+    <if test="projects != null">
+      AND
+      <foreach close=")" collection="projects" index="index" item="item" open="project in (" separator=",">
+        #{item}
+      </foreach>
+    </if>
     ORDER BY priority ASC
     <if test="batchSize&gt;=0">
       LIMIT #{batchSize,jdbcType=INTEGER}

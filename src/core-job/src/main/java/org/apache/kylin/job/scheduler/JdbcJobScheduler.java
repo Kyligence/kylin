@@ -58,6 +58,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.zen.license.check.CheckResult;
 import io.kyligence.zen.license.check.LicenseChecker;
 import io.kyligence.zen.license.check.ResultType;
@@ -170,7 +171,7 @@ public class JdbcJobScheduler implements JobScheduler {
         // init master lock
         try {
             if (jobContext.getJobLockMapper().selectByJobId(JobScheduler.MASTER_SCHEDULER) == null) {
-                jobContext.getJobLockMapper().insertSelective(new JobLock(JobScheduler.MASTER_SCHEDULER, 0));
+                jobContext.getJobLockMapper().insertSelective(new JobLock(JobScheduler.MASTER_SCHEDULER, "_global", 0));
             }
         } catch (Exception e) {
             logger.error("Try insert 'master_scheduler' failed.", e);
@@ -227,7 +228,7 @@ public class JdbcJobScheduler implements JobScheduler {
                     JobLock lock = jobContext.getJobLockMapper().selectByJobId(jobId);
                     JobInfo jobInfo = jobContext.getJobInfoMapper().selectByJobId(jobId);
                     if (lock == null && jobContext.getJobLockMapper()
-                            .insertSelective(new JobLock(jobId, jobInfo.getPriority())) == 0) {
+                            .insertSelective(new JobLock(jobId, jobInfo.getProject(), jobInfo.getPriority())) == 0) {
                         logger.error("Create job lock for [{}] failed!", jobId);
                         return null;
                     }
@@ -317,7 +318,8 @@ public class JdbcJobScheduler implements JobScheduler {
             if (exeFreeSlots < batchSize) {
                 batchSize = exeFreeSlots;
             }
-            List<String> jobIdList = findNonLockIdListInOrder(batchSize);
+            List<String> projects = EpochManager.getInstance().listProjectWithPermissionForScheduler();
+            List<String> jobIdList = findNonLockIdListInOrder(batchSize, projects);
 
             if (CollectionUtils.isEmpty(jobIdList)) {
                 return;
@@ -354,8 +356,9 @@ public class JdbcJobScheduler implements JobScheduler {
         }
     }
 
-    public List<String> findNonLockIdListInOrder(int batchSize) {
-        List<PriorityFistRandomOrderJob> jobIdList = jobContext.getJobLockMapper().findNonLockIdList(batchSize);
+    public List<String> findNonLockIdListInOrder(int batchSize, List<String> projects) {
+        List<PriorityFistRandomOrderJob> jobIdList = jobContext.getJobLockMapper().findNonLockIdList(batchSize,
+                projects);
         // Shuffle jobs avoiding jobLock conflict.
         // At the same time, we should ensure the overall order.
         if (hasRunningJob()) {

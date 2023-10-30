@@ -34,6 +34,8 @@ public class JobLock {
 
     private String lockId;
 
+    private String project;
+
     private String lockNode;
 
     private Date lockExpireTime;
@@ -49,8 +51,9 @@ public class JobLock {
 
     private String database;
 
-    public JobLock(String lockId, int priority) {
+    public JobLock(String lockId, String project, int priority) {
         this.lockId = lockId;
+        this.project = project;
         this.priority = priority;
         this.createTime = System.currentTimeMillis();
         this.updateTime = System.currentTimeMillis();

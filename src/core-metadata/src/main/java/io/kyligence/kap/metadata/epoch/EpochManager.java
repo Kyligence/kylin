@@ -406,11 +406,24 @@ public class EpochManager {
     }
 
     private List<String> listProjectWithPermission() {
-        List<String> projects = epochCheckEnabled ? getProjectsToMarkOwner()
-                : NProjectManager.getInstance(config).listAllProjects().stream().map(ProjectInstance::getName)
-                        .collect(Collectors.toList());
+        List<String> projects = listRealProjectWithPermission();
         projects.add(GLOBAL);
         return projects;
+    }
+    
+    public List<String> listProjectWithPermissionForScheduler() {
+        List<String> projects = listRealProjectWithPermission();
+        if (projects.size() == NProjectManager.getInstance(config).listAllProjects().size()) {
+            // Returning null indicates that filtering items is not required during scheduling.
+            return null;
+        }
+        return projects;
+    }
+
+    private List<String> listRealProjectWithPermission() {
+        return epochCheckEnabled ? getProjectsToMarkOwner()
+                : NProjectManager.getInstance(config).listAllProjects().stream().map(ProjectInstance::getName)
+                        .collect(Collectors.toList());
     }
 
     //for test

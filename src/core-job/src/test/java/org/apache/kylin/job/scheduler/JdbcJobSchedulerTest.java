@@ -20,6 +20,7 @@ package org.apache.kylin.job.scheduler;
 import static org.apache.kylin.common.util.TestUtils.getTestConfig;
 import static org.awaitility.Awaitility.await;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -117,7 +118,7 @@ class JdbcJobSchedulerTest {
     @Test
     void testLockExpiredAndJobNotFinal() {
         String jobId = mockJob();
-        JobLock lock = new JobLock(jobId, 1);
+        JobLock lock = new JobLock(jobId, PROJECT, 1);
         lock.setLockNode("mock_node");
         lock.setLockExpireTime(new Date());
         int expect = jobContext.getJobLockMapper().insert(lock);
@@ -168,6 +169,7 @@ class JdbcJobSchedulerTest {
             JobLock lock = new JobLock();
             String id = "mock_lock_id_" + i;
             lock.setLockId(id);
+            lock.setProject(PROJECT);
             lock.setLockNode("mock_node");
             lock.setPriority(p);
             lock.setLockExpireTime(new Date());
@@ -179,8 +181,10 @@ class JdbcJobSchedulerTest {
         JdbcJobScheduler jobScheduler = Mockito.spy(originScheduler);
         Mockito.when(jobScheduler.hasRunningJob()).thenReturn(true);
         jobContext.setJobScheduler(jobScheduler);
-        List<String> order1 = jobContext.getJobScheduler().findNonLockIdListInOrder(20);
-        List<String> order2 = jobContext.getJobScheduler().findNonLockIdListInOrder(20);
+        List<String> order1 = jobContext.getJobScheduler().findNonLockIdListInOrder(20,
+                Collections.singletonList(PROJECT));
+        List<String> order2 = jobContext.getJobScheduler().findNonLockIdListInOrder(20,
+                Collections.singletonList(PROJECT));
         boolean hasDiff = false;
         int currentPriority = 0;
         for (int i = 0; i < order1.size(); i++) {
@@ -202,7 +206,7 @@ class JdbcJobSchedulerTest {
         AbstractExecutable job = mockExecutable();
         // insert job lock, without lock node
         String jobId = job.getJobId();
-        JobLock lock = new JobLock(jobId, 1);
+        JobLock lock = new JobLock(jobId, PROJECT, 1);
         int expect = jobContext.getJobLockMapper().insert(lock);
         Assertions.assertEquals(1, expect);
         await().atMost(60, TimeUnit.SECONDS).until(() -> jobContext.getJobLockMapper().selectByJobId(jobId) == null);
@@ -225,7 +229,7 @@ class JdbcJobSchedulerTest {
             job.getTasks().forEach(task -> task.getOutput().setStatus(ExecutableState.PENDING.name()));
             return true;
         });
-        mapper.insertSelective(new JobLock(jobId, 3));
+        mapper.insertSelective(new JobLock(jobId, PROJECT, 3));
         // init schedule
         JobContextUtil.getJobContext(config);
 

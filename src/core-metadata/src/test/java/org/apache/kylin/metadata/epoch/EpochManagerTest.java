@@ -22,6 +22,7 @@ import static org.apache.kylin.common.util.TestUtils.getTestConfig;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,11 +33,17 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.metadata.Epoch;
 import org.apache.kylin.common.persistence.metadata.EpochStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.junit.annotation.OverwriteProp;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.resourcegroup.KylinInstance;
+import org.apache.kylin.metadata.resourcegroup.RequestTypeEnum;
+import org.apache.kylin.metadata.resourcegroup.ResourceGroupEntity;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupManager;
+import org.apache.kylin.metadata.resourcegroup.ResourceGroupMappingInfo;
+import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -578,4 +585,38 @@ class EpochManagerTest {
         Assertions.assertTrue(isEpochLegal);
     }
 
+    @Test
+    @MetadataInfo
+    void testListProjectForScheduling() {
+        KylinConfig config = getTestConfig();
+        List<ProjectInstance> allProjects = NProjectManager.getInstance(config).listAllProjects();
+        EpochManager epochManager = EpochManager.getInstance();
+        ResourceGroupManager resourceGroupManager = ResourceGroupManager.getInstance(config);
+
+        // Resource is disabled.
+        Assert.assertNull(epochManager.listProjectWithPermissionForScheduler());
+
+        // ResourceGroup is enabled, but no projects are bound.
+        resourceGroupManager.updateResourceGroup(copyForWrite -> copyForWrite.setResourceGroupEnabled(true));
+        Assert.assertEquals(0, epochManager.listProjectWithPermissionForScheduler().size());
+
+        // ResourceGroup is enabled， and project 'default' is bound.
+        resourceGroupManager.updateResourceGroup(copyForWrite -> {
+            ResourceGroupEntity group = new ResourceGroupEntity();
+            ReflectionTestUtils.setField(group, "id", "rg_001");
+            KylinInstance kylinInstance = new KylinInstance();
+            ReflectionTestUtils.setField(kylinInstance, "resourceGroupId", "rg_001");
+            ReflectionTestUtils.setField(kylinInstance, "instance", AddressUtil.getLocalInstance());
+            ResourceGroupMappingInfo resourceGroupMappingInfo = new ResourceGroupMappingInfo();
+            ReflectionTestUtils.setField(resourceGroupMappingInfo, "project", "default");
+            ReflectionTestUtils.setField(resourceGroupMappingInfo, "resourceGroupId", "rg_001");
+            ReflectionTestUtils.setField(resourceGroupMappingInfo, "requestType", RequestTypeEnum.BUILD);
+
+            copyForWrite.setResourceGroupEntities(Collections.singletonList(group));
+            copyForWrite.setKylinInstances(Collections.singletonList(kylinInstance));
+            copyForWrite.setResourceGroupMappingInfoList(Collections.singletonList(resourceGroupMappingInfo));
+        });
+        Assert.assertEquals(1, epochManager.listProjectWithPermissionForScheduler().size());
+        Assert.assertEquals("default", epochManager.listProjectWithPermissionForScheduler().get(0));
+    }
 }

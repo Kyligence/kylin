@@ -18,6 +18,7 @@
 
 CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_lock (
   id SERIAL PRIMARY KEY,
+  project varchar(100) NOT NULL,
   lock_id varchar(100) UNIQUE NOT NULL,
   lock_node varchar(50) DEFAULT NULL,
   lock_expire_time timestamptz DEFAULT NULL,

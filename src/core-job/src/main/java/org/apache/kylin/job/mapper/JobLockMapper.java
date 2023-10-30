@@ -51,7 +51,8 @@ public interface JobLockMapper {
 
     int batchRemoveLock(@Param("jobIdList") List<String> jobIdList);
 
-    List<PriorityFistRandomOrderJob> findNonLockIdList(@Param("batchSize") int batchSize);
+    List<PriorityFistRandomOrderJob> findNonLockIdList(@Param("batchSize") int batchSize,
+            @Param("projects") List<String> projects);
 
     List<String> findExpiredORNonLockIdList(@Param("batchSize") int batchSize);
 
