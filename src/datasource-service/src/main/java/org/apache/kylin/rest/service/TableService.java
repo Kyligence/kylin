@@ -611,6 +611,10 @@ public class TableService extends BasicService {
         long size = 0;
         for (val model : models) {
             val df = dfManger.getDataflow(model.getUuid());
+            if(df==null){
+                logger.warn("cannot get model size  {} of {}（might be deleted） ", model.getAlias(), project);
+                continue;
+            }
             val readySegs = df.getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING);
             if (CollectionUtils.isNotEmpty(readySegs)) {
                 for (NDataSegment segment : readySegs) {
@@ -628,7 +632,11 @@ public class TableService extends BasicService {
         Set<String> primaryKey = new HashSet<>();
         Set<String> foreignKey = new HashSet<>();
         for (val model : modelsUsingTable) {
-            val joinTables = dataModelManager.getDataModelDesc(model.getUuid()).getJoinTables();
+            var dataMode = dataModelManager.getDataModelDesc(model.getUuid());
+            if(dataMode==null){
+                continue;
+            }
+            val joinTables = dataMode.getJoinTables();
             for (JoinTableDesc joinTable : joinTables) {
                 if (joinTable.getTable().equals(table.getIdentity())) {
                     foreignKey.addAll(Arrays.asList(joinTable.getJoin().getForeignKey()));
