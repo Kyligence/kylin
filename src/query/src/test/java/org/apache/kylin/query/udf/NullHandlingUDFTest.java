@@ -18,55 +18,16 @@
 
 package org.apache.kylin.query.udf;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.sql.Date;
 import java.sql.Timestamp;
 
-import org.apache.kylin.query.udf.nullHandling.IfNullUDF;
 import org.apache.kylin.query.udf.nullHandling.IsNullUDF;
 import org.junit.Test;
 
 public class NullHandlingUDFTest {
-
-    @Test
-    public void testIfNullUDF() throws Exception {
-        IfNullUDF ifNullUDF = new IfNullUDF();
-
-        String str1 = ifNullUDF.IFNULL("Apache", "Kylin");
-        assertEquals("Apache", str1);
-        String str2 = ifNullUDF.IFNULL(null, "Kylin");
-        assertEquals("Kylin", str2);
-
-        double d1 = ifNullUDF.IFNULL(2.3, 2.4);
-        assertEquals(d1, 2.3, 0);
-        double d2 = ifNullUDF.IFNULL(null, 2.4);
-        assertEquals(d2, 2.4, 0);
-
-        int num1 = ifNullUDF.IFNULL(23, 24);
-        assertEquals(num1, 23);
-        int num2 = ifNullUDF.IFNULL(null, 24);
-        assertEquals(num2, 24);
-
-        Date date1 = new Date(System.currentTimeMillis());
-        Date date2 = new Date(System.currentTimeMillis());
-        Date date3 = ifNullUDF.IFNULL(date1, date2);
-        assertEquals(date3, date1);
-        Date date4 = ifNullUDF.IFNULL(null, date2);
-        assertEquals(date4, date2);
-
-        Timestamp timestamp1 = new Timestamp(System.currentTimeMillis());
-        Timestamp timestamp2 = new Timestamp(System.currentTimeMillis());
-        Timestamp timestamp3 = ifNullUDF.IFNULL(timestamp1, timestamp2);
-        assertEquals(timestamp3, timestamp1);
-        Timestamp timestamp4 = ifNullUDF.IFNULL(null, timestamp2);
-        assertEquals(timestamp4, timestamp2);
-
-        assertTrue(ifNullUDF.IFNULL(true, false));
-        assertFalse(ifNullUDF.IFNULL(null, false));
-    }
 
     @Test
     public void testIsNullUDF() throws Exception {

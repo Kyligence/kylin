@@ -47,7 +47,7 @@ object ExpressionConverter {
 
   private val ternaryParameterFunc = mutable.HashSet("replace", "substring_index", "conv", "regexp_extract")
   private val binaryParameterFunc =
-    mutable.HashSet("decode", "encode", "find_in_set", "levenshtein", "sha2",
+    mutable.HashSet("decode", "encode", "find_in_set", "levenshtein", "sha2", "ifnull",
       "trunc", "add_months", "date_add", "date_sub", "from_utc_timestamp", "to_utc_timestamp", "date_format",
       // math function
       "hypot", "log"

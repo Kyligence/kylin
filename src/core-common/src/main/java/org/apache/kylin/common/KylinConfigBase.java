@@ -2143,7 +2143,6 @@ public abstract class KylinConfigBase implements Serializable {
         udfMap.put("to_char", "org.apache.kylin.query.udf.formatUdf.ToCharUDF");
         udfMap.put("instr", "org.apache.kylin.query.udf.stringUdf.InStrUDF");
         udfMap.put("strpos", "org.apache.kylin.query.udf.stringUdf.StrPosUDF");
-        udfMap.put("ifnull", "org.apache.kylin.query.udf.nullHandling.IfNullUDF");
         udfMap.put("nvl", "org.apache.kylin.query.udf.nullHandling.NvlUDF");
         udfMap.put("isnull", "org.apache.kylin.query.udf.nullHandling.IsNullUDF");
         udfMap.put("split_part", "org.apache.kylin.query.udf.stringUdf.SplitPartUDF");

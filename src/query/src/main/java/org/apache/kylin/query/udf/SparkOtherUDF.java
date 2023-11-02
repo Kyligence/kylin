@@ -27,4 +27,9 @@ public class SparkOtherUDF implements NotConstant {
     public Object EXPLODE(@Parameter(name = "t1") Object exp1) throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }
+
+    public Object IFNULL(@Parameter(name = "left") Object left, @Parameter(name = "right") Object right)
+            throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
 }
