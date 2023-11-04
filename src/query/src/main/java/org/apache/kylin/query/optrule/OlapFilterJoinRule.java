@@ -21,6 +21,7 @@ package org.apache.kylin.query.optrule;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.calcite.plan.RelOptRule;
@@ -35,9 +36,12 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexPermuteInputsShuttle;
 import org.apache.calcite.rex.RexUtil;
@@ -48,6 +52,7 @@ import org.apache.calcite.util.mapping.Mappings;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.query.util.RexUtils;
 
 /**
@@ -56,6 +61,54 @@ import org.apache.kylin.query.util.RexUtils;
  *
  */
 public class OlapFilterJoinRule extends RelOptRule {
+
+    public static final FilterJoinRule FILTER_ON_JOIN = new FilterJoinRule.FilterIntoJoinRule(true,
+            RelFactories.LOGICAL_BUILDER, FilterJoinRule.TRUE_PREDICATE) {
+
+        // https://olapio.atlassian.net/browse/AL-8813
+        @Override
+        protected boolean canPushIntoFromAbove(Filter filter) {
+            if (filter == null) {
+                return false;
+            }
+
+            if (isFilterContainsCC(filter)) {
+                return false;
+            }
+
+            RexNode condition = filter.getCondition();
+            if (condition.isA(SqlKind.AND)) {
+                RexCall call = (RexCall) condition;
+                return call.getOperands().stream().allMatch(this::isSimpleInputRefCondition);
+            }
+            return isSimpleInputRefCondition(condition);
+        }
+
+        private boolean isFilterContainsCC(Filter filter) {
+            RexNode condition = filter.getCondition();
+            if (condition == null) {
+                return false;
+            }
+
+            Set<RexInputRef> allInputRefs = RexUtils.getAllInputRefs(condition);
+            List<RelDataTypeField> fieldList = filter.getRowType().getFieldList();
+            return allInputRefs.stream().anyMatch(inputRef -> fieldList.get(inputRef.getIndex()).getName()
+                    .startsWith(ComputedColumnUtil.CC_NAME_PREFIX));
+        }
+
+        // for example: table1.col1 = table2.col1 can be pushed into the below join relNode,
+        // however, table1.col1 + table1.col2 = table2.col1 can't be pushed.
+        private boolean isSimpleInputRefCondition(RexNode condition) {
+            if (condition.isA(SqlKind.EQUALS)) {
+                RexCall call = (RexCall) condition;
+                RexNode left = call.getOperands().get(0);
+                RexNode right = call.getOperands().get(1);
+                return left instanceof RexInputRef && right instanceof RexInputRef;
+            }
+            return false;
+        }
+    };
+
     public static final OlapFilterJoinRule OLAP_FILTER_ON_JOIN_JOIN = new OlapFilterJoinRule(
             operand(Filter.class,
                     operand(Join.class,

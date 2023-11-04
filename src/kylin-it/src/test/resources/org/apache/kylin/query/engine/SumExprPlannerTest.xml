@@ -1446,12 +1446,13 @@ OlapToEnumerableConverter
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[]], groups=[null], EXPR$0=[SUM($0)], ctx=[])
     OlapProjectRel($f0=[CASE(=($0, 20230501), $1, null)], ctx=[])
-      OlapJoinRel(condition=[=($0, $3)], joinType=[inner], ctx=[])
-        OlapProjectRel(LO_COMMITDATE=[$15], LO_DISCOUNT=[$11], LO_ORDERDATE=[$5], ctx=[])
-          OlapTableScan(table=[[SSB, P_LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]])
-        OlapAggregateRel(group-set=[[]], groups=[null], EXPR$0=[MAX($0)], ctx=[])
-          OlapProjectRel(LO_COMMITDATE=[$15], ctx=[])
+      OlapFilterRel(condition=[=($0, $3)], ctx=[])
+        OlapJoinRel(condition=[true], joinType=[left], ctx=[])
+          OlapProjectRel(LO_COMMITDATE=[$15], LO_DISCOUNT=[$11], LO_ORDERDATE=[$5], ctx=[])
             OlapTableScan(table=[[SSB, P_LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]])
+          OlapAggregateRel(group-set=[[]], groups=[null], EXPR$0=[MAX($0)], ctx=[])
+            OlapProjectRel(LO_COMMITDATE=[$15], ctx=[])
+              OlapTableScan(table=[[SSB, P_LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]])
 ]]>
         </Resource>
         <Resource name="planAfter">

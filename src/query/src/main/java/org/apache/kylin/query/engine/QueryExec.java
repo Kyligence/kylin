@@ -64,6 +64,7 @@ import org.apache.kylin.query.engine.exec.SparderPlanExec;
 import org.apache.kylin.query.engine.meta.SimpleDataContext;
 import org.apache.kylin.query.engine.view.ViewAnalyzer;
 import org.apache.kylin.query.mask.QueryResultMasks;
+import org.apache.kylin.query.optrule.OlapFilterJoinRule;
 import org.apache.kylin.query.optrule.SumConstantConvertRule;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapAggregateRel;
@@ -285,15 +286,14 @@ public class QueryExec {
             postOptRules.addAll(HepUtils.FilterReductionRules);
         }
 
-        if (!postOptRules.isEmpty()) {
-            RelNode transformed = HepUtils.runRuleCollection(node, postOptRules, false);
-            if (transformed != node && allowAlternativeQueryPlan) {
-                return Lists.newArrayList(transformed, node);
-            } else {
-                return Lists.newArrayList(transformed);
-            }
+        postOptRules.add(OlapFilterJoinRule.FILTER_ON_JOIN);
+
+        RelNode transformed = HepUtils.runRuleCollection(node, postOptRules, false);
+        if (transformed != node && allowAlternativeQueryPlan) {
+            return Lists.newArrayList(transformed, node);
+        } else {
+            return Lists.newArrayList(transformed);
         }
-        return Lists.newArrayList(node);
     }
 
     @VisibleForTesting

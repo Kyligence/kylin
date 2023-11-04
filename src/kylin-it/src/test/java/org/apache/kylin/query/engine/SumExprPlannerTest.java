@@ -21,16 +21,19 @@ package org.apache.kylin.query.engine;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.test.DiffRepository;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.optrule.OlapAggFilterTransposeRule;
 import org.apache.kylin.query.optrule.OlapAggJoinTransposeRule;
 import org.apache.kylin.query.optrule.OlapAggProjectMergeRule;
 import org.apache.kylin.query.optrule.OlapAggProjectTransposeRule;
 import org.apache.kylin.query.optrule.OlapAggregateRule;
 import org.apache.kylin.query.optrule.OlapCountDistinctJoinRule;
+import org.apache.kylin.query.optrule.OlapFilterJoinRule;
 import org.apache.kylin.query.optrule.OlapJoinRule;
 import org.apache.kylin.query.optrule.OlapProjectRule;
 import org.apache.kylin.query.optrule.OlapSumCastTransposeRule;
@@ -204,7 +207,9 @@ public class SumExprPlannerTest extends CalciteRuleTestBase {
                 + "  ) a\n" //
                 + "where  LO_COMMITDATE = ( select max(LO_COMMITDATE) from ssb.P_LINEORDER )";
         openSumCaseWhen();
-        checkSQL("ssb", sql, null, null);
+        List<RelOptRule> rules = Lists.newArrayList(HepUtils.SumExprRules);
+        rules.add(OlapFilterJoinRule.FILTER_ON_JOIN);
+        super.checkSQLPostOptimize("ssb", sql, null, null, rules);
     }
 
     @Test
