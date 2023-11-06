@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
+import org.apache.kylin.common.exception.BigQueryException;
 import org.apache.kylin.common.exception.NewQueryRefuseException;
 import org.apache.kylin.common.state.StateSwitchConstant;
 import org.apache.kylin.common.util.AddressUtil;
@@ -249,4 +250,33 @@ public class TestResultPlan extends NLocalFileMetadataTestCase {
         ResultPlan.getResult(ss.sql(sql), resultType);
     }
 
+    @Test
+    public void testBigQueryException() {
+        QueryShareStateManager.getInstance().setState(Collections.singletonList(AddressUtil.concatInstanceName()),
+                StateSwitchConstant.QUERY_LIMIT_STATE, "true");
+        QueryContext queryContext = QueryContext.current();
+        queryContext.setIfBigQuery(true);
+        queryContext.getMetrics()
+                .addAccumSourceScanRows(KapConfig.getInstanceFromEnv().getBigQuerySourceScanRowsThreshold() + 1);
+        String sql = "select * from TEST_KYLIN_FACT";
+        try {
+            ResultPlan.getResult(ss.sql(sql), null);
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof BigQueryException);
+        }
+    }
+
+    @Test
+    public void testNoBigQueryException() {
+        QueryContext queryContext = QueryContext.current();
+        queryContext.setIfBigQuery(true);
+        queryContext.getMetrics()
+                .addAccumSourceScanRows(KapConfig.getInstanceFromEnv().getBigQuerySourceScanRowsThreshold() + 1);
+        String sql = "select * from TEST_KYLIN_FACT";
+        try {
+            ResultPlan.getResult(ss.sql(sql), null);
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof BigQueryException);
+        }
+    }
 }

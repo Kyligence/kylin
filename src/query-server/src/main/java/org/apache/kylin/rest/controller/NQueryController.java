@@ -81,6 +81,7 @@ import org.apache.kylin.rest.request.SQLFormatRequest;
 import org.apache.kylin.rest.request.SQLRequest;
 import org.apache.kylin.rest.request.SaveSqlRequest;
 import org.apache.kylin.rest.request.SyncFileSegmentsRequest;
+import org.apache.kylin.rest.response.BigQueryResponse;
 import org.apache.kylin.rest.response.DataResult;
 import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.QueryDetectResponse;
@@ -726,5 +727,20 @@ public class NQueryController extends NBasicController {
         } else if (!(tables instanceof List)) {
             throw new KylinException(INVALID_TABLE_REFRESH_PARAMETER, message.getTableRefreshParamInvalid(), false);
         }
+    }
+
+    @ApiOperation(value = "ifBigQuery", tags = {
+            "QE" }, notes = "Update Param: query_id, accept_partial, backdoor_toggles, cache_key")
+    @PostMapping(value = "/if_big_query")
+    @ResponseBody
+    public EnvelopeResponse<BigQueryResponse> ifBigQuery(@Valid @RequestBody PrepareSqlRequest sqlRequest,
+            @RequestHeader(value = "User-Agent") String userAgent) {
+        sqlRequest.setIfBigQuery(true);
+        checkForcedToParams(sqlRequest);
+        checkProjectName(sqlRequest.getProject());
+        sqlRequest.setUserAgent(userAgent != null ? userAgent : "");
+        QueryContext.current().record("end_http_proc");
+        BigQueryResponse bigQueryResponse = queryService.ifBigQuery(sqlRequest);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, bigQueryResponse, "");
     }
 }

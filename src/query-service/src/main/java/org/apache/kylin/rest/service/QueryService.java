@@ -64,6 +64,7 @@ import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.debug.BackdoorToggles;
+import org.apache.kylin.common.exception.BigQueryException;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.KylinTimeoutException;
 import org.apache.kylin.common.exception.NewQueryRefuseException;
@@ -151,6 +152,7 @@ import org.apache.kylin.rest.model.Query;
 import org.apache.kylin.rest.request.PrepareSqlRequest;
 import org.apache.kylin.rest.request.QueryDetectRequest;
 import org.apache.kylin.rest.request.SQLRequest;
+import org.apache.kylin.rest.response.BigQueryResponse;
 import org.apache.kylin.rest.response.QueryDetectResponse;
 import org.apache.kylin.rest.response.SQLResponse;
 import org.apache.kylin.rest.response.SQLResponseTrace;
@@ -509,6 +511,23 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         return log;
     }
 
+    public BigQueryResponse ifBigQuery(SQLRequest sqlRequest) {
+        SQLResponse sqlResponse = queryWithCache(sqlRequest);
+        BigQueryResponse bigQueryResponse = new BigQueryResponse();
+        String isBigQuery = sqlResponse.isBigQuery() ? "bigQuery" : "nonBigQuery";
+        if (sqlRequest.isForcedToPushDown() || sqlResponse.isException()) {
+            isBigQuery = "others";
+        }
+        if (sqlResponse.isException()) {
+            bigQueryResponse.setException(true);
+            bigQueryResponse.setExceptionMessage(sqlResponse.getExceptionMessage());
+        }
+        bigQueryResponse.setCache(sqlResponse.isStorageCacheUsed());
+        bigQueryResponse.setIfBigQuery(isBigQuery);
+        bigQueryResponse.setScanRows(sqlResponse.getTotalScanRows());
+        return bigQueryResponse;
+    }
+
     public SQLResponse queryWithCache(SQLRequest sqlRequest) {
         aclEvaluate.checkProjectQueryPermission(sqlRequest.getProject());
         checkIfExecuteUserValid(sqlRequest);
@@ -516,6 +535,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         queryContext.setProject(sqlRequest.getProject());
         queryContext.setLimit(sqlRequest.getLimit());
         queryContext.setOffset(sqlRequest.getOffset());
+        queryContext.setIfBigQuery(sqlRequest.isIfBigQuery());
         if (StringUtils.isNotEmpty(sqlRequest.getQueryId())) {
             // validate queryId with UUID.fromString
             queryContext.setQueryId(UUID.fromString(sqlRequest.getQueryId()).toString());
@@ -663,6 +683,9 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                 try (QueryRequestLimits ignored = new QueryRequestLimits(project)) {
                     sqlResponse = queryAndUpdateCache(sqlRequest, kylinConfig);
                 }
+            }
+            if (sqlRequest.isIfBigQuery()) {
+                return sqlResponse;
             }
 
             QueryUtils.updateQueryContextSQLMetrics(rawSql.getStatementString());
@@ -844,7 +867,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             } else {
                 throw new KylinException(PERMISSION_DENIED, MsgPicker.getMsg().getnotSupportedSql());
             }
-            if (checkCondition(queryCacheEnabled, "query cache is disabled")) {
+            if (checkCondition(queryCacheEnabled, "query cache is disabled") && !sqlRequest.isIfBigQuery()) {
                 // set duration for caching condition checking
                 sqlResponse.setDuration(QueryContext.currentMetrics().duration());
                 queryCacheManager.cacheSuccessQuery(sqlRequest, sqlResponse);
@@ -864,13 +887,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             queryContext.getMetrics().setQueryMsg(errMsg);
             queryContext.getQueryTagInfo().setPushdown(false);
 
-            if (e.getCause() != null && NewQueryRefuseException.causedByRefuse(e)) {
-                queryContext.getQueryTagInfo().setRefused(true);
-            }
-
-            if (e.getCause() != null && KylinTimeoutException.causedByTimeout(e)) {
-                queryContext.getQueryTagInfo().setTimeout(true);
-            }
+            applyExceptionResponse(sqlResponse, e, queryContext);
 
             if (UserStopQueryException.causedByUserStop(e)) {
                 sqlResponse.setStopByUser(true);
@@ -888,6 +905,21 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             }
         }
         return sqlResponse;
+    }
+
+    private static void applyExceptionResponse(SQLResponse sqlResponse, Throwable e, QueryContext queryContext) {
+        if (e.getCause() != null) {
+            if (NewQueryRefuseException.causedByRefuse(e)) {
+                queryContext.getQueryTagInfo().setRefused(true);
+            } else if (BigQueryException.causedByRefuse(e)) {
+                sqlResponse.setException(false);
+                sqlResponse.setExceptionMessage("");
+                sqlResponse.setScanRows(queryContext.getMetrics().getScanRows());
+                sqlResponse.setBigQuery(queryContext.isBigQuery());
+            } else if (KylinTimeoutException.causedByTimeout(e)) {
+                queryContext.getQueryTagInfo().setTimeout(true);
+            }
+        }
     }
 
     @VisibleForTesting

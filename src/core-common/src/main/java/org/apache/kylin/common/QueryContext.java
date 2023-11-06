@@ -152,6 +152,14 @@ public class QueryContext implements Closeable {
     @Setter
     private boolean enhancedAggPushDown;
 
+    @Getter
+    @Setter
+    private boolean ifBigQuery = false;
+
+    @Getter
+    @Setter
+    private boolean isBigQuery = false;
+
     private QueryContext() {
         // use QueryContext.current() instead
         queryId = RandomUtil.randomUUIDStr();

@@ -152,6 +152,7 @@ public class SQLResponse implements Serializable {
     @JsonProperty("executed_plan")
     private String executedPlan;
 
+    private boolean isBigQuery = false;
     public SQLResponse() {
         this(new LinkedList<>(), new LinkedList<>(), 0, false, null);
     }

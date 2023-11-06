@@ -72,6 +72,8 @@ public class SQLRequest implements Serializable, ProjectInsensitiveRequest, Vali
     @JsonProperty("include_header")
     private boolean includeHeader;
 
+    private boolean ifBigQuery = false;
+
     private Map<String, String> backdoorToggles;
 
     @Size(max = 256)

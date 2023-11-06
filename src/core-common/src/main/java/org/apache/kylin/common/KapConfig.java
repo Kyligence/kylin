@@ -746,6 +746,10 @@ public class KapConfig {
         return Long.parseLong(config.getOptional("kylin.query.big-query-second", "10"));
     }
 
+    public boolean isBigQueryLimitEnable() {
+        return Boolean.parseBoolean(config.getOptional("kylin.query.big-query-limit-enabled", FALSE));
+    }
+
     public long getBigQueryThresholdUpdateIntervalSecond() {
         return Long.parseLong(config.getOptional("kylin.query.big-query-threshold-update-interval-second", "10800"));
     }

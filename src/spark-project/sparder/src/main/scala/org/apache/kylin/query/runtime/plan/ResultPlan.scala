@@ -25,7 +25,7 @@ import java.{lang, util}
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.fs.Path
-import org.apache.kylin.common.exception.NewQueryRefuseException
+import org.apache.kylin.common.exception.{BigQueryException, NewQueryRefuseException}
 import org.apache.kylin.common.util.{HadoopUtil, RandomUtil}
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
 import org.apache.kylin.engine.spark.utils.LogEx
@@ -109,13 +109,9 @@ object ResultPlan extends LogEx {
 
       // judge whether to refuse the new big query
       logDebug(s"Total source scan rows: $sumOfSourceScanRows")
-      if (QueryShareStateManager.isShareStateSwitchEnabled
-        && sumOfSourceScanRows >= bigQueryThreshold
-        && SparkQueryJobManager.isNewBigQueryRefuse) {
-        QueryContext.current().getQueryTagInfo.setRefused(true)
-        throw new NewQueryRefuseException("Refuse new big query, sum of source_scan_rows is " + sumOfSourceScanRows
-          + ", refuse query threshold is " + bigQueryThreshold + ". Current step: Collecting dataset for sparder. ")
-      }
+      val sourceScanRows = Array(new lang.Long(sumOfSourceScanRows)).toList.asJava
+      val ifBigQuery: Boolean = QueryContext.current().isIfBigQuery
+      ifRefuseQuery(sumOfSourceScanRows, bigQueryThreshold, sourceScanRows, ifBigQuery)
 
       QueryContext.current.record("executed_plan")
       QueryContext.currentTrace().endLastSpan()
@@ -165,6 +161,25 @@ object ResultPlan extends LogEx {
     }
   }
 
+  private def ifRefuseQuery(sumOfSourceScanRows: Long, bigQueryThreshold: Long, sourceScanRows: util.List[lang.Long], ifBigQuery: Boolean): Unit = {
+    if (QueryShareStateManager.isShareStateSwitchEnabled
+      && sumOfSourceScanRows >= bigQueryThreshold
+      && (SparkQueryJobManager.isNewBigQueryRefuse || KapConfig.getInstanceFromEnv.isBigQueryLimitEnable)) {
+      if (ifBigQuery) {
+        QueryContext.current().setBigQuery(true)
+        QueryContext.current().getMetrics.setScanRows(sourceScanRows)
+        throw new BigQueryException("This query is bigquery.")
+      } else {
+        QueryContext.current().getQueryTagInfo.setRefused(true)
+        throw new NewQueryRefuseException("Refuse new big query, sum of source_scan_rows is " + sumOfSourceScanRows
+          + ", refuse query threshold is " + bigQueryThreshold + ". Current step: Collecting dataset for sparder. ")
+      }
+    } else if (ifBigQuery) {
+      QueryContext.current().getMetrics.setScanRows(sourceScanRows)
+      QueryContext.current().setBigQuery(false)
+      throw new BigQueryException("This query is non bigquery.")
+    }
+  }
 
   def readResultRow(resultRows: util.Iterator[Row], resultTypes: mutable.Buffer[RelDataTypeField]): lang.Iterable[util.List[String]] = {
     () =>

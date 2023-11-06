@@ -86,10 +86,12 @@ public class QueryNodeFilter extends BaseFilter {
         // jdbc, odbc, query, maintain
         notRoutePostApiSet.add("/kylin/api/query");
         notRoutePostApiSet.add("/kylin/api/async_query");
+        notRoutePostApiSet.add("/kylin/api/query/if_big_query");
         notRoutePostApiSet.add("/kylin/api/query/prestate");
         notRoutePostApiSet.add("/kylin/api/user/authentication");
         notRoutePostApiSet.add("/kylin/api/system/maintenance_mode");
         notRouteDeleteApiSet.add("/kylin/api/query");
+        notRouteDeleteApiSet.add("/kylin/api/query/if_big_query");
 
         notRoutePostApiSet.add("/kylin/api/kg/health/instance_info");
         notRoutePostApiSet.add("/kylin/api/kg/health/instance_service/query_up_grade");

@@ -65,6 +65,7 @@ import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
+import org.apache.kylin.common.exception.BigQueryException;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.exception.KylinTimeoutException;
@@ -136,6 +137,7 @@ import org.apache.kylin.rest.model.Query;
 import org.apache.kylin.rest.request.PrepareSqlRequest;
 import org.apache.kylin.rest.request.QueryDetectRequest;
 import org.apache.kylin.rest.request.SQLRequest;
+import org.apache.kylin.rest.response.BigQueryResponse;
 import org.apache.kylin.rest.response.QueryDetectResponse;
 import org.apache.kylin.rest.response.SQLResponse;
 import org.apache.kylin.rest.security.AclEntityFactory;
@@ -3029,5 +3031,49 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             Assert.assertFalse(queryContext.getQueryTagInfo().isHitExceptionCache());
             Assert.assertTrue(queryContext.getQueryTagInfo().isAsyncQuery());
         }
+    }
+
+    @Test
+    public void testIfBigQuery() throws Exception {
+        final String sql = "select count(1) from KYLIN_SALES";
+        final String project = "default";
+        SQLRequest sqlRequest = new SQLRequest();
+        sqlRequest.setSql(sql);
+        sqlRequest.setProject(project);
+        sqlRequest.setForcedToIndex(true);
+        sqlRequest.setIfBigQuery(true);
+        Mockito.doThrow(new SQLException(new BigQueryException("is nonBigQuery"))).when(queryService)
+                .query(Mockito.any(SQLRequest.class));
+        final BigQueryResponse response = queryService.ifBigQuery(sqlRequest);
+        Assert.assertFalse(response.isException());
+    }
+
+    @Test
+    public void testPushDownIfBigQuery() {
+        final String sql = "select count(1) from KYLIN_SALES";
+        final String project = "default";
+        SQLRequest sqlRequest = new SQLRequest();
+        sqlRequest.setSql(sql);
+        sqlRequest.setProject(project);
+        sqlRequest.setForcedToIndex(true);
+        sqlRequest.setIfBigQuery(true);
+        sqlRequest.setForcedToPushDown(true);
+        final BigQueryResponse response = queryService.ifBigQuery(sqlRequest);
+        Assert.assertTrue(response.isException());
+    }
+
+    @Test
+    public void testIfBigQueryException() {
+        final String sql = "select aa from KYLIN_SALES";
+        final String project = "default";
+        SQLRequest sqlRequest = new SQLRequest();
+        sqlRequest.setSql(sql);
+        sqlRequest.setProject(project);
+        sqlRequest.setForcedToIndex(true);
+        sqlRequest.setIfBigQuery(true);
+        Mockito.doThrow(new RuntimeException(new KylinTimeoutException(""))).when(queryService)
+                .queryAndUpdateCache(Mockito.any(SQLRequest.class), Mockito.any(KylinConfig.class));
+        BigQueryResponse bigQueryResponse = queryService.ifBigQuery(sqlRequest);
+        Assert.assertTrue(bigQueryResponse.isException());
     }
 }
