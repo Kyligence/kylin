@@ -123,9 +123,10 @@ public class SampleController extends NBasicController {
         checkSamplingTable(request.getQualifiedTableName());
         validatePriority(request.getPriority());
 
-        tableSampleService.sampling(Sets.newHashSet(request.getQualifiedTableName()), request.getProject(),
-                request.getRows(), request.getPriority(), request.getYarnQueue(), request.getTag());
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+        List<String> sampleJobs = tableSampleService.sampling(Sets.newHashSet(request.getQualifiedTableName()),
+                request.getProject(), request.getRows(), request.getPriority(), request.getYarnQueue(),
+                request.getTag());
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, sampleJobs.stream().findFirst().orElse(null), "");
     }
 
     @ApiOperation(value = "hasSamplingJob", tags = { "AI" }, notes = "Update Param: qualified_table_name")
