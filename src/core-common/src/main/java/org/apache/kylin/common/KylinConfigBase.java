@@ -3634,6 +3634,10 @@ public abstract class KylinConfigBase implements Serializable {
         return getOptional("kylin.diag.obf.level", "OBF").toUpperCase(Locale.ROOT);
     }
 
+    public boolean isDiagIpObfEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.diag.ip-obf-enabled", FALSE));
+    }
+
     public boolean isDimensionRangeFilterEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.storage.columnar.dimension-range-filter-enabled", TRUE));
     }

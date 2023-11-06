@@ -99,6 +99,7 @@ import org.apache.kylin.rest.util.SpringContext;
 import org.apache.kylin.tool.constant.DiagSubTaskEnum;
 import org.apache.kylin.tool.constant.SensitiveConfigKeysConstant;
 import org.apache.kylin.tool.constant.StageEnum;
+import org.apache.kylin.tool.obf.IpObfuscator;
 import org.apache.kylin.tool.obf.KylinConfObfuscator;
 import org.apache.kylin.tool.obf.MappingRecorder;
 import org.apache.kylin.tool.obf.ObfLevel;
@@ -315,6 +316,21 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
             kylinConfObfuscator.obfuscate(new File(rootDir, SensitiveConfigKeysConstant.CONF_DIR),
                     file -> (file.isFile() && file.getName().startsWith(SensitiveConfigKeysConstant.KYLIN_PROPERTIES)));
         }
+
+        obfIpDiag(rootDir, obfLevel);
+    }
+
+    private void obfIpDiag(File rootDir, ObfLevel obfLevel) throws IOException {
+        if (!kylinConfig.isDiagIpObfEnabled()) {
+            return;
+        }
+        logger.info("diag start obf ip");
+        try (MappingRecorder recorder = new MappingRecorder(null)) {
+            ResultRecorder resultRecorder = new ResultRecorder();
+            IpObfuscator ipObfuscator = new IpObfuscator(obfLevel, recorder, resultRecorder);
+            ipObfuscator.obfuscate(rootDir, null);
+        }
+        logger.info("diag end obf ip");
     }
 
     private boolean isDiag() {
