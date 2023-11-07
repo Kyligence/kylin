@@ -563,7 +563,9 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             return response;
         } finally {
             QueryLimiter.release();
+            String queryExecutionId = QueryContext.current().getExecutionID();
             QueryContext.current().close();
+            QueryContext.current().setExecutionID(queryExecutionId);
         }
     }
 

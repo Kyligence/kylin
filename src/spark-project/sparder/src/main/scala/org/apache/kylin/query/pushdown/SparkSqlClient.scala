@@ -185,7 +185,14 @@ object SparkSqlClient {
       val jobTrace = new SparkJobTrace(jobGroup, QueryContext.currentTrace()
         , QueryContext.current().getQueryId, SparderEnv.getSparkSession.sparkContext)
 
-      val results = df.toIterator()
+      NProjectManager.getProjectConfig(QueryContext.current().getProject).isQueryUseIterableCollectApi
+
+      val results = if (NProjectManager.getProjectConfig(QueryContext.current().getProject)
+        .isQueryUseIterableCollectApi ) {
+        df.collectToIterator()
+      } else {
+        df.toIterator()
+      }
       val resultRows = results._1
       val resultSize = results._2
       if (config.isQuerySparkJobTraceEnabled) jobTrace.jobFinished()

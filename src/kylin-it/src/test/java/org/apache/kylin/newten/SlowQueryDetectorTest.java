@@ -228,6 +228,7 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
     public void testSparderTimeoutCancelJob() throws Exception {
         val df = SparderEnv.getSparkSession().emptyDataFrame();
         val mockDf = Mockito.spy(df);
+        Mockito.doAnswer(new AnswersWithDelay(TIMEOUT_MS * 3, new Returns(null))).when(mockDf).collectToIterator();
         Mockito.doAnswer(new AnswersWithDelay(TIMEOUT_MS * 3, new Returns(null))).when(mockDf).toIterator();
         slowQueryDetector.queryStart("");
         try {
@@ -255,6 +256,7 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
     public void testPushdownTimeoutCancelJob() {
         val df = SparderEnv.getSparkSession().emptyDataFrame();
         val mockDf = Mockito.spy(df);
+        Mockito.doAnswer(new AnswersWithDelay(TIMEOUT_MS * 3, new Returns(null))).when(mockDf).collectToIterator();
         Mockito.doAnswer(new AnswersWithDelay(TIMEOUT_MS * 3, new Returns(null))).when(mockDf).toIterator();
         slowQueryDetector.queryStart("");
         try {

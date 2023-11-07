@@ -40,7 +40,7 @@ import org.apache.spark.sql.execution.ui.PostQueryExecutionForKylin
 import org.apache.spark.sql.hive.HiveStorageRule
 import org.apache.spark.sql.udf.UdfManager
 import org.apache.spark.util.{ThreadUtils, Utils}
-import org.apache.spark.{ExecutorAllocationClient, SparkConf, SparkContext}
+import org.apache.spark.{ExecutorAllocationClient, SparkConf, SparkContext, SparkEnv}
 
 import java.lang.{Boolean => JBoolean, String => JString}
 import java.security.PrivilegedAction
@@ -414,5 +414,9 @@ object SparderEnv extends Logging {
   // Return the list of currently active executors
   def getActiveExecutorIds(): Seq[String] = {
     getSparkSession.sparkContext.getExecutorIds()
+  }
+
+  def deleteQueryTaskResultBlock(queryExecutionID: String): Unit = {
+    SparkEnv.get.deleteAllBlockForQueryResult(queryExecutionID)
   }
 }

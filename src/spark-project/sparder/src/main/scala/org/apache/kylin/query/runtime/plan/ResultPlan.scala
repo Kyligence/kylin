@@ -21,7 +21,6 @@ import java.io.{File, FileOutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.atomic.AtomicLong
 import java.{lang, util}
-
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.fs.Path
@@ -47,8 +46,8 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparderEnv}
 import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`iterator asScala`
 import scala.collection.mutable
-
 import io.kyligence.kap.secondstorage.SecondStorageUtil
+import org.apache.kylin.metadata.project.NProjectManager
 
 // scalastyle:off
 object ResultType extends Enumeration {
@@ -116,7 +115,12 @@ object ResultPlan extends LogEx {
       QueryContext.current.record("executed_plan")
       QueryContext.currentTrace().endLastSpan()
       val jobTrace = new SparkJobTrace(jobGroup, QueryContext.currentTrace(), QueryContext.current().getQueryId, sparkContext)
-      val results = df.toIterator()
+      val results = if (NProjectManager.getProjectConfig(QueryContext.current().getProject)
+        .isQueryUseIterableCollectApi) {
+        df.collectToIterator()
+      } else {
+        df.toIterator()
+      }
       val resultRows = results._1
       val resultSize = results._2
       if (kapConfig.isQuerySparkJobTraceEnabled) jobTrace.jobFinished()

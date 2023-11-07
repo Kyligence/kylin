@@ -4297,4 +4297,8 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isPrintQueryPlanEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.query.print-logical-plan", FALSE));
     }
+
+    public boolean isQueryUseIterableCollectApi() {
+        return Boolean.parseBoolean(getOptional("kylin.query.use-iterable-collect", FALSE));
+    }
 }
