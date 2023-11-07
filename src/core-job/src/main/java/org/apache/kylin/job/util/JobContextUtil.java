@@ -248,14 +248,16 @@ public class JobContextUtil {
         }
     }
 
-    public static DataSourceTransactionManager getTransactionManager(KylinConfig config) {
+    private static DataSourceTransactionManager getTransactionManager(KylinConfig config) throws Exception {
         if (config.isUTEnv() || isNoSpringContext()) {
             synchronized (JobContextUtil.class) {
                 initMappers(config);
                 return transactionManager;
             }
         } else {
-            return SpringContext.getBean(DataSourceTransactionManager.class);
+            val url = config.getMetadataUrl();
+            val props = JdbcUtil.datasourceParameters(url);
+            return JdbcDataSource.getTransactionManager(props);
         }
     }
 

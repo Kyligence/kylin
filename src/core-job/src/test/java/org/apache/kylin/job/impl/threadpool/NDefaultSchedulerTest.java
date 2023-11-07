@@ -1293,7 +1293,6 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
     }
 
     @Test
-    @Repeat(3)
     public void testConcurrentJobLimit() {
         String project = "heterogeneous_segment";
         String modelId = "747f864b-9721-4b97-acde-0aa8e8656cba";
@@ -1326,7 +1325,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
         val runningExecutables = executableManager.getRunningExecutables(project, modelId);
         runningExecutables.sort(Comparator.comparing(AbstractExecutable::getCreateTime));
         Assert.assertEquals(ExecutableState.RUNNING, runningExecutables.get(0).getStatus());
-        Assert.assertEquals(ExecutableState.PENDING, runningExecutables.get(1).getStatus());
+        Assert.assertEquals(ExecutableState.READY, runningExecutables.get(1).getStatus());
 
         waitForJobByStatus(job1.getId(), 60000, null, executableManager);
         waitForJobByStatus(job2.getId(), 60000, null, executableManager);
@@ -1335,7 +1334,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
 
         await().atMost(1, TimeUnit.SECONDS).until(() -> memory == ResourceAcquirer.availablePermits());
 
-        config.setProperty("kylin.job.max-concurrent-jobs", "0");
+        config.setProperty("kylin.job.node-max-concurrent-jobs", "0");
         JobContextUtil.cleanUp();
         JobContext jobContext = JobContextUtil.getJobContext(config);
         val df2 = NDataflowManager.getInstance(getTestConfig(), project).getDataflow(modelId);

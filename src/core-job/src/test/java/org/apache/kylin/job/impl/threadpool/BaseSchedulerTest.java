@@ -52,8 +52,6 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
 
     @Before
     public void setup() throws Exception {
-        overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
-        overwriteSystemProp("kylin.job.slave-lock-renew-sec", "30");
         createTestMetadata();
         killProcessCount = new AtomicInteger();
         val originExecutableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);

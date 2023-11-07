@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.PriorityQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +55,8 @@ import org.apache.kylin.job.runners.JobCheckUtil;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.job.util.JobInfoUtil;
 import org.apache.kylin.metadata.cube.utils.StreamingUtils;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.util.SpringContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +80,8 @@ public class JdbcJobScheduler implements JobScheduler {
     // job id -> (executable, job scheduled time)
     private final Map<String, Pair<AbstractJobExecutable, Long>> runningJobMap;
 
+    private final Map<String, PriorityQueue<JobInfo>> readyJobCache;
+
     private JdbcJobLock masterLock;
 
     private ScheduledExecutorService master;
@@ -91,7 +96,8 @@ public class JdbcJobScheduler implements JobScheduler {
         this.jobContext = jobContext;
         this.isMaster = new AtomicBoolean(false);
         this.runningJobMap = Maps.newConcurrentMap();
-        this.consumerMaxThreads = jobContext.getKylinConfig().getMaxConcurrentJobLimit();
+        this.readyJobCache = Maps.newHashMap();
+        this.consumerMaxThreads = jobContext.getKylinConfig().getNodeMaxConcurrentJobLimit();
     }
 
     @Override
@@ -193,59 +199,135 @@ public class JdbcJobScheduler implements JobScheduler {
                 return;
             }
 
-            releaseExpiredLock();
-
-            // parallel job count threshold
-            if (!jobContext.getParallelLimiter().tryRelease()) {
-                return;
-            }
-
-            int batchSize = jobContext.getKylinConfig().getJobSchedulerMasterPollBatchSize();
-            List<String> readyJobIdList = jobContext.getJobInfoMapper()
-                    .findJobIdListByStatusBatch(ExecutableState.READY.name(), batchSize);
-            if (readyJobIdList.isEmpty()) {
-                return;
-            }
-
             if (!checkLicense()) {
                 return;
             }
 
-            String polledJobIdInfo = readyJobIdList.stream().collect(Collectors.joining(",", "[", "]"));
-            logger.info("Scheduler polled jobs: {} {}", readyJobIdList.size(), polledJobIdInfo);
-            // force catchup metadata before produce jobs
-            StreamingUtils.replayAuditlog();
-            for (String jobId : readyJobIdList) {
-                if (!jobContext.getParallelLimiter().tryAcquire()) {
-                    return;
-                }
+            releaseExpiredLock();
 
-                if (JobCheckUtil.markSuicideJob(jobId, jobContext)) {
-                    logger.info("suicide job = {} on produce", jobId);
+            List<JobInfo> processingJobInfoList = getProcessingJobInfoWithOrder();
+            Map<String, Integer> projectRunningCountMap = Maps.newHashMap();
+            for (JobInfo processingJobInfo : processingJobInfoList) {
+                if (ExecutableState.READY.name().equals(processingJobInfo.getJobStatus())) {
+                    addReadyJobToCache(processingJobInfo);
+                } else {
+                    // count running job by project
+                    String project = processingJobInfo.getProject();
+                    if (!projectRunningCountMap.containsKey(project)) {
+                        projectRunningCountMap.put(project, 0);
+                    }
+                    projectRunningCountMap.put(project, projectRunningCountMap.get(project) + 1);
+                }
+            }
+            Map<String, Integer> projectProduceCountMap = getProjectProduceCount(projectRunningCountMap);
+
+            boolean produced = false;
+            for (Map.Entry<String, Integer> entry : projectProduceCountMap.entrySet()) {
+                String project = entry.getKey();
+                int produceCount = entry.getValue();
+                if (produceCount == 0) {
+                    logger.info("Project {} has reached max concurrent limit", project);
                     continue;
                 }
-
-                JobContextUtil.withTxAndRetry(() -> {
-                    JobLock lock = jobContext.getJobLockMapper().selectByJobId(jobId);
-                    JobInfo jobInfo = jobContext.getJobInfoMapper().selectByJobId(jobId);
-                    if (lock == null && jobContext.getJobLockMapper()
-                            .insertSelective(new JobLock(jobId, jobInfo.getProject(), jobInfo.getPriority())) == 0) {
-                        logger.error("Create job lock for [{}] failed!", jobId);
-                        return null;
-                    }
-                    ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), jobInfo.getProject())
-                            .publishJob(jobId, (AbstractExecutable) getJobExecutable(jobInfo));
-                    return null;
-                });
+                PriorityQueue<JobInfo> projectReadyJobCache = readyJobCache.get(project);
+                if (CollectionUtils.isEmpty(projectReadyJobCache)) {
+                    continue;
+                }
+                produced = true;
+                if (produceCount > projectReadyJobCache.size()) {
+                    produceCount = projectReadyJobCache.size();
+                }
+                // force catchup metadata before produce jobs
+                StreamingUtils.replayAuditlog();
+                logger.info("Begin to produce job for project: {}, product count: {}", project, produceCount);
+                for (int i = 0; i < produceCount; i++) {
+                    produceJobForProject(produceCount, projectReadyJobCache);
+                }
             }
-
-            // maybe more jobs exist, publish job immediately
-            delaySec = 0;
-        } catch (Exception e) {
-            logger.error("Something's wrong when publishing job", e);
+            if (produced) {
+                // maybe more jobs exist, publish job immediately
+                delaySec = 0;
+            }
+        } catch (Throwable t) {
+            logger.error("Something's wrong when publishing job", t);
         } finally {
             master.schedule(this::produceJob, delaySec, TimeUnit.SECONDS);
         }
+    }
+
+    private void produceJobForProject(int produceCount, PriorityQueue<JobInfo> projectReadyJobCache) {
+        int i = 0;
+        while (i < produceCount) {
+            if (projectReadyJobCache.isEmpty()) {
+                return;
+            }
+            JobInfo jobInfo = projectReadyJobCache.poll();
+            if (doProduce(jobInfo)) {
+                i++;
+            }
+        }
+    }
+
+    private boolean doProduce(JobInfo jobInfo) {
+        try {
+            if (JobCheckUtil.markSuicideJob(jobInfo)) {
+                logger.info("Suicide job = {} on produce", jobInfo.getJobId());
+                return false;
+            }
+            return JobContextUtil.withTxAndRetry(() -> {
+                String jobId = jobInfo.getJobId();
+                JobLock lock = jobContext.getJobLockMapper().selectByJobId(jobId);
+                if (lock == null && jobContext.getJobLockMapper().insertSelective(
+                        new JobLock(jobId, jobInfo.getProject(), jobInfo.getPriority())) == 0) {
+                    logger.error("Create job lock for [{}] failed!", jobId);
+                    return false;
+                }
+                ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), jobInfo.getProject())
+                        .publishJob(jobId, (AbstractExecutable) getJobExecutable(jobInfo));
+                logger.debug("Job {} has bean produced successfully", jobInfo.getJobId());
+                return true;
+            });
+        } catch (Throwable t) {
+            logger.error("Failed to produce job: " + jobInfo.getJobId(), t);
+            return false;
+        }
+    }
+
+    private List<JobInfo> getProcessingJobInfoWithOrder() {
+        JobMapperFilter jobMapperFilter = new JobMapperFilter();
+        jobMapperFilter.setStatuses(ExecutableState.READY, ExecutableState.PENDING, ExecutableState.RUNNING);
+        jobMapperFilter.setOrderByFiled("priority,create_time");
+        jobMapperFilter.setOrderType("ASC");
+        return jobContext.getJobInfoMapper().selectByJobFilter(jobMapperFilter);
+    }
+
+    private void addReadyJobToCache(JobInfo jobInfo) {
+        String project = jobInfo.getProject();
+        if (null == readyJobCache.get(project)) {
+            readyJobCache.put(project, new PriorityQueue<>());
+        }
+        if (!readyJobCache.get(project).contains(jobInfo)) {
+            readyJobCache.get(project).add(jobInfo);
+        }
+    }
+
+    private Map<String, Integer> getProjectProduceCount(Map<String, Integer> projectRunningCountMap) {
+        Map<String, Integer> projectProduceCount = Maps.newHashMap();
+        NProjectManager projectManager = NProjectManager.getInstance(jobContext.getKylinConfig());
+        List<ProjectInstance> allProjects = projectManager.listAllProjects();
+        for (ProjectInstance projectInstance : allProjects) {
+            String project = projectInstance.getName();
+            int projectMaxConcurrent = projectInstance.getConfig().getMaxConcurrentJobLimit();
+            int projectRunningCount = projectRunningCountMap.containsKey(project)
+                    ? projectRunningCountMap.get(project).intValue()
+                    : 0;
+            if (projectRunningCount < projectMaxConcurrent) {
+                projectProduceCount.put(project, projectMaxConcurrent - projectRunningCount);
+                continue;
+            }
+            projectProduceCount.put(project, 0);
+        }
+        return projectProduceCount;
     }
 
     private boolean checkLicense() {
@@ -428,8 +510,8 @@ public class JdbcJobScheduler implements JobScheduler {
             if (null == jobLock) {
                 return;
             }
-            if (jobContext.isProjectReachQuotaLimit(jobExecutable.getProject())
-                    && JobCheckUtil.stopJobIfStorageQuotaLimitReached(jobContext, jobInfo, jobExecutable)) {
+            if (jobContext.isProjectReachQuotaLimit(jobExecutable.getProject()) && JobCheckUtil
+                    .stopJobIfStorageQuotaLimitReached(jobContext, jobInfo.getProject(), jobInfo.getJobId())) {
                 return;
             }
             // heavy action

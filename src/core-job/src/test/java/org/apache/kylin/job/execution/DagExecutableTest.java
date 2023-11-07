@@ -117,7 +117,7 @@ class DagExecutableTest {
         executable1.setNextSteps(Sets.newHashSet(executable2.getId()));
         executable2.setPreviousStep(executable1.getId());
         manager.addJob(job);
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(executable1.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(executable1.getId(), ExecutableState.SUCCEED);
 
@@ -142,7 +142,7 @@ class DagExecutableTest {
         executable1.setNextSteps(Sets.newHashSet(executable2.getId()));
         executable2.setPreviousStep(executable1.getId());
         manager.addJob(job);
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(executable1.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(executable1.getId(), ExecutableState.SUCCEED);
         manager.updateJobOutput(executable2.getId(), ExecutableState.RUNNING);
@@ -168,7 +168,7 @@ class DagExecutableTest {
         executable1.setNextSteps(Sets.newHashSet(executable2.getId()));
         executable2.setPreviousStep(executable1.getId());
         manager.addJob(job);
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(executable1.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(executable1.getId(), ExecutableState.SUCCEED);
         manager.updateJobOutput(executable2.getId(), ExecutableState.RUNNING);
@@ -210,7 +210,7 @@ class DagExecutableTest {
         executable2.setNextSteps(Sets.newHashSet(executable3.getId()));
         executable3.setPreviousStep(executable2.getId());
         manager.addJob(job);
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getId(), job);
         manager.updateJobOutput(executable1.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(executable1.getId(), ExecutableState.SUCCEED);
         manager.updateJobOutput(executable2.getId(), ExecutableState.RUNNING);
@@ -248,7 +248,7 @@ class DagExecutableTest {
         final Map<String, Executable> dagExecutablesMap = job.getTasks().stream()
                 .collect(Collectors.toMap(Executable::getId, executable -> executable));
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         job.dagExecute(Lists.newArrayList(executable1), dagExecutablesMap, context);
 
         assertEquals(ExecutableState.SUCCEED, executable1.getStatus());
@@ -338,7 +338,7 @@ class DagExecutableTest {
         final Map<String, Executable> dagExecutablesMap = job.getTasks().stream()
                 .collect(Collectors.toMap(Executable::getId, executable -> executable));
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         job.dagExecute(Lists.newArrayList(executable1, executable01), dagExecutablesMap, context);
 
         await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -383,7 +383,7 @@ class DagExecutableTest {
 
         List<Executable> executables = job.getTasks().stream().map(task -> ((Executable) task))
                 .collect(Collectors.toList());
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         job.dagSchedule(executables, context);
 
         assertEquals(ExecutableState.SUCCEED, executable1.getStatus());
@@ -409,7 +409,7 @@ class DagExecutableTest {
 
         List<Executable> executables = job.getTasks().stream().map(task -> ((Executable) task))
                 .collect(Collectors.toList());
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         job.chainedSchedule(executables, context);
 
         assertEquals(ExecutableState.SUCCEED, executable1.getStatus());
@@ -433,7 +433,7 @@ class DagExecutableTest {
         job.setJobType(JobTypeEnum.INDEX_BUILD);
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(executable2.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(executable2.getId(), ExecutableState.SUCCEED);
         manager.updateJobOutput(executable3.getId(), ExecutableState.RUNNING);
@@ -478,7 +478,7 @@ class DagExecutableTest {
         executable3.setPreviousStep(executable2.getId());
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         val executeResult = job.doWork(context);
         assertEquals(ExecuteResult.State.SUCCEED, executeResult.state());
         assertEquals("succeed", executeResult.output());
@@ -512,7 +512,7 @@ class DagExecutableTest {
         job.setJobSchedulerMode(JobSchedulerModeEnum.CHAIN);
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         val executeResult = job.doWork(context);
         assertEquals(ExecuteResult.State.SUCCEED, executeResult.state());
         assertEquals("succeed", executeResult.output());
@@ -546,7 +546,7 @@ class DagExecutableTest {
         job.setJobSchedulerMode(JobSchedulerModeEnum.DAG);
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         val executeResult = job.doWork(context);
         assertEquals(ExecuteResult.State.SUCCEED, executeResult.state());
         assertEquals("succeed", executeResult.output());
@@ -586,7 +586,7 @@ class DagExecutableTest {
         job.setJobSchedulerMode(JobSchedulerModeEnum.DAG);
 
         manager.addJob(job);
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         job.doWork(context);
 
         await().atMost(new Duration(120, TimeUnit.SECONDS)).untilAsserted(() -> {
@@ -628,7 +628,7 @@ class DagExecutableTest {
         executable222.setPreviousStep(executable2.getId());
 
         manager.addJob(job);
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         job.doWork(context);
 
         assertEquals(ExecutableState.SUCCEED, executable1.getStatus());
@@ -663,7 +663,7 @@ class DagExecutableTest {
         job.setJobType(JobTypeEnum.INDEX_BUILD);
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(job.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(task.getId(), ExecutableState.RUNNING);
         manager.updateStageStatus(stage1.getId(), task.getId(), ExecutableState.RUNNING, null, null);
@@ -708,7 +708,7 @@ class DagExecutableTest {
         job.setJobType(JobTypeEnum.INDEX_BUILD);
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(job.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(task.getId(), ExecutableState.RUNNING);
         manager.updateStageStatus(stage1.getId(), task.getId(), ExecutableState.RUNNING, null, null);
@@ -742,7 +742,7 @@ class DagExecutableTest {
         job.setJobType(JobTypeEnum.INDEX_BUILD);
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             manager.updateJobOutput(task1.getId(), ExecutableState.ERROR);
             return null;
@@ -778,7 +778,7 @@ class DagExecutableTest {
 
         val info = Maps.<String, String> newHashMap();
         info.put(DEPENDENT_FILES, "12");
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(job.getId(), ExecutableState.RUNNING, info);
         dependentFiles = job.getDependentFiles();
         assertEquals(1, dependentFiles.size());
@@ -842,7 +842,7 @@ class DagExecutableTest {
         job.setJobSchedulerMode(JobSchedulerModeEnum.DAG);
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(executable2.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(executable3.getId(), ExecutableState.RUNNING);
 
@@ -907,7 +907,7 @@ class DagExecutableTest {
 
         manager.addJob(job);
 
-        await().atMost(5, TimeUnit.SECONDS).until(() -> job.getStatus() == ExecutableState.PENDING);
+        manager.publishJob(job.getJobId(), job);
         manager.updateJobOutput(executable2.getId(), ExecutableState.RUNNING);
         manager.updateJobOutput(executable3.getId(), ExecutableState.RUNNING);
 

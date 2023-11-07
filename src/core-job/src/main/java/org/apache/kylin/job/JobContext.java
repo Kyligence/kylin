@@ -43,7 +43,6 @@ import org.apache.kylin.job.runners.JobCheckRunner;
 import org.apache.kylin.job.runners.JobCheckUtil;
 import org.apache.kylin.job.runners.QuotaStorageCheckRunner;
 import org.apache.kylin.job.scheduler.JdbcJobScheduler;
-import org.apache.kylin.job.scheduler.ParallelLimiter;
 import org.apache.kylin.job.scheduler.ResourceAcquirer;
 import org.apache.kylin.job.scheduler.SharedFileProgressReporter;
 import org.apache.kylin.rest.ISmartApplicationListenerForSystem;
@@ -85,7 +84,6 @@ public class JobContext implements InitializingBean, DisposableBean, ISmartAppli
 
     private Map<String, Boolean> projectReachQuotaLimitMap;
 
-    private ParallelLimiter parallelLimiter;
     private ResourceAcquirer resourceAcquirer;
 
     private SharedFileProgressReporter progressReporter;
@@ -102,10 +100,6 @@ public class JobContext implements InitializingBean, DisposableBean, ISmartAppli
 
         if (Objects.nonNull(progressReporter)) {
             progressReporter.destroy();
-        }
-
-        if (Objects.nonNull(parallelLimiter)) {
-            parallelLimiter.destroy();
         }
 
         if (Objects.nonNull(jobScheduler)) {
@@ -162,9 +156,6 @@ public class JobContext implements InitializingBean, DisposableBean, ISmartAppli
             progressReporter = new SharedFileProgressReporter(kylinConfig);
             progressReporter.start();
 
-            parallelLimiter = new ParallelLimiter(this);
-            parallelLimiter.start();
-
             lockClient = new JdbcLockClient(this);
             lockClient.start();
 
@@ -199,10 +190,6 @@ public class JobContext implements InitializingBean, DisposableBean, ISmartAppli
 
     public JobLockMapper getJobLockMapper() {
         return jobLockMapper;
-    }
-
-    public ParallelLimiter getParallelLimiter() {
-        return parallelLimiter;
     }
 
     public ResourceAcquirer getResourceAcquirer() {

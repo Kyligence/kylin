@@ -98,6 +98,8 @@ public class JobManagerTest extends NLocalFileMetadataTestCase {
 
         jobManager = JobManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT);
         SparkJobFactoryUtils.initJobFactory();
+
+        overwriteSystemProp("kylin.job.max-concurrent-jobs", "0");
     }
 
     @After

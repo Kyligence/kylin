@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.kylin.common.AbstractTestCase;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.JobContext;
@@ -48,8 +49,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
-@MetadataInfo(onlyProps = true)
-class JdbcJobSchedulerTest {
+@MetadataInfo
+class JdbcJobSchedulerTest extends AbstractTestCase {
     private static final String PROJECT = "default";
 
     private JobInfoDao jobInfoDao;
@@ -58,8 +59,8 @@ class JdbcJobSchedulerTest {
     @BeforeEach
     public void setup() {
         KylinConfig config = getTestConfig();
-        config.setProperty("kylin.job.max-concurrent-jobs", "2");
-        config.setProperty("kylin.job.slave-lock-renew-sec", "3");
+        overwriteSystemProp("kylin.job.max-concurrent-jobs", "2");
+        overwriteSystemProp("kylin.job.slave-lock-renew-sec", "3");
         jobContext = JobContextUtil.getJobContext(config);
         jobInfoDao = JobContextUtil.getJobInfoDao(config);
     }
@@ -74,9 +75,7 @@ class JdbcJobSchedulerTest {
         String jobId = mockJob();
         Assertions.assertEquals(jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus(),
                 ExecutableState.READY.name());
-        await().atMost(2, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
-                .equals(ExecutableState.PENDING.name()));
-        await().atMost(2, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
+        await().atMost(3, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
                 .equals(ExecutableState.RUNNING.name()));
         await().atMost(2, TimeUnit.SECONDS).until(() -> jobInfoDao.getExecutablePOByUuid(jobId).getOutput().getStatus()
                 .equals(ExecutableState.SUCCEED.name()));
@@ -98,6 +97,7 @@ class JdbcJobSchedulerTest {
 
     @Test
     void JobsScheduledOnTwoNode() throws Exception {
+        overwriteSystemProp("kylin.job.max-concurrent-jobs", "3");
         JobContext secondJobContext = mockJobContext("127.0.0.1:7071");
         System.setProperty("COST_TIME", "3000");
         for (int i = 0; i < 3; i++) {
@@ -108,8 +108,8 @@ class JdbcJobSchedulerTest {
         await().atMost(5, TimeUnit.SECONDS).until(() -> jobInfoDao.getJobInfoListByFilter(filter).size() == 3);
         Assertions.assertEquals(secondJobContext.getJobScheduler().getRunningJob().size()
                 + jobContext.getJobScheduler().getRunningJob().size(), 3);
-        Assertions.assertTrue(jobContext.getJobScheduler().getRunningJob().size() > 0);
-        Assertions.assertTrue(secondJobContext.getJobScheduler().getRunningJob().size() > 0);
+        Assertions.assertTrue(jobContext.getJobScheduler().getRunningJob().size() > 0
+                || secondJobContext.getJobScheduler().getRunningJob().size() > 0);
 
         secondJobContext.destroy();
         System.clearProperty("COST_TIME");

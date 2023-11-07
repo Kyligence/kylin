@@ -55,12 +55,14 @@ public class JdbcUtil {
 
     private static final ThreadLocal txThreadLocal = new ThreadLocal();
 
-    public static <T> T withTxAndRetry(DataSourceTransactionManager transactionManager, Callback<T> consumer){
+    public static <T> T withTxAndRetry(DataSourceTransactionManager transactionManager, Callback<T> consumer) {
         return withTxAndRetry(transactionManager, consumer, TransactionDefinition.ISOLATION_REPEATABLE_READ, 3);
     }
 
-    public static <T> T withTxAndRetry(DataSourceTransactionManager transactionManager, Callback<T> consumer, int retryLimit){
-        return withTxAndRetry(transactionManager, consumer, TransactionDefinition.ISOLATION_REPEATABLE_READ, retryLimit);
+    public static <T> T withTxAndRetry(DataSourceTransactionManager transactionManager, Callback<T> consumer,
+            int retryLimit) {
+        return withTxAndRetry(transactionManager, consumer, TransactionDefinition.ISOLATION_REPEATABLE_READ,
+                retryLimit);
     }
 
     public static boolean isInExistingTx(){

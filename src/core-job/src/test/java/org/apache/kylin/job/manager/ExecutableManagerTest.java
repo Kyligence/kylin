@@ -99,6 +99,7 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() throws Exception {
         createTestMetadata();
+        overwriteSystemProp("kylin.job.max-concurrent-jobs", "0");
         JobContextUtil.cleanUp();
         JobContextUtil.getJobInfoDao(getTestConfig());
         manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), DEFAULT_PROJECT);
@@ -106,8 +107,8 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
 
     @After
     public void after() throws Exception {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test
