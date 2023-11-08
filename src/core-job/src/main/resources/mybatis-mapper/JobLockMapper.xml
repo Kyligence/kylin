@@ -141,13 +141,14 @@
   <select id="findNonLockIdList" resultMap="PriorityFistRandomOrderJob">
     SELECT lock_id, priority
     FROM ${jobLockTable}
-    WHERE lock_node IS NULL OR lock_expire_time <![CDATA[<]]> CURRENT_TIMESTAMP
+    WHERE
     <if test="projects != null">
-      AND
       <foreach close=")" collection="projects" index="index" item="item" open="project in (" separator=",">
         #{item}
       </foreach>
+      AND
     </if>
+    (lock_node IS NULL OR lock_expire_time <![CDATA[<]]> CURRENT_TIMESTAMP)
     ORDER BY priority ASC
     <if test="batchSize&gt;=0">
       LIMIT #{batchSize,jdbcType=INTEGER}
