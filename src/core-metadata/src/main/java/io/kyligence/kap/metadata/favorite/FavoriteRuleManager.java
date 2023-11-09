@@ -129,6 +129,10 @@ public class FavoriteRuleManager {
         favoriteRuleStore.deleteByName(project, favoriteRule.getName());
     }
 
+    public void deleteByProject() {
+        favoriteRuleStore.deleteByProject(project);
+    }
+
     @VisibleForTesting
     public void createRule(final FavoriteRule rule) {
         FavoriteRule copy = copyForWrite(rule);

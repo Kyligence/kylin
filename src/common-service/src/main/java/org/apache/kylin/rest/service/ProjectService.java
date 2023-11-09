@@ -148,6 +148,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.SneakyThrows;
@@ -961,8 +962,16 @@ public class ProjectService extends BasicService {
 
         NProjectManager prjManager = getManager(NProjectManager.class);
         prjManager.forceDropProject(project);
+        UnitOfWork.get().doAfterUpdate(() -> deleteProjectRelatedMeta(project));
         UnitOfWork.get().doAfterUnit(() -> new ProjectDropListener().onDelete(project, clusterManager, headers));
         EventBusFactory.getInstance().postAsync(new SourceUsageUpdateNotifier());
+    }
+
+    private void deleteProjectRelatedMeta(String project) {
+        // delete query history id offset
+        QueryHistoryIdOffsetManager.getInstance(project).delete();
+        // delete favorite rule
+        FavoriteRuleManager.getInstance(project).deleteByProject();
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")
