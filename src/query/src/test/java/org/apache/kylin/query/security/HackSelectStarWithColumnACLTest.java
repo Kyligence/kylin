@@ -116,7 +116,19 @@ class HackSelectStarWithColumnACLTest {
                     + "select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
                     + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" "
                     + "from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"TEST_KYLIN_FACT\" "
-                    + "join TEST_ORDER on TEST_KYLIN_FACT.ORDER_ID = TEST_ORDER.ORDER_ID";
+                    + "join \"TEST_ORDER\" on TEST_KYLIN_FACT.ORDER_ID = TEST_ORDER.ORDER_ID";
+            Assertions.assertEquals(expected, converted);
+        }
+        // with-item has alias in with-body
+        {
+            String sql = "with \"TEMP_DEPT\" as (select fpd.order_id, fpd.buyer_id "
+                    + "from test_order as fpd group by fpd.order_id, fpd.buyer_id)\n"
+                    + "select fpd.order_id, fpd.buyer_id from temp_dept as fpd";
+            String converted = TRANSFORMER.convert(sql, PROJECT, SCHEMA);
+            String expected = "with \"TEMP_DEPT\" as (select fpd.order_id, fpd.buyer_id from ( "
+                    + "select \"TEST_ORDER\".\"ORDER_ID\", \"TEST_ORDER\".\"BUYER_ID\", \"TEST_ORDER\".\"TEST_DATE_ENC\" "
+                    + "from \"DEFAULT\".\"TEST_ORDER\") as \"FPD\" group by fpd.order_id, fpd.buyer_id)\n"
+                    + "select fpd.order_id, fpd.buyer_id from \"TEMP_DEPT\" as \"FPD\"";
             Assertions.assertEquals(expected, converted);
         }
         // some content of with-body reuse with-items
@@ -132,7 +144,7 @@ class HackSelectStarWithColumnACLTest {
                     + "select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
                     + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" "
                     + "from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"TEST_KYLIN_FACT\" "
-                    + "join (select * from TEST_ORDER) TEST_ORDER on TEST_KYLIN_FACT.ORDER_ID = TEST_ORDER.ORDER_ID";
+                    + "join (select * from \"TEST_ORDER\") TEST_ORDER on TEST_KYLIN_FACT.ORDER_ID = TEST_ORDER.ORDER_ID";
             Assertions.assertEquals(expected, converted);
         }
         // all contexts of with-body do not reuse any with-items
@@ -170,7 +182,7 @@ class HackSelectStarWithColumnACLTest {
                     + "select * from ( select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
                     + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" "
                     + "from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"TEST_KYLIN_FACT\")\n"
-                    + "select * from TEST_KYLIN_FACT join (select * from TEST_ORDER) TEST_ORDER "
+                    + "select * from \"TEST_KYLIN_FACT\" join (select * from \"TEST_ORDER\") TEST_ORDER "
                     + "on TEST_KYLIN_FACT.ORDER_ID = TEST_ORDER.ORDER_ID";
             Assertions.assertEquals(expected, converted);
         }

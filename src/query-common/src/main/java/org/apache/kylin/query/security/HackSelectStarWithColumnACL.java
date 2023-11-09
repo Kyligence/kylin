@@ -198,7 +198,9 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
 
         private String markTableIdentifier(SqlIdentifier operand, SqlNode alias) {
             if (namesOfWithItems.contains(operand.toString())) {
-                return operand.toString();
+                String withItemName = StringHelper.doubleQuote(operand.toString());
+                return alias == null ? withItemName
+                        : withItemName + " as " + StringHelper.doubleQuote(alias.toString());
             }
             List<String> names = operand.names;
             String schema = names.size() == 1 ? defaultSchema : names.get(0);
