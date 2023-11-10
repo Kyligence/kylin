@@ -307,7 +307,7 @@ public class OpenModelController extends NBasicController {
     public EnvelopeResponse<String> deleteModel(@PathVariable("model_name") String modelAlias,
             @RequestParam("project") String project) {
         String projectName = checkProjectName(project);
-        String modelId = modelService.getModel(modelAlias, projectName).getId();
+        String modelId = modelService.getModelWithoutBrokenCheck(modelAlias, projectName).getId();
         return modelController.deleteModel(modelId, projectName);
     }
 

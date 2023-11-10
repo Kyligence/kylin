@@ -387,6 +387,18 @@ public class ModelService extends AbstractModelService
         return model;
     }
 
+    public NDataModel getModelWithoutBrokenCheck(String modelAliasOrUuid, String project) {
+        NDataModel model = getManager(NDataModelManager.class, project).listAllModels().stream() //
+                .filter(dataModel -> dataModel.getUuid().equals(modelAliasOrUuid) //
+                        || dataModel.getAlias().equalsIgnoreCase(modelAliasOrUuid))
+                .findFirst().orElse(null);
+
+        if (model == null) {
+            throw new KylinException(MODEL_NAME_NOT_EXIST, modelAliasOrUuid);
+        }
+        return model;
+    }
+
     public List<String> getModelNamesByFuzzyName(String fuzzyName, String project, boolean exact) {
         if (StringUtils.isNotEmpty(project)) {
             NDataModelManager modelManager = getManager(NDataModelManager.class, project);
