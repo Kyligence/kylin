@@ -44,6 +44,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.QueryErrorCode;
+import org.apache.kylin.common.exception.code.ErrorCodeServer;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.StopQueryBroadcastEventNotifier;
@@ -312,8 +313,10 @@ public class NAsyncQueryController extends NBasicController {
         AsyncQueryResponse asyncQueryResponse;
         switch (queryStatus) {
         case SUCCESS:
-            asyncQueryResponse = new AsyncQueryResponse(queryId, AsyncQueryResponse.Status.SUCCESSFUL,
-                    "await fetching results");
+            AsyncQueryUtil.SuccessFileContent content = AsyncQueryUtil.getSuccessFileContent(project, queryId);
+            ErrorCodeServer code = content == null ? null : ErrorCodeServer.of(content.getCode());
+            String info = code == null ? "await fetching results" : code.getErrorMsg().getLocalizedString();
+            asyncQueryResponse = new AsyncQueryResponse(queryId, AsyncQueryResponse.Status.SUCCESSFUL, info);
             break;
         case RUNNING:
             asyncQueryResponse = new AsyncQueryResponse(queryId, AsyncQueryResponse.Status.RUNNING, "still running");

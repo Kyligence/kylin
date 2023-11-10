@@ -17,6 +17,8 @@
  */
 package org.apache.kylin.common.exception.code;
 
+import org.apache.commons.lang3.StringUtils;
+
 public enum ErrorCodeServer implements ErrorCodeProducer {
 
     // 100012XX project
@@ -165,6 +167,7 @@ public enum ErrorCodeServer implements ErrorCodeProducer {
     ASYNC_QUERY_PROJECT_NAME_EMPTY("KE-010031302"),
     ASYNC_QUERY_TIME_FORMAT_ERROR("KE-010031303"),
     ASYNC_QUERY_INCLUDE_HEADER_NOT_EMPTY("KE-010031304"),
+    ASYNC_QUERY_OUT_OF_DATA_RANGE("KE-010031305"),
 
     // 400272XX resource group
     RESOURCE_GROUP_DISABLE_FAILED("KE-040027201"),
@@ -201,6 +204,18 @@ public enum ErrorCodeServer implements ErrorCodeProducer {
     CUSTOM_PARSER_NOT_EXISTS_JAR("KE-010042214"),
     CUSTOM_PARSER_ALREADY_EXISTS_PARSER("KE-010042215"),
     CUSTOM_PARSER_ALREADY_EXISTS_JAR("KE-010042216");
+
+    public static ErrorCodeServer of(String keCode) {
+        if (StringUtils.isBlank(keCode)) {
+            return null;
+        }
+        for (ErrorCodeServer value : values()) {
+            if (value.getErrorCode().getCode().equals(keCode)) {
+                return value;
+            }
+        }
+        return null;
+    }
 
     private final ErrorCode errorCode;
     private final ErrorMsg errorMsg;

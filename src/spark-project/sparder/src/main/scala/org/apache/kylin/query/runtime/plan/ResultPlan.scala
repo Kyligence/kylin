@@ -17,18 +17,17 @@
  */
 package org.apache.kylin.query.runtime.plan
 
-import java.io.{File, FileOutputStream, OutputStreamWriter}
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.atomic.AtomicLong
-import java.{lang, util}
+import io.kyligence.kap.secondstorage.SecondStorageUtil
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.fs.Path
+import org.apache.kylin.common.exception.code.ErrorCodeServer.ASYNC_QUERY_OUT_OF_DATA_RANGE
 import org.apache.kylin.common.exception.{BigQueryException, NewQueryRefuseException}
 import org.apache.kylin.common.util.{HadoopUtil, RandomUtil}
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
 import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.guava30.shaded.common.cache.{Cache, CacheBuilder}
+import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.kylin.metadata.query.{BigQueryThresholdUpdater, StructField}
 import org.apache.kylin.metadata.state.QueryShareStateManager
 import org.apache.kylin.query.engine.RelColumnMetaDataExtractor
@@ -43,11 +42,13 @@ import org.apache.spark.sql.hive.QueryMetricUtils
 import org.apache.spark.sql.util.{SparderConstants, SparderTypeUtil}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparderEnv}
 
+import java.io.{File, FileOutputStream, OutputStreamWriter}
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.atomic.AtomicLong
+import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`iterator asScala`
 import scala.collection.mutable
-import io.kyligence.kap.secondstorage.SecondStorageUtil
-import org.apache.kylin.metadata.project.NProjectManager
 
 // scalastyle:off
 object ResultType extends Enumeration {
@@ -346,7 +347,8 @@ object ResultPlan extends LogEx {
         normalizeSchema(df).write.option("timestampFormat", dateTimeFormat).option("encoding", encode)
           .option("charset", "utf-8").mode(SaveMode.Append).parquet(path)
     }
-    AsyncQueryUtil.createSuccessFlag(QueryContext.current().getProject, QueryContext.current().getQueryId)
+    val successFileContent = if (QueryContext.current().isOutOfSegmentRange) new AsyncQueryUtil.SuccessFileContent(ASYNC_QUERY_OUT_OF_DATA_RANGE.getErrorCode.getCode) else null
+    AsyncQueryUtil.createSuccessFlagWithContent(QueryContext.current().getProject, QueryContext.current().getQueryId, successFileContent)
     if (kapConfig.isQuerySparkJobTraceEnabled) {
       jobTrace.jobFinished()
     }
