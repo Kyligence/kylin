@@ -1741,6 +1741,43 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    public void testMetaDataV2WithModelDescAsTableAlias() throws IOException {
+        overwriteSystemProp("kylin.query.auto-model-view-enabled", "true");
+        final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("test_jdbc", null);
+        String metaString = tableMetas.toString();
+        File expectedMetaFile = new File("src/test/resources/ut_table_meta/testJdbcTableMetaV2");
+        String expectedMetaString = FileUtils.readFileToString(expectedMetaFile, Charset.defaultCharset());
+        Assert.assertEquals(expectedMetaString, metaString);
+        TableMetaWithType tableMetaWithType = tableMetas.stream()
+                .filter(t -> t.getTABLE_SCHEM().equalsIgnoreCase("test_jdbc"))
+                .filter(t -> t.getTABLE_NAME().equalsIgnoreCase("model_name_alias")).findFirst()
+                .orElseThrow(KylinRuntimeException::new);
+        String modelRemarks = tableMetaWithType.getREMARKS();
+        Assert.assertEquals("无名模型", modelRemarks);
+        ColumnMetaWithType fullQualifiedName = (ColumnMetaWithType) tableMetaWithType.getColumns().stream()
+                .filter(c -> c.getCOLUMN_NAME().equals("C_NAME")).findFirst().orElseThrow(KylinRuntimeException::new);
+        Assert.assertEquals("SSB.CUSTOMER.C_NAME", fullQualifiedName.getFULLY_QUALIFIED_COLUMN_NAME());
+
+        TableMetaWithType tableMetaWithNoAlias = tableMetas.stream()
+                .filter(t -> t.getTABLE_SCHEM().equalsIgnoreCase("test_jdbc"))
+                .filter(t -> t.getTABLE_NAME().equalsIgnoreCase("test")).findFirst()
+                .orElseThrow(KylinRuntimeException::new);
+        String modelWithNullRemarks = tableMetaWithNoAlias.getREMARKS();
+        Assert.assertNull(modelWithNullRemarks);
+
+        overwriteSystemProp("kylin.query.auto-model-view-enabled", "false");
+        final List<TableMetaWithType> tableMetasUabledModelView = queryService.getMetadataV2("test_jdbc", null);
+        List<TableMetaWithType> tableMetaWithType1 = tableMetasUabledModelView.stream()
+                .filter(t -> t.getTABLE_SCHEM().equalsIgnoreCase("test_jdbc"))
+                .filter(t -> t.getTABLE_NAME().equalsIgnoreCase("model_name_alias")).collect(Collectors.toList());
+        Assert.assertEquals(0, tableMetaWithType1.size());
+
+        updateProjectConfig("test_jdbc", "kylin.query.schema-cache-enabled", "true");
+        List<TableMetaWithType> metaWithTypeList = queryService.getMetadataV2("test_jdbc", null);
+        Assert.assertFalse(metaWithTypeList.isEmpty());
+    }
+
+    @Test
     //ref KE-12803
     public void testDeepCopy() {
         final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", null);

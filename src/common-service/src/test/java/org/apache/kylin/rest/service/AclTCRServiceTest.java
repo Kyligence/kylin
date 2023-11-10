@@ -1318,7 +1318,7 @@ public class AclTCRServiceTest extends NLocalFileMetadataTestCase {
         Mockito.when(userService.isGlobalAdmin("ADMIN")).thenReturn(true);
         List<SidPermissionWithAclResponse> responses = accessService.getUserOrGroupAclPermissions(projects, "ADMIN",
                 true);
-        Assert.assertEquals(30, responses.size());
+        Assert.assertEquals(31, responses.size());
         Assert.assertTrue(responses.stream().allMatch(response -> "ADMIN".equals(response.getProjectPermission())));
 
         // test normal group

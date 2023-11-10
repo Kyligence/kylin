@@ -1250,6 +1250,24 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         Map<TableMetaIdentify, TableMetaWithType> tableMap = constructTableMeta(schemaMetaData, targetModelTables);
         Map<ColumnMetaIdentify, ColumnMetaWithType> columnMap = constructTblColMeta(schemaMetaData, project,
                 targetModelColumns);
+        columnMap.forEach((identify, columnMetaWithType) -> {
+            TableMetaIdentify tableMetaIdentify = new TableMetaIdentify(identify.getTableSchema(),
+                    identify.getTableName());
+            val tableType = tableMap.get(tableMetaIdentify).getTABLE_TYPE();
+            if (tableType.equals("VIEW")) {
+                // Converts the model's column alias to a true column name
+                val modelManager = NDataModelManager.getInstance(getConfig(), project);
+                val model = modelManager.getDataModelDescByAlias(tableMetaIdentify.tableName);
+                // Set table name comment of this model view
+                if (!model.getDescription().isEmpty()) {
+                    tableMap.get(tableMetaIdentify).setREMARKS(model.getDescription());
+                }
+                int colIdInMode = model.getColumnByColumnNameInModel(columnMetaWithType.getCOLUMN_NAME()).getId();
+                String fullyQualifiedName = model.getColRef(colIdInMode).getColumnWithTableAndSchema();
+                columnMetaWithType.setFULLY_QUALIFIED_COLUMN_NAME(fullyQualifiedName);
+            }
+        });
+
         addColsToTblMeta(tableMap, columnMap);
 
         for (NDataModel model : models) {
