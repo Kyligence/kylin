@@ -302,6 +302,11 @@ public class NDataModelResponse extends NDataModel {
         return this.isBroken();
     }
 
+    @JsonProperty("has_segment_overlap")
+    public boolean isHasSegmentOverlap() {
+        return NDataModel.BrokenReason.SEGMENT_OVERLAP == this.getBrokenReason();
+    }
+
     @JsonProperty("simplified_tables")
     public List<SimplifiedTableResponse> getSimpleTables() {
         List<SimplifiedTableResponse> simpleTables = new ArrayList<>();

@@ -91,7 +91,9 @@ public class SegmentUtil {
         }
 
         if (CollectionUtils.isNotEmpty(overlapSegs)) {
-            Preconditions.checkState(CollectionUtils.isNotEmpty(overlapSegs.getSegments(SegmentStatusEnum.NEW)));
+            if(CollectionUtils.isEmpty(overlapSegs.getSegments(SegmentStatusEnum.NEW))){
+                return SegmentStatusEnumToDisplay.OVERLAP;
+            }
             return SegmentStatusEnumToDisplay.LOCKED;
         }
 

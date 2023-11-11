@@ -18,14 +18,16 @@
 
 package org.apache.kylin.job.common;
 
+import java.util.ArrayList;
+
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.junit.TimeZoneTestRunner;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.model.SegmentStatusEnumToDisplay;
 import org.apache.kylin.metadata.model.Segments;
-import org.apache.kylin.junit.TimeZoneTestRunner;
-import org.apache.kylin.metadata.cube.model.NDataSegment;
-import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -223,6 +225,43 @@ public class SegmentsTest {
         seg.setSegmentRange(new SegmentRange.TimePartitionedSegmentRange(startTime, endTime));
         seg.setStatus(SegmentStatusEnum.READY);
         return seg;
+    }
+
+    @Test
+    public void testSegmentsWithRangeOverlap() {
+        val segmentList = new ArrayList();
+        Segments segments = new Segments();
+        val seg = NDataSegment.empty();
+        seg.setId(RandomUtil.randomUUIDStr());
+        seg.setSegmentRange(new SegmentRange.TimePartitionedSegmentRange(0L, 10000L));
+        seg.setStatus(SegmentStatusEnum.READY);
+        segments.add(seg);
+        segmentList.add(seg);
+
+        val seg2 = NDataSegment.empty();
+        seg2.setId(RandomUtil.randomUUIDStr());
+        seg2.setSegmentRange(new SegmentRange.TimePartitionedSegmentRange(9999L, 20000L));
+        seg2.setStatus(SegmentStatusEnum.READY);
+        segments.add(seg2);
+        segmentList.add(seg);
+
+        val newSeg = NDataSegment.empty();
+        newSeg.setId(RandomUtil.randomUUIDStr());
+        newSeg.setSegmentRange(new SegmentRange.TimePartitionedSegmentRange(20000L, 40000L));
+        newSeg.setStatus(SegmentStatusEnum.NEW);
+        segments.add(newSeg);
+        segmentList.add(seg);
+
+        Mockito.mockStatic(SegmentUtil.class);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(
+                Mockito.any(),
+                Mockito.any(NDataSegment.class),
+                Mockito.any())).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(Mockito.anyObject())).thenReturn(false);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null);
+        Assert.assertEquals(status, SegmentStatusEnumToDisplay.OVERLAP);
+
+
     }
 
 }

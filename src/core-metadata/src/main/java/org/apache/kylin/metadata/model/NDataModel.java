@@ -291,7 +291,7 @@ public class NDataModel extends RootPersistentEntity {
     }
 
     public enum BrokenReason {
-        SCHEMA, NULL, EVENT
+        SCHEMA, NULL, EVENT, SEGMENT_OVERLAP
     }
 
     @Data

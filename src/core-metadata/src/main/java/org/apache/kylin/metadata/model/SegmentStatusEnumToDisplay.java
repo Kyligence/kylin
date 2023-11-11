@@ -30,7 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @author xduo
  */
 public enum SegmentStatusEnumToDisplay implements Serializable {
-    ONLINE, LOCKED, REFRESHING, MERGING, LOADING, WARNING,
+    ONLINE, LOCKED, REFRESHING, MERGING, LOADING, WARNING, OVERLAP,
     @JsonProperty(value = "ONLINE(HDFS)")
     ONLINE_HDFS {
         @Override

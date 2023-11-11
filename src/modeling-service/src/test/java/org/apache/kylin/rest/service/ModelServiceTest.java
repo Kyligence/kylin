@@ -5714,4 +5714,23 @@ public class ModelServiceTest extends SourceTestCase {
         ModelRequest request = JsonUtil.readValue(modelRequest, ModelRequest.class);
         Assert.assertThrows(KylinException.class, () -> modelService.checkBeforeModelSave(request));
     }
+
+
+    @Test
+    public void testCheckModelWithSegmentOverlap() {
+        val project = "segment_overlap_test";
+        val modelId = "d0bbfa51-9c16-b6e5-1d33-76b47d8853eb";
+        val modelName = "time_range_overlap";
+        val models = modelService.getModels(modelName, project,
+                false, null, Lists.newArrayList(), null, false, null, null, null, true);
+        NDataModelResponse model = models.get(0);
+        Assert.assertSame(NDataModel.BrokenReason.NULL, model.getBrokenReason());
+
+        modelService.addOldParams(project, (List)models);
+        Assert.assertSame(NDataModel.BrokenReason.SEGMENT_OVERLAP, model.getBrokenReason());
+
+        model = modelService.getCubes0(modelName, project).get(0);
+        Assert.assertSame(NDataModel.BrokenReason.SEGMENT_OVERLAP, model.getBrokenReason());
+
+    }
 }

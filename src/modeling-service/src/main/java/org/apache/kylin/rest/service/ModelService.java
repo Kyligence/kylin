@@ -467,6 +467,7 @@ public class ModelService extends AbstractModelService
             ((NDataModelResponse) model).setSegments(segments);
             ((NDataModelResponse) model).setHasSegments(
                     ((NDataModelResponse) model).isHasSegments() || CollectionUtils.isNotEmpty(segments));
+            checkSegmentOverlap((NDataModelResponse) model, segments);
         }
 
         if (model.isFusionModel()) {
@@ -679,6 +680,7 @@ public class ModelService extends AbstractModelService
                 modelResponse.setSegments(segments);
                 modelResponse.setHasSegments(modelResponse.isHasSegments() || CollectionUtils.isNotEmpty(segments));
 
+                checkSegmentOverlap(modelResponse, segments);
             }
 
             oldParams.setName(modelResponse.getAlias());
@@ -4596,6 +4598,20 @@ public class ModelService extends AbstractModelService
             throw new KylinException(COMPUTED_COLUMN_NAME_OR_EXPR_EMPTY);
         }
     }
+
+    public void checkSegmentOverlap(NDataModelResponse model, List<NDataSegmentResponse> segments) {
+        if (ModelStatusToDisplayEnum.BROKEN != model.getStatus()) {
+            boolean hasAnyOverlapSegment = segments.stream()
+                    .anyMatch(seg -> SegmentStatusEnumToDisplay.OVERLAP == seg.getStatusToDisplay());
+            if (hasAnyOverlapSegment) {
+                logger.warn("model {} segments overlap found, mark as broken!", model.getId());
+                model.setBroken(true);
+                model.setBrokenReason(NDataModel.BrokenReason.SEGMENT_OVERLAP);
+                model.setStatus(ModelStatusToDisplayEnum.BROKEN);
+            }
+        }
+    }
+
 
     public Pair<ModelRequest, ComputedColumnConflictResponse> checkCCConflict(ModelRequest modelRequest) {
         String project = modelRequest.getProject();

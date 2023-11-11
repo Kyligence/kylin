@@ -91,7 +91,7 @@ public class HdfsCapacityMetricsTest extends NLocalFileMetadataTestCase {
         }
         Assert.assertTrue(hdfsCapacityMetrics.getWorkingDirCapacity().isEmpty());
         hdfsCapacityMetrics.writeHdfsMetrics();
-        Assert.assertEquals(31, hdfsCapacityMetrics.getWorkingDirCapacity().size());
+        Assert.assertEquals(32, hdfsCapacityMetrics.getWorkingDirCapacity().size());
 
     }
 
