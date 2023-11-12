@@ -19,6 +19,7 @@ package org.apache.kylin.job.dao;
 
 import static org.apache.kylin.job.util.JobInfoUtil.JOB_SERIALIZER;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,11 +30,13 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
+import org.apache.kylin.common.util.CompressionUtils;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.job.config.JobMybatisConfig;
 import org.apache.kylin.job.domain.JobInfo;
 import org.apache.kylin.job.domain.JobLock;
+import org.apache.kylin.job.exception.ExecuteRuntimeException;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -196,7 +199,7 @@ public class JobInfoDao {
         jobInfo.setModelId(executablePO.getTargetModel());
         jobInfo.setCreateTime(executablePO.getCreateTime());
         jobInfo.setUpdateTime(executablePO.getLastModified());
-        jobInfo.setJobContent(JobInfoUtil.serializeExecutablePO(executablePO));
+        jobInfo.setJobContent(checkAndCompressJobContent(JobInfoUtil.serializeExecutablePO(executablePO)));
 
         ExecutableManager executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
                 executablePO.getProject());
@@ -205,6 +208,14 @@ public class JobInfoDao {
         jobInfo.setJobDurationMillis(duration);
         jobInfo.setMvcc(mvcc);
         return jobInfo;
+    }
+
+    private byte[] checkAndCompressJobContent(byte[] jobContent) {
+        try {
+            return CompressionUtils.compress(jobContent);
+        } catch (IOException e) {
+            throw new ExecuteRuntimeException("Compress job content failed.", e);
+        }
     }
 
     public void deleteJobsByProject(String project) {
@@ -222,6 +233,7 @@ public class JobInfoDao {
                 jobInfoMapper.deleteByProject(project);
             }
             for (JobInfo jobInfo : jobInfos) {
+                jobInfo.setJobContent(checkAndCompressJobContent(jobInfo.getJobContent()));
                 JobInfo currentJobInfo = jobInfoMapper.selectByJobId(jobInfo.getJobId());
                 jobInfo.setJobInfoTable(JobMybatisConfig.JOB_INFO_TABLE);
                 if (currentJobInfo == null) {

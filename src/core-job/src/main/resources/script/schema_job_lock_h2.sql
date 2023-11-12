@@ -28,4 +28,4 @@ CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_lock (
   update_time bigint,
   PRIMARY KEY (id),
   UNIQUE KEY uk_lock_id (lock_id)
-) DEFAULT CHARSET=utf8;
+);
