@@ -129,8 +129,8 @@ public class JobErrorTest extends NLocalFileMetadataTestCase {
 
     @After
     public void tearDown() {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     private String getProject() {

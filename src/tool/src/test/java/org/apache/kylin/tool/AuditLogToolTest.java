@@ -108,8 +108,8 @@ public class AuditLogToolTest extends NLocalFileMetadataTestCase {
     public void teardown() {
         val jdbcTemplate = getJdbcTemplate();
         jdbcTemplate.batchUpdate("DROP ALL OBJECTS");
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

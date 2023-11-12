@@ -79,8 +79,8 @@ public class ITStorageCleanerTest extends NLocalWithSparkSessionTest {
 
     @After
     public void tearDown() throws Exception {
-        this.cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        this.cleanupTestMetadata();
     }
 
     @Test

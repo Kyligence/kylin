@@ -37,6 +37,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
+import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.job.condition.JobModeCondition;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.annotation.Conditional;
@@ -59,8 +60,8 @@ public class JobMybatisConfig implements InitializingBean {
 
     private String database;
 
-    public static String JOB_INFO_TABLE = "job_info";
-    public static String JOB_LOCK_TABLE = "job_lock";
+    private String jobInfoTableName = "job_info";
+    private String jobLockTableName = "job_lock";
 
     public String getDatabase() {
         return database;
@@ -69,6 +70,14 @@ public class JobMybatisConfig implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         setupJobTables();
+    }
+
+    public String getJobInfoTableName() {
+        return jobInfoTableName;
+    }
+
+    public String getJobLockTableName() {
+        return jobLockTableName;
     }
 
     public void setupJobTables() throws Exception {
@@ -80,9 +89,13 @@ public class JobMybatisConfig implements InitializingBean {
         if (StringUtils.isEmpty(url.getScheme())) {
             log.info("metadata from file");
             keIdentified = "file";
+            if (KylinConfig.getInstanceFromEnv().isUTEnv()) {
+                String uuid = RandomUtil.randomUUIDStr().replace("-", "_");
+                keIdentified = "UT_" + uuid;
+            }
         }
-        JOB_INFO_TABLE = keIdentified + "_job_info";
-        JOB_LOCK_TABLE = keIdentified + "_job_lock";
+        jobInfoTableName = keIdentified + "_job_info";
+        jobLockTableName = keIdentified + "_job_lock";
         database = Database.MYSQL.databaseId;
 
         String jobInfoFile = "script/schema_job_info_mysql.sql";
@@ -117,11 +130,11 @@ public class JobMybatisConfig implements InitializingBean {
             }
         }
         try {
-            if (!isTableExists(dataSource.getConnection(), JOB_INFO_TABLE)) {
+            if (!isTableExists(dataSource.getConnection(), jobInfoTableName)) {
                 createTableIfNotExist(keIdentified, jobInfoFile);
             }
 
-            if (!isTableExists(dataSource.getConnection(), JOB_LOCK_TABLE)) {
+            if (!isTableExists(dataSource.getConnection(), jobLockTableName)) {
                 createTableIfNotExist(keIdentified, jobLockFile);
             }
         } catch (SQLException | IOException e) {

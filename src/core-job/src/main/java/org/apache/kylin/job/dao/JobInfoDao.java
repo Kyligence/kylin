@@ -33,7 +33,6 @@ import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.CompressionUtils;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.job.config.JobMybatisConfig;
 import org.apache.kylin.job.domain.JobInfo;
 import org.apache.kylin.job.domain.JobLock;
 import org.apache.kylin.job.exception.ExecuteRuntimeException;
@@ -235,7 +234,6 @@ public class JobInfoDao {
             for (JobInfo jobInfo : jobInfos) {
                 jobInfo.setJobContent(checkAndCompressJobContent(jobInfo.getJobContent()));
                 JobInfo currentJobInfo = jobInfoMapper.selectByJobId(jobInfo.getJobId());
-                jobInfo.setJobInfoTable(JobMybatisConfig.JOB_INFO_TABLE);
                 if (currentJobInfo == null) {
                     jobInfoMapper.insert(jobInfo);
                 } else {

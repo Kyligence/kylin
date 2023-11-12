@@ -61,8 +61,8 @@ public class SystemUsageToolTest extends NLocalFileMetadataTestCase {
     @After
     public void teardown() {
         queryHistoryDAO.deleteAllQueryHistory();
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

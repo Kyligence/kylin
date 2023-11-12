@@ -18,28 +18,19 @@
 
 package org.apache.kylin.job.util;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.nio.charset.Charset;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 
 import javax.sql.DataSource;
 
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
-import org.apache.ibatis.jdbc.ScriptRunner;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.session.Configuration;
@@ -49,7 +40,6 @@ import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.StorageURL;
-import org.apache.kylin.common.logging.LogOutputStream;
 import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.AddressUtil;
@@ -68,6 +58,7 @@ import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import lombok.SneakyThrows;
@@ -79,12 +70,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class JobContextUtil {
-
-    private static final Charset DEFAULT_CHARSET = Charset.defaultCharset();
-
-    private static final String CREATE_JOB_INFO_TABLE = "create.job.info.table";
-
-    private static final String CREATE_JOB_LOCK_TABLE = "create.job.lock.table";
 
     private static JobInfoMapper jobInfoMapper;
 
@@ -135,43 +120,30 @@ public class JobContextUtil {
         if (null != jobInfoMapper && null != jobLockMapper) {
             return;
         }
-        boolean isUTEnv = config.isUTEnv();
-
         StorageURL url = config.getMetadataUrl();
         Properties props = JdbcUtil.datasourceParameters(url);
-        DataSource dataSource = null;
         try {
-            dataSource = JdbcDataSource.getDataSource(props);
-            if (!isUTEnv) {
-                // setup job table names
-                jobMybatisConfig.setDataSource(dataSource);
-                jobMybatisConfig.setupJobTables();
-                jobTableInterceptor.setJobMybatisConfig(jobMybatisConfig);
-            }
+            DataSource dataSource = JdbcDataSource.getDataSource(props);
             transactionManager = JdbcDataSource.getTransactionManager(dataSource);
             SqlSessionFactory sqlSessionFactory = getSqlSessionFactory(dataSource);
-            addPluginForSqlSessionManager(sqlSessionFactory);
+            addPluginForSqlSessionManager(dataSource, sqlSessionFactory);
             sqlSessionTemplate = new SqlSessionTemplate(sqlSessionFactory);
             jobInfoMapper = sqlSessionTemplate.getMapper(JobInfoMapper.class);
             jobLockMapper = sqlSessionTemplate.getMapper(JobLockMapper.class);
-            if (isUTEnv) {
-                createTableIfNotExist((BasicDataSource) dataSource, "job_info");
-                createTableIfNotExist((BasicDataSource) dataSource, "job_lock");
-                jobInfoMapper.deleteAllJob();
-                jobLockMapper.deleteAllJobLock();
-            }
         } catch (Exception e) {
             throw new RuntimeException("initialize mybatis mappers failed", e);
         }
     }
 
-    private static void addPluginForSqlSessionManager(SqlSessionFactory sqlSessionFactory) {
+    private static void addPluginForSqlSessionManager(DataSource dataSource, SqlSessionFactory sqlSessionFactory)
+            throws Exception {
+        jobMybatisConfig.setDataSource(dataSource);
+        jobMybatisConfig.setupJobTables();
+        jobTableInterceptor.setJobMybatisConfig(jobMybatisConfig);
         List<Interceptor> interceptors = sqlSessionFactory.getConfiguration().getInterceptors();
-
         if (!interceptors.contains(jobTableInterceptor)) {
             sqlSessionFactory.getConfiguration().addInterceptor(jobTableInterceptor);
         }
-
     }
 
     public static SqlSessionFactory getSqlSessionFactory(DataSource dataSource) throws SQLException, IOException {
@@ -196,39 +168,6 @@ public class JobContextUtil {
             XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(resource.getInputStream(), configuration,
                     resource.toString(), configuration.getSqlFragments());
             xmlMapperBuilder.parse();
-        }
-    }
-
-    private static void createTableIfNotExist(BasicDataSource dataSource, String tableName)
-            throws IOException, SQLException {
-        if (JdbcUtil.isTableExists(dataSource.getConnection(), tableName)) {
-            log.info("{} already existed in database", tableName);
-            return;
-        }
-
-        String createTableStmtProp = "";
-        if ("job_info".equals(tableName)) {
-            createTableStmtProp = CREATE_JOB_INFO_TABLE;
-        } else {
-            createTableStmtProp = CREATE_JOB_LOCK_TABLE;
-        }
-
-        Properties properties = JdbcUtil.getProperties(dataSource);
-        String createTableStmt = String.format(Locale.ROOT, properties.getProperty(createTableStmtProp), tableName);
-        try (Connection connection = dataSource.getConnection()) {
-            ScriptRunner sr = new ScriptRunner(connection);
-            sr.setLogWriter(new PrintWriter(new OutputStreamWriter(new LogOutputStream(log), DEFAULT_CHARSET)));
-            log.debug("start to create table({})", tableName);
-            sr.runScript(new InputStreamReader(new ByteArrayInputStream(createTableStmt.getBytes(DEFAULT_CHARSET)),
-                    DEFAULT_CHARSET));
-            log.debug("create table finished");
-        }
-
-        if (!JdbcUtil.isTableExists(dataSource.getConnection(), tableName)) {
-            log.debug("failed to create table({})", tableName);
-            throw new IllegalStateException(String.format(Locale.ROOT, "create table(%s) failed", tableName));
-        } else {
-            log.debug("table({}) already exists.", tableName);
         }
     }
 
@@ -271,6 +210,7 @@ public class JobContextUtil {
             if (null != jobContext) {
                 jobContext.destroy();
             }
+            dropUTJobTable();
             jobInfoMapper = null;
             jobLockMapper = null;
             jobInfoDao = null;
@@ -280,6 +220,17 @@ public class JobContextUtil {
         } catch (Exception e) {
             log.error("JobContextUtil clean up failed.");
             throw new RuntimeException("JobContextUtil clean up failed.", e);
+        }
+    }
+
+    private static void dropUTJobTable() {
+        try {
+            if (null != transactionManager) {
+                JdbcTemplate jdbcTemplate = new JdbcTemplate(transactionManager.getDataSource());
+                jdbcTemplate.execute("DROP ALL OBJECTS");
+            }
+        } catch (Exception e) {
+            log.error("Drop UT job table failed.", e);
         }
     }
 

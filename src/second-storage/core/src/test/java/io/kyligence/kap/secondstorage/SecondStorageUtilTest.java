@@ -80,8 +80,8 @@ public class SecondStorageUtilTest extends NLocalFileMetadataTestCase {
 
     @After
     public void tearDown() throws Exception {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     private void prepareManger() {

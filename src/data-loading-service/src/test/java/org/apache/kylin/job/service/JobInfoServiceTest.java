@@ -163,8 +163,8 @@ public class JobInfoServiceTest extends LogOutputTestCase {
 
     @After
     public void tearDown() {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

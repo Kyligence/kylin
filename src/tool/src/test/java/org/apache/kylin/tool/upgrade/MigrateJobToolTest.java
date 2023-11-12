@@ -47,8 +47,8 @@ public class MigrateJobToolTest extends NLocalFileMetadataTestCase {
 
     @After
     public void teardown() {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test

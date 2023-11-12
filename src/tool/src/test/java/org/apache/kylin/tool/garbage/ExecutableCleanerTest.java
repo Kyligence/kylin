@@ -48,8 +48,8 @@ public class ExecutableCleanerTest extends NLocalFileMetadataTestCase {
 
     @After
     public void destroy() {
-        cleanupTestMetadata();
         JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     @Test
