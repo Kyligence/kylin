@@ -158,6 +158,33 @@ public class DiagClientToolTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    public void testObfIpConfig() throws IOException {
+        File mainDir = new File(temporaryFolder.getRoot(), testName.getMethodName());
+        FileUtils.forceMkdir(mainDir);
+
+        ipObfDataPrepare();
+
+        getTestConfig().setProperty("kylin.diag.obf.level", "RAW");
+        getTestConfig().setProperty("kylin.diag.ip-obf-enabled", "true");
+
+        DiagClientTool diagClientTool = new DiagClientTool();
+
+        diagClientTool.execute(new String[] { "-destDir", mainDir.getAbsolutePath() });
+
+        File zipFile = mainDir.listFiles()[0].listFiles()[0];
+        File exportFile = new File(mainDir, "output");
+        FileUtils.forceMkdir(exportFile);
+        ZipFileUtils.decompressZipFile(zipFile.getAbsolutePath(), exportFile.getAbsolutePath());
+        File baseDiagFile = exportFile.listFiles()[0];
+        val properties = org.apache.kylin.common.util.FileUtils
+                .readFromPropertiesFile(new File(baseDiagFile, "conf/kylin.properties"));
+        Assert.assertFalse(properties.get("kylin.metadata.url").contains(SensitiveConfigKeysConstant.HIDDEN + ":3306"));
+        Assert.assertFalse(new File(baseDiagFile, "conf/clickhouse01_<hidden>_8080.zip").exists());
+        Assert.assertTrue(new File(baseDiagFile, "conf/clickhouse01_192.1.2.1_8080.zip").exists());
+
+    }
+    
+    @Test
     public void testIpObfByLinux() throws Exception {
         File mainDir = new File(temporaryFolder.getRoot(), testName.getMethodName());
         FileUtils.forceMkdir(mainDir);

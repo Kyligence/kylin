@@ -321,7 +321,7 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
     }
 
     private void obfIpDiag(File rootDir, ObfLevel obfLevel) throws IOException {
-        if (!kylinConfig.isDiagIpObfEnabled()) {
+        if (!(obfLevel == ObfLevel.OBF && kylinConfig.isDiagIpObfEnabled())) {
             return;
         }
         logger.info("diag start obf ip");
