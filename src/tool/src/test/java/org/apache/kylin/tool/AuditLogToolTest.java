@@ -101,6 +101,7 @@ public class AuditLogToolTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() throws Exception {
         createTestMetadata();
+        JobContextUtil.cleanUp();
         prepareData();
     }
 

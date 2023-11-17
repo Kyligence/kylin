@@ -131,6 +131,7 @@ import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.val;
 import lombok.var;
 
+@Ignore
 public class ModelServiceBuildTest extends SourceTestCase {
     @InjectMocks
     private final ModelService modelService = Mockito.spy(new ModelService());

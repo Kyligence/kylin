@@ -239,33 +239,33 @@ public class JdbcJobScheduler implements JobScheduler {
                 }
                 // force catchup metadata before produce jobs
                 StreamingUtils.replayAuditlog();
-                logger.info("Begin to produce job for project: {}, product count: {}", project, produceCount);
-                for (int i = 0; i < produceCount; i++) {
-                    produceJobForProject(produceCount, projectReadyJobCache);
-                }
+                logger.info("Begin to produce job for project: {}", project);
+                int count = produceJobForProject(produceCount, projectReadyJobCache);
+                logger.info("Successfully produced {} job for project: {}", count, project);
             }
             if (produced) {
                 // maybe more jobs exist, publish job immediately
                 delaySec = 0;
             }
-        } catch (Throwable t) {
-            logger.error("Something's wrong when publishing job", t);
+        } catch (Exception e) {
+            logger.error("Something's wrong when publishing job", e);
         } finally {
             master.schedule(this::produceJob, delaySec, TimeUnit.SECONDS);
         }
     }
 
-    private void produceJobForProject(int produceCount, PriorityQueue<JobInfo> projectReadyJobCache) {
+    private int produceJobForProject(int produceCount, PriorityQueue<JobInfo> projectReadyJobCache) {
         int i = 0;
         while (i < produceCount) {
             if (projectReadyJobCache.isEmpty()) {
-                return;
+                return i;
             }
             JobInfo jobInfo = projectReadyJobCache.poll();
             if (doProduce(jobInfo)) {
                 i++;
             }
         }
+        return i;
     }
 
     private boolean doProduce(JobInfo jobInfo) {
@@ -287,8 +287,8 @@ public class JdbcJobScheduler implements JobScheduler {
                 logger.debug("Job {} has bean produced successfully", jobInfo.getJobId());
                 return true;
             });
-        } catch (Throwable t) {
-            logger.error("Failed to produce job: " + jobInfo.getJobId(), t);
+        } catch (Exception e) {
+            logger.error("Failed to produce job: " + jobInfo.getJobId(), e);
             return false;
         }
     }
@@ -339,7 +339,7 @@ public class JdbcJobScheduler implements JobScheduler {
         CheckResult checkResult = null;
         try {
             checkResult = licenseChecker.check();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             logger.error("Error happened when check license", e);
             return false;
         }
@@ -459,8 +459,8 @@ public class JdbcJobScheduler implements JobScheduler {
             }
             AbstractJobExecutable jobExecutable = getJobExecutable(jobInfo);
             return new Pair<>(jobInfo, jobExecutable);
-        } catch (Throwable throwable) {
-            logger.error("Fetch job failed, job id: " + jobId, throwable);
+        } catch (Exception e) {
+            logger.error("Fetch job failed, job id: " + jobId, e);
             return null;
         }
     }
@@ -477,8 +477,8 @@ public class JdbcJobScheduler implements JobScheduler {
             if (!jobContext.getResourceAcquirer().tryAcquire(jobExecutable)) {
                 return false;
             }
-        } catch (Throwable throwable) {
-            logger.error("Error when preparing to submit job: " + jobId, throwable);
+        } catch (Exception e) {
+            logger.error("Error when preparing to submit job: " + jobId, e);
             return false;
         }
         return true;
@@ -516,8 +516,8 @@ public class JdbcJobScheduler implements JobScheduler {
             }
             // heavy action
             jobExecutor.execute();
-        } catch (Throwable t) {
-            logger.error("Execute job failed " + jobExecutable.getJobId(), t);
+        } catch (Exception e) {
+            logger.error("Execute job failed " + jobExecutable.getJobId(), e);
         } finally {
             if (jobLock != null) {
                 stopJobLockRenewAfterExecute(jobLock);
@@ -547,8 +547,8 @@ public class JdbcJobScheduler implements JobScheduler {
                 logger.error("Unexpected status for {} <{}>, mark job error", jobId, jobExecutable.getStatusInMem());
                 markErrorJob(jobId, jobExecutable.getProject());
             }
-        } catch (Throwable t) {
-            logger.error("Fail to check status before stop renew job lock {}", jobLock.getLockId(), t);
+        } catch (Exception e) {
+            logger.error("Fail to check status before stop renew job lock {}", jobLock.getLockId(), e);
         } finally {
             jobLock.stopRenew();
         }
@@ -558,10 +558,9 @@ public class JdbcJobScheduler implements JobScheduler {
         try {
             val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             manager.errorJob(jobId);
-        } catch (Throwable t) {
+        } catch (Exception e) {
             logger.warn("[UNEXPECTED_THINGS_HAPPENED] project {} job {} should be error but mark failed", project,
-                    jobId, t);
-            throw t;
+                    jobId, e);
         }
     }
 
