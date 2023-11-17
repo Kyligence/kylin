@@ -2328,7 +2328,7 @@ public abstract class KylinConfigBase implements Serializable {
     // ============================================================================
 
     private boolean isMicroService() {
-        return Boolean.parseBoolean(this.getOptional("kylin.micro.service", TRUE));
+        return Boolean.parseBoolean(this.getOptional("kylin.micro.service", FALSE));
     }
 
     public String getServerMode() {
