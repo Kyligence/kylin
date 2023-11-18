@@ -307,7 +307,7 @@ public class KylinConfigTest {
     }
 
     @Test
-    public void testLoadMicroServiceMode() throws IOException {
+    void testLoadMicroServiceMode() throws IOException {
         ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();
         try {
             ClassLoader cl = Mockito.mock(ClassLoader.class);
@@ -319,35 +319,43 @@ public class KylinConfigTest {
 
             final KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
 
+            kylinConfig.setProperty("kylin.micro.service", "true");
             createYamlFile("common", file);
             Assert.assertEquals(ClusterConstant.COMMON, kylinConfig.getMicroServiceMode());
             Assert.assertEquals(ClusterConstant.COMMON, kylinConfig.getMicroServiceMode());
             kylinConfig.properties.clear();
 
+            kylinConfig.setProperty("kylin.micro.service", "true");
             createYamlFile("data-loading", file);
             Assert.assertEquals(ClusterConstant.DATA_LOADING, kylinConfig.getMicroServiceMode());
             kylinConfig.properties.clear();
 
+            kylinConfig.setProperty("kylin.micro.service", "true");
             createYamlFile("query", file);
             Assert.assertEquals(ClusterConstant.QUERY, kylinConfig.getMicroServiceMode());
             kylinConfig.properties.clear();
 
+            kylinConfig.setProperty("kylin.micro.service", "true");
             createYamlFile("smart", file);
             Assert.assertEquals(ClusterConstant.SMART, kylinConfig.getMicroServiceMode());
             kylinConfig.properties.clear();
 
+            kylinConfig.setProperty("kylin.micro.service", "true");
             createYamlFile("ops", file);
             Assert.assertEquals(ClusterConstant.OPS, kylinConfig.getMicroServiceMode());
             kylinConfig.properties.clear();
 
+            kylinConfig.setProperty("kylin.micro.service", "true");
             createYamlFile("resource", file);
             Assert.assertEquals(ClusterConstant.RESOURCE, kylinConfig.getMicroServiceMode());
             kylinConfig.properties.clear();
 
+            kylinConfig.setProperty("kylin.micro.service", "true");
             createYamlFile("illegal", file);
             Assert.assertNull(kylinConfig.getMicroServiceMode());
             kylinConfig.properties.clear();
 
+            kylinConfig.setProperty("kylin.micro.service", "true");
             Mockito.when(cl.getResource(fileName)).thenReturn(null);
             Assert.assertNull(kylinConfig.getMicroServiceMode());
 
