@@ -3113,4 +3113,35 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         BigQueryResponse bigQueryResponse = queryService.ifBigQuery(sqlRequest);
         Assert.assertTrue(bigQueryResponse.isException());
     }
+
+    @Test
+    public void testQueryDetectWhenIndexPlanIsNullIfBigQuery() {
+        QueryDetectRequest queryDetectRequest = new QueryDetectRequest("sql", "default", 0, 500);
+        // build sqlRequest
+        SQLRequest sqlRequest = new SQLRequest();
+        sqlRequest.setSql(queryDetectRequest.getSql());
+        String project = queryDetectRequest.getProject();
+        sqlRequest.setLimit(queryDetectRequest.getLimit());
+        sqlRequest.setOffset(queryDetectRequest.getOffset());
+        sqlRequest.setProject(project);
+
+        // build sqlResponse
+        SQLResponse sqlResponse = new SQLResponse();
+        sqlResponse.setException(false);
+        sqlResponse.setQueryId("queryId");
+        sqlResponse.setQueryPushDown(true);
+        List<NativeQueryRealization> nativeRealizations = Lists.newArrayList();
+        sqlResponse.setNativeRealizations(nativeRealizations);
+
+        // mock NIndexPlanManager and IndexPlan
+        PowerMockito.mockStatic(NIndexPlanManager.class);
+        NIndexPlanManager nIndexPlanManager = Mockito.mock(NIndexPlanManager.class);
+
+        // mock method return value
+        Mockito.doReturn(sqlResponse).when(queryService).queryWithCache(sqlRequest);
+
+        BigQueryResponse bigQueryResponse = queryService.ifBigQuery(sqlRequest);
+
+        Assert.assertEquals("others", bigQueryResponse.getIfBigQuery());
+    }
 }

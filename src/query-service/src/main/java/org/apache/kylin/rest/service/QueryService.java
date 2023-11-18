@@ -515,7 +515,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         SQLResponse sqlResponse = queryWithCache(sqlRequest);
         BigQueryResponse bigQueryResponse = new BigQueryResponse();
         String isBigQuery = sqlResponse.isBigQuery() ? "bigQuery" : "nonBigQuery";
-        if (sqlRequest.isForcedToPushDown() || sqlResponse.isException()) {
+        if (sqlRequest.isForcedToPushDown() || sqlResponse.isException() || sqlResponse.isQueryPushDown()) {
             isBigQuery = "others";
         }
         if (sqlResponse.isException()) {
