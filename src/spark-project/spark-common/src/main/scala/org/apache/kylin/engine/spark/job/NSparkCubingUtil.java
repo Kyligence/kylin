@@ -21,13 +21,10 @@ package org.apache.kylin.engine.spark.job;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
-import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.commons.lang3.StringUtils;
@@ -39,9 +36,6 @@ import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.model.Segments;
 import org.apache.spark.sql.Column;
 import org.sparkproject.guava.collect.Sets;
-
-import lombok.Getter;
-import lombok.Setter;
 
 public class NSparkCubingUtil {
 
@@ -200,49 +194,17 @@ public class NSparkCubingUtil {
     }
 
     public static String convertFromDotWithBackTick(String withDot) {
-        ConvertContext ctx = new ConvertContext(withDot);
-        Optional<ConvertContext> ctxOptional = Stream.iterate(ctx, convertFromDotWithBackTickOpt)
-                .filter(ConvertContext::isComplete).findFirst();
-        return ctxOptional.map(ConvertContext::getOut).orElse(withDot);
-    }
-
-    static final class ConvertContext {
-        @Getter
-        @Setter
-        private String in;
-        @Getter
-        private final StringBuilder outBuilder = new StringBuilder();
-        @Getter
-        @Setter
-        private boolean complete = false;
-
-        public ConvertContext(String in) {
-            this.in = in;
-        }
-
-        public String getOut() {
-            return outBuilder.toString();
-        }
-    }
-
-    private static final UnaryOperator<ConvertContext> convertFromDotWithBackTickOpt = ctx -> {
-        String withDot = ctx.getIn();
-        StringBuilder builder = ctx.getOutBuilder();
-
         int literalBegin = withDot.indexOf(QUOTE);
         if (literalBegin != -1) {
             int literalEnd = withDot.indexOf(QUOTE, literalBegin + 1);
             if (literalEnd != -1) {
-                builder.append(doConvertFromDot(withDot.substring(0, literalBegin), true));
-                builder.append(withDot, literalBegin, literalEnd + 1);
-                ctx.setIn(withDot.substring(literalEnd + 1));
-                return ctx;
+                return doConvertFromDot(withDot.substring(0, literalBegin), true)
+                        + withDot.substring(literalBegin, literalEnd + 1)
+                        + convertFromDotWithBackTick(withDot.substring(literalEnd + 1));
             }
         }
-        builder.append(doConvertFromDot(withDot, true));
-        ctx.setComplete(true);
-        return ctx;
-    };
+        return doConvertFromDot(withDot, true);
+    }
 
     private static String doConvertFromDot(String withDot, boolean addBackTick) {
         if (withDot.contains(BACK_TICK)) {

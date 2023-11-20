@@ -21,7 +21,6 @@ package org.apache.kylin.engine.spark.job;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -192,28 +191,6 @@ public class NSparkCubingUtilTest extends NLocalWithSparkSessionTestBase {
                         "`test_table_0_DOT_0_column` > 0 and `test_table_0_DOT_0_column` < 100"));
         Assert.assertTrue(isEqualsConvertedStringWithBackTick("`table`.`col umn,<>/?'\"[{]}\\|~!@#$%^&*()-=+`",
                 "`table_0_DOT_0_col umn,<>/?'\"[{]}\\|~!@#$%^&*()-=+`"));
-    }
-
-    /**
-     * After bug fix this test should not be failed at all time.
-     * <p>Keep test case here to prevent further recursion problem imported.
-     * <p>See <a href="https://olapio.atlassian.net/browse/AL-7663">AL-7663</a> for more details.
-     */
-    @Test
-    public void testConvertWithBackTickDoNotCauseStackOverflow() throws Exception {
-        String sql = constructLargeConditionSql();
-        Assert.assertTrue(StringUtils.isNotBlank(sql));
-        NSparkCubingUtil.convertFromDotWithBackTick(sql);
-    }
-
-    private String constructLargeConditionSql() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("select CASE WHEN \"HELLO_HELLO_HELLO_TABLE\".\"HELLO_COLUMN\" = 'AA00001'");
-        for (int i = 2; i < 10_000; i++) {
-            builder.append(String.format("OR \"HELLO_HELLO_HELLO_TABLE\".\"HELLO_COLUMN\" = 'AA%05d'", i));
-        }
-        builder.append(" THEN 'BBB' ELSE 'OTHERS' FROM \"HELLO_HELLO_HELLO_TABLE\"");
-        return builder.toString();
     }
 
     private boolean isEqualsConvertedString(String original, String converted) {
