@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.kylin.common.AbstractTestCase;
 import org.apache.kylin.common.KylinConfig;
@@ -42,6 +43,8 @@ import org.apache.kylin.job.mapper.JobLockMapper;
 import org.apache.kylin.job.rest.JobMapperFilter;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.junit.annotation.MetadataInfo;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -198,6 +201,34 @@ class JdbcJobSchedulerTest extends AbstractTestCase {
             hasDiff |= !jobId1.equals(jobId2);
         }
         Assertions.assertTrue(hasDiff);
+    }
+
+    @Test
+    void testFindNonLockIdListWithProject() {
+        jobContext.getJobScheduler().destroy();
+        JobLock lock = new JobLock();
+        String id = "mock_lock";
+        lock.setLockId(id);
+        lock.setProject(PROJECT);
+        lock.setPriority(3);
+        jobContext.getJobLockMapper().insert(lock);
+
+        List<String> jobIdList;
+        
+        jobIdList = jobContext.getJobScheduler().findNonLockIdListInOrder(5, Collections.emptyList());
+        Assertions.assertTrue(jobIdList.isEmpty());
+        
+        List<String> allProjects = NProjectManager.getInstance(getTestConfig()).listAllProjects().stream()
+                .map(ProjectInstance::getName).collect(Collectors.toList());
+        String otherProject = allProjects.stream().filter(project -> !project.equals(PROJECT)).findFirst().get();
+        jobIdList = jobContext.getJobScheduler().findNonLockIdListInOrder(5, Collections.singletonList(otherProject));
+        Assertions.assertTrue(jobIdList.isEmpty());
+
+        jobIdList = jobContext.getJobScheduler().findNonLockIdListInOrder(5, Collections.singletonList(PROJECT));
+        Assertions.assertEquals(1, jobIdList.size());
+
+        jobIdList = jobContext.getJobScheduler().findNonLockIdListInOrder(5, allProjects);
+        Assertions.assertEquals(1, jobIdList.size());
     }
 
     @Test

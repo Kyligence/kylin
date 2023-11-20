@@ -594,11 +594,11 @@ class EpochManagerTest {
         ResourceGroupManager resourceGroupManager = ResourceGroupManager.getInstance(config);
 
         // Resource is disabled.
-        Assert.assertNull(epochManager.listProjectWithPermissionForScheduler());
+        Assert.assertEquals(allProjects.size(), epochManager.listRealProjectWithPermission().size());
 
         // ResourceGroup is enabled, but no projects are bound.
         resourceGroupManager.updateResourceGroup(copyForWrite -> copyForWrite.setResourceGroupEnabled(true));
-        Assert.assertEquals(0, epochManager.listProjectWithPermissionForScheduler().size());
+        Assert.assertEquals(0, epochManager.listRealProjectWithPermission().size());
 
         // ResourceGroup is enabled， and project 'default' is bound.
         resourceGroupManager.updateResourceGroup(copyForWrite -> {
@@ -616,7 +616,7 @@ class EpochManagerTest {
             copyForWrite.setKylinInstances(Collections.singletonList(kylinInstance));
             copyForWrite.setResourceGroupMappingInfoList(Collections.singletonList(resourceGroupMappingInfo));
         });
-        Assert.assertEquals(1, epochManager.listProjectWithPermissionForScheduler().size());
-        Assert.assertEquals("default", epochManager.listProjectWithPermissionForScheduler().get(0));
+        Assert.assertEquals(1, epochManager.listRealProjectWithPermission().size());
+        Assert.assertEquals("default", epochManager.listRealProjectWithPermission().get(0));
     }
 }

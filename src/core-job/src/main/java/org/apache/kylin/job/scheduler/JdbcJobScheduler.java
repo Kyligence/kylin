@@ -401,7 +401,7 @@ public class JdbcJobScheduler implements JobScheduler {
             if (exeFreeSlots < batchSize) {
                 batchSize = exeFreeSlots;
             }
-            List<String> projects = EpochManager.getInstance().listProjectWithPermissionForScheduler();
+            List<String> projects = EpochManager.getInstance().listRealProjectWithPermission();
             List<String> jobIdList = findNonLockIdListInOrder(batchSize, projects);
 
             if (CollectionUtils.isEmpty(jobIdList)) {
@@ -440,6 +440,13 @@ public class JdbcJobScheduler implements JobScheduler {
     }
 
     public List<String> findNonLockIdListInOrder(int batchSize, List<String> projects) {
+        KylinConfig config = jobContext.getKylinConfig();
+        if (projects.size() == 0) {
+            return Collections.emptyList();
+        }
+        if (projects.size() == NProjectManager.getInstance(config).listAllProjects().size()) {
+            projects = null;
+        }
         List<PriorityFistRandomOrderJob> jobIdList = jobContext.getJobLockMapper().findNonLockIdList(batchSize,
                 projects);
         // Shuffle jobs avoiding jobLock conflict.
