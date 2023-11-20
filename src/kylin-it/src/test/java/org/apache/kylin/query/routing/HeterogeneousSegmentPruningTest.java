@@ -52,7 +52,6 @@ import org.junit.Test;
 
 import lombok.val;
 
-
 public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest {
 
     @Test
@@ -316,6 +315,15 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
 
         val sql2_date_string = sql + "where cal_dt >= '2012-01-03' and cal_dt < '2012-01-10' group by cal_dt";
         assertPrunedSegmentsRange(project, sql2_date_string, dfId, expectedRanges, layout_10001, null);
+        val sql2_cast_date_str = sql
+                + "where cast(cal_dt as date) >= '2012-01-03' and cast(cal_dt as date) < '2012-01-10' group by cal_dt";
+        assertPrunedSegmentsRange(project, sql2_cast_date_str, dfId, expectedRanges, layout_10001, null);
+        val sql_date_cast_literal = sql
+                + "where cal_dt >= cast('2012-01-03' as date) and cal_dt < cast('2012-01-10' as date) group by cal_dt";
+        assertPrunedSegmentsRange(project, sql_date_cast_literal, dfId, expectedRanges, layout_10001, null);
+        val sql_cast_date_cast_literal = sql
+                + "where cast(cal_dt as date) >= cast('2012-01-03' as date) and cast(cal_dt as date) < cast('2012-01-10' as date) group by cal_dt";
+        assertPrunedSegmentsRange(project, sql_cast_date_cast_literal, dfId, expectedRanges, layout_10001, null);
 
         // pruned segments do not have capable layout to answer
         val sql3_no_layout = "select trans_id from test_kylin_fact "
@@ -453,7 +461,7 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // val seg3Id = "54eaf96d-6146-45d2-b94e-d5d187f89919"
         // val seg4Id = "411f40b9-a80a-4453-90a9-409aac6f7632"
         // val seg5Id = "a8318597-cb75-416f-8eb8-96ea285dd2b4"
-        // 
+        //
         val sql = "with T1 as (select cal_dt, trans_id \n" + "from test_kylin_fact inner join test_account \n"
                 + "on test_kylin_fact.seller_id = test_account.account_id \n"
                 + "where cal_dt between date'2012-01-01' and date'2012-01-03'\n" + "group by cal_dt, trans_id),\n"
@@ -522,7 +530,7 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // val seg3Id = "54eaf96d-6146-45d2-b94e-d5d187f89919"
         // val seg4Id = "411f40b9-a80a-4453-90a9-409aac6f7632"
         // val seg5Id = "a8318597-cb75-416f-8eb8-96ea285dd2b4"
-        // 
+        //
         val sql = "with T1 as (select cal_dt, trans_id \n" + "from test_kylin_fact inner join test_account \n"
                 + "on test_kylin_fact.seller_id = test_account.account_id \n"
                 + "where cal_dt between date'2012-01-01' and date'2012-01-03'\n" + "group by cal_dt, trans_id)\n";

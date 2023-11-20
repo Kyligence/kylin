@@ -35,16 +35,17 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.NlsString;
-import org.apache.calcite.util.TimestampString;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.relnode.OlapRel;
 import org.apache.kylin.query.relnode.OlapTableScan;
+import org.apache.kylin.query.util.RexUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,9 +54,6 @@ import lombok.var;
 
 public class FilterConditionExpander {
     public static final Logger logger = LoggerFactory.getLogger(FilterConditionExpander.class);
-
-    private static final String DATE = "date";
-    private static final String TIMESTAMP = "timestamp";
 
     private final OlapContext context;
     private final RelNode currentRel;
@@ -148,31 +146,41 @@ public class FilterConditionExpander {
             }
 
             // col <op> lit
-            val op1 = call.getOperands().get(1);
-            if (call.getOperands().size() == 2 && op1 instanceof RexLiteral) {
-                var rLit = (RexLiteral) op1;
-                rLit = ((RexLiteral) op1).getValue() instanceof NlsString ? transformRexLiteral(lInputRef, rLit) : rLit;
-                return rexBuilder.makeCall(call.getOperator(), lInputRef, rLit);
-            }
+            return simplify(call, lInputRef);
         }
 
         return null;
     }
 
+    private RexNode simplify(RexCall call, RexInputRef lInputRef) {
+        val op1 = call.getOperands().get(1);
+        if (call.getOperands().size() == 2) {
+            // accept cases: the right rel is literal
+            if (op1 instanceof RexLiteral) {
+                var rLit = (RexLiteral) op1;
+                rLit = transformRexLiteral(lInputRef, rLit);
+                return rexBuilder.makeCall(call.getOperator(), lInputRef, rLit);
+            }
+            // accept cases: the right rel is cast(literal as datatype)
+            if (op1.isA(SqlKind.CAST)) {
+                RexCall c = (RexCall) op1;
+                RexNode rexNode = c.getOperands().get(0);
+                if (rexNode instanceof RexLiteral) {
+                    RexLiteral rLit = transformRexLiteral(lInputRef, (RexLiteral) rexNode);
+                    return rexBuilder.makeCall(call.getOperator(), lInputRef, rLit);
+                }
+            }
+        }
+        return null;
+    }
+
     private RexNode convertIn(RexInputRef rexInputRef, List<RexNode> extendedOperands, boolean isIn) {
-        val transformedOperands = Lists.<RexNode> newArrayList();
+        List<RexNode> transformedOperands = Lists.newArrayList();
         for (RexNode operand : extendedOperands) {
-            RexNode transformedOperand;
             if (!(operand instanceof RexLiteral)) {
                 return null;
             }
-            if (((RexLiteral) operand).getValue() instanceof NlsString) {
-                val transformed = transformRexLiteral(rexInputRef, (RexLiteral) operand);
-                transformedOperand = transformed == null ? operand : transformed;
-            } else {
-                transformedOperand = operand;
-            }
-
+            RexNode transformedOperand = transformRexLiteral(rexInputRef, (RexLiteral) operand);
             val operator = isIn ? SqlStdOperatorTable.EQUALS : SqlStdOperatorTable.NOT_EQUALS;
             transformedOperands.add(rexBuilder.makeCall(operator, rexInputRef, transformedOperand));
         }
@@ -186,18 +194,18 @@ public class FilterConditionExpander {
     }
 
     private RexLiteral transformRexLiteral(RexInputRef inputRef, RexLiteral operand2) {
-        val literalValue = operand2.getValue();
-        val literalValueInString = ((NlsString) literalValue).getValue();
-        val typeName = inputRef.getType().getSqlTypeName().getName();
+        DataType dataType = DataType.getType(inputRef.getType().getSqlTypeName().getName());
+        String value;
+        if (operand2.getValue() instanceof NlsString) {
+            value = RexLiteral.stringValue(operand2);
+        } else {
+            Comparable c = RexLiteral.value(operand2);
+            value = c == null ? null : c.toString();
+        }
         try {
-            if (typeName.equalsIgnoreCase(DATE)) {
-                return rexBuilder.makeDateLiteral(new DateString(literalValueInString));
-            } else if (typeName.equalsIgnoreCase(TIMESTAMP)) {
-                return rexBuilder.makeTimestampLiteral(new TimestampString(literalValueInString),
-                        inputRef.getType().getPrecision());
-            }
+            return (RexLiteral) RexUtils.transformValue2RexLiteral(rexBuilder, value, dataType);
         } catch (Exception ex) {
-            logger.warn("transform Date/Timestamp RexLiteral for filterRel failed", ex);
+            logger.warn("transform rexLiteral({}) failed: {}", RexLiteral.value(operand2), ex.getMessage());
         }
         return operand2;
     }

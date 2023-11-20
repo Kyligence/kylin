@@ -19,7 +19,6 @@
 package org.apache.kylin.query.runtime
 
 
-import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.ZoneId
 
@@ -324,23 +323,25 @@ class SparderRexVisitor(val inputFieldNames: Seq[String],
         if (Seq("MONTH", "YEAR", "QUARTER").contains(
           t.getIntervalQualifier.timeUnitRange.name)) {
           return Some(
-            MonthNum(k_lit(literal.getValue.asInstanceOf[BigDecimal].intValue)))
+            MonthNum(k_lit(RexLiteral.intValue(literal))))
         }
         if (literal.getType.getFamily
           .asInstanceOf[SqlTypeFamily] == SqlTypeFamily.INTERVAL_DAY_TIME) {
           return Some(
             SparderTypeUtil.toSparkTimestamp(
-              new java.math.BigDecimal(literal.getValue.toString).longValue()))
+              new java.math.BigDecimal(RexLiteral.value(literal).toString).longValue()))
         }
       }
 
       case literalSql: BasicSqlType => {
+        val literalStr = RexLiteral.value(literal).toString
         literalSql.getSqlTypeName match {
           case SqlTypeName.DATE =>
-            return Some(stringToTime(literal.toString))
+            return Some(stringToTime(literalStr))
           case SqlTypeName.TIMESTAMP =>
-            return Some(toJavaTimestamp(stringToTimestamp(UTF8String.fromString(literal.toString),
-              ZoneId.systemDefault()).head))
+            val string = UTF8String.fromString(literalStr)
+            val maybeLong = stringToTimestamp(string, ZoneId.systemDefault())
+            return Some(toJavaTimestamp(maybeLong.head))
           case _ =>
         }
       }

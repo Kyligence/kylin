@@ -230,6 +230,8 @@ object SparderTypeUtil extends Logging {
             b.floatValue()
           case SqlTypeName.SMALLINT =>
             b.shortValue()
+          case SqlTypeName.TINYINT =>
+            b.byteValue()
           case _ =>
             b
         }

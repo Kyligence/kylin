@@ -44,6 +44,8 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.metadata.model.TblColRef;
@@ -263,13 +265,21 @@ public class RexUtils {
         RelDataType relDataType;
         switch (colType.getName()) {
         case DataType.DATE:
-            return rexBuilder.makeDateLiteral(new DateString(value));
+            // In order to support the column type is date, but the value is timestamp string.
+            // for example: DEFAULT.TEST_KYLIN_FACT.CAL_DT with type date,
+            // the filter condition is: cast("cal_dt" as timestamp) >= timestamp '2012-01-01 00:00:00',
+            // the FilterConditionExpander will translate it to compare CAL_DT >= date '2012-01-01'
+            // This seems like an unsafe operation.
+            String[] splits = StringUtils.split(value.trim(), " ");
+            Preconditions.checkArgument(splits.length >= 1, "split %s with error", value);
+            return rexBuilder.makeDateLiteral(new DateString(splits[0]));
         case DataType.TIMESTAMP:
             relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
             return rexBuilder.makeTimestampLiteral(new TimestampString(value), relDataType.getPrecision());
         case DataType.VARCHAR:
         case DataType.STRING:
-            return rexBuilder.makeLiteral(value);
+            relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR, colType.getPrecision());
+            return rexBuilder.makeLiteral(value, relDataType, false);
         case DataType.INTEGER:
             relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.INTEGER);
             return rexBuilder.makeLiteral(Integer.parseInt(value), relDataType, false);
