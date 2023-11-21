@@ -303,6 +303,7 @@ class FilePruner(val session: SparkSession,
       layoutRows
     }).sum
     setShufflePartitions(totalFileSize, sourceRows, session)
+    setFilesMaxPartitionBytes(totalFileSize, sourceRows, session)
     if (selected.isEmpty) {
       val value = Seq.empty[PartitionDirectory]
       cached.put((partitionFilters, dataFilters, derivedFilters), (value, sourceRows))

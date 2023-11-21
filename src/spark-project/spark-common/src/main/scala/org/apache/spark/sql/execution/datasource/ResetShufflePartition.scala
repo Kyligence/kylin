@@ -18,6 +18,7 @@
 package org.apache.spark.sql.execution.datasource
 
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
+import org.apache.kylin.engine.spark.utils.StorageUtils.MB
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf
@@ -45,6 +46,37 @@ trait ResetShufflePartition extends Logging {
     } else {
       logInfo(s"Origin partition is $originPartitionsNum, new partition is $partitionsNum, total bytes " +
         s"${QueryContext.current().getMetrics.getSourceScanBytes}, will not reset the ${SQLConf.SHUFFLE_PARTITIONS.key}")
+    }
+  }
+
+  def needSetFilesMaxPartitionBytes(totalRowCount: Long, sourceBytes: Long, kapConfig: KapConfig): Boolean = {
+    if (kapConfig.isResetMaxPartitionBytes) {
+      val parquetRowCountThresholdSize = kapConfig.getQueryParquetRowCountThresholdSize
+      val filesThresholdBytes = kapConfig.getQueryParquetFilesThresholdBytes
+      val parquetRowCountPerMb = kapConfig.getQueryParquetRowCountPerMb
+      // setFilesMaxPartitionBytes:
+      // 1. sourceBytes < files threshold bytes
+      // 2. totalRowCount < threshold size
+      // 3. per file size < threshold per file size
+      return (sourceBytes < filesThresholdBytes) &&
+        (totalRowCount < parquetRowCountThresholdSize) &&
+        ((totalRowCount / (sourceBytes * 1.0 / MB)) > parquetRowCountPerMb)
+    }
+    false
+  }
+
+  def setFilesMaxPartitionBytes(sourceBytes: Long, sourceRows: Long, sparkSession: SparkSession): Unit = {
+    val kapConfig = KapConfig.getInstanceFromEnv
+    val needSet = needSetFilesMaxPartitionBytes(sourceRows, sourceBytes, kapConfig)
+
+    if (needSet) {
+      val filesMaxPartitionBytes = kapConfig.getQueryFilesMaxPartitionBytes
+      sparkSession.sessionState.conf.setLocalProperty(SQLConf.FILES_MAX_PARTITION_BYTES.key, filesMaxPartitionBytes.toString)
+      logInfo(s"Set the ${SQLConf.FILES_MAX_PARTITION_BYTES.key} to $filesMaxPartitionBytes, " +
+        s"total bytes $sourceBytes , total row count $sourceRows")
+    } else {
+      logInfo(s"Not need reset the ${SQLConf.FILES_MAX_PARTITION_BYTES.key}, " +
+        s"total bytes $sourceBytes , total row count $sourceRows")
     }
   }
 }
