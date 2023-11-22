@@ -175,7 +175,7 @@ public class RecCandidateToolTest extends NLocalFileMetadataTestCase {
         jdbcRawRecStore.deleteAll();
         assertEquals(0, jdbcRawRecStore.queryAll().size());
         tool = new RecCandidateTool();
-        tool.execute(new String[] { "-restore", "-dir", file.getAbsolutePath(), "-table", "test_opt_rec_candidate" });
+        tool.execute(new String[] { "-restore", "-dir", file.getAbsolutePath(), "-table", "test_opt_rec_candidate_v2" });
         assertEquals(3, jdbcRawRecStore.queryAll().size());
     }
 
@@ -197,7 +197,7 @@ public class RecCandidateToolTest extends NLocalFileMetadataTestCase {
         jdbcRawRecStore.deleteAll();
         assertEquals(0, jdbcRawRecStore.queryAll().size());
         tool = new RecCandidateTool();
-        tool.execute(new String[] { "-restore", "-dir", file.getAbsolutePath(), "-table", "test_opt_rec_candidate" });
+        tool.execute(new String[] { "-restore", "-dir", file.getAbsolutePath(), "-table", "test_opt_rec_candidate_v2" });
         assertEquals(3, jdbcRawRecStore.queryAll().size());
     }
 

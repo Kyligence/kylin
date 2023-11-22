@@ -84,7 +84,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JdbcRawRecStore {
 
-    public static final String RECOMMENDATION_CANDIDATE = "_rec_candidate";
+    public static final String RECOMMENDATION_CANDIDATE = "_rec_candidate_v2";
     private static final int NON_EXIST_MODEL_SEMANTIC_VERSION = Integer.MIN_VALUE;
     private static final int LAG_SEMANTIC_VERSION = 1;
     private static final List<RawRecItem.RawRecState> FINAL_STATE = Arrays.asList(RawRecItem.RawRecState.APPLIED,
