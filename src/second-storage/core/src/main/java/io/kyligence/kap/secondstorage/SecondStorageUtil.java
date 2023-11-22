@@ -91,7 +91,7 @@ import io.kyligence.kap.secondstorage.response.SecondStorageNode;
 
 public class SecondStorageUtil {
     public static final Set<ExecutableState> RUNNING_STATE = ImmutableSet.of(ExecutableState.RUNNING,
-            ExecutableState.READY, ExecutableState.PAUSED);
+            ExecutableState.READY, ExecutableState.PAUSED, ExecutableState.PENDING);
     public static final Set<JobTypeEnum> RELATED_JOBS = ImmutableSet.of(JobTypeEnum.INDEX_BUILD,
             JobTypeEnum.INDEX_REFRESH, JobTypeEnum.INC_BUILD, JobTypeEnum.INDEX_MERGE,
             JobTypeEnum.EXPORT_TO_SECOND_STORAGE, JobTypeEnum.SECOND_STORAGE_REFRESH_SECONDARY_INDEXES);
