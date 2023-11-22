@@ -18,7 +18,6 @@
 
 package org.apache.kylin.query.optrule;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -30,9 +29,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.Permutation;
@@ -83,6 +80,12 @@ public class OlapProjectMergeRule extends RelOptRule {
 
     //~ Methods ----------------------------------------------------------------
 
+    @Override public boolean matches(RelOptRuleCall call) {
+        final Project topProject = call.rel(0);
+        final Project bottomProject = call.rel(1);
+        return topProject.getConvention() == bottomProject.getConvention();
+    }
+
     public void onMatch(RelOptRuleCall call) {
         final Project topProject = call.rel(0);
         final Project bottomProject = call.rel(1);
@@ -121,18 +124,17 @@ public class OlapProjectMergeRule extends RelOptRule {
             return;
         }
 
-        final List<RexNode> pushedProjects;
+        final List<RexNode> newProjects;
         if (KylinConfig.getInstanceFromEnv().isProjectMergeWithBloatEnabled()) {
-            pushedProjects = RelOptUtil.pushPastProjectUnlessBloat(topProject.getProjects(), bottomProject,
+            newProjects = RelOptUtil.pushPastProjectUnlessBloat(topProject.getProjects(), bottomProject,
                     KylinConfig.getInstanceFromEnv().getProjectMergeRuleBloatThreshold());
-            if (pushedProjects == null) {
+            if (newProjects == null) {
                 // Merged projects are significantly more complex. Do not merge.
                 return;
             }
         } else {
-            pushedProjects = RelOptUtil.pushPastProject(topProject.getProjects(), bottomProject);
+            newProjects = RelOptUtil.pushPastProject(topProject.getProjects(), bottomProject);
         }
-        final List<RexNode> newProjects = simplify(pushedProjects);
         final RelNode input = bottomProject.getInput();
         if (RexUtil.isIdentity(newProjects, input.getRowType())
                 && (force || input.getRowType().getFieldNames().equals(topProject.getRowType().getFieldNames()))) {
@@ -144,39 +146,6 @@ public class OlapProjectMergeRule extends RelOptRule {
         relBuilder.push(bottomProject.getInput());
         relBuilder.project(newProjects, topProject.getRowType().getFieldNames());
         call.transformTo(relBuilder.build());
-    }
-
-    private static List<RexNode> simplify(List<RexNode> projectExprs) {
-
-        final List<RexNode> list = new ArrayList<>();
-        simplifyRecursiveCase().visitList(projectExprs, list);
-        return list;
-    }
-
-    private static RexShuttle simplifyRecursiveCase() {
-        return new RexShuttle() {
-            @Override
-            public RexNode visitCall(RexCall call) {
-                if (call.getKind() == SqlKind.CASE && call.getOperands().size() == 3) {
-                    RexNode op0 = call.getOperands().get(0);
-                    RexNode op1 = call.getOperands().get(1);
-                    RexNode op2 = call.getOperands().get(2);
-                    if (op1 instanceof RexCall && ((RexCall) op1).getKind() == SqlKind.CASE
-                            && ((RexCall) op1).getOperands().size() == 3
-                            && RexUtil.eq(op0, ((RexCall) op1).getOperands().get(0))
-                            && RexUtil.eq(op2, ((RexCall) op1).getOperands().get(2))) {
-                        return visitCall((RexCall) op1);
-                    }
-                    if (op2 instanceof RexCall && ((RexCall) op2).getKind() == SqlKind.CASE
-                            && ((RexCall) op2).getOperands().size() == 3
-                            && RexUtil.eq(op0, ((RexCall) op2).getOperands().get(0))
-                            && RexUtil.eq(op1, ((RexCall) op2).getOperands().get(1))) {
-                        return visitCall((RexCall) op2);
-                    }
-                }
-                return super.visitCall(call);
-            }
-        };
     }
 
     private boolean containsNonMergeableExprs(Project project) {
