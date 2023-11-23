@@ -65,6 +65,10 @@ import org.apache.kylin.query.engine.meta.SimpleDataContext;
 import org.apache.kylin.query.engine.view.ViewAnalyzer;
 import org.apache.kylin.query.mask.QueryResultMasks;
 import org.apache.kylin.query.optrule.OlapFilterJoinRule;
+import org.apache.kylin.query.optrule.OlapFilterRule;
+import org.apache.kylin.query.optrule.OlapProjectRule;
+import org.apache.kylin.query.optrule.OlapReduceExpressionRule;
+import org.apache.kylin.query.optrule.OlapValuesRule;
 import org.apache.kylin.query.optrule.SumConstantConvertRule;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapAggregateRel;
@@ -263,6 +267,16 @@ public class QueryExec {
         Collection<RelOptRule> postOptRules = new LinkedHashSet<>();
         // It will definitely work if it were put here
         postOptRules.add(SumConstantConvertRule.INSTANCE);
+        if (kylinConfig.isReduceExpressionsRulesEnabled()) {
+            // old calcite given wrong cost, therefore add FilterReduceExpressionsRule
+            // ignore ProjectReduceExpressionsRule for the function `concat` may give wrong result
+            // upgrade calcite to handle this problem?
+            // postOptRules.add(OlapReduceExpressionRule.PROJECT_INSTANCE)
+            postOptRules.add(OlapReduceExpressionRule.FILTER_INSTANCE);
+            postOptRules.add(OlapFilterRule.INSTANCE);
+            postOptRules.add(OlapProjectRule.INSTANCE);
+            postOptRules.add(OlapValuesRule.INSTANCE);
+        }
         if (kylinConfig.isConvertSumExpressionEnabled()) {
             postOptRules.addAll(HepUtils.SumExprRules);
         }
