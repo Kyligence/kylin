@@ -53,7 +53,6 @@ import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
 import org.apache.calcite.rel.rules.ProjectWindowTransposeRule;
-import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.rel.rules.SemiJoinRule;
 import org.apache.calcite.rel.rules.SortJoinTransposeRule;
 import org.apache.calcite.rel.rules.SortProjectTransposeRule;
@@ -82,6 +81,7 @@ import org.apache.kylin.query.optrule.OlapModelViewRule;
 import org.apache.kylin.query.optrule.OlapProjectJoinTransposeRule;
 import org.apache.kylin.query.optrule.OlapProjectMergeRule;
 import org.apache.kylin.query.optrule.OlapProjectRule;
+import org.apache.kylin.query.optrule.OlapReduceExpressionRule;
 import org.apache.kylin.query.optrule.OlapSortRule;
 import org.apache.kylin.query.optrule.OlapToEnumerableConverterRule;
 import org.apache.kylin.query.optrule.OlapUnionRule;
@@ -183,15 +183,15 @@ public class PlannerFactory {
 
         // CalcitePrepareImpl.CONSTANT_REDUCTION_RULES
         if (kylinConfig.isReduceExpressionsRulesEnabled()) {
-            planner.addRule(ReduceExpressionsRule.PROJECT_INSTANCE);
-            planner.addRule(ReduceExpressionsRule.FILTER_INSTANCE);
-            planner.addRule(ReduceExpressionsRule.CALC_INSTANCE);
-            planner.addRule(ReduceExpressionsRule.JOIN_INSTANCE);
+            planner.addRule(OlapReduceExpressionRule.PROJECT_INSTANCE);
+            planner.addRule(OlapReduceExpressionRule.FILTER_INSTANCE);
+            planner.addRule(OlapReduceExpressionRule.JOIN_INSTANCE);
+            planner.addRule(OlapReduceExpressionRule.CALC_INSTANCE);
         }
         // the ValuesReduceRule breaks query test somehow...
-        //        planner.addRule(ValuesReduceRule.FILTER_INSTANCE);
-        //        planner.addRule(ValuesReduceRule.PROJECT_FILTER_INSTANCE);
-        //        planner.addRule(ValuesReduceRule.PROJECT_INSTANCE);
+        //   planner.addRule(ValuesReduceRule.FILTER_INSTANCE);
+        //   planner.addRule(ValuesReduceRule.PROJECT_FILTER_INSTANCE);
+        //   planner.addRule(ValuesReduceRule.PROJECT_INSTANCE);
 
         removeRules(planner, kylinConfig.getCalciteRemoveRule());
         if (!kylinConfig.isEnumerableRulesEnabled()) {

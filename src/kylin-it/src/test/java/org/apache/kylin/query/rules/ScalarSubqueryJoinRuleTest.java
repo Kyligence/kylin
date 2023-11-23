@@ -32,6 +32,7 @@ import org.apache.kylin.query.optrule.AggregateProjectReduceRule;
 import org.apache.kylin.query.optrule.OlapAggregateRule;
 import org.apache.kylin.query.optrule.OlapJoinRule;
 import org.apache.kylin.query.optrule.OlapProjectRule;
+import org.apache.kylin.query.optrule.OlapReduceExpressionRule;
 import org.apache.kylin.query.optrule.ScalarSubqueryJoinRule;
 import org.junit.After;
 import org.junit.Before;
@@ -104,6 +105,7 @@ public class ScalarSubqueryJoinRuleTest extends CalciteRuleTestBase {
                 ProjectMergeRule.INSTANCE, //
                 AggregateProjectMergeRule.INSTANCE, //
                 AggregateProjectReduceRule.INSTANCE, //
+                OlapReduceExpressionRule.PROJECT_INSTANCE, //
                 // target rules
                 ScalarSubqueryJoinRule.AGG_JOIN, //
                 ScalarSubqueryJoinRule.AGG_PRJ_JOIN, //

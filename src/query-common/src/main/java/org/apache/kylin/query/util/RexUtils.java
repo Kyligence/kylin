@@ -263,6 +263,7 @@ public class RexUtils {
 
     public static RexNode transformValue2RexLiteral(RexBuilder rexBuilder, String value, DataType colType) {
         RelDataType relDataType;
+        String[] splits;
         switch (colType.getName()) {
         case DataType.DATE:
             // In order to support the column type is date, but the value is timestamp string.
@@ -270,12 +271,17 @@ public class RexUtils {
             // the filter condition is: cast("cal_dt" as timestamp) >= timestamp '2012-01-01 00:00:00',
             // the FilterConditionExpander will translate it to compare CAL_DT >= date '2012-01-01'
             // This seems like an unsafe operation.
-            String[] splits = StringUtils.split(value.trim(), " ");
+            splits = StringUtils.split(value.trim(), " ");
             Preconditions.checkArgument(splits.length >= 1, "split %s with error", value);
             return rexBuilder.makeDateLiteral(new DateString(splits[0]));
         case DataType.TIMESTAMP:
             relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
-            return rexBuilder.makeTimestampLiteral(new TimestampString(value), relDataType.getPrecision());
+            // If the value with format yyyy-MM-dd, then pad with ` 00:00:00`,
+            // if with format `yyyy-MM-dd HH:mm:ss`, use this value directly,
+            // otherwise, wrong format, making literal will throw exception by Calcite
+            splits = StringUtils.split(value.trim(), " ");
+            String ts = splits.length == 1 ? value + " 00:00:00" : value;
+            return rexBuilder.makeTimestampLiteral(new TimestampString(ts), relDataType.getPrecision());
         case DataType.VARCHAR:
         case DataType.STRING:
             relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR, colType.getPrecision());

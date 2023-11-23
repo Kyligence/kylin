@@ -18,32 +18,17 @@
 
 package org.apache.kylin.query.routing;
 
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
-import java.util.TimeZone;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.calcite.plan.RelOptPredicateList;
-import org.apache.calcite.rel.type.RelDataTypeFamily;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSimplify;
-import org.apache.calcite.sql.SqlCollation;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.type.BasicSqlType;
-import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.DateString;
-import org.apache.calcite.util.NlsString;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.kylin.common.KylinConfig;
@@ -51,7 +36,6 @@ import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.exception.KylinTimeoutException;
 import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -80,17 +64,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SegmentPruningRule extends PruningRule {
 
-    private static final TimeZone UTC_ZONE = TimeZone.getTimeZone("UTC");
-
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
     private static final Pattern TIMESTAMP_PATTERN = Pattern
             .compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(\\.\\d*[1-9])?");
-
-    public static final Set<SqlKind> COMPARISON_OP_KIND_SET = ImmutableSet.of(SqlKind.GREATER_THAN,
-            SqlKind.GREATER_THAN_OR_EQUAL, //
-            SqlKind.LESS_THAN, SqlKind.LESS_THAN_OR_EQUAL, //
-            SqlKind.IN, SqlKind.NOT_IN, //
-            SqlKind.EQUALS, SqlKind.NOT_EQUALS);
 
     @Override
     public void apply(Candidate candidate) {
@@ -127,38 +103,11 @@ public class SegmentPruningRule extends PruningRule {
 
         // pruner segment by simplify sql filter
         val relOptCluster = olapContext.getFirstTableScan().getCluster();
-        val rexBuilder = relOptCluster.getRexBuilder();
         val rexSimplify = new RexSimplify(relOptCluster.getRexBuilder(), RelOptPredicateList.EMPTY, true,
                 relOptCluster.getPlanner().getExecutor());
 
-        var filterConditions = olapContext.getExpandedFilterConditions();
-        val dateFormat = partitionCol.getPartitionDateFormat();
-        val partitionColRef = partitionCol.getPartitionDateColumnRef();
-        RexInputRef partitionColInputRef = null;
-        if (needRewritePartitionColInFilter(dataflow, olapContext)) {
-            partitionColInputRef = RexUtils.transformColumn2RexInputRef(partitionColRef,
-                    olapContext.getAllTableScans());
-            try {
-                val firstSegmentRanges = transformSegment2RexCall(allReadySegments.get(0), dateFormat, rexBuilder,
-                        partitionColInputRef, partitionColRef.getType(), dataflow.isStreaming());
-                RelDataTypeFamily segmentLiteralTypeFamily = getSegmentLiteralTypeFamily(firstSegmentRanges.getFirst());
-                List<RexNode> filterRexNodeList = new ArrayList<>();
-                for (RexNode filterCondition : filterConditions) {
-                    RexNode rexNode = rewriteRexCall(filterCondition, rexBuilder, segmentLiteralTypeFamily,
-                            partitionColInputRef, dateFormat);
-                    filterRexNodeList.add(rexNode);
-                }
-                filterConditions = filterRexNodeList;
-            } catch (Exception ex) {
-                log.warn("Segment pruning error: ", ex);
-                if (canPruneSegmentsForMaxMeasure(dataflow, olapContext, partitionColRef)) {
-                    return selectSegmentsForMaxMeasure(dataflow);
-                }
-                return allReadySegments;
-            }
-        }
-
-        RexNode simplifiedSqlFilter = rexSimplify.simplifyAnds(filterConditions);
+        // this step may spend too long time, should be handled by https://olapio.atlassian.net/browse/KE-42295
+        RexNode simplifiedSqlFilter = rexSimplify.simplifyAnds(olapContext.getExpandedFilterConditions());
         if (simplifiedSqlFilter.isAlwaysFalse()) {
             log.info("SQL filter condition is always false, pruning all ready segments");
             olapContext.getStorageContext().setFilterCondAlwaysFalse(true);
@@ -166,6 +115,7 @@ public class SegmentPruningRule extends PruningRule {
         }
 
         // pruner segment by customized scene optimize
+        val partitionColRef = partitionCol.getPartitionDateColumnRef();
         if (canPruneSegmentsForMaxMeasure(dataflow, olapContext, partitionColRef)) {
             return selectSegmentsForMaxMeasure(dataflow);
         }
@@ -181,6 +131,8 @@ public class SegmentPruningRule extends PruningRule {
         }
 
         // prune segments by partition filter
+        RexInputRef partitionColInputRef = RexUtils.transformColumn2RexInputRef(partitionColRef,
+                olapContext.getAllTableScans());
         Segments<NDataSegment> selectedSegments = pruneSegmentsByPartitionFilter(dataflow, olapContext, rexSimplify,
                 partitionColInputRef, simplifiedSqlFilter);
         log.info("Scan segment.size: {} after segment pruning", selectedSegments.size());
@@ -237,11 +189,6 @@ public class SegmentPruningRule extends PruningRule {
             }
         }
         return selectedSegments;
-    }
-
-    private boolean needRewritePartitionColInFilter(NDataflow dataflow, OlapContext olapContext) {
-        return !dataflow.getQueryableSegments().isEmpty() && olapContext.getFilterColumns()
-                .contains(getPartitionDesc(dataflow, olapContext).getPartitionDateColumnRef());
     }
 
     private boolean isFullBuildModel(PartitionDesc partitionCol) {
@@ -308,111 +255,6 @@ public class SegmentPruningRule extends PruningRule {
         }
         return NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), dataflow.getProject())
                 .getDataModelDesc(model.getFusionId()).getPartitionDesc();
-    }
-
-    private RexNode rewriteRexCall(RexNode rexNode, RexBuilder rexBuilder, RelDataTypeFamily relDataTypeFamily,
-            RexInputRef partitionColInputRef, String dateFormat) {
-        if (!(rexNode instanceof RexCall)) {
-            return rexNode;
-        }
-
-        RexCall rewriteRexCall = (RexCall) rexNode;
-
-        if (COMPARISON_OP_KIND_SET.contains(rewriteRexCall.getOperator().kind)) {
-            return needRewrite(partitionColInputRef, rewriteRexCall)
-                    ? rewriteRexNodeLiteral(rexNode, rexBuilder, relDataTypeFamily, dateFormat)
-                    : rexNode;
-        } else {
-            List<RexNode> opList = rewriteRexCall.getOperands().stream()
-                    .map(rex -> rewriteRexCall(rex, rexBuilder, relDataTypeFamily, partitionColInputRef, dateFormat))
-                    .collect(Collectors.toList());
-            return rexBuilder.makeCall(rewriteRexCall.getOperator(), opList);
-        }
-    }
-
-    private boolean needRewrite(RexInputRef partitionColInputRef, RexCall rewriteRexCall) {
-        boolean isContainsPartitionColumn = false;
-        boolean isContainsLiteral = false;
-        for (RexNode sonRexNode : rewriteRexCall.getOperands()) {
-            if (sonRexNode instanceof RexInputRef) {
-                RexInputRef rexInputRef = (RexInputRef) sonRexNode;
-                String columnName = rexInputRef.getName();
-                if (partitionColInputRef.getName().contains(columnName)) {
-                    isContainsPartitionColumn = true;
-                }
-            } else if (sonRexNode instanceof RexLiteral) {
-                isContainsLiteral = true;
-            }
-        }
-        return isContainsPartitionColumn && isContainsLiteral;
-    }
-
-    private RexNode rewriteRexNodeLiteral(RexNode rexNodeLiteral, RexBuilder rexBuilder,
-            RelDataTypeFamily relDataTypeFamily, String dateFormat) {
-        if (rexNodeLiteral instanceof RexCall) {
-            try {
-                RexCall rexCall = (RexCall) rexNodeLiteral;
-                List<RexNode> oldRexNodes = rexCall.getOperands();
-                List<RexNode> newRexNodes = new ArrayList<>();
-                for (RexNode rexNode : oldRexNodes) {
-                    newRexNodes.add(transform(rexNode, rexBuilder, relDataTypeFamily, dateFormat));
-                }
-                rexNodeLiteral = rexBuilder.makeCall(rexCall.getOperator(), newRexNodes);
-            } catch (Exception e) {
-                log.warn("RewriteRexNodeLiteral failed rexNodeLiteral:{} relDataTypeFamily:{} dateFormat:{}",
-                        rexNodeLiteral, relDataTypeFamily.toString(), dateFormat, e);
-            }
-        }
-        return rexNodeLiteral;
-    }
-
-    private RexNode transform(RexNode rexNode, RexBuilder rexBuilder, RelDataTypeFamily relDataTypeFamily,
-            String dateFormat) {
-        if (!(rexNode instanceof RexLiteral)) {
-            return rexNode;
-        }
-
-        RexLiteral rexLiteral = (RexLiteral) rexNode;
-        RexNode newLiteral;
-        if (SqlTypeFamily.DATE == relDataTypeFamily) {
-            String dateStr = normalization(dateFormat, rexLiteral);
-            newLiteral = rexBuilder.makeLiteral(new DateString(dateStr),
-                    new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.DATE), true);
-        } else if (SqlTypeFamily.CHARACTER == relDataTypeFamily) {
-            String dateStr = normalization(dateFormat, rexLiteral);
-            newLiteral = rexBuilder.makeLiteral(new NlsString(dateStr, "UTF-16LE", SqlCollation.IMPLICIT),
-                    new BasicSqlType(RelDataTypeSystem.DEFAULT, SqlTypeName.CHAR), true);
-        } else {
-            newLiteral = rexLiteral;
-        }
-        return newLiteral;
-    }
-
-    private String normalization(String dateFormat, RexLiteral rexLiteral) {
-        RelDataTypeFamily typeFamily = rexLiteral.getType().getFamily();
-        if (SqlTypeFamily.DATE == typeFamily || SqlTypeFamily.TIMESTAMP == typeFamily) {
-            // Calendar uses UTC timezone, just to keep RexLiteral's value(an instanceof DateString)
-            long timeInMillis = ((Calendar) rexLiteral.getValue()).getTimeInMillis();
-            String dateStr = DateFormat.formatToDateStr(timeInMillis, dateFormat, UTC_ZONE);
-            if (!rexLiteral.toString().equals(dateStr)) {
-                log.warn("Normalize RexLiteral({}) to {}", rexLiteral, dateStr);
-            }
-            return dateStr;
-        }
-        return rexLiteral.getValue2().toString();
-    }
-
-    private RelDataTypeFamily getSegmentLiteralTypeFamily(RexNode rangeRexNode) {
-        if (rangeRexNode instanceof RexCall) {
-            RexCall rexCall = (RexCall) rangeRexNode;
-            List<RexNode> oldRexNodes = rexCall.getOperands();
-            for (RexNode rexNode : oldRexNodes) {
-                if (rexNode instanceof RexLiteral) {
-                    return rexNode.getType().getFamily();
-                }
-            }
-        }
-        return null;
     }
 
     private Pair<RexNode, RexNode> transformSegment2RexCall(NDataSegment dataSegment, String dateFormat,

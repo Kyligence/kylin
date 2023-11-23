@@ -28,6 +28,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.query.optrule.FilterJoinConditionMergeRule;
 import org.apache.kylin.query.optrule.FilterSimplifyRule;
+import org.apache.kylin.query.optrule.OlapFilterRule;
+import org.apache.kylin.query.optrule.OlapReduceExpressionRule;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,8 +58,10 @@ public class FilterSimplifyRuleTest extends CalciteRuleTestBase {
     @Test
     public void test() throws IOException {
         final List<RelOptRule> rules = new ArrayList<>();
+        rules.add(OlapReduceExpressionRule.FILTER_INSTANCE);
         rules.add(FilterSimplifyRule.INSTANCE);
         rules.add(FilterJoinConditionMergeRule.INSTANCE);
+        rules.add(OlapFilterRule.INSTANCE);
         List<Pair<String, String>> queries = readALLSQLs(KylinConfig.getInstanceFromEnv(), defaultProject,
                 "query/sql_filter_simplify");
 

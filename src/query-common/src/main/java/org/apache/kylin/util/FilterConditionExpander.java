@@ -22,6 +22,7 @@ import static org.apache.kylin.common.exception.QueryErrorCode.UNSUPPORTED_EXPRE
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
@@ -40,6 +41,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.NlsString;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapContext;
@@ -58,6 +60,8 @@ public class FilterConditionExpander {
     private final OlapContext context;
     private final RelNode currentRel;
     private final RexBuilder rexBuilder;
+
+    private final Map<String, RexNode> cachedConvertedRelMap = Maps.newHashMap();
 
     public FilterConditionExpander(OlapContext context, RelNode currentRel) {
         this.context = context;
@@ -145,8 +149,14 @@ public class FilterConditionExpander {
                 }
             }
 
-            // col <op> lit
-            return simplify(call, lInputRef);
+            // col <op> lit, optimized with cache
+            if (cachedConvertedRelMap.containsKey(call.toString())) {
+                return cachedConvertedRelMap.get(call.toString());
+            } else {
+                RexNode simplified = simplify(call, lInputRef);
+                cachedConvertedRelMap.put(call.toString(), simplified); // add cache
+                return simplified;
+            }
         }
 
         return null;

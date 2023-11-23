@@ -32,7 +32,7 @@ OlapToEnumerableConverter
         <Resource name="query01.planAfter">
             <![CDATA[
 OlapToEnumerableConverter
-  OlapProjectRel(D_DATEKEY=[$1], DATE_TIME=[$0], TOTAL=[$2], ctx=[])
+  OlapProjectRel(D_DATEKEY=[$1], DATE_TIME=['1995-03-01'], TOTAL=[$2], ctx=[])
     OlapAggregateRel(group-set=[[0, 1]], groups=[null], TOTAL=[SUM($2)], ctx=[])
       OlapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
         OlapProjectRel(DATE_TIME=['1995-03-01'], ctx=[])
@@ -161,7 +161,7 @@ OlapToEnumerableConverter
 OlapToEnumerableConverter
   OlapProjectRel(SD=[$3], D_DATE=[$1], EXPR$2=[$4], DATE_TIME=[$0], SY=[$5], SR=[$6], LO_ORDERDATE=[$2], ctx=[])
     OlapAggregateRel(group-set=[[0, 1, 2]], groups=[null], SD=[SUM($8)], EXPR$2=[$SUM0($9)], SY=[SUM($10)], SR=[SUM($11)], ctx=[])
-      OlapProjectRel(DATE_TIME=[$0], D_DATE=[$1], LO_ORDERDATE=[$5], EXPR$2=[$3], SY=[$4], SD=[$2], $f1=[$6], SR=[$7], $f8=[CAST(*($2, $6)):BIGINT], $f9=[*($3, $6)], $f10=[CAST(*($4, $6)):BIGINT], $f11=[CAST(*($3, $7)):BIGINT], ctx=[])
+      OlapProjectRel(DATE_TIME=[$0], D_DATE=[$1], LO_ORDERDATE=[$5], EXPR$2=[$3], SY=[$4], SD=[$2], $f1=[$6], SR=[$7], $f8=[*($2, $6)], $f9=[*($3, $6)], $f10=[*($4, $6)], $f11=[*($3, $7)], ctx=[])
         OlapJoinRel(condition=[=($0, $5)], joinType=[inner], ctx=[])
           OlapAggregateRel(group-set=[[0, 1]], groups=[null], SD=[SUM($2)], EXPR$2=[$SUM0($3)], SY=[SUM($4)], ctx=[])
             OlapProjectRel(DATE_TIME=[$0], D_DATE=[$1], SD=[$2], $f3=[CASE(IS NULL($3), CAST(1):BIGINT, $3)], SY=[$4], ctx=[])
@@ -453,7 +453,7 @@ OlapToEnumerableConverter
 OlapToEnumerableConverter
   OlapProjectRel(DATE_TIME=[$0], EXPR$1=[$1], EXPR$2=[$2], EXPR$3=[$3], EXPR$4=[$3], EXPR$5=[$4], SY=[$5], SR=[$6], ctx=[])
     OlapAggregateRel(group-set=[[0]], groups=[null], EXPR$1=[$SUM0($8)], EXPR$2=[$SUM0($9)], EXPR$3=[$SUM0($10)], EXPR$5=[$SUM0($11)], SY=[SUM($12)], SR=[SUM($13)], ctx=[])
-      OlapProjectRel(DATE_TIME=[$0], $f1=[$1], EXPR$3=[$2], SY=[$3], LO_ORDERDATE=[$4], $f10=[$5], $f2=[$6], SR=[$7], $f8=[*($1, $5)], $f9=[*($1, $6)], $f1011=[*($2, $6)], $f11=[*($2, $5)], $f12=[CAST(*($3, $6)):BIGINT], $f13=[CAST(*($2, $7)):BIGINT], ctx=[])
+      OlapProjectRel(DATE_TIME=[$0], $f1=[$1], EXPR$3=[$2], SY=[$3], LO_ORDERDATE=[$4], $f10=[$5], $f2=[$6], SR=[$7], $f8=[*($1, $5)], $f9=[*($1, $6)], $f1011=[*($2, $6)], $f11=[*($2, $5)], $f12=[*($3, $6)], $f13=[*($2, $7)], ctx=[])
         OlapJoinRel(condition=[=($0, $4)], joinType=[inner], ctx=[])
           OlapAggregateRel(group-set=[[0]], groups=[null], agg#0=[$SUM0($2)], EXPR$3=[$SUM0($3)], SY=[SUM($4)], ctx=[])
             OlapProjectRel(DATE_TIME=[$0], D_DATE=[$1], $f2=[CASE(IS NULL($2), CAST(0):BIGINT, $2)], $f3=[CASE(IS NULL($3), CAST(1):BIGINT, $3)], SY=[$4], ctx=[])
@@ -662,7 +662,7 @@ OlapToEnumerableConverter
         <Resource name="query17.planAfter">
             <![CDATA[
 OlapToEnumerableConverter
-  OlapProjectRel(C_NAME=[$1], COUNT_ORDER=[$3], LO_ORDERDATE=[$0], DATE_TIME=[$2], SUM_CUSTKEY=[$4], ctx=[])
+  OlapProjectRel(C_NAME=[$1], COUNT_ORDER=[$3], LO_ORDERDATE=[CAST('1996-01-02'):INTEGER], DATE_TIME=['1996-01-02'], SUM_CUSTKEY=[$4], ctx=[])
     OlapAggregateRel(group-set=[[0, 1, 4]], groups=[null], COUNT_ORDER=[$SUM0($2)], SUM_CUSTKEY=[SUM($3)], ctx=[])
       OlapJoinRel(condition=[=($0, $4)], joinType=[inner], ctx=[])
         OlapAggregateRel(group-set=[[5, 22]], groups=[null], COUNT_ORDER=[COUNT($0)], SUM_CUSTKEY=[SUM($21)], ctx=[])
@@ -714,9 +714,9 @@ OlapToEnumerableConverter
         <Resource name="query18.planAfter">
             <![CDATA[
 OlapToEnumerableConverter
-  OlapProjectRel(C_NAME=[$2], COUNT_ORDER=[$4], LO_ORDERDATE=[$1], DATE_TIME=[$0], DATE_TIME0=[$3], SUM_CUSTKEY=[$5], ctx=[])
+  OlapProjectRel(C_NAME=[$2], COUNT_ORDER=[$4], LO_ORDERDATE=[$1], DATE_TIME=['1996-01-02'], DATE_TIME0=[$3], SUM_CUSTKEY=[$5], ctx=[])
     OlapAggregateRel(group-set=[[0, 1, 2, 3]], groups=[null], COUNT_ORDER=[$SUM0($4)], SUM_CUSTKEY=[SUM($5)], ctx=[])
-      OlapProjectRel(DATE_TIME=[$0], LO_ORDERDATE=[$1], C_NAME=[$2], DATE_TIME0=[$3], $f4=[CASE(IS NULL($4), CAST(0):BIGINT, $4)], SUM_CUSTKEY=[$5], ctx=[])
+      OlapProjectRel(DATE_TIME=['1996-01-02'], LO_ORDERDATE=[$1], C_NAME=[$2], DATE_TIME0=[$3], $f4=[CASE(IS NULL($4), CAST(0):BIGINT, $4)], SUM_CUSTKEY=[$5], ctx=[])
         OlapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
           OlapProjectRel(DATE_TIME=['1996-01-02'], ctx=[])
             OlapValuesRel(tuples=[[{ 0 }]])
@@ -764,9 +764,9 @@ OlapToEnumerableConverter
         <Resource name="query19.planAfter">
             <![CDATA[
 OlapToEnumerableConverter
-  OlapProjectRel(EXPR$0=[$2], LO_ORDERDATE=[$0], DATE_TIME=[$1], ctx=[])
+  OlapProjectRel(EXPR$0=[$2], LO_ORDERDATE=[CAST(19931014):INTEGER], DATE_TIME=[19931014], ctx=[])
     OlapAggregateRel(group-set=[[0, 1]], groups=[null], EXPR$0=[SUM($2)], ctx=[])
-      OlapProjectRel(LO_ORDERDATE=[$5], DATE_TIME=[$18], $f2=[*($9, 3)], ctx=[])
+      OlapProjectRel(LO_ORDERDATE=[CAST(19931014):INTEGER], DATE_TIME=[19931014], $f2=[*($9, 3)], ctx=[])
         OlapJoinRel(condition=[=($5, $18)], joinType=[inner], ctx=[])
           OlapTableScan(table=[[SSB, P_LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]])
           OlapProjectRel(DATE_TIME=[19931014], ctx=[])
