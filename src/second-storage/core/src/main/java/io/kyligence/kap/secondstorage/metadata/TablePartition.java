@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
@@ -46,7 +47,7 @@ public class TablePartition implements Serializable {
     private String segmentId;
     @JsonProperty("id")
     private String id;
-    @JsonProperty("node_file_map")
+    @JsonIgnore
     private Map<String, List<SegmentFileStatus>> nodeFileMap;
     @JsonProperty("secondary_index_columns")
     private Set<Integer> secondaryIndexColumns = Sets.newHashSet();
@@ -85,8 +86,8 @@ public class TablePartition implements Serializable {
             return this;
         }
 
-        public Builder setNodeFileMap(Map<String, List<SegmentFileStatus>> nodeFileMap) {
-            this.nodeFileMap = nodeFileMap;
+        public Builder setNodeFileMap() {
+            this.nodeFileMap = null;
             return this;
         }
 

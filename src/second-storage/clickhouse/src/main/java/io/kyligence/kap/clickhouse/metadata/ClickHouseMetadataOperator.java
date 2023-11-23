@@ -41,7 +41,6 @@ import io.kyligence.kap.secondstorage.ddl.ShowCreateTable;
 import io.kyligence.kap.secondstorage.ddl.exp.TableIdentifier;
 import io.kyligence.kap.secondstorage.metadata.MetadataOperator;
 import io.kyligence.kap.secondstorage.metadata.NodeGroup;
-import io.kyligence.kap.secondstorage.metadata.SegmentFileStatus;
 import io.kyligence.kap.secondstorage.metadata.TableData;
 import io.kyligence.kap.secondstorage.metadata.TableFlow;
 import io.kyligence.kap.secondstorage.metadata.TablePartition;
@@ -212,11 +211,8 @@ public class ClickHouseMetadataOperator implements MetadataOperator {
                                     e -> e.setValue(sizeInNodeMap.getOrDefault(e.getKey(), 0L))
                             );
 
-                            Map<String, List<SegmentFileStatus>> nodeFileMap = new HashMap<>(tablePartition.getNodeFileMap());
-
                             for (String node : addShardNodes) {
                                 sizeInNode.put(node, sizeInNodeMap.getOrDefault(node, 0L));
-                                nodeFileMap.put(node, new ArrayList<>());
                             }
 
                             TablePartition.Builder builder = new TablePartition.Builder();
@@ -224,7 +220,7 @@ public class ClickHouseMetadataOperator implements MetadataOperator {
                                     .setSegmentId(tablePartition.getSegmentId())
                                     .setShardNodes(shardNodes)
                                     .setSizeInNode(sizeInNode)
-                                    .setNodeFileMap(nodeFileMap)
+                                    .setNodeFileMap()
                                     .setSecondaryIndexColumns(tablePartition.getSecondaryIndexColumns());
                             newTablePartitions.add(builder.build());
                         }

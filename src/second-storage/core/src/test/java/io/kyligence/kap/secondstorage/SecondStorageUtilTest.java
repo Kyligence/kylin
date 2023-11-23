@@ -91,7 +91,7 @@ public class SecondStorageUtilTest extends NLocalFileMetadataTestCase {
     private TableFlow prepareTableFlow() throws NoSuchFieldException {
         TableFlow tableFlow = new TableFlow();
         TableData tableData = new TableData();
-        tableData.addPartition(TablePartition.builder().setNodeFileMap(Collections.emptyMap())
+        tableData.addPartition(TablePartition.builder().setNodeFileMap()
                 .setSizeInNode(Collections.emptyMap())
                 .setShardNodes(Collections.emptyList())
                 .setSegmentId("test")
@@ -106,12 +106,12 @@ public class SecondStorageUtilTest extends NLocalFileMetadataTestCase {
     private TableFlow prepareTableFlow2Partition() throws NoSuchFieldException {
         TableFlow tableFlow = new TableFlow();
         TableData tableData = new TableData();
-        tableData.addPartition(TablePartition.builder().setNodeFileMap(Collections.emptyMap())
+        tableData.addPartition(TablePartition.builder().setNodeFileMap()
                 .setSizeInNode(Collections.emptyMap())
                 .setShardNodes(ImmutableList.of("node01", "node02"))
                 .setSegmentId("test1")
                 .build());
-        tableData.addPartition(TablePartition.builder().setNodeFileMap(Collections.emptyMap())
+        tableData.addPartition(TablePartition.builder().setNodeFileMap()
                 .setSizeInNode(Collections.emptyMap())
                 .setShardNodes(ImmutableList.of("node01", "node02"))
                 .setSegmentId("test2")

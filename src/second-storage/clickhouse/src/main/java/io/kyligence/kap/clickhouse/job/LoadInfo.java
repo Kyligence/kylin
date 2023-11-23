@@ -19,9 +19,7 @@ package io.kyligence.kap.clickhouse.job;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -171,12 +169,6 @@ public class LoadInfo {
 
     // meta update
     public TablePartition createMetaInfo() {
-        Map<String, List<SegmentFileStatus>> nodeFileMap = new HashMap<>();
-        ListIterator<String> it = Arrays.asList(nodeNames).listIterator();
-        while (it.hasNext()) {
-            int idx = it.nextIndex();
-            nodeFileMap.put(it.next(), shardFiles.get(idx));
-        }
         val metric = new ClickHouseTableStorageMetric(Arrays.asList(this.nodeNames));
         metric.collect(false);
 
@@ -189,7 +181,7 @@ public class LoadInfo {
         Map<String, Long> sizeInNode = metric.getByPartitions(targetDatabase, targetTable, segment.getSegRange(),
                 dateFormat);
         return TablePartition.builder().setSegmentId(segmentId).setShardNodes(Arrays.asList(nodeNames))
-                .setId(RandomUtil.randomUUIDStr()).setNodeFileMap(nodeFileMap).setSizeInNode(sizeInNode)
+                .setId(RandomUtil.randomUUIDStr()).setNodeFileMap().setSizeInNode(sizeInNode)
                 .setSecondaryIndexColumns(tableEntity.getSecondaryIndexColumns()).build();
     }
 

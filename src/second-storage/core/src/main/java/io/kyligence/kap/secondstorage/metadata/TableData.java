@@ -191,9 +191,7 @@ public class TableData implements Serializable, WithLayout {
                     .setSegmentId(mergeSegId)
                     .setShardNodes(Lists.newArrayList(nodeGroup))
                     .setId(RandomUtil.randomUUIDStr())
-                    .setNodeFileMap(nodeGroup.stream().collect(
-                            Collectors.toMap(node -> node, node -> nodeFileMap.getOrDefault(node, Collections.emptyList()))
-                    )).build()
+                    .setNodeFileMap().build()
         ).collect(Collectors.toList());
         removePartitions(tablePartition -> oldSegIds.contains(tablePartition.getSegmentId()));
         this.partitions.addAll(mergedPartitions);
@@ -259,7 +257,6 @@ public class TableData implements Serializable, WithLayout {
 
         List<TablePartition> newPartitionList = getPartitions().stream().map(partition -> {
             Map<String, Long> sizeInNode = new HashMap<>(partition.getSizeInNode());
-            Map<String, List<SegmentFileStatus>> nodeFileMap = new HashMap<>(partition.getNodeFileMap());
             List<String> shardNodes = new ArrayList<>(partition.getShardNodes());
 
             nodeNames.forEach(nodeName -> {
@@ -270,7 +267,6 @@ public class TableData implements Serializable, WithLayout {
                 }
 
                 sizeInNode.remove(nodeName);
-                nodeFileMap.remove(nodeName);
             });
 
             shardNodes.removeAll(nodeNames);
@@ -280,7 +276,7 @@ public class TableData implements Serializable, WithLayout {
                     .setSegmentId(partition.getSegmentId())
                     .setShardNodes(shardNodes)
                     .setSizeInNode(sizeInNode)
-                    .setNodeFileMap(nodeFileMap)
+                    .setNodeFileMap()
                     .setSecondaryIndexColumns(partition.getSecondaryIndexColumns())
                     .build();
         }).collect(Collectors.toList());
