@@ -242,7 +242,7 @@ public class NIndexPlanManagerTest {
 
         val plan = manager.getIndexPlan(modelId);
         Assert.assertEquals(
-                "[1, 1030002, 1140001, 1010001, 1080002, 1070002, 1090001, 1100001, 1020001, 1040001, 1150001, 1130001]",
+                "[1, 1030002, 1010001, 1080002, 1070002, 1090001, 1100001, 1020001, 1040001]",
                 plan.getAllLayouts().stream().map(LayoutEntity::getId).collect(Collectors.toList()).toString());
     }
 

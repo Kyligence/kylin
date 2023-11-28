@@ -1023,9 +1023,9 @@ public class MetaStoreServiceTest extends ServiceTestBase {
         indexPlan = indexPlanManager.getIndexPlanByModelAlias("ssb_model_index_mixin");
 
         // 11 layout
-        Assert.assertEquals(12, indexPlan.getAllLayouts().size());
+        Assert.assertEquals(11, indexPlan.getAllLayouts().size());
         // should 6, rule based black layout should be deleted
-        Assert.assertEquals(7, indexPlan.getRuleBaseLayouts().size());
+        Assert.assertEquals(6, indexPlan.getRuleBaseLayouts().size());
 
         Assert.assertEquals(5, indexPlan.getWhitelistLayouts().size());
 

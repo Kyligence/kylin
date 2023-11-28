@@ -564,6 +564,7 @@ public class MetaStoreService extends BasicService {
             }
 
             if (targetIndexPlan.getAggShardByColumns() != null) {
+                copyForWrite.setRuleBasedIndex(targetIndexPlan.getRuleBasedIndex());
                 copyForWrite.setAggShardByColumns(targetIndexPlan.getAggShardByColumns());
             }
         });
@@ -574,10 +575,12 @@ public class MetaStoreService extends BasicService {
         if (modelSchemaChange != null) {
             val toBeRemovedIndexes = Stream
                     .concat(modelSchemaChange.getReduceItems().stream()
-                            .filter(schemaChange -> schemaChange.getType() == SchemaNodeType.WHITE_LIST_INDEX)
+                            .filter(schemaChange -> schemaChange.getType() == SchemaNodeType.WHITE_LIST_INDEX
+                                    || schemaChange.getType() == SchemaNodeType.RULE_BASED_INDEX)
                             .map(SchemaChangeCheckResult.ChangedItem::getDetail),
                             modelSchemaChange.getUpdateItems().stream()
-                                    .filter(schemaUpdate -> schemaUpdate.getType() == SchemaNodeType.WHITE_LIST_INDEX)
+                                    .filter(schemaUpdate -> schemaUpdate.getType() == SchemaNodeType.WHITE_LIST_INDEX
+                                            || schemaUpdate.getType() == SchemaNodeType.RULE_BASED_INDEX)
                                     .map(SchemaChangeCheckResult.UpdatedItem::getFirstDetail))
                     .map(Long::parseLong).collect(Collectors.toSet());
             if (!toBeRemovedIndexes.isEmpty()) {
@@ -602,6 +605,27 @@ public class MetaStoreService extends BasicService {
             indexPlanManager.updateIndexPlan(targetIndexPlan.getUuid(), copyForWrite -> {
                 IndexPlan.IndexPlanUpdateHandler updateHandler = copyForWrite.createUpdateHandler();
                 targetIndexPlan.getWhitelistLayouts().stream().filter(layout -> newIndexes.contains(layout.getId()))
+                        .forEach(layout -> updateHandler.add(layout, IndexEntity.isAggIndex(layout.getId())));
+                updateHandler.complete();
+            });
+        }
+    }
+
+    private void addRuleBasedIndex(String project, SchemaChangeCheckResult.ModelSchemaChange modelSchemaChange,
+                                   IndexPlan targetIndexPlan) {
+        if (modelSchemaChange != null) {
+            val newIndexes = Stream
+                    .concat(modelSchemaChange.getNewItems().stream()
+                                    .filter(schemaChange -> schemaChange.getType() == SchemaNodeType.RULE_BASED_INDEX)
+                                    .map(SchemaChangeCheckResult.ChangedItem::getDetail),
+                            modelSchemaChange.getUpdateItems().stream()
+                                    .filter(schemaUpdate -> schemaUpdate.getType() == SchemaNodeType.RULE_BASED_INDEX)
+                                    .map(SchemaChangeCheckResult.UpdatedItem::getSecondDetail))
+                    .map(Long::parseLong).collect(Collectors.toList());
+            val indexPlanManager = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            indexPlanManager.updateIndexPlan(targetIndexPlan.getUuid(), copyForWrite -> {
+                IndexPlan.IndexPlanUpdateHandler updateHandler = copyForWrite.createUpdateHandler();
+                targetIndexPlan.getRuleBaseLayouts().stream().filter(layout -> newIndexes.contains(layout.getId()))
                         .forEach(layout -> updateHandler.add(layout, IndexEntity.isAggIndex(layout.getId())));
                 updateHandler.complete();
             });
@@ -721,6 +745,7 @@ public class MetaStoreService extends BasicService {
                     updateModel(project, nDataModel, modelImport, hasModelOverrideProps);
                     updateIndexPlan(project, nDataModel, targetIndexPlan, hasModelOverrideProps);
                     addWhiteListIndex(project, modelSchemaChange, targetIndexPlan);
+                    addRuleBasedIndex(project, modelSchemaChange, targetIndexPlan);
 
                     importRecommendations(project, nDataModel.getUuid(), importDataModel.getUuid(), targetKylinConfig);
                 }
