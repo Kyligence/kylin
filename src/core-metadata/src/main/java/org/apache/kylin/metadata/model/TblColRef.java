@@ -21,6 +21,7 @@ package org.apache.kylin.metadata.model;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.calcite.avatica.util.Quoting;
@@ -267,6 +268,12 @@ public class TblColRef implements Serializable {
 
     public String getAliasDotName() {
         return getTableAlias() + "." + getName();
+    }
+
+    public String getTableAliasColName() {
+        return table == null ? null
+                : String.format(Locale.ROOT, "%s.%s.%s", table.getTableDesc().getDatabase(), getTableAlias(),
+                        getName());
     }
 
     public String getTableDotName() {

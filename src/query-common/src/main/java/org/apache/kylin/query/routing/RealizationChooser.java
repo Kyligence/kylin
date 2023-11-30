@@ -53,6 +53,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.calcite.rex.RexNode;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -103,9 +104,11 @@ import org.apache.kylin.metadata.realization.RealizationRuntimeException;
 import org.apache.kylin.metadata.realization.SQLDigest;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.relnode.OlapContextProp;
+import org.apache.kylin.query.relnode.OlapFilterRel;
 import org.apache.kylin.query.relnode.OlapTableScan;
 import org.apache.kylin.query.util.RelAggPushDownUtil;
 import org.apache.kylin.storage.StorageContext;
+import org.apache.kylin.util.FilterConditionExpander;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -345,6 +348,12 @@ public class RealizationChooser {
         Candidate candidate = new Candidate(realization, olapContext, matchedJoinGraphAliasMap);
         logger.info("Find candidates by table {} and project={} : {}", olapContext.getFirstTableScan().getTableName(),
                 olapContext.getOlapSchema().getProjectName(), candidate);
+
+        for (OlapFilterRel filterRel : olapContext.getAllFilterRels()) {
+            List<RexNode> filterConditions = new FilterConditionExpander(olapContext, filterRel)
+                    .convert(filterRel.getCondition());
+            olapContext.getExpandedFilterConditions().addAll(filterConditions);
+        }
 
         QueryRouter.applyRules(candidate);
 

@@ -157,6 +157,7 @@ public class OlapContext {
     /** Aggregations like min(2),max(2),avg(2), not including count(1). */
     private final List<FunctionDesc> constantAggregations = new ArrayList<>();
     private final List<RexNode> expandedFilterConditions = new LinkedList<>();
+    private final List<OlapFilterRel> allFilterRels = new LinkedList<>();
     /**
      * Tables without `not null` filters can be optimized for graph matching in the query, 
      * see configuration item `kylin.query.join-match-optimization-enabled`.

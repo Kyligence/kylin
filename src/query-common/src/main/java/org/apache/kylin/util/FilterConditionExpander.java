@@ -58,12 +58,12 @@ public class FilterConditionExpander {
     public static final Logger logger = LoggerFactory.getLogger(FilterConditionExpander.class);
 
     private final OlapContext context;
-    private final RelNode currentRel;
+    private final OlapRel currentRel;
     private final RexBuilder rexBuilder;
 
     private final Map<String, RexNode> cachedConvertedRelMap = Maps.newHashMap();
 
-    public FilterConditionExpander(OlapContext context, RelNode currentRel) {
+    public FilterConditionExpander(OlapContext context, OlapRel currentRel) {
         this.context = context;
         this.currentRel = currentRel;
         this.rexBuilder = currentRel.getCluster().getRexBuilder();
@@ -120,14 +120,7 @@ public class FilterConditionExpander {
 
     // handles only simple expression of form <RexInputRef> <op> <RexLiteral>
     public RexNode convertSimpleCall(RexCall call) {
-        val op0 = call.getOperands().get(0);
-        RexInputRef lInputRef = null;
-        if (call.getOperands().get(0) instanceof RexInputRef) {
-            lInputRef = convertInputRef((RexInputRef) call.getOperands().get(0), currentRel);
-        } else if (op0 instanceof RexCall && ((RexCall) op0).getOperator() == SqlStdOperatorTable.CAST
-                && ((RexCall) op0).getOperands().get(0) instanceof RexInputRef) {
-            lInputRef = convertInputRef((RexInputRef) ((RexCall) op0).getOperands().get(0), currentRel);
-        }
+        RexInputRef lInputRef = convertInputRef(call);
 
         if (lInputRef == null) {
             return null;
@@ -220,17 +213,42 @@ public class FilterConditionExpander {
         return operand2;
     }
 
-    private RexInputRef convertInputRef(RexInputRef rexInputRef, RelNode relNode) {
+    private RexInputRef convertInputRef(RexCall call) {
+        RexInputRef resultInputRef = null;
+        RexInputRef originInputRef = extractInputRef(call.getOperands().get(0));
+        if (originInputRef != null) {
+            RexInputRef rexInputRef = extractTableScanInputRef(originInputRef, currentRel);
+            if (rexInputRef != null) {
+                String tableAliasColName = currentRel.getColumnRowType().getColumnByIndex(originInputRef.getIndex())
+                        .getTableAliasColName();
+                resultInputRef = tableAliasColName == null
+                        ? new RexInputRef(rexInputRef.getName(), rexInputRef.getIndex(), rexInputRef.getType())
+                        : new RexInputRef(tableAliasColName, rexInputRef.getIndex(), rexInputRef.getType());
+            }
+        }
+        return resultInputRef;
+    }
+
+    private RexInputRef extractInputRef(RexNode node) {
+        if (node instanceof RexInputRef) {
+            return (RexInputRef) node;
+        } else if (node instanceof RexCall && ((RexCall) node).getOperator() == SqlStdOperatorTable.CAST) {
+            RexNode operand = ((RexCall) node).getOperands().get(0);
+            if (operand instanceof RexInputRef) {
+                return (RexInputRef) operand;
+            }
+        }
+        return null;
+    }
+
+    private RexInputRef extractTableScanInputRef(RexInputRef rexInputRef, RelNode relNode) {
         if (relNode instanceof TableScan) {
             return ContextUtil.createUniqueInputRefAmongTables((OlapTableScan) relNode, rexInputRef.getIndex(),
                     context.getAllTableScans());
         }
 
         if (relNode instanceof Project) {
-            val projectRel = (Project) relNode;
-            val expression = projectRel.getChildExps().get(rexInputRef.getIndex());
-            return expression instanceof RexInputRef ? convertInputRef((RexInputRef) expression, projectRel.getInput(0))
-                    : null;
+            return extractProjectInputRef((Project) relNode, rexInputRef);
         }
 
         val index = rexInputRef.getIndex();
@@ -249,12 +267,19 @@ public class FilterConditionExpander {
             val child = (OlapRel) relNode.getInput(i);
             val childRowTypeSize = child.getColumnRowType().size();
             if (index < currentSize + childRowTypeSize) {
-                return convertInputRef(RexInputRef.of(index - currentSize, child.getRowType()), child);
+                return extractTableScanInputRef(RexInputRef.of(index - currentSize, child.getRowType()), child);
             }
             currentSize += childRowTypeSize;
         }
 
         return null;
+    }
+
+    private RexInputRef extractProjectInputRef(Project projectRel, RexInputRef rexInputRef) {
+        val expression = projectRel.getChildExps().get(rexInputRef.getIndex());
+        return expression instanceof RexInputRef
+                ? extractTableScanInputRef((RexInputRef) expression, projectRel.getInput(0))
+                : null;
     }
 
 }

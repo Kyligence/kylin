@@ -66,7 +66,6 @@ import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
 import org.apache.kylin.query.util.ICutContextStrategy;
 import org.apache.kylin.query.util.RexToTblColRefTranslator;
 import org.apache.kylin.query.util.RexUtils;
-import org.apache.kylin.util.FilterConditionExpander;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -294,7 +293,7 @@ public class OlapFilterRel extends Filter implements OlapRel {
         if (context != null) {
             // only translate where clause and don't translate having clause
             if (!context.isAfterAggregate()) {
-                updateContextFilter();
+                collectContextFilter();
             } else {
                 context.setAfterHavingClauseFilter(true);
             }
@@ -346,14 +345,13 @@ public class OlapFilterRel extends Filter implements OlapRel {
         context.getNotNullTables().addAll(leftOrInnerTables);
     }
 
-    private void updateContextFilter() {
+    private void collectContextFilter() {
         // optimize the filter, the optimization has to be segment-irrelevant
         Set<TblColRef> filterColumns = Sets.newHashSet();
         FilterVisitor visitor = new FilterVisitor(this.columnRowType, filterColumns);
         this.condition.accept(visitor);
         if (isHeterogeneousSegmentOrMultiPartEnabled(this.context)) {
-            context.getExpandedFilterConditions()
-                    .addAll(new FilterConditionExpander(context, this).convert(this.condition));
+            context.getAllFilterRels().add(this);
         }
         if (isJoinMatchOptimizationEnabled()) {
             collectNotNullTableWithFilterCondition(context);
@@ -424,8 +422,7 @@ public class OlapFilterRel extends Filter implements OlapRel {
             FilterVisitor visitor = new FilterVisitor(this.columnRowType, filterColumns);
             this.condition.accept(visitor);
             if (isHeterogeneousSegmentOrMultiPartEnabled(subCtx)) {
-                List<RexNode> convert = new FilterConditionExpander(subCtx, this).convert(this.condition);
-                subCtx.getExpandedFilterConditions().addAll(convert);
+                subCtx.getAllFilterRels().add(this);
             }
             if (isJoinMatchOptimizationEnabled()) {
                 collectNotNullTableWithFilterCondition(subCtx);
