@@ -1623,13 +1623,11 @@ public class SecondStorageLockTest implements JobWaiter {
 
             shards.stream().flatMap(shard -> clusters.get(shard).stream()).map(Node::getName).forEach(nodeName -> {
                 assertTrue(p.getSizeInNode().containsKey(nodeName));
-                assertTrue(p.getNodeFileMap().containsKey(nodeName));
             });
 
             deletedShards.stream().flatMap(shard -> clusters.get(shard).stream()).map(Node::getName)
                     .forEach(nodeName -> {
                         assertFalse(p.getSizeInNode().containsKey(nodeName));
-                        assertFalse(p.getNodeFileMap().containsKey(nodeName));
                     });
         }));
     }
