@@ -501,7 +501,8 @@ public class SecondStorageJavaTest implements JobWaiter {
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
         await().atMost(10, TimeUnit.SECONDS).until(() -> {
             val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-            return executableManager.getJob(jobId).getStatus() == ExecutableState.RUNNING;
+            ExecutableState state = executableManager.getJob(jobId).getStatus();
+            return state == ExecutableState.RUNNING || state == ExecutableState.SUCCEED;
         });
         waitJobFinish(project, jobId);
         Assert.assertEquals(10000, IncrementalWithIntPartitionTest.getModelRowCount(project, modelId));

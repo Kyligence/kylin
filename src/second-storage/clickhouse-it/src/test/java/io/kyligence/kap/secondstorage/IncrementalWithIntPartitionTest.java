@@ -491,7 +491,8 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
         await().atMost(10, TimeUnit.SECONDS).until(() -> {
             val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-            return executableManager.getJob(jobId).getStatus() == ExecutableState.RUNNING;
+            ExecutableState state = executableManager.getJob(jobId).getStatus();
+            return state == ExecutableState.RUNNING || state == ExecutableState.SUCCEED;
         });
         waitJobFinish(project, jobId);
         int pn = tableFlowManager.get().get(modelId).orElseThrow(() -> new IllegalStateException("tableflow not found"))
