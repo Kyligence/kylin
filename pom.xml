@@ -42,7 +42,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <arthas.version>3.6.8-kyarthas-r1</arthas.version>
-        <tomcat-embed.version>9.0.82</tomcat-embed.version>
+        <tomcat-embed.version>9.0.83</tomcat-embed.version>
+        <logback.version>1.2.13</logback.version>
 
         <!-- Keep same order with dependencyManagement -->
 
@@ -161,7 +162,7 @@
         <dropwizard.version>4.1.1</dropwizard.version>
 
         <spring.cloud.version>2021.0.6</spring.cloud.version>
-        <spring.boot.version>2.7.12</spring.boot.version>
+        <spring.boot.version>2.7.18</spring.boot.version>
         <spring-boot-admin.version>2.6.10</spring-boot-admin.version>
         <spring-session.version>2.6.1-kylin-r4</spring-session.version>
         <spring.framework.security.config.version>5.7.10</spring.framework.security.config.version>
@@ -2238,6 +2239,17 @@
                 <artifactId>log4j-layout-template-json</artifactId>
                 <version>${log4j2.version}</version>
             </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+
 
             <!-- Test -->
             <dependency>
@@ -2279,6 +2291,14 @@
                     <exclusion>
                         <groupId>junit</groupId>
                         <artifactId>junit</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.xmlbeans</groupId>
+                        <artifactId>xmlbeans</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.poi</groupId>
+                        <artifactId>poi-ooxml</artifactId>
                     </exclusion>
                 </exclusions>
                 <scope>test</scope>
