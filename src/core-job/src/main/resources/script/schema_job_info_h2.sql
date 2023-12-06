@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_info (
   create_time bigint,
   update_time bigint,
   job_duration_millis bigint(10) NOT NULL DEFAULT '0' COMMENT 'total duration milliseconds',
-   PRIMARY KEY (id),
-   UNIQUE KEY uk_job_id (job_id)
+   PRIMARY KEY (id)
 );
+
+ALTER TABLE KE_IDENTIFIED_job_info ADD UNIQUE KE_IDENTIFIED_job_info_idx (job_id);

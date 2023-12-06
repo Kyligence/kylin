@@ -26,6 +26,6 @@ CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_lock (
   priority integer DEFAULT 3,
   create_time bigint,
   update_time bigint,
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_lock_id (lock_id)
+  PRIMARY KEY (id)
 );
+ALTER TABLE KE_IDENTIFIED_job_lock ADD UNIQUE KE_IDENTIFIED_job_lock_idx (lock_id);
