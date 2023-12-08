@@ -280,7 +280,13 @@ public class RexUtils {
             relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.TIMESTAMP);
             // If the value with format yyyy-MM-dd, then pad with ` 00:00:00`,
             // if with format `yyyy-MM-dd HH:mm:ss`, use this value directly,
-            // otherwise, wrong format, making literal will throw exception by Calcite
+            // otherwise, wrong format, making literal will throw exception by Calcite.
+            // Convert yyyy-MM-dd HH:mm:ss.0 to yyyy-MM-dd HH:mm:ss
+            // because this format is not supported in calcite TimestampString
+            int dotIndex = value.indexOf(".");
+            if (dotIndex != -1 && Integer.parseInt(value.substring(dotIndex + 1)) == 0) {
+                value = value.substring(0, dotIndex);
+            }
             splits = StringUtils.split(value.trim(), " ");
             String ts = splits.length == 1 ? value + " 00:00:00" : value;
             return rexBuilder.makeTimestampLiteral(new TimestampString(ts), relDataType.getPrecision());
