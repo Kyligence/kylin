@@ -18,12 +18,6 @@
 
 package org.apache.spark.sql.util
 
-import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
-import java.math.BigDecimal
-import java.sql.{Date, Timestamp, Types}
-import java.time.ZoneId
-import java.util.{GregorianCalendar, Locale, TimeZone}
-
 import org.apache.calcite.avatica.util.TimeUnitRange
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexLiteral
@@ -41,6 +35,11 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
+import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
+import java.math.BigDecimal
+import java.sql.{Date, Timestamp, Types}
+import java.time.ZoneId
+import java.util.{GregorianCalendar, Locale, TimeZone}
 import scala.collection.{immutable, mutable}
 
 object SparderTypeUtil extends Logging {

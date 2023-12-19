@@ -49,8 +49,6 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.sparkproject.guava.collect.Sets;
 
-import io.kyligence.kap.engine.spark.job.ModelIndexLoadCacheStep;
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import lombok.val;
 
 @MetadataInfo

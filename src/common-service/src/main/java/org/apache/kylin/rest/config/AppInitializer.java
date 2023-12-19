@@ -156,7 +156,7 @@ public class AppInitializer {
         } else {
             val auditLogStore = new JdbcAuditLogStore(kylinConfig);
             val epochStore = EpochStore.getEpochStore(kylinConfig);
-            kylinConfig.setQueryHistoryUrl(kylinConfig.getQueryHistoryUrl().toString());
+            kylinConfig.setJDBCQueryHistoryURL(kylinConfig.getQueryHistoryUrl().toString());
             kylinConfig.setStreamingStatsUrl(kylinConfig.getStreamingStatsUrl().toString());
             kylinConfig.setJdbcShareStateUrl(kylinConfig.getJdbcShareStateUrl().toString());
             if (kylinConfig.getMetadataStoreType().equals("hdfs")) {
@@ -170,6 +170,7 @@ public class AppInitializer {
             resourceStore.getMetadataStore().setEpochStore(epochStore);
         }
 
+        kylinConfig.setQueryHistoryUrl(kylinConfig.getQueryHistoryUrl().toString());
         kylinConfig.getDistributedLockFactory().initialize();
         if (!isResource) {
             warmUpSystemCache();

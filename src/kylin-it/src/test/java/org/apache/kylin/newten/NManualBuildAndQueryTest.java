@@ -27,6 +27,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.job.NSparkMergingJob;
+import org.apache.kylin.engine.spark.merger.AfterMergeOrRefreshResourceMerger;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -40,7 +42,6 @@ import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
-import org.apache.kylin.rest.service.merger.AfterMergeOrRefreshResourceMerger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -48,7 +49,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sparkproject.guava.collect.Sets;
 
-import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 import lombok.val;
 
 @Ignore("see io.kyligence.kap.ut.TestQueryAndBuild")

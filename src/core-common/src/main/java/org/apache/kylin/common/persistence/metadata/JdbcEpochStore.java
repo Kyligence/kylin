@@ -42,11 +42,10 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.Singletons;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
+import org.apache.kylin.guava30.shaded.common.base.Joiner;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-
-import org.apache.kylin.guava30.shaded.common.base.Joiner;
 
 import lombok.Getter;
 import lombok.val;

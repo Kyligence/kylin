@@ -18,9 +18,9 @@
 
 package org.apache.spark.sql.udf
 
-import java.math.{BigDecimal, RoundingMode}
-
 import org.apache.spark.sql.types.Decimal
+
+import java.math.{BigDecimal, RoundingMode}
 
 object TruncateImpl {
 

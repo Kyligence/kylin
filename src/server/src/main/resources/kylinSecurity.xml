@@ -245,6 +245,8 @@
             <scr:intercept-url pattern="/api/job_delegate/feign/**" access="permitAll"/>
             <scr:intercept-url pattern="/api/jobs/feign/**" access="permitAll"/>
             <scr:intercept-url pattern="/api/models/feign/**" access="permitAll"/>
+            <scr:intercept-url pattern="/api/models/recommendations" access="permitAll"/>
+            <scr:intercept-url pattern="/api/jobs/replace_metadata" access="permitAll"/>
             <scr:intercept-url pattern="/api/recommendations/feign/**" access="permitAll"/>
             <scr:intercept-url pattern="/api/streaming_jobs/spark" access="permitAll"/>
             <scr:intercept-url pattern="/api/streaming_jobs/stats" access="permitAll"/>
@@ -355,6 +357,8 @@
             <scr:intercept-url pattern="/api/jobs/feign/**" access="permitAll"/>
             <scr:intercept-url pattern="/api/models/feign/**" access="permitAll"/>
             <scr:intercept-url pattern="/api/recommendations/feign/**" access="permitAll"/>
+            <scr:intercept-url pattern="/api/models/recommendations" access="permitAll"/>
+            <scr:intercept-url pattern="/api/jobs/replace_metadata" access="permitAll"/>
             <scr:intercept-url pattern="/api/streaming_jobs/spark" access="permitAll"/>
             <scr:intercept-url pattern="/api/streaming_jobs/stats" access="permitAll"/>
             <scr:intercept-url pattern="/api/streaming_jobs/dataflow/**" access="permitAll"/>

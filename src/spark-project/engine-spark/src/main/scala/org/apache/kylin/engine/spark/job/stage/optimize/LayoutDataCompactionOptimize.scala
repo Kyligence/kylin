@@ -20,22 +20,20 @@ package org.apache.kylin.engine.spark.job.stage.optimize
 
 import org.apache.commons.lang3.StringUtils
 import org.apache.kylin.engine.spark.application.SparkApplication
+import org.apache.kylin.engine.spark.job.LayoutDataOptimizeJob
 import org.apache.kylin.engine.spark.job.SegmentExec.CompactionOptimizeResult
-import org.apache.kylin.metadata.cube.model.{NDataLayoutDetails, NDataSegment}
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails
 
 import scala.concurrent.Future
 
 import io.delta.tables.DeltaTable
-import io.kyligence.kap.engine.spark.job.LayoutDataOptimizeJob
+
 
 class LayoutDataCompactionOptimize(layoutDataOptimizeJob: LayoutDataOptimizeJob) extends LayoutOptimizeExec {
+
   override def getStageName: String = "layout data compaction"
 
   override def getJobContext: SparkApplication = layoutDataOptimizeJob
-
-  override def getDataSegment: NDataSegment = null
-
-  override def getSegmentId: String = null
 
   override def execute(): Unit = {
     if (!canSkip) {

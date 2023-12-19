@@ -30,6 +30,7 @@ import java.util.zip.ZipInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.engine.spark.job.NSparkSnapshotJob;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.util.JobContextUtil;
@@ -43,8 +44,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.HttpHeaders;
-
-import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 
 @MetadataInfo
 class DiagK8sToolTest {

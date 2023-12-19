@@ -18,9 +18,9 @@
 
 package org.apache.kylin.engine.spark.application;
 
+import static org.apache.kylin.engine.spark.job.NSparkExecutable.JOB_LAST_RUNNING_START_TIME;
+import static org.apache.kylin.engine.spark.job.StageEnum.WAIT_FOR_RESOURCE;
 import static org.apache.kylin.engine.spark.utils.SparkConfHelper.COUNT_DISTICT;
-import static org.apache.kylin.job.execution.NSparkExecutable.JOB_LAST_RUNNING_START_TIME;
-import static org.apache.kylin.job.execution.stage.StageType.WAITE_FOR_RESOURCE;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -63,13 +63,17 @@ import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.job.BuildJobInfos;
 import org.apache.kylin.engine.spark.job.EnviromentAdaptor;
 import org.apache.kylin.engine.spark.job.IJobProgressReport;
+import org.apache.kylin.engine.spark.job.IndexPlanOptimizeJob;
+import org.apache.kylin.engine.spark.job.InternalTableLoadJob;
+import org.apache.kylin.engine.spark.job.JobConstants;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
 import org.apache.kylin.engine.spark.job.LogJobInfoUtils;
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
+import org.apache.kylin.engine.spark.job.NSparkExecutable;
 import org.apache.kylin.engine.spark.job.ParamsConstants;
 import org.apache.kylin.engine.spark.job.ResourceDetect;
 import org.apache.kylin.engine.spark.job.RestfulJobProgressReport;
-import org.apache.kylin.engine.spark.job.SparkJobConstants;
+import org.apache.kylin.engine.spark.job.SegmentBuildJob;
 import org.apache.kylin.engine.spark.job.UdfManager;
 import org.apache.kylin.engine.spark.scheduler.ClusterMonitor;
 import org.apache.kylin.engine.spark.scheduler.JobFailed;
@@ -79,7 +83,6 @@ import org.apache.kylin.engine.spark.utils.SparkConfHelper;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -112,8 +115,6 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import io.kyligence.kap.engine.spark.job.InternalTableLoadJob;
-import io.kyligence.kap.engine.spark.job.SegmentBuildJob;
 import lombok.val;
 import scala.runtime.AbstractFunction1;
 import scala.runtime.BoxedUnit;
@@ -315,7 +316,7 @@ public abstract class SparkApplication implements Application {
             TimeZoneUtils.setDefaultTimeZone(config);
 
             /// wait until resource is enough
-            waiteForResource();
+            waitForResource();
 
             ///
             logger.info("Prepare job environment");
@@ -350,7 +351,7 @@ public abstract class SparkApplication implements Application {
             // should be invoked after method prepareSparkSession
             extraInit();
 
-            waiteForResourceSuccess();
+            waitForResourceSuccess();
             doExecute();
             // Output metadata to another folder
             val resourceStore = ResourceStore.getKylinMetaStore(config);
@@ -474,7 +475,7 @@ public abstract class SparkApplication implements Application {
     }
 
     protected String calculateRequiredCores() throws Exception {
-        return SparkJobConstants.DEFAULT_REQUIRED_CORES;
+        return JobConstants.DEFAULT_REQUIRED_CORES;
     }
 
     private void autoSetSparkConf(SparkConf sparkConf) throws Exception {
@@ -494,15 +495,15 @@ public abstract class SparkApplication implements Application {
         helper.applySparkConf(sparkConf);
     }
 
-    protected void waiteForResource() {
-        val waiteForResource = WAITE_FOR_RESOURCE.create(this, null, null);
-        infos.recordStageId(waiteForResource.getId());
-        waiteForResource.execute();
+    protected void waitForResource() {
+        val wfr = WAIT_FOR_RESOURCE.createExec(this);
+        infos.recordStageId(wfr.getStageId());
+        wfr.execute();
     }
 
-    protected void waiteForResourceSuccess() throws Exception {
-        val waiteForResource = WAITE_FOR_RESOURCE.create(this, null, null);
-        waiteForResource.onStageFinished(ExecutableState.SUCCEED);
+    protected void waitForResourceSuccess() throws Exception {
+        val wfr = WAIT_FOR_RESOURCE.createExec(this);
+        wfr.onStageFinished(ExecutableState.SUCCEED);
         infos.recordStageId("");
     }
 
@@ -674,6 +675,16 @@ public abstract class SparkApplication implements Application {
             if (!fs.exists(logPath)) {
                 fs.mkdirs(logPath);
             }
+        }
+
+        boolean indexPlannerEnabled = Boolean.parseBoolean(getParam(NBatchConstants.P_PLANNER_AUTO_APPROVE_ENABLED));
+        if (indexPlannerEnabled && ((this instanceof SegmentBuildJob) || (this instanceof IndexPlanOptimizeJob))) {
+            // index planner specified spark conf, based on the exchanged spark conf.
+            Map<String, String> hostingIndexSparkConf = config.getIndexPlannerBuildingConfigOverride();
+            hostingIndexSparkConf.forEach(sparkConf::set);
+            String hostingIndexSparkConfStr = JsonUtil.writeValueAsString(hostingIndexSparkConf);
+            logger.info("Override spark build conf using index planner specified sparkConf: {}",
+                    hostingIndexSparkConfStr);
         }
 
         atomicSparkConf.set(sparkConf);

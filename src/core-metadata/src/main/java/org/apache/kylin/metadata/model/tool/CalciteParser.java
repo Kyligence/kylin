@@ -46,15 +46,14 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ExpModifier;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.ParseException;
-import org.apache.kylin.metadata.project.NProjectManager;
-
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.cache.Cache;
+import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.metadata.project.NProjectManager;
 
-import org.apache.kylin.guava30.shaded.common.cache.Cache;
-import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

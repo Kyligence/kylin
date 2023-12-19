@@ -27,7 +27,7 @@ import org.apache.kylin.metadata.cube.model.{NCubeJoinedFlatTableDesc, NDataSegm
 import org.apache.kylin.metadata.model.NDataModel.Measure
 import org.apache.kylin.metadata.model.TblColRef
 import org.apache.spark.sql.catalyst.expressions.Literal
-import org.apache.spark.sql.functions.{col, _}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.udaf._
 import org.apache.spark.sql.util.SparderTypeUtil

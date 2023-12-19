@@ -18,31 +18,30 @@
 
 package org.apache.kylin.engine.spark.builder
 
-import java.io.IOException
-import java.util
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap, Executors}
-import java.util.{Objects, UUID}
-import org.apache.kylin.guava30.shaded.common.collect.Maps
-import org.apache.kylin.engine.spark.NSparkCubingEngine
-import org.apache.kylin.engine.spark.job.{DFChooser, KylinBuildEnv}
-import org.apache.kylin.engine.spark.utils.{FileNames, LogUtils}
-import org.apache.kylin.metadata.model.{NDataModel, NTableMetadataManager}
-import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.hadoop.fs.{FileStatus, FileSystem, Path, PathFilter}
 import org.apache.hadoop.security.AccessControlException
 import org.apache.kylin.common.KylinConfig.SetAndUnsetThreadLocalConfig
 import org.apache.kylin.common.persistence.transaction.UnitOfWork
-import org.apache.kylin.common.{KapConfig, KylinConfig}
 import org.apache.kylin.common.util.HadoopUtil
-import org.apache.kylin.metadata.model.{TableDesc, TableExtDesc}
+import org.apache.kylin.common.{KapConfig, KylinConfig}
+import org.apache.kylin.engine.spark.NSparkCubingEngine
+import org.apache.kylin.engine.spark.job.{DFChooser, KylinBuildEnv}
+import org.apache.kylin.engine.spark.utils.{FileNames, LogUtils}
+import org.apache.kylin.guava30.shaded.common.collect.Maps
+import org.apache.kylin.metadata.model.{NDataModel, NTableMetadataManager, TableDesc, TableExtDesc}
+import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.kylin.source.SourceFactory
 import org.apache.spark.SparkException
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.hive.utils.ResourceDetectUtils
-import org.apache.spark.sql.{Dataset, Encoders, Row, SparderEnv, SparkSession}
+import org.apache.spark.sql._
 import org.apache.spark.utils.ProxyThreadUtils
 
+import java.io.IOException
+import java.util
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap, Executors}
+import java.util.{Objects, UUID}
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}

@@ -26,6 +26,7 @@
 package org.apache.kylin.engine.spark.utils
 
 import org.apache.spark.internal.Logging
+
 import scala.reflect.ClassTag
 
 

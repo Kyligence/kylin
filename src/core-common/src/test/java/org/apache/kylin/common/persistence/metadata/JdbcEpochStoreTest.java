@@ -27,6 +27,8 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.junit.annotation.OverwriteProp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -34,9 +36,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.TransactionException;
-
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 

@@ -16,24 +16,6 @@
  * limitations under the License.
  */
 
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.kylin.common;
 
 import static org.apache.kylin.common.KylinConfigBase.FALSE;
@@ -85,6 +67,7 @@ import lombok.val;
 class KylinConfigBaseTest {
 
     private static final Map<String, PropertiesEntity> map = new HashMap<>();
+
     static {
         map.put("getDeployEnv", new PropertiesEntity("kylin.env", "DEV", "DEV"));
 
@@ -217,10 +200,6 @@ class KylinConfigBaseTest {
         map.put("getCubeAggrGroupIsMandatoryOnlyValid",
                 new PropertiesEntity("kylin.cube.aggrgroup.is-mandatory-only-valid", "true", true));
 
-        map.put("getLowFrequencyThreshold", new PropertiesEntity("kylin.cube.low-frequency-threshold", "5", 5));
-
-        map.put("getFrequencyTimeWindowInDays", new PropertiesEntity("kylin.cube.frequency-time-window", "30", 30));
-
         map.put("isBaseCuboidAlwaysValid",
                 new PropertiesEntity("kylin.cube.aggrgroup.is-base-cuboid-always-valid", "true", true));
 
@@ -344,18 +323,18 @@ class KylinConfigBaseTest {
 
         map.put("getSparkBuildClassName",
                 new PropertiesEntity("kylin.engine.spark.build-class-name",
-                        "io.kyligence.kap.engine.spark.job.SegmentBuildJob",
-                        "io.kyligence.kap.engine.spark.job.SegmentBuildJob"));
+                        "org.apache.kylin.engine.spark.job.SegmentBuildJob",
+                        "org.apache.kylin.engine.spark.job.SegmentBuildJob"));
 
         map.put("getSparkTableSamplingClassName",
                 new PropertiesEntity("kylin.engine.spark.sampling-class-name",
-                        "io.kyligence.kap.engine.spark.stats.analyzer.TableAnalyzerJob",
-                        "io.kyligence.kap.engine.spark.stats.analyzer.TableAnalyzerJob"));
+                        "org.apache.kylin.engine.spark.job.TableAnalyzeJob",
+                        "org.apache.kylin.engine.spark.job.TableAnalyzeJob"));
 
         map.put("getSparkMergeClassName",
                 new PropertiesEntity("kylin.engine.spark.merge-class-name",
-                        "io.kyligence.kap.engine.spark.job.SegmentMergeJob",
-                        "io.kyligence.kap.engine.spark.job.SegmentMergeJob"));
+                        "org.apache.kylin.engine.spark.job.SegmentMergeJob",
+                        "org.apache.kylin.engine.spark.job.SegmentMergeJob"));
 
         map.put("getClusterManagerClassName", new PropertiesEntity("kylin.engine.spark.cluster-manager-class-name",
                 "org.apache.kylin.cluster.YarnClusterManager", "org.apache.kylin.cluster.YarnClusterManager"));
@@ -392,7 +371,7 @@ class KylinConfigBaseTest {
         map.put("getSparkEngineSampleSplitThreshold",
                 new PropertiesEntity("kylin.engine.spark.sample-split-threshold", "256m", "256m"));
 
-        map.put("getSparkEngineTaskImpactInstanceEnabled",
+        map.put("isSparkEngineTaskImpactInstanceEnabled",
                 new PropertiesEntity("kylin.engine.spark.task-impact-instance-enabled", "true", true));
 
         map.put("isSparderAsync", new PropertiesEntity("kylin.query.init-sparder-async", "true", true));

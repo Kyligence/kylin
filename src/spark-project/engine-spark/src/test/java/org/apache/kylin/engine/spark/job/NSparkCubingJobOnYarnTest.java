@@ -41,9 +41,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.sparkproject.guava.collect.Sets;
 
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
-
 @Ignore("for test spark job on yarn")
 public class NSparkCubingJobOnYarnTest extends NLocalFileMetadataTestCase {
 

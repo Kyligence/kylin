@@ -25,8 +25,8 @@ import org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.{LayoutFileSourceScanExec, SparkPlan}
 import org.apache.spark.sql.execution.datasources.{BucketingUtils, HadoopFsRelation, LogicalRelation}
+import org.apache.spark.sql.execution.{LayoutFileSourceScanExec, SparkPlan}
 import org.apache.spark.util.collection.BitSet
 
 /**

@@ -43,6 +43,8 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.cube.model.SelectRule;
+import org.apache.kylin.engine.spark.job.ExecutableAddCuboidHandler;
+import org.apache.kylin.engine.spark.job.NSparkCubingJob;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -102,8 +104,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.engine.spark.job.ExecutableAddCuboidHandler;
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;

@@ -38,7 +38,6 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.dao.JobInfoDao;
 import org.apache.kylin.job.mapper.JobInfoMapper;
-import org.apache.kylin.job.service.JobInfoService;
 import org.apache.kylin.junit.rule.TransactionExceptedException;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;

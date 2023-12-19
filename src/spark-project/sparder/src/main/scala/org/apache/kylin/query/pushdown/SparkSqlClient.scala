@@ -25,9 +25,13 @@ import java.util
 import java.util.concurrent.{Callable, Executors, TimeUnit, TimeoutException}
 import java.util.{UUID, List => JList}
 
+import io.kyligence.kap.cache.kylin.KylinCacheFileSystem
+import io.kyligence.kap.fileseg.FileSegments
+import io.kyligence.kap.softaffinity.SoftAffinityManager
 import org.apache.commons.lang3.StringUtils
 import org.apache.kylin.common.util.{DateFormat, HadoopUtil, Pair}
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
+import org.apache.kylin.engine.spark.QueryCostCollector
 import org.apache.kylin.guava30.shaded.common.collect.{ImmutableList, Lists}
 import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.kylin.metadata.query.StructField
@@ -45,10 +49,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.JavaConverters._
 import scala.collection.{immutable, mutable}
 import scala.concurrent.duration.Duration
-
-import io.kyligence.kap.cache.kylin.KylinCacheFileSystem
-import io.kyligence.kap.fileseg.FileSegments
-import io.kyligence.kap.softaffinity.SoftAffinityManager
 
 object SparkSqlClient {
   val DEFAULT_DB: String = "spark.sql.default.database"
@@ -208,6 +208,7 @@ object SparkSqlClient {
       QueryContext.current().getMetrics.setQueryJobCount(jobCount)
       QueryContext.current().getMetrics.setQueryStageCount(stageCount)
       QueryContext.current().getMetrics.setQueryTaskCount(taskCount)
+      QueryContext.current().getMetrics.setCpuTime(QueryCostCollector.getAndCleanStatus(QueryContext.current().getQueryId))
       // return result
       (readPushDownResultRow(resultRows, checkInterrupt = true), resultSize, fieldList)
     } catch {

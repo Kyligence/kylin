@@ -46,6 +46,8 @@ import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.cube.model.SelectRule;
+import org.apache.kylin.engine.spark.job.NSparkCubingJob;
+import org.apache.kylin.engine.spark.job.NTableSamplingJob;
 import org.apache.kylin.guava30.shaded.common.base.Joiner;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -98,8 +100,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;

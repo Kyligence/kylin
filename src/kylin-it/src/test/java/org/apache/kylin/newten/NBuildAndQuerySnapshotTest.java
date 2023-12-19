@@ -27,6 +27,7 @@ import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.job.NSparkSnapshotJob;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.ExecutableManager;
@@ -52,7 +53,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 import lombok.val;
 
 public class NBuildAndQuerySnapshotTest extends NLocalWithSparkSessionTest {

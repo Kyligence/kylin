@@ -37,7 +37,6 @@ import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.apache.kylin.job.handler.InternalTableJobHandler;
 import org.apache.kylin.job.model.JobParam;
-import org.apache.kylin.job.service.InternalTableLoadingService;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
@@ -46,6 +45,7 @@ import org.apache.kylin.metadata.streaming.ReflectionUtils;
 import org.apache.kylin.metadata.table.InternalTableDesc;
 import org.apache.kylin.metadata.table.InternalTableManager;
 import org.apache.kylin.rest.constant.Constant;
+import org.apache.kylin.rest.service.InternalTableLoadingService;
 import org.apache.kylin.rest.service.InternalTableService;
 import org.apache.kylin.rest.service.TableService;
 import org.apache.kylin.rest.util.AclEvaluate;
@@ -64,8 +64,6 @@ import org.mockito.Spy;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import io.kyligence.kap.engine.spark.job.InternalTableLoadCacheStep;
-import io.kyligence.kap.engine.spark.job.InternalTableLoadingJob;
 import lombok.val;
 
 @MetadataInfo

@@ -173,6 +173,7 @@ public class NModelController extends NBasicController {
                 onlyNormalDim, lite);
         DataResult<List<NDataModel>> filterModels = modelService.getModels(request);
         fusionModelService.setModelUpdateEnabled(filterModels);
+        fusionModelService.setAutoIndexPlanEnabled(filterModels);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, filterModels, "");
     }
 
@@ -217,6 +218,13 @@ public class NModelController extends NBasicController {
         DataRangeUtils.validateDataRange(modelRequest.getStart(), modelRequest.getEnd(), partitionDateFormat);
         try {
             NDataModel model = modelService.createModel(modelRequest.getProject(), modelRequest);
+            try {
+                if (modelRequest.isWithRecJob()) {
+                    indexPlanService.optIndexPlan(model.getId(), null, modelRequest.getProject(), 3, null, null);
+                }
+            } catch (Exception e) {
+                log.error("Create rec job failed, due to:", e);
+            }
             return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
                     BuildBaseIndexResponse.from(modelService.getIndexPlan(model.getId(), model.getProject())), "");
         } catch (LookupTableException e) {

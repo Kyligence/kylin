@@ -223,7 +223,7 @@
             **/org/apache/kylin/tool/garbage/IndexCleaner.java,
             **/io/kyligence/kap/cache/utils/Hadoop3CompaUtil.java,
             **/io/kyligence/hive/serde2/lazy/LazyQuoteAwareSerDe.java,
-            **/org/apache/kylin/engine/spark/job/stage/build/MaterializedFactTableView.scala,
+            **/org/apache/kylin/engine/spark/job/stage/build/MaterializeFactView.scala,
             **/org/apache/spark/sql/hive/KylinHiveSessionStateBuilder.scala,
             **/org/apache/kylin/rest/service/ModelService.java,
             **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java,
@@ -285,7 +285,7 @@
             **/org/apache/kylin/tool/garbage/IndexCleaner.java,
             **/io/kyligence/kap/cache/utils/Hadoop3CompaUtil.java,
             **/io/kyligence/hive/serde2/lazy/LazyQuoteAwareSerDe.java,
-            **/org/apache/kylin/engine/spark/job/stage/build/MaterializedFactTableView.scala,
+            **/org/apache/kylin/engine/spark/job/stage/build/MaterializeFactView.scala,
             **/org/apache/spark/sql/hive/KylinHiveSessionStateBuilder.scala,
             **/org/apache/kylin/rest/service/ModelService.java,
             **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java,
@@ -362,6 +362,7 @@
     </properties>
 
     <modules>
+        <module>src/core-planner</module>
         <module>src/core-job</module>
         <module>src/core-storage</module>
         <module>src/query-common</module>
@@ -417,6 +418,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.apache.kylin</groupId>
+                <artifactId>kylin-core-planner</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.kylin</groupId>
                 <artifactId>kylin-engine-spark</artifactId>

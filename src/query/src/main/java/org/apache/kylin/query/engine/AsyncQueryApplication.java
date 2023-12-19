@@ -98,7 +98,7 @@ public class AsyncQueryApplication extends SparkApplication {
     }
 
     @Override
-    protected void waiteForResourceSuccess() {
+    protected void waitForResourceSuccess() {
         // do nothing
     }
 

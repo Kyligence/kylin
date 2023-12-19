@@ -47,6 +47,9 @@ import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.engine.spark.job.ExecutableAddCuboidHandler;
+import org.apache.kylin.engine.spark.job.ExecutableAddSegmentHandler;
+import org.apache.kylin.engine.spark.job.NSparkCubingJob;
 import org.apache.kylin.engine.spark.utils.ComputedColumnEvalUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
@@ -57,7 +60,6 @@ import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableParams;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.service.JobInfoService;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.junit.rule.TransactionExceptedException;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
@@ -119,9 +121,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.engine.spark.job.ExecutableAddCuboidHandler;
-import io.kyligence.kap.engine.spark.job.ExecutableAddSegmentHandler;
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import lombok.val;
 import lombok.var;
 

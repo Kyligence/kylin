@@ -19,10 +19,9 @@
 package org.apache.kylin.engine.spark;
 
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
+import org.apache.kylin.engine.spark.job.SegmentBuildJob;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.spark.dict.IllegalDictEncodeValueException;
-
-import io.kyligence.kap.engine.spark.job.SegmentBuildJob;
 
 public class MockSegmentBuildJobWithRetry extends SegmentBuildJob {
 

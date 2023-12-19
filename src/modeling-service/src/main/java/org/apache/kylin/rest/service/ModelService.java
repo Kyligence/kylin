@@ -126,6 +126,8 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.SqlIdentifierFormatterVisitor;
 import org.apache.kylin.common.util.StringHelper;
 import org.apache.kylin.common.util.ThreadUtil;
+import org.apache.kylin.engine.spark.job.NSparkCubingJob;
+import org.apache.kylin.engine.spark.merger.MetadataMerger;
 import org.apache.kylin.engine.spark.utils.ComputedColumnEvalUtil;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
@@ -245,7 +247,6 @@ import org.apache.kylin.rest.response.SegmentCheckResponse;
 import org.apache.kylin.rest.response.SegmentPartitionResponse;
 import org.apache.kylin.rest.response.SegmentRangeResponse;
 import org.apache.kylin.rest.response.SimplifiedMeasure;
-import org.apache.kylin.rest.service.merger.MetadataMerger;
 import org.apache.kylin.rest.service.params.FullBuildSegmentParams;
 import org.apache.kylin.rest.service.params.IncrementBuildSegmentParams;
 import org.apache.kylin.rest.service.params.MergeSegmentParams;
@@ -273,7 +274,6 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import io.kyligence.kap.fileseg.FileSegments;
 import io.kyligence.kap.fileseg.FileSegments.ModelFileSegments;
 import lombok.Setter;
@@ -323,6 +323,9 @@ public class ModelService extends AbstractModelService
     @Autowired(required = false)
     @Qualifier("modelBuildService")
     private ModelBuildSupporter modelBuildService;
+
+    @Autowired(required = false)
+    private ModelSmartServiceSupporter modelSmartServiceSupporter;
 
     @Setter
     @Autowired(required = false)
@@ -2624,6 +2627,10 @@ public class ModelService extends AbstractModelService
 
     public void checkModelAndIndexManually(FullBuildSegmentParams params) {
         if (params.isNeedBuild()) {
+            if (modelSmartServiceSupporter != null
+                    && modelSmartServiceSupporter.isAutoIndexPlanEnabled(params.getModelId(), params.getProject())) {
+                return;
+            }
             val indexPlan = getIndexPlan(params.getModelId(), params.getProject());
             if (indexPlan == null || indexPlan.getAllLayouts().isEmpty()) {
                 throw new KylinException(PERMISSION_DENIED, MsgPicker.getMsg().getCanNotBuildSegment());
@@ -4345,6 +4352,13 @@ public class ModelService extends AbstractModelService
                     response.addConflictDetail(code, msg);
                 });
         return response;
+    }
+
+    public boolean isAutoIndexPlanEnabled(String project, String modelId) {
+        if (modelSmartServiceSupporter == null) {
+            return false;
+        }
+        return modelSmartServiceSupporter.isAutoIndexPlanEnabled(modelId, project);
     }
 
     @Override

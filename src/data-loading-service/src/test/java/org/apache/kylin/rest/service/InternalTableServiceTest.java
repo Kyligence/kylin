@@ -46,7 +46,6 @@ import org.apache.kylin.engine.spark.builder.InternalTableLoader;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.service.InternalTableLoadingService;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;

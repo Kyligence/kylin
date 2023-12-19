@@ -103,8 +103,8 @@ public class FileSystemMetadataStore extends MetadataStore {
     private static final String COMPRESSED_FILE = "metadata.zip";
     public static final String JSON_SUFFIX = ".json";
     private static final int DEFAULT_FILE_NUMBER = 10000;
-    private static final ThreadLocal<Set<ReentrantLock>> OWNED_LOCKS = ThreadLocal.withInitial(HashSet::new);
-    private static final ConcurrentHashMap<String, ReentrantLock> LOCK_MAP = new ConcurrentHashMap<>();
+    private final ThreadLocal<Set<ReentrantLock>> OWNED_LOCKS = ThreadLocal.withInitial(HashSet::new);
+    private final ConcurrentHashMap<String, ReentrantLock> LOCK_MAP = new ConcurrentHashMap<>();
     @VisibleForTesting
     protected static volatile ExecutorService fileSystemMetadataExecutor = null;
 

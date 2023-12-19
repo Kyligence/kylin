@@ -286,7 +286,6 @@ public class OptRecService extends AbstractModelService {
      * 3. all, fetch all recommendations
      */
     public OptRecLayoutsResponse getOptRecLayoutsResponse(String project, String modelId, String recActionType) {
-        aclEvaluate.checkProjectReadPermission(project);
         return getOptRecLayoutsResponseInner(project, modelId, recActionType);
     }
 

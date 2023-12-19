@@ -29,6 +29,8 @@ import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.ExecutableUtils;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.engine.spark.job.NSparkCubingJob;
+import org.apache.kylin.engine.spark.merger.AfterBuildResourceMerger;
 import org.apache.kylin.engine.spark.smarter.IndexDependencyParser;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -61,7 +63,6 @@ import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.NUserGroupService;
 import org.apache.kylin.rest.service.QueryHistoryAccelerateScheduler;
 import org.apache.kylin.rest.service.RawRecService;
-import org.apache.kylin.rest.service.merger.AfterBuildResourceMerger;
 import org.apache.kylin.rest.service.params.IndexBuildParams;
 import org.apache.kylin.rest.service.params.RefreshSegmentParams;
 import org.apache.kylin.rest.util.AclEvaluate;
@@ -80,7 +81,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import lombok.val;
 
 public class PartialBuildJobTest extends SemiAutoTestBase {

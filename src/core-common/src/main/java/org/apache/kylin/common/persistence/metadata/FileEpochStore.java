@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import lombok.val;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.Singletons;
@@ -33,6 +32,7 @@ import org.apache.kylin.common.Singletons;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

@@ -28,21 +28,20 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.util.CaseInsensitiveStringMap;
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.metadata.model.JoinTableDesc;
-import org.apache.kylin.metadata.model.ParameterDesc;
-import org.apache.kylin.metadata.model.TblColRef;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.graph.Graph;
+import org.apache.kylin.guava30.shaded.common.graph.MutableGraph;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
+import org.apache.kylin.metadata.model.JoinTableDesc;
 import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.ParameterDesc;
+import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
-import org.apache.kylin.guava30.shaded.common.graph.Graph;
-import org.apache.kylin.guava30.shaded.common.graph.MutableGraph;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.val;

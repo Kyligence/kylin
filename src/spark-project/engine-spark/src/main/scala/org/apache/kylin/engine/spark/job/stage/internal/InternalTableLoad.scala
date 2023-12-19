@@ -18,17 +18,12 @@
 
 package org.apache.kylin.engine.spark.job.stage.internal
 
-import io.kyligence.kap.engine.spark.job.InternalTableLoadJob
 import org.apache.kylin.engine.spark.application.SparkApplication
-import org.apache.kylin.engine.spark.job.stage.StageExec
-import org.apache.kylin.metadata.cube.model.NDataSegment
+import org.apache.kylin.engine.spark.job.InternalTableLoadJob
+import org.apache.kylin.engine.spark.job.step.StageExec
 
 class InternalTableLoad(jobContext: InternalTableLoadJob) extends StageExec {
   override def getJobContext: SparkApplication = jobContext
-
-  override def getDataSegment: NDataSegment = null
-
-  override def getSegmentId: String = jobContext.getJobId
 
   override def execute(): Unit = {
     jobContext.innerExecute()
