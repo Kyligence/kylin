@@ -30,7 +30,6 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -73,6 +72,7 @@ import org.apache.kylin.query.optrule.SumConstantConvertRule;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapAggregateRel;
 import org.apache.kylin.query.relnode.OlapContext;
+import org.apache.kylin.query.schema.KylinJavaTypeFactoryImpl;
 import org.apache.kylin.query.util.AsyncQueryUtil;
 import org.apache.kylin.query.util.CalcitePlanRouterVisitor;
 import org.apache.kylin.query.util.HepUtils;
@@ -477,7 +477,7 @@ public class QueryExec {
     private Prepare.CatalogReader createCatalogReader(CalciteConnectionConfig connectionConfig,
             CalciteSchema rootSchema, String defaultSchemaName) {
         RelDataTypeSystem relTypeSystem = new KylinRelDataTypeSystem();
-        JavaTypeFactory javaTypeFactory = new JavaTypeFactoryImpl(relTypeSystem);
+        JavaTypeFactory javaTypeFactory = new KylinJavaTypeFactoryImpl(relTypeSystem);
         return new CalciteCatalogReader(rootSchema, Collections.singletonList(defaultSchemaName), javaTypeFactory,
                 connectionConfig);
     }
