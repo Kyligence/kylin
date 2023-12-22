@@ -17,18 +17,21 @@
  */
 package org.apache.spark.sql.catalyst.expressions
 
+import java.time.ZoneId
+import java.util.Locale
+
+import org.apache.kylin.common.util.TimeUtil
 import org.apache.spark.dict.{NBucketDictionary, NGlobalDictionaryV2}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate.DeclarativeAggregate
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
-import org.apache.spark.sql.catalyst.expressions.codegen.{Block, CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
+import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, GenericArrayData, KapDateTimeUtils}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.udf._
+import org.apache.spark.unsafe.types.UTF8String
 
-import java.time.ZoneId
-import java.util.Locale
 import scala.collection.JavaConverters._
 
 // Returns the date that is num_months after start_date.
@@ -125,7 +128,6 @@ case class KapSubtractMonths(a: Expression, b: Expression)
 
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
 import org.apache.spark.sql.catalyst.util.TypeUtils
-import org.apache.spark.sql.types._
 
 @ExpressionDescription(
   usage = "_FUNC_(expr) - Returns the sum calculated from values of a group. " +
@@ -807,7 +809,7 @@ case class SumLCDecode(bytes: Expression, wrapDataTypeExpr: Expression) extends 
         boolean ${ev.isNull} = $evalValue == null;
         $javaType ${ev.value} = ${CodeGenerator.defaultValue(dataType)};
           """
-    val conditionCodeBlock = if(wrapDataType.isInstanceOf[DecimalType]) {
+    val conditionCodeBlock = if (wrapDataType.isInstanceOf[DecimalType]) {
       code"""
         if(!${ev.isNull}) {
             ${ev.value} = $decimalUtil.fromDecimal($evalValue);
@@ -841,6 +843,39 @@ case class SumLCDecode(bytes: Expression, wrapDataTypeExpr: Expression) extends 
 
   override protected def withNewChildrenInternal(newLeft: Expression, newRight: Expression): Expression = {
     val newChildren = Seq(newLeft, newRight)
+    super.legacyWithNewChildren(newChildren)
+  }
+}
+
+case class YMDintBetween(first: Expression, second: Expression) extends BinaryExpression with ImplicitCastInputTypes {
+
+  override def left: Expression = first
+
+  override def right: Expression = second
+
+  override def dataType: DataType = StringType
+
+  override def inputTypes: Seq[AbstractDataType] = Seq(DateType, DateType)
+
+  override protected def nullSafeEval(input1: Any, input2: Any): Any = {
+    (first.dataType, second.dataType) match {
+      case (DateType, DateType) =>
+        UTF8String.fromString(TimeUtil.ymdintBetween(KapDateTimeUtils.daysToMillis(input1.asInstanceOf[Int]),
+          KapDateTimeUtils.daysToMillis(input2.asInstanceOf[Int])))
+    }
+  }
+
+  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val td = classOf[TimeUtil].getName
+    val dtu = KapDateTimeUtils.getClass.getName.stripSuffix("$")
+    defineCodeGen(ctx, ev, (arg1, arg2) => {
+      s"""org.apache.spark.unsafe.types.UTF8String.fromString($td.ymdintBetween($dtu.daysToMillis($arg1),
+         |$dtu.daysToMillis($arg2)))""".stripMargin
+    })
+  }
+
+  override protected def withNewChildrenInternal(newFirst: Expression, newSecond: Expression): Expression = {
+    val newChildren = Seq(newFirst, newSecond)
     super.legacyWithNewChildren(newChildren)
   }
 }
