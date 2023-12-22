@@ -43,7 +43,9 @@ import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutorImpl;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
@@ -518,6 +520,10 @@ public class QueryExec {
                     .anyMatch(pRelNode -> pRelNode.accept(new CalcitePlanRouterVisitor()))) {
                 return false;
             }
+            if (projectRelNode.getChildExps() != null
+                    && projectRelNode.getChildExps().stream().anyMatch(this::isPlusString)) {
+                return false;
+            }
         }
 
         if (rel instanceof OlapAggregateRel) {
@@ -533,6 +539,27 @@ public class QueryExec {
         }
 
         return rel.getInputs().stream().allMatch(this::isCalciteEngineCapable);
+    }
+
+    /**
+     * calcite not support 'number' + number/'number'
+     * @param node
+     * @return
+     */
+    private boolean isPlusString(RexNode node) {
+        if (node instanceof RexCall) {
+            RexCall rexCall = (RexCall) node;
+            if ("plus".equals(rexCall.getOperator().getKind().lowerName)) {
+                for (RexNode operand : rexCall.operands) {
+                    if (operand.getType().getFamily() == SqlTypeFamily.STRING
+                            || operand.getType().getFamily() == SqlTypeFamily.CHARACTER) {
+                        return true;
+                    }
+                }
+            }
+            return rexCall.getOperands().stream().anyMatch(this::isPlusString);
+        }
+        return false;
     }
 
     private SQLException newSqlException(String sql, String msg, Throwable e) {
