@@ -707,6 +707,10 @@ public class OpenModelControllerTest extends NLocalFileMetadataTestCase {
         request.setProject("default");
         request.setModel("model1");
 
+        NDataModelResponse model = new NDataModelResponse();
+        model.setAlias(request.getModel());
+        Mockito.doReturn(model).when(modelService).getModel(request.getModel(), request.getProject());
+
         ArrayList<ModelConfigResponse> modelConfigs = new ArrayList<>();
         ModelConfigResponse configResponse = new ModelConfigResponse();
         configResponse.setModel("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
@@ -752,6 +756,21 @@ public class OpenModelControllerTest extends NLocalFileMetadataTestCase {
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(openModelController).updateModelConfig(request);
 
+        //test case ignore
+        request.setProject("dEfault");
+        request.setModel("mOdel1");
+        Mockito.doReturn(model).when(modelService).getModel("mOdel1", "default");
+        Mockito.doReturn(modelConfigs).when(modelService).getModelConfig("dEfault", "model1");
+        Mockito.doNothing().when(modelService).updateModelConfig("dEfault", "89af4ee2-2cdb-4b07-b39e-4c29856309aa",
+                modelConfigRequest);
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/models/config").contentType(MediaType.APPLICATION_JSON)
+                .content(JsonUtil.writeValueAsString(request))
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        Mockito.verify(openModelController).updateModelConfig(request);
+
+        request.setProject("default");
+        request.setModel("model1");
         //delete
         Set<String> set = new HashSet<>();
         set.add("test.add.key");

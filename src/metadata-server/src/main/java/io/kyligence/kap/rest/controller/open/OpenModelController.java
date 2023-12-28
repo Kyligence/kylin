@@ -522,7 +522,8 @@ public class OpenModelController extends NBasicController {
     @ResponseBody
     public EnvelopeResponse<ModelConfigResponse> getModelConfig(@RequestParam(value = "model") String modelAlias,
             @RequestParam(value = "project") String project) {
-        ModelConfigResponse modelConfig = checkModelConfig(modelAlias, project);
+        String projectName = checkProjectName(project);
+        ModelConfigResponse modelConfig = checkModelConfig(modelAlias, projectName);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, modelConfig, "");
     }
 
@@ -530,13 +531,14 @@ public class OpenModelController extends NBasicController {
     @PostMapping(value = "/config")
     @ResponseBody
     public EnvelopeResponse<ModelConfigResponse> addModelConfig(@RequestBody OpenModelConfigRequest request) {
-        ModelConfigResponse modelConfig = checkModelConfig(request.getModel(), request.getProject());
+        String projectName = checkProjectName(request.getProject());
+        ModelConfigResponse modelConfig = checkModelConfig(request.getModel(), projectName);
 
         checkConfigWhetherExist(modelConfig.getOverrideProps(), request.getCustomSettings().keySet(), true);
         modelConfig.getOverrideProps().putAll(request.getCustomSettings());
         
-        ModelConfigRequest modelConfigRequest = newModelConfigRequestByConfig(modelConfig, request.getProject());
-        modelService.updateModelConfig(request.getProject(), modelConfig.getModel(), modelConfigRequest);
+        ModelConfigRequest modelConfigRequest = newModelConfigRequestByConfig(modelConfig, projectName);
+        modelService.updateModelConfig(projectName, modelConfig.getModel(), modelConfigRequest);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, modelConfig, "");
     }
 
@@ -544,13 +546,14 @@ public class OpenModelController extends NBasicController {
     @PutMapping(value = "/config")
     @ResponseBody
     public EnvelopeResponse<ModelConfigResponse> updateModelConfig(@RequestBody OpenModelConfigRequest request) {
-        ModelConfigResponse modelConfig = checkModelConfig(request.getModel(), request.getProject());
+        String projectName = checkProjectName(request.getProject());
+        ModelConfigResponse modelConfig = checkModelConfig(request.getModel(), projectName);
 
         checkConfigWhetherExist(modelConfig.getOverrideProps(), request.getCustomSettings().keySet(), false);
         modelConfig.getOverrideProps().putAll(request.getCustomSettings());
 
-        ModelConfigRequest modelConfigRequest = newModelConfigRequestByConfig(modelConfig, request.getProject());
-        modelService.updateModelConfig(request.getProject(), modelConfig.getModel(), modelConfigRequest);
+        ModelConfigRequest modelConfigRequest = newModelConfigRequestByConfig(modelConfig, projectName);
+        modelService.updateModelConfig(projectName, modelConfig.getModel(), modelConfigRequest);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, modelConfig, "");
     }
 
@@ -558,13 +561,14 @@ public class OpenModelController extends NBasicController {
     @DeleteMapping(value = "/config")
     @ResponseBody
     public EnvelopeResponse<ModelConfigResponse> deleteModelConfig(@RequestBody OpenModelConfigRequest request) {
-        ModelConfigResponse modelConfig = checkModelConfig(request.getModel(), request.getProject());
+        String projectName = checkProjectName(request.getProject());
+        ModelConfigResponse modelConfig = checkModelConfig(request.getModel(), projectName);
 
         checkConfigWhetherExist(modelConfig.getOverrideProps(), request.getDeleteCustomSettings(), false);
         request.getDeleteCustomSettings().forEach(key -> modelConfig.getOverrideProps().remove(key));
 
-        ModelConfigRequest modelConfigRequest = newModelConfigRequestByConfig(modelConfig, request.getProject());
-        modelService.updateModelConfig(request.getProject(), modelConfig.getModel(), modelConfigRequest);
+        ModelConfigRequest modelConfigRequest = newModelConfigRequestByConfig(modelConfig, projectName);
+        modelService.updateModelConfig(projectName, modelConfig.getModel(), modelConfigRequest);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, modelConfig, "");
     }
 
@@ -597,14 +601,14 @@ public class OpenModelController extends NBasicController {
         }
     }
 
-    public ModelConfigResponse checkModelConfig(String modelAlias, String project) {
-        checkProjectName(project);
-        NDataModel model = modelService.getModel(modelAlias, project);
-        ModelConfigResponse modelConfig = modelService.getModelConfig(project, modelAlias).stream()
-                .filter(config -> modelAlias.equals(config.getAlias())).findFirst().orElse(null);
+    public ModelConfigResponse checkModelConfig(String modelAlias, String projectName) {
+        NDataModel model = modelService.getModel(modelAlias, projectName);
+        String modelName = model.getAlias();
+        ModelConfigResponse modelConfig = modelService.getModelConfig(projectName, modelName).stream()
+                .filter(config -> modelName.equalsIgnoreCase(config.getAlias())).findFirst().orElse(null);
         if (modelConfig == null) {
             throw new KylinException(MODEL_CONFIG_NOT_EXIST, String.format(Locale.ROOT,
-                    String.format(Locale.ROOT, MsgPicker.getMsg().getModelConfigKeyExist(), model.getAlias())));
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getModelConfigExist(), modelName)));
         }
         return modelConfig;
     }
