@@ -1160,7 +1160,7 @@ public abstract class KylinConfigBase implements Serializable {
     public int getMaxTransactionRetry() {
         return Integer.parseInt(getOptional("kylin.job.max-transaction-retry", "3"));
     }
-    
+
     public int getMaxConcurrentJobLimit() {
         return Integer.parseInt(getOptional("kylin.job.max-concurrent-jobs", "20"));
     }
@@ -4307,5 +4307,9 @@ public abstract class KylinConfigBase implements Serializable {
 
     public boolean isQueryUseIterableCollectApi() {
         return Boolean.parseBoolean(getOptional("kylin.query.use-iterable-collect", FALSE));
+    }
+
+    public String getBuildResourceTemporaryWritableDB() {
+        return getOptional("kylin.build.resource.temporary-writable-db", null);
     }
 }
