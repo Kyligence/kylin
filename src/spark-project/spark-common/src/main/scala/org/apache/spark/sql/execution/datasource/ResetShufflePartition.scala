@@ -28,25 +28,41 @@ trait ResetShufflePartition extends Logging {
   def setShufflePartitions(bytes: Long, sourceRows: Long, sparkSession: SparkSession): Unit = {
     QueryContext.current().getMetrics.setSourceScanBytes(bytes)
     QueryContext.current().getMetrics.setSourceScanRows(sourceRows)
-    val defaultParallelism = sparkSession.sparkContext.defaultParallelism
+
+    val partitions = getPartitions(sparkSession, bytes)
+    val originPartitions = QueryContext.current().getShufflePartitionsReset
+
+    if (partitions > originPartitions) {
+      sparkSession.sessionState.conf.setLocalProperty(SQLConf.SHUFFLE_PARTITIONS.key, partitions.toString)
+      QueryContext.current().setShufflePartitionsReset(partitions)
+      logInfo(s"Set partition from $originPartitions to $partitions, " +
+        s"total bytes ${QueryContext.current().getMetrics.getSourceScanBytes}")
+    } else {
+      logInfo(s"Origin partition is $originPartitions, new partition is $partitions, total bytes " +
+        s"${QueryContext.current().getMetrics.getSourceScanBytes}, will not reset the ${SQLConf.SHUFFLE_PARTITIONS.key}")
+    }
+  }
+
+  def getPartitions(sparkSession: SparkSession, bytes: Long): Int = {
+    val defaultParallelism = sparkSession.leafNodeDefaultParallelism
     val kapConfig = KapConfig.getInstanceFromEnv
     val partitionsNum = if (kapConfig.getSparkSqlShufflePartitions != -1) {
       kapConfig.getSparkSqlShufflePartitions
     } else {
-      Math.min(QueryContext.current().getMetrics.getSourceScanBytes / (
+      var partitions = Math.min(QueryContext.current().getMetrics.getSourceScanBytes / (
         KylinConfig.getInstanceFromEnv.getQueryPartitionSplitSizeMB * 1024 * 1024) + 1,
         defaultParallelism).toInt
+      if (sparkSession.sessionState.conf.splitSourcePartitionEnabled) {
+        val maxExpandNum = sparkSession.sessionState.conf.splitSourcePartitionMaxExpandNum
+        val profitableSize = sparkSession.sessionState.conf.splitSourcePartitionThreshold
+        val expandPartNum = Math.min(maxExpandNum, defaultParallelism).toInt
+        if (expandPartNum >= (partitions << 1) && bytes >= profitableSize) {
+          partitions = expandPartNum
+        }
+      }
+      partitions
     }
-    val originPartitionsNum = QueryContext.current().getShufflePartitionsReset
-    if (partitionsNum > originPartitionsNum) {
-      sparkSession.sessionState.conf.setLocalProperty(SQLConf.SHUFFLE_PARTITIONS.key, partitionsNum.toString)
-      QueryContext.current().setShufflePartitionsReset(partitionsNum)
-      logInfo(s"Set partition from $originPartitionsNum to $partitionsNum, " +
-        s"total bytes ${QueryContext.current().getMetrics.getSourceScanBytes}")
-    } else {
-      logInfo(s"Origin partition is $originPartitionsNum, new partition is $partitionsNum, total bytes " +
-        s"${QueryContext.current().getMetrics.getSourceScanBytes}, will not reset the ${SQLConf.SHUFFLE_PARTITIONS.key}")
-    }
+    partitionsNum
   }
 
   def needSetFilesMaxPartitionBytes(totalRowCount: Long, sourceBytes: Long, kapConfig: KapConfig): Boolean = {
