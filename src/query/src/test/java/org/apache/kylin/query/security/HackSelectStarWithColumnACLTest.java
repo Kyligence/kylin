@@ -84,6 +84,50 @@ class HackSelectStarWithColumnACLTest {
                     + "on t1.ORDER_ID = t2.ORDER_ID";
             Assertions.assertEquals(expected, converted);
         }
+        // with alias without select star
+        {
+            String sql = "select t1.ORDER_ID from TEST_KYLIN_FACT t1 join TEST_ORDER t2 on t1.ORDER_ID = t2.ORDER_ID";
+            String converted = TRANSFORMER.convert(sql, PROJECT, SCHEMA);
+            String expected = "select t1.ORDER_ID from ( " //
+                    + "select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
+                    + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"T1\" "
+                    + "join ( select \"TEST_ORDER\".\"ORDER_ID\", \"TEST_ORDER\".\"BUYER_ID\", "
+                    + "\"TEST_ORDER\".\"TEST_DATE_ENC\" from \"DEFAULT\".\"TEST_ORDER\") as \"T2\" "
+                    + "on t1.ORDER_ID = t2.ORDER_ID";
+            Assertions.assertEquals(expected, converted);
+        }
+        // with tow alias
+        {
+            String sql = "select * from TEST_KYLIN_FACT t1 join TEST_ORDER t2 on t1.ORDER_ID = t2.ORDER_ID"
+                    + " join TEST_ORDER t3 on t1.ORDER_ID = t3.ORDER_ID";
+            String converted = TRANSFORMER.convert(sql, PROJECT, SCHEMA);
+            String expected = "select * from ( " //
+                    + "select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
+                    + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"T1\" "
+                    + "join ( select \"TEST_ORDER\".\"ORDER_ID\", \"TEST_ORDER\".\"BUYER_ID\", "
+                    + "\"TEST_ORDER\".\"TEST_DATE_ENC\" from \"DEFAULT\".\"TEST_ORDER\") as \"T2\" "
+                    + "on t1.ORDER_ID = t2.ORDER_ID "
+                    + "join ( select \"TEST_ORDER\".\"ORDER_ID\", \"TEST_ORDER\".\"BUYER_ID\", "
+                    + "\"TEST_ORDER\".\"TEST_DATE_ENC\" from \"DEFAULT\".\"TEST_ORDER\") as \"T3\" "
+                    + "on t1.ORDER_ID = t3.ORDER_ID";
+            Assertions.assertEquals(expected, converted);
+        }
+        // with tow alias without select star
+        {
+            String sql = "select t1.ORDER_ID from TEST_KYLIN_FACT t1 join TEST_ORDER t2 on t1.ORDER_ID = t2.ORDER_ID"
+                    + " join TEST_ORDER t3 on t1.ORDER_ID = t3.ORDER_ID";
+            String converted = TRANSFORMER.convert(sql, PROJECT, SCHEMA);
+            String expected = "select t1.ORDER_ID from ( " //
+                    + "select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
+                    + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"T1\" "
+                    + "join ( select \"TEST_ORDER\".\"ORDER_ID\", \"TEST_ORDER\".\"BUYER_ID\", "
+                    + "\"TEST_ORDER\".\"TEST_DATE_ENC\" from \"DEFAULT\".\"TEST_ORDER\") as \"T2\" "
+                    + "on t1.ORDER_ID = t2.ORDER_ID "
+                    + "join ( select \"TEST_ORDER\".\"ORDER_ID\", \"TEST_ORDER\".\"BUYER_ID\", "
+                    + "\"TEST_ORDER\".\"TEST_DATE_ENC\" from \"DEFAULT\".\"TEST_ORDER\") as \"T3\" "
+                    + "on t1.ORDER_ID = t3.ORDER_ID";
+            Assertions.assertEquals(expected, converted);
+        }
         // nested select star
         {
             String sql = "select * from (select * from TEST_KYLIN_FACT) t1 join TEST_ORDER t2 "

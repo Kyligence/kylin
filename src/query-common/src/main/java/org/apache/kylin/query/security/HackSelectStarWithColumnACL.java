@@ -209,17 +209,17 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
             if (tableDesc == null) {
                 throw new KylinRuntimeException("Failed to parse table: " + operand);
             }
-
+            String subQueryAlias = alias == null ? StringHelper.doubleQuote(table)
+                    : StringHelper.doubleQuote(alias.toString());
             String tableIdentity = tableDesc.getDoubleQuoteIdentity();
-            if (tableToReplacedSubQuery.containsKey(tableIdentity)) {
-                return tableToReplacedSubQuery.get(tableIdentity);
+            String tableToReplacedSubQueryKey = tableIdentity + subQueryAlias;
+            if (tableToReplacedSubQuery.containsKey(tableToReplacedSubQueryKey)) {
+                return tableToReplacedSubQuery.get(tableToReplacedSubQueryKey);
             } else {
                 List<String> authorizedCols = getAuthorizedCols(tableDesc);
-                String subQueryAlias = alias == null ? StringHelper.doubleQuote(table)
-                        : StringHelper.doubleQuote(alias.toString());
                 String replacedSubQuery = "( select " + String.join(", ", authorizedCols) //
                         + " from " + tableIdentity + ") as " + subQueryAlias;
-                tableToReplacedSubQuery.put(tableIdentity, replacedSubQuery);
+                tableToReplacedSubQuery.put(tableToReplacedSubQueryKey, replacedSubQuery);
                 return replacedSubQuery;
             }
         }
