@@ -27,6 +27,11 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
+            <directory>${basedir}/../../../build/async-profiler-lib</directory>
+            <outputDirectory>lib</outputDirectory>
+            <fileMode>0644</fileMode>
+        </fileSet>
+        <fileSet>
             <directory>${basedir}/../../../build/spark</directory>
             <outputDirectory>spark</outputDirectory>
             <excludes>
