@@ -37,3 +37,6 @@ CREATE TABLE IF NOT EXISTS KE_IDENTIFIED_job_info (
 
 create index KE_IDENTIFIED_job_info_ix
     on KE_IDENTIFIED_job_info (project, job_status, job_type, subject);
+
+create index KE_IDENTIFIED_job_info_project_model_id_ix
+    on KE_IDENTIFIED_job_info (project, model_id);
