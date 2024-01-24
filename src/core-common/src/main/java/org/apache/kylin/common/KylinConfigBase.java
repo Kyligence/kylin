@@ -1344,6 +1344,18 @@ public abstract class KylinConfigBase implements Serializable {
         return Arrays.stream(family.split(",")).map(Integer::parseInt).collect(Collectors.toList());
     }
 
+    public Map<Integer, List<Integer>> getSourceProviderFamilyMapping() {
+        Map<Integer, String> originalMapping = convertKeyToInteger(getPropertiesByPrefix("kylin.source.provider-family."));
+        Map<Integer, List<Integer>> ret = Maps.newHashMap();
+        for (Map.Entry<Integer, String> entry : originalMapping.entrySet()) {
+            if (StringUtils.isNotBlank(entry.getValue())) {
+                ret.put(entry.getKey(),
+                        Arrays.stream(entry.getValue().split(",")).map(Integer::parseInt).collect(Collectors.toList()));
+            }
+        }
+        return ret;
+    }
+
     /**
      * was for route to hive, not used any more
      * @deprecated KYLIN-2195 re-format KylinConfigBase
