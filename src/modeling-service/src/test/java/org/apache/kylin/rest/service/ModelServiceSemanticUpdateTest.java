@@ -17,6 +17,8 @@
  */
 package org.apache.kylin.rest.service;
 
+import static org.awaitility.Awaitility.await;
+
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -45,6 +47,7 @@ import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -166,8 +169,12 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
 
     @After
     public void tearDown() {
+        JobContext jobContext = JobContextUtil.getJobContext(getTestConfig());
+
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
+
+        await().until(() -> !jobContext.getJobScheduler().hasRunningJob());
     }
 
     @Test
