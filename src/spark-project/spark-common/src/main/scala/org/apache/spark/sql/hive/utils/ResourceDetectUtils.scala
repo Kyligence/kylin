@@ -18,11 +18,8 @@
 
 package org.apache.spark.sql.hive.utils
 
-import java.io.IOException
-import java.nio.charset.Charset
-import java.util.concurrent.Executors
-import java.util.{Map => JMap}
-
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.apache.kylin.common.KylinConfig
@@ -35,18 +32,19 @@ import org.apache.spark.sql.catalyst.expressions.{Expression, SubqueryExpression
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.columnar.InMemoryTableScanExec
 import org.apache.spark.sql.execution.datasources.FileIndex
-import org.apache.spark.sql.execution.exchange.{BroadcastExchangeExec, ReusedExchangeExec}
+import org.apache.spark.sql.execution.exchange.{BroadcastExchangeLike, ReusedExchangeExec}
 import org.apache.spark.sql.hive.execution.HiveTableScanExec
 import org.apache.spark.sql.sources.NBaseRelation
 import org.apache.spark.util.ThreadUtils
 
+import java.io.IOException
+import java.nio.charset.Charset
+import java.util.concurrent.Executors
+import java.util.{Map => JMap}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
-
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 
 object ResourceDetectUtils extends Logging {
   private val json = new Gson()
@@ -130,8 +128,13 @@ object ResourceDetectUtils extends Logging {
     plan.foreach {
       case node: LeafExecNode =>
         val pn = node match {
-          case ree: ReusedExchangeExec if ree.child.isInstanceOf[BroadcastExchangeExec] => 1
-          case _ => leafNodePartitionsLengthMap.getOrElseUpdate(node.nodeName, node.execute().partitions.length)
+          case ree: ReusedExchangeExec if ree.child.isInstanceOf[BroadcastExchangeLike] => 1
+          case _ => val partitionsLength = if (node.supportsColumnar) {
+            node.executeColumnar().partitions.length
+          } else {
+            node.execute().partitions.length
+          }
+            leafNodePartitionsLengthMap.getOrElseUpdate(node.nodeName, partitionsLength)
         }
         pNum = pNum + pn
         logInfo(s"${node.nodeName} partition size $pn")

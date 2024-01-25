@@ -126,7 +126,7 @@ public class KylinCacheFileSystem extends AbstractCacheFileSystem {
 
         sparkContext.setLocalProperty(key, Long.toString(acceptCacheTime));
         sparkContext.setLocalProperty(CacheFileSystemConstants.PARAMS_KEY_ACCEPT_CACHE_TIME_FOR_GLUTEN,
-            Long.toString(acceptCacheTime));
+                Long.toString(acceptCacheTime));
     }
 
     public static void clearAcceptCacheTimeLocally() {

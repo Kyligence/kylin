@@ -155,6 +155,11 @@
             <artifactId>spark-unsafe_2.12</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>volcano-client</artifactId>
+            <version>5.12.2</version>
+        </dependency>
 
         <dependency>
             <groupId>io.delta</groupId>

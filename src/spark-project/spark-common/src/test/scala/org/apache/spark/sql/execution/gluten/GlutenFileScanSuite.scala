@@ -21,7 +21,7 @@
  */
 package org.apache.spark.sql.execution.gluten
 
-import io.glutenproject.execution.FileSourceScanExecTransformer
+import org.apache.gluten.execution.FileSourceScanExecTransformer
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql._
@@ -49,7 +49,7 @@ class GlutenFileScanSuite extends SparkFunSuite
         .master("local[3]")
         .config("spark.sql.shuffle.partitions", "3")
         .config("spark.sql.adaptive.enabled", "true")
-        .config("spark.plugins", "io.glutenproject.GlutenPlugin")
+        .config("spark.plugins", "org.apache.gluten.GlutenPlugin")
         .config("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager")
         .config("spark.io.compression.codec", "LZ4")
         .config("spark.gluten.sql.columnar.libpath", "/usr/local/clickhouse/lib/libch.so")

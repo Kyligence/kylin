@@ -55,31 +55,31 @@
             <artifactId>kylin-soft-affinity-cache</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
+            <groupId>org.apache.gluten</groupId>
             <artifactId>gluten-core</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
+            <groupId>org.apache.gluten</groupId>
             <artifactId>gluten-ui</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
+            <groupId>org.apache.gluten</groupId>
             <artifactId>backends-clickhouse</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
-            <artifactId>spark-sql-columnar-shims-spark32</artifactId>
+            <groupId>org.apache.gluten</groupId>
+            <artifactId>spark-sql-columnar-shims-spark33</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
+            <groupId>org.apache.gluten</groupId>
             <artifactId>spark-sql-columnar-shims-common</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>

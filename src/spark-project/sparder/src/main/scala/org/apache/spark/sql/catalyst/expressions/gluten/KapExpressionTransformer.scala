@@ -16,10 +16,10 @@
  */
 package org.apache.spark.sql.catalyst.expressions.gluten
 
-import io.glutenproject.backendsapi.clickhouse.CHBackendSettings
-import io.glutenproject.expression._
-import io.glutenproject.extension.ExpressionExtensionTrait
-import io.glutenproject.substrait.expression.{ExpressionBuilder, ExpressionNode}
+import org.apache.gluten.backendsapi.clickhouse.CHBackendSettings
+import org.apache.gluten.expression._
+import org.apache.gluten.extension.ExpressionExtensionTrait
+import org.apache.gluten.substrait.expression.{ExpressionBuilder, ExpressionNode}
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions._

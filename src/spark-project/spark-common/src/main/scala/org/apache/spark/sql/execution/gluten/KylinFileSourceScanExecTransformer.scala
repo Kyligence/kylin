@@ -18,8 +18,8 @@
 
 package org.apache.spark.sql.execution.gluten
 
-import io.glutenproject.backendsapi.BackendsApiManager
-import io.glutenproject.execution.FileSourceScanExecTransformer
+import org.apache.gluten.backendsapi.BackendsApiManager
+import org.apache.gluten.execution.FileSourceScanExecTransformer
 import org.apache.kylin.common.KylinConfig
 import org.apache.spark.sql.catalyst.expressions.{Ascending, Attribute, BloomAndRangeFilterExpression, Expression, SortOrder}
 import org.apache.spark.sql.catalyst.TableIdentifier

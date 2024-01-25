@@ -18,7 +18,7 @@
 
 package org.apache.spark.sql.execution.gluten
 
-import io.glutenproject.execution.FileSourceScanExecTransformer
+import org.apache.gluten.execution.FileSourceScanExecTransformer
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.rules.Rule

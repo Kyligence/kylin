@@ -249,7 +249,7 @@
                             <shadedClassifierName>job</shadedClassifierName>
                             <artifactSet>
                                 <excludes>
-                                    <exclude>io.glutenproject:*</exclude>
+                                    <exclude>org.apache.gluten:*</exclude>
                                     <exclude>io.netty:*</exclude>
                                     <exclude>org.apache.zookeeper:*</exclude>
                                     <exclude>org.apache.httpcomponents:*</exclude>

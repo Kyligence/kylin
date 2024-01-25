@@ -125,25 +125,22 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
             log.warn("-Dclickhouse.lib.path is not set or path not exists, skip gluten config");
         }
         conf.set("spark.gluten.enabled", "true");
-        conf.set("spark.plugins", "io.glutenproject.GlutenPlugin");
+        conf.set("spark.plugins", "org.apache.gluten.GlutenPlugin");
         conf.set("spark.gluten.sql.columnar.libpath", chLibPath);
         conf.set("spark.gluten.sql.columnar.extended.columnar.pre.rules", "org.apache.spark.sql.execution.gluten.ConvertKylinFileSourceToGlutenRule");
         conf.set("spark.gluten.sql.columnar.extended.expressions.transformer", "org.apache.spark.sql.catalyst.expressions.gluten.CustomerExpressionTransformer");
         // FIXME, enable this after we fix the issue of AutoSinaiPocTest and AutoTpchTest
         conf.set("spark.sql.adaptive.enabled", "false");
-        //        conf.set("spark.eventLog.enabled", "true");
-        //        conf.set("spark.eventLog.dir", "file:///tmp/spark-events");
-        //        conf.set("spark.eventLog.compress", "true");
-        //        conf.set("spark.eventLog.compression.codec", "snappy");
+        // conf.set("spark.eventLog.enabled", "true");
+        // conf.set("spark.eventLog.dir", "file:///tmp/spark-events");
+        // conf.set("spark.eventLog.compress", "true");
+        // conf.set("spark.eventLog.compression.codec", "snappy");
 
         conf.set("spark.sql.columnVector.offheap.enabled", "true");
         conf.set("spark.memory.offHeap.enabled", "true");
         conf.set("spark.memory.offHeap.size", "1g");
         conf.set("spark.gluten.sql.enable.native.validation", "false");
-        conf.set("spark.gluten.sql.columnar.preferColumnar", "false");
         conf.set("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager");
-        conf.set("spark.gluten.sql.columnar.shuffleSplitDefaultSize", "65505");
-        conf.set("spark.gluten.sql.columnar.backend.ch.use.v2", "false");
         conf.set("spark.gluten.sql.columnar.iterator", "true");
         conf.set("spark.gluten.sql.columnar.sort", "true");
         conf.set("spark.sql.exchange.reuse", "true");
@@ -188,7 +185,6 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
         // CancelFlag flag after the completion of this particular use case execution.
         CancelFlag.getContextCancelFlag().clearCancel();
     }
-
 
     @Before
     public void setUp() throws Exception {

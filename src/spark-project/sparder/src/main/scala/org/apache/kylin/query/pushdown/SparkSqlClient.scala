@@ -18,11 +18,11 @@
 
 package org.apache.kylin.query.pushdown
 
-import io.glutenproject.utils.FallbackUtil
 import io.kyligence.kap.cache.kylin.KylinCacheFileSystem
 import io.kyligence.kap.fileseg.FileSegments
 import io.kyligence.kap.softaffinity.SoftAffinityManager
 import org.apache.commons.lang3.StringUtils
+import org.apache.gluten.utils.FallbackUtil
 import org.apache.kylin.common.util.{DateFormat, HadoopUtil, Pair}
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
 import org.apache.kylin.guava30.shaded.common.collect.{ImmutableList, Lists}

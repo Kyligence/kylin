@@ -21,7 +21,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <name>Kylin - Spark Common</name>
-    <url>http://kylin.apache.org</url>
+    <url>https://kylin.apache.org</url>
     <description>Kylin  Job Engine - SPARK</description>
 
     <artifactId>kylin-spark-common</artifactId>
@@ -124,31 +124,31 @@
         </dependency>
 
         <dependency>
-            <groupId>io.glutenproject</groupId>
+            <groupId>org.apache.gluten</groupId>
             <artifactId>gluten-core</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
+            <groupId>org.apache.gluten</groupId>
             <artifactId>gluten-ui</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
+            <groupId>org.apache.gluten</groupId>
             <artifactId>backends-clickhouse</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
-            <artifactId>spark-sql-columnar-shims-spark32</artifactId>
+            <groupId>org.apache.gluten</groupId>
+            <artifactId>spark-sql-columnar-shims-spark33</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>
         </dependency>
         <dependency>
-            <groupId>io.glutenproject</groupId>
+            <groupId>org.apache.gluten</groupId>
             <artifactId>spark-sql-columnar-shims-common</artifactId>
             <version>${gluten.version}</version>
             <scope>${gluten.deps.scope}</scope>

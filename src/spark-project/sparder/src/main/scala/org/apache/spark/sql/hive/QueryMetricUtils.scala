@@ -18,7 +18,7 @@
 
 package org.apache.spark.sql.hive
 
-import io.glutenproject.execution.FileSourceScanExecTransformer
+import org.apache.gluten.execution.FileSourceScanExecTransformer
 
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
