@@ -19,12 +19,15 @@
 package org.apache.kylin.rest.controller.open;
 
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.PARAMETER_INVALID_SUPPORT_LIST;
 
+import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.rest.controller.NBasicController;
 import org.apache.kylin.rest.controller.SparkDDLController;
 import org.apache.kylin.rest.request.OpenLogicalViewRequest;
 import org.apache.kylin.rest.request.ViewRequest;
 import org.apache.kylin.rest.response.EnvelopeResponse;
+import org.apache.spark.ddl.DDLConstant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -49,6 +52,11 @@ public class OpenLogicalViewController extends NBasicController {
     public EnvelopeResponse<String> executeSql(@RequestBody OpenLogicalViewRequest request) {
         val project = checkProjectName(request.getProject());
         checkRequiredArg("sql", request.getSql());
+        if (!DDLConstant.LOGICAL_VIEW.equals(request.getRestrict())
+                && !DDLConstant.REPLACE_LOGICAL_VIEW.equals(request.getRestrict())) {
+            throw new KylinException(PARAMETER_INVALID_SUPPORT_LIST, "restrict",
+                    DDLConstant.LOGICAL_VIEW + ", " + DDLConstant.REPLACE_LOGICAL_VIEW);
+        }
         val viewRequest = new ViewRequest(project, request.getSql(), request.getRestrict());
         return sparkDDLController.executeSQL(viewRequest);
     }

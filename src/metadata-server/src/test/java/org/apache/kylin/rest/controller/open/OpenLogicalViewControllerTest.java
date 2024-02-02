@@ -67,7 +67,7 @@ class OpenLogicalViewControllerTest {
     }
 
     @Test
-    void executeSql() throws Exception {
+    void executeSqlCreate() throws Exception {
         OpenLogicalViewRequest request = new OpenLogicalViewRequest();
         request.setSql("CREATE LOGICAL VIEW your_logical_view AS select * from your_loaded_table");
         request.setProject("default");
@@ -78,5 +78,31 @@ class OpenLogicalViewControllerTest {
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
         val viewRequest = new ViewRequest(request.getProject(), request.getSql(), request.getRestrict());
         Mockito.verify(sparkDDLController).executeSQL(viewRequest);
+    }
+
+    @Test
+    void executeSqlReplace() throws Exception {
+        OpenLogicalViewRequest request = new OpenLogicalViewRequest();
+        request.setSql("REPLACE LOGICAL VIEW your_logical_view AS select * from your_loaded_table");
+        request.setProject("default");
+        request.setRestrict(DDLConstant.REPLACE_LOGICAL_VIEW);
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/logical_view/ddl").contentType(MediaType.APPLICATION_JSON)
+                .content(JsonUtil.writeValueAsString(request))
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
+        val viewRequest = new ViewRequest(request.getProject(), request.getSql(), request.getRestrict());
+        Mockito.verify(sparkDDLController).executeSQL(viewRequest);
+    }
+
+    @Test
+    void executeSqlError() throws Exception {
+        OpenLogicalViewRequest request = new OpenLogicalViewRequest();
+        request.setSql("CREATE LOGICAL VIEW your_logical_view AS select * from your_loaded_table");
+        request.setProject("default");
+        request.setRestrict(DDLConstant.HIVE_VIEW);
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/logical_view/ddl").contentType(MediaType.APPLICATION_JSON)
+                .content(JsonUtil.writeValueAsString(request))
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isInternalServerError()).andReturn();
     }
 }
