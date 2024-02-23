@@ -32,16 +32,23 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 public class JobMybatisConfigTest extends NLocalFileMetadataTestCase {
 
+    private JdbcTemplate jdbcTemplate;
+
     @Before
-    public void setup() {
+    public void setup() throws Exception {
         createTestMetadata();
+        jdbcTemplate = JdbcUtil.getJdbcTemplate(getTestConfig());
     }
 
     @After
     public void tearDown() {
+        if (jdbcTemplate != null) {
+            jdbcTemplate.batchUpdate("DROP ALL OBJECTS");
+        }
         cleanupTestMetadata();
     }
 
