@@ -89,6 +89,7 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
             throw new KylinRuntimeException("Failed to parse invalid SQL: " + sql);
         }
 
+        // Make sure the position of the resolved's sqlNode in the sql is from left to right
         SelectStarAuthVisitor replacer = new SelectStarAuthVisitor(project, defaultSchema, aclLocal);
         sqlNode.accept(replacer);
         Map<SqlNode, String> resolved = replacer.getResolved();
@@ -145,8 +146,8 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
         public SqlNode visit(SqlCall call) {
             if (call instanceof SqlSelect) {
                 SqlSelect select = (SqlSelect) call;
-                markCall(select.getFrom());
                 select.getSelectList().accept(this);
+                markCall(select.getFrom());
             }
             if (call instanceof SqlBasicCall) {
                 SqlBasicCall basicCall = (SqlBasicCall) call;

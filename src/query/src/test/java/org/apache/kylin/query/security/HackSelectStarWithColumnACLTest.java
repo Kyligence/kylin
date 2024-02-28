@@ -233,6 +233,44 @@ class HackSelectStarWithColumnACLTest {
     }
 
     @Test
+    void testResolvedSorted() {
+        {
+            String sql = "select " //
+                    + " sum(ORDER_ID)," //
+                    + " (select sum(ORDER_ID) from TEST_ORDER ) as o2" //
+                    + "  from TEST_KYLIN_FACT";
+            String converted = TRANSFORMER.convert(sql, PROJECT, SCHEMA);
+            String expected = "select " //
+                    + " sum(ORDER_ID)," //
+                    + " (select sum(ORDER_ID) from " //
+                    + "( select \"TEST_ORDER\".\"ORDER_ID\", \"TEST_ORDER\".\"BUYER_ID\", "
+                    + "\"TEST_ORDER\".\"TEST_DATE_ENC\" " //
+                    + "from \"DEFAULT\".\"TEST_ORDER\") as \"TEST_ORDER\" ) as o2" //
+                    + "  from ( select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
+                    + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" "
+                    + "from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"TEST_KYLIN_FACT\"";
+            Assertions.assertEquals(expected, converted);
+        }
+        {
+            String sql = "select " //
+                    + " sum(ORDER_ID)," //
+                    + " (select sum(ORDER_ID) from TEST_KYLIN_FACT ) as o2" //
+                    + "  from TEST_KYLIN_FACT";
+            String converted = TRANSFORMER.convert(sql, PROJECT, SCHEMA);
+            String expected = "select " //
+                    + " sum(ORDER_ID)," //
+                    + " (select sum(ORDER_ID) from " //
+                    + "( select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
+                    + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" "
+                    + "from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"TEST_KYLIN_FACT\" ) as o2" //
+                    + "  from ( select \"TEST_KYLIN_FACT\".\"ORDER_ID\", \"TEST_KYLIN_FACT\".\"PRICE\", "
+                    + "\"TEST_KYLIN_FACT\".\"ITEM_COUNT\" "
+                    + "from \"DEFAULT\".\"TEST_KYLIN_FACT\") as \"TEST_KYLIN_FACT\"";
+            Assertions.assertEquals(expected, converted);
+        }
+    }
+
+    @Test
     void testWithoutSubQueryFrom() {
         // without from
         {
