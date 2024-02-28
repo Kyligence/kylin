@@ -20,7 +20,6 @@ package org.apache.kylin.job.config;
 
 import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.isTableExists;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -131,9 +130,14 @@ public class JobMybatisConfig implements InitializingBean {
                 throw new KylinRuntimeException(errorMsg);
             }
         }
+
+        Properties sqlProperties = JdbcUtil.getProperties((BasicDataSource) dataSource);
+        checkAndCreateTable(sqlProperties);
+        checkAndCreateTableIndex(sqlProperties);
+    }
+
+    private void checkAndCreateTable(Properties sqlProperties) {
         try {
-            Properties sqlProperties = JdbcUtil.getProperties((BasicDataSource) dataSource);
-            
             if (!isTableExists(dataSource.getConnection(), jobInfoTableName)) {
                 String jobInfoTableSql = String.format(Locale.ROOT, sqlProperties.getProperty(CREATE_JOB_INFO_TABLE),
                         jobInfoTableName);
@@ -146,22 +150,28 @@ public class JobMybatisConfig implements InitializingBean {
                 executeSql(jobLockTableSql);
             }
 
+        } catch (SQLException e) {
+            throw new KylinRuntimeException(e);
+        }
+    }
+
+    private void checkAndCreateTableIndex(Properties sqlProperties) {
+        try {
             String jobInfoIndex1 = jobInfoTableName + "_ix";
             if (!JdbcUtil.isIndexExists(dataSource.getConnection(), jobInfoTableName, jobInfoIndex1)) {
                 String jobInfoIndex1Sql = String.format(Locale.ROOT, sqlProperties.getProperty(CREATE_JOB_INFO_INDEX_1),
                         jobInfoIndex1, jobInfoTableName);
                 executeSql(jobInfoIndex1Sql);
             }
-            
+
             String jobInfoIndex2 = jobInfoTableName + "_project_model_id_ix";
             if (!JdbcUtil.isIndexExists(dataSource.getConnection(), jobInfoTableName, jobInfoIndex2)) {
                 String jobInfoIndex2Sql = String.format(Locale.ROOT, sqlProperties.getProperty(CREATE_JOB_INFO_INDEX_2),
                         jobInfoIndex2, jobInfoTableName);
                 executeSql(jobInfoIndex2Sql);
             }
-
-        } catch (SQLException | IOException e) {
-            throw new KylinRuntimeException(e);
+        } catch (Exception e) {
+            log.warn("Check and create index for job info table failed.", e);
         }
     }
 
