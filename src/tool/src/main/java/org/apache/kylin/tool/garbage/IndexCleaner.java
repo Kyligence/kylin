@@ -26,17 +26,20 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.annotation.Clarification;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.cube.optimization.GarbageLayoutType;
+import org.apache.kylin.metadata.cube.optimization.IndexOptimizer;
 import org.apache.kylin.metadata.cube.optimization.IndexOptimizerFactory;
 import org.apache.kylin.metadata.cube.optimization.event.ApproveRecsEvent;
 import org.apache.kylin.metadata.cube.optimization.event.BuildIndexEvent;
@@ -54,15 +57,27 @@ import lombok.extern.slf4j.Slf4j;
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Enterprise")
 public class IndexCleaner extends MetadataCleaner {
 
-    private List<String> needUpdateModels = Lists.newArrayList();
+    private final List<String> needUpdateModels = Lists.newArrayList();
 
-    private Map<NDataflow, Map<Long, GarbageLayoutType>> needOptAggressivelyModels = Maps.newHashMap();
+    private final Map<NDataflow, Map<Long, GarbageLayoutType>> needOptAggressivelyModels = Maps.newHashMap();
+    private final Map<NDataflow, Set<Long>> modelMergeLayoutIds = Maps.newHashMap();
 
     private final boolean needAggressiveOpt;
+    private final String specialModelId;
+    private final boolean approveRecommendation;
+    private final boolean autoBuildIndex;
 
     public IndexCleaner(String project, boolean needAggressiveOpt) {
+        this(project, needAggressiveOpt, null, true, true);
+    }
+
+    public IndexCleaner(String project, boolean needAggressiveOpt, String specialModelId, boolean approveRecommendation,
+            boolean autoBuildIndex) {
         super(project);
         this.needAggressiveOpt = needAggressiveOpt;
+        this.specialModelId = specialModelId;
+        this.approveRecommendation = approveRecommendation;
+        this.autoBuildIndex = autoBuildIndex;
     }
 
     @Override
@@ -79,9 +94,12 @@ public class IndexCleaner extends MetadataCleaner {
 
         OptRecManagerV2 recManagerV2 = OptRecManagerV2.getInstance(project);
         for (val model : dataflowManager.listUnderliningDataModels()) {
+            if (StringUtils.isNotEmpty(specialModelId) && !specialModelId.equals(model.getId())) {
+                continue;
+            }
+
             val dataflow = dataflowManager.getDataflow(model.getId()).copy();
-            Map<Long, GarbageLayoutType> garbageLayouts = IndexOptimizerFactory
-                    .getOptimizer(dataflow, needAggressiveOpt, true).getGarbageLayoutMap(dataflow);
+            Map<Long, GarbageLayoutType> garbageLayouts = getIndexOptimizer(dataflow).getGarbageLayoutMap(dataflow);
 
             if (needAggressiveOpt) {
                 needOptAggressivelyModels.put(dataflow, garbageLayouts);
@@ -102,13 +120,22 @@ public class IndexCleaner extends MetadataCleaner {
         log.info("Clean index in project {} finished", project);
     }
 
+    private IndexOptimizer getIndexOptimizer(NDataflow dataflow) {
+        if (approveRecommendation) {
+            //Default behavior, complete policy
+            return IndexOptimizerFactory.getOptimizer(dataflow, needAggressiveOpt, true);
+        }
+        //Execute only what is needed
+        return IndexOptimizerFactory.getMergedLayoutOptStrategyOptimizer(true);
+    }
+
     @Override
     public void beforeExecute() {
         if (MapUtils.isEmpty(needOptAggressivelyModels)) {
             return;
         }
-
-        approveRec();
+        if (approveRecommendation)
+            approveRec();
         mergeSameDimAggLayout();
     }
 
@@ -171,7 +198,9 @@ public class IndexCleaner extends MetadataCleaner {
 
             log.info("merge same dimension index for model: {} under project: {}", dataflow.getModelAlias(), project);
             indexPlanManager.updateIndexPlan(dataflow.getId(), copyForWrite -> {
-                IndexPlan indexPlanMerged = IndexPlanReduceUtil.mergeSameDimLayout(indexPlan, mergedLayouts);
+                val indexPlanSetPair = IndexPlanReduceUtil.mergeSameDimLayout(indexPlan, mergedLayouts);
+                modelMergeLayoutIds.put(dataflow, indexPlanSetPair.getValue());
+                val indexPlanMerged = indexPlanSetPair.getKey();
                 copyForWrite.setIndexes(indexPlanMerged.getIndexes());
                 copyForWrite.setLastModified(System.currentTimeMillis());
             });
@@ -186,7 +215,9 @@ public class IndexCleaner extends MetadataCleaner {
             }
             log.info("aggressively clean up index for model: {} under project: {}", dataflow.getModelAlias(), project);
             IndexPlan indexPlan = indexPlanManager.getIndexPlan(dataflow.getId());
-            deleteIndexes(indexPlan, garbageLayouts.keySet());
+            val needDeleteLayoutIds = garbageLayouts.keySet();
+            needDeleteLayoutIds.removeAll(modelMergeLayoutIds.getOrDefault(dataflow, Sets.newHashSet()));
+            deleteIndexes(indexPlan, needDeleteLayoutIds);
         });
     }
 
@@ -209,8 +240,10 @@ public class IndexCleaner extends MetadataCleaner {
     }
 
     private void buildIndexes() {
-        EventBusFactory eventBusFactory = EventBusFactory.getInstance();
-        eventBusFactory
-                .callService(new BuildIndexEvent(project, Lists.newArrayList(needOptAggressivelyModels.keySet())));
+        if (autoBuildIndex) {
+            EventBusFactory eventBusFactory = EventBusFactory.getInstance();
+            eventBusFactory
+                    .callService(new BuildIndexEvent(project, Lists.newArrayList(needOptAggressivelyModels.keySet())));
+        }
     }
 }

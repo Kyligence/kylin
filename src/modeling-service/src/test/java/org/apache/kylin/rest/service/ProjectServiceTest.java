@@ -52,6 +52,7 @@ import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.cube.optimization.FrequencyMap;
 import org.apache.kylin.metadata.model.AutoMergeTimeEnum;
 import org.apache.kylin.metadata.model.ISourceAware;
@@ -1043,6 +1044,28 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
         QueryHistoryMetaUpdateScheduler qhMetaUpdateScheduler = QueryHistoryMetaUpdateScheduler.getInstance(PROJECT);
         qhMetaUpdateScheduler.init();
         projectService.cleanupGarbage(PROJECT, false);
+    }
+
+    @Test
+    public void testOptimizeModelIndex() {
+        String project = "default";
+        String modelId = "abe3bf1a-c4bc-458d-8278-7ea8b00f5e96";
+        NProjectManager projectManager = NProjectManager.getInstance(getTestConfig());
+        projectManager.updateProject(project, copyForWrite -> {
+            var properties = copyForWrite.getOverrideKylinProps();
+            if (properties == null) {
+                properties = Maps.newLinkedHashMap();
+            }
+            properties.put("kylin.metadata.semi-automatic-mode", "true");
+            copyForWrite.setOverrideKylinProps(properties);
+        });
+        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), project);
+        var indexPlan = indexPlanManager.getIndexPlan(modelId);
+        Assert.assertEquals(5, indexPlan.getAllLayouts().size());
+        projectService.optimizeIndex(project, modelId, false, false);
+        indexPlan = indexPlanManager.getIndexPlan(modelId);
+        //No need to merge
+        Assert.assertEquals(5, indexPlan.getAllLayouts().size());
     }
 
     @Test

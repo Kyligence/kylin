@@ -134,11 +134,11 @@ public class ProjectStorageInfoCollectorTest extends NLocalFileMetadataTestCase 
         getTestConfig().setProperty("kylin.index.frequency-strategy.consider-table-index", "true");
         Set<Long> garbageLayouts = IndexOptimizer.findGarbageLayouts(dataflow, new LowFreqLayoutOptStrategy());
 
-        //  layout 1L and 20_000_040_001L with low frequency => garbage
-        Assert.assertTrue(garbageLayouts.containsAll(Sets.newHashSet(1L, 20_000_040_001L)));
+        //  layout 1L with low frequency => garbage
+        Assert.assertTrue(garbageLayouts.containsAll(Sets.newHashSet(1L)));
 
         // without frequency hit layout => garbage
-        Assert.assertTrue(garbageLayouts.containsAll(Sets.newHashSet(20001L, 30001L, 1000001L, 20_000_020_001L)));
+        Assert.assertTrue(garbageLayouts.containsAll(Sets.newHashSet(20001L, 30001L, 1000001L)));
 
         // layout 10_001L, 10002L, 40_001L, 40_002L, 20_000_000_001L and 20_000_010_001L were not considered as garbage
         Assert.assertFalse(garbageLayouts.contains(10001L));
@@ -213,7 +213,7 @@ public class ProjectStorageInfoCollectorTest extends NLocalFileMetadataTestCase 
         NDataflow dataflow = dataflowManager.getDataflow(DEFAULT_MODEL_BASIC_ID);
         NDataflowUpdate update = new NDataflowUpdate(dataflow.getUuid());
         NDataSegment latestReadySegment = dataflow.getLatestReadySegment();
-        Set<Long> ids = indexPlan.getAllLayouts().stream().map(LayoutEntity::getId).collect(Collectors.toSet());
+        Set<Long> ids = indexPlanAfter.getAllLayouts().stream().map(LayoutEntity::getId).collect(Collectors.toSet());
         update.setToAddOrUpdateLayouts(genCuboids(dataflow, latestReadySegment.getId(), ids));
         dataflowManager.updateDataflow(update);
 

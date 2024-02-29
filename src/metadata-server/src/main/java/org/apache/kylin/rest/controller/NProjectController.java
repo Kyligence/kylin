@@ -56,6 +56,7 @@ import org.apache.kylin.rest.request.JdbcRequest;
 import org.apache.kylin.rest.request.JdbcSourceInfoRequest;
 import org.apache.kylin.rest.request.JobNotificationConfigRequest;
 import org.apache.kylin.rest.request.MultiPartitionConfigRequest;
+import org.apache.kylin.rest.request.OptimizeIndexRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
 import org.apache.kylin.rest.request.ProjectConfigRequest;
 import org.apache.kylin.rest.request.ProjectConfigResetRequest;
@@ -250,15 +251,16 @@ public class NProjectController extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, true, "");
     }
 
-    @ApiOperation(value = "cleanupProjectStorage", tags = { "SM" }, notes = "Add URL: {project}; ")
+    @ApiOperation(value = "optimize_index", tags = { "SM" })
     @PutMapping(value = "/{project:.+}/optimize_index")
     @ResponseBody
-    public EnvelopeResponse<Boolean> optimizeIndex(@PathVariable(value = "project") String project) throws Exception {
-        ProjectInstance projectInstance = projectService.getManager(NProjectManager.class).getProject(project);
-        if (projectInstance == null) {
-            throw new KylinException(PROJECT_NOT_EXIST, project);
-        }
-        projectService.cleanupGarbage(project, true);
+    public EnvelopeResponse<Boolean> optimizeIndex(@PathVariable(value = "project") String project,
+            @RequestBody OptimizeIndexRequest request) {
+        String projectName = checkProjectName(project);
+        String modelId = StringUtils.isEmpty(request.getModel()) ? null
+                : modelService.getModel(request.getModel(), projectName).getId();
+        projectService.optimizeIndex(projectName, modelId, request.isApproveRecommendation(),
+                request.isAutoBuildIndex());
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, true, "");
     }
 

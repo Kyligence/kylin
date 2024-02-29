@@ -34,6 +34,7 @@ import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.metadata.model.AutoMergeTimeEnum;
+import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.RetentionRange;
 import org.apache.kylin.metadata.model.VolatileRange;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -44,6 +45,7 @@ import org.apache.kylin.rest.request.FavoriteQueryThresholdRequest;
 import org.apache.kylin.rest.request.GarbageCleanUpConfigRequest;
 import org.apache.kylin.rest.request.JdbcSourceInfoRequest;
 import org.apache.kylin.rest.request.JobNotificationConfigRequest;
+import org.apache.kylin.rest.request.OptimizeIndexRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
 import org.apache.kylin.rest.request.ProjectConfigRequest;
 import org.apache.kylin.rest.request.ProjectExclusionRequest;
@@ -60,6 +62,7 @@ import org.apache.kylin.rest.response.FavoriteQueryThresholdResponse;
 import org.apache.kylin.rest.response.ProjectConfigResponse;
 import org.apache.kylin.rest.response.StorageVolumeInfoResponse;
 import org.apache.kylin.rest.security.AclPermissionEnum;
+import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.ProjectService;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.junit.After;
@@ -96,6 +99,9 @@ public class NProjectControllerTest extends NLocalFileMetadataTestCase {
 
     @Mock
     private ProjectService projectService;
+
+    @Mock
+    private ModelService modelService;
 
     @InjectMocks
     private NProjectController nProjectController = Mockito.spy(new NProjectController());
@@ -223,6 +229,23 @@ public class NProjectControllerTest extends NLocalFileMetadataTestCase {
 
         Mockito.verify(nProjectController).updateStorageQuotaConfig(eq("default"),
                 Mockito.any(StorageQuotaRequest.class));
+    }
+
+    @Test
+    public void testOptimizeIndex() throws Exception {
+        OptimizeIndexRequest request = new OptimizeIndexRequest();
+        request.setModel("model");
+
+        NProjectManager projectManager = Mockito.mock(NProjectManager.class);
+        Mockito.doReturn(projectManager).when(projectService).getManager(NProjectManager.class);
+        NDataModel dataModel = Mockito.mock(NDataModel.class);
+        Mockito.doReturn(dataModel).when(modelService).getModel("model", "default");
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/projects/{project}/optimize_index", "default")
+                .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
+
+        Mockito.verify(nProjectController).optimizeIndex("default", request);
     }
 
     @Test
