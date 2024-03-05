@@ -149,11 +149,11 @@ public class ModelQueryService extends BasicService implements ModelQuerySupport
             boolean reverse) {
         if (StringUtils.isEmpty(sortBy)) {
             if (getManager(NProjectManager.class).getProject(projectName).isSemiAutoMode()) {
-                return modelTripleList.parallelStream().sorted(
+                return modelTripleList.stream().sorted(
                         new ModelTripleComparator(RECOMMENDATIONS_COUNT_LOWER_CAMEL, !reverse, SORT_KEY_DATA_MODEL))
                         .collect(Collectors.toList());
             } else {
-                return modelTripleList.parallelStream()
+                return modelTripleList.stream()
                         .sorted(new ModelTripleComparator(LAST_MODIFIED, !reverse, SORT_KEY_DATA_MODEL))
                         .collect(Collectors.toList());
             }
@@ -161,11 +161,11 @@ public class ModelQueryService extends BasicService implements ModelQuerySupport
 
         switch (sortBy) {
         case USAGE:
-            return modelTripleList.parallelStream()
+            return modelTripleList.stream()
                     .sorted(new ModelTripleComparator(QUERY_HIT_COUNT, !reverse, SORT_KEY_DATAFLOW))
                     .collect(Collectors.toList());
         case ModelService.RECOMMENDATIONS_COUNT_LOWER_UNDERSCORE:
-            return modelTripleList.parallelStream()
+            return modelTripleList.stream()
                     .sorted(new ModelTripleComparator(RECOMMENDATIONS_COUNT_LOWER_CAMEL, !reverse, SORT_KEY_DATA_MODEL))
                     .collect(Collectors.toList());
         case STORAGE:
@@ -173,7 +173,7 @@ public class ModelQueryService extends BasicService implements ModelQuerySupport
         case EXPANSION_RATE:
             return sortByExpansionRate(modelTripleList, projectName, reverse);
         default:
-            return modelTripleList.parallelStream()
+            return modelTripleList.stream()
                     .sorted(new ModelTripleComparator(LAST_MODIFIED, !reverse, SORT_KEY_DATA_MODEL))
                     .collect(Collectors.toList());
         }
@@ -191,7 +191,7 @@ public class ModelQueryService extends BasicService implements ModelQuerySupport
         tripleList.parallelStream().filter(t -> !t.getDataModel().isFusionModel())
                 .forEach(t -> t.setCalcObject(t.getDataflow().getStorageBytesSize()));
 
-        return tripleList.parallelStream()
+        return tripleList.stream()
                 .sorted(new ModelTripleComparator("calcObject", !reverse, SORT_KEY_CALC_OBJECT))
                 .collect(Collectors.toList());
     }
