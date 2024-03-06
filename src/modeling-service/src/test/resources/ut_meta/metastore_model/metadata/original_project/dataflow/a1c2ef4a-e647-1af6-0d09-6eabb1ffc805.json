@@ -1,0 +1,64 @@
+{
+  "uuid" : "a1c2ef4a-e647-1af6-0d09-6eabb1ffc805",
+  "last_modified" : 1708926834437,
+  "create_time" : 1708922453934,
+  "version" : "4.0.0.0",
+  "status" : "ONLINE",
+  "last_status" : null,
+  "cost" : 50,
+  "query_hit_count" : 0,
+  "last_query_time" : 0,
+  "last_data_refresh_time" : 0,
+  "layout_query_hit_count" : { },
+  "segments" : [ {
+    "id" : "28a69ff2-8b7a-6198-dcc9-e26b1338e41a",
+    "name" : "FULL_BUILD",
+    "create_time_utc" : 1708926834420,
+    "status" : "READY",
+    "segRange" : {
+      "@class" : "org.apache.kylin.metadata.model.SegmentRange$TimePartitionedSegmentRange",
+      "date_range_start" : 0,
+      "date_range_end" : 9223372036854775807
+    },
+    "timeRange" : null,
+    "dimension_range_info_map" : {
+      "11" : {
+        "min" : "1-URGENT",
+        "max" : "5-LOW"
+      },
+      "1" : {
+        "min" : "1",
+        "max" : "2000"
+      },
+      "14" : {
+        "min" : "AIR",
+        "max" : "TRUCK"
+      },
+      "7" : {
+        "min" : "1",
+        "max" : "20"
+      }
+    },
+    "parameters" : null,
+    "dictionaries" : null,
+    "snapshots" : null,
+    "last_build_time" : 1708927077498,
+    "source_count" : 60175,
+    "source_bytes_size" : 5659955,
+    "column_source_bytes" : {
+      "SSB.LINEORDER.LO_PARTKEY" : 207663,
+      "SSB.LINEORDER.LO_SUPPKEY" : 94173,
+      "SSB.LINEORDER.LO_ORDERPRIOTITY" : 456006,
+      "SSB.LINEORDER.LO_SHIPMODE" : 261701
+    },
+    "ori_snapshot_size" : { },
+    "additionalInfo" : { },
+    "is_realtime_segment" : false,
+    "is_snapshot_ready" : false,
+    "is_dict_ready" : true,
+    "is_flat_table_ready" : true,
+    "is_fact_view_ready" : false,
+    "multi_partitions" : [ ],
+    "max_bucket_id" : -1
+  } ]
+}

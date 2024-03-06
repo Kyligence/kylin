@@ -61,6 +61,8 @@ import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
+import org.apache.kylin.metadata.cube.model.NDataSegDetails;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
@@ -71,6 +73,7 @@ import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.PartitionDesc;
+import org.apache.kylin.metadata.model.Segments;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.schema.SchemaChangeCheckResult;
@@ -165,7 +168,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
         Assert.assertEquals(2, modelPreviewResponseList.size());
 
         modelPreviewResponseList = metaStoreService.getPreviewModels("original_project", Collections.emptyList());
-        Assert.assertEquals(12, modelPreviewResponseList.size());
+        Assert.assertEquals(13, modelPreviewResponseList.size());
 
         Assert.assertTrue(
                 modelPreviewResponseList.stream().anyMatch(ModelPreviewResponse::isHasMultiplePartitionValues));
@@ -1232,6 +1235,43 @@ public class MetaStoreServiceTest extends ServiceTestBase {
             }
         });
         metaStoreService.importModelMetadata("original_project", multipartFile, request);
+    }
+
+    @Test
+    public void testImportModelMetadataAndOverwriteWithLockedIndexes() throws Exception {
+        File file = new File(
+                "src/test/resources/ut_model_metadata/test_import_overwrite_model_metadata_2024_02_26_15_17_46_E5CC543C8FAE022CAC1C120F62449763.zip");
+        var multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
+                Files.newInputStream(file.toPath()));
+        ModelImportRequest request = new ModelImportRequest();
+        List<ModelImportRequest.ModelImport> models = new ArrayList<>();
+        models.add(new ModelImportRequest.ModelImport("test_import_overwrite", "test_import_overwrite",
+                ModelImportRequest.ImportType.OVERWRITE));
+
+        request.setModels(models);
+        metaStoreService.importModelMetadata("original_project", multipartFile, request);
+
+        NDataflowManager nDataflowManager = NDataflowManager.getInstance(getTestConfig(), "original_project");
+        NDataflow dataflow = nDataflowManager.getDataflow("a1c2ef4a-e647-1af6-0d09-6eabb1ffc805");
+        Segments<NDataSegment> segments = dataflow.getSegments();
+        Assert.assertNotNull(segments);
+        Assert.assertEquals(1, segments.size());
+
+        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), "original_project");
+        IndexPlan indexPlan = indexPlanManager.getIndexPlan("a1c2ef4a-e647-1af6-0d09-6eabb1ffc805");
+        List<IndexEntity> toBeDeletedIndexes = indexPlan.getToBeDeletedIndexes();
+        List<Long> toBeDeletedIndexIdList = Lists.newArrayList();
+        for (IndexEntity toBeDeletedIndex : toBeDeletedIndexes) {
+            toBeDeletedIndexIdList.add(toBeDeletedIndex.getId());
+        }
+        Assert.assertEquals(toBeDeletedIndexIdList, Lists.newArrayList(80000L, 30000L, 70000L, 20000L));
+
+        NDataSegment segment = segments.get(0);
+        NDataSegDetails segDetails = segment.getSegDetails();
+        Assert.assertNotNull(segDetails.getLayoutById(80001L));
+        Assert.assertNotNull(segDetails.getLayoutById(30001L));
+        Assert.assertNotNull(segDetails.getLayoutById(70001L));
+        Assert.assertNotNull(segDetails.getLayoutById(20001L));
     }
 
     @Test

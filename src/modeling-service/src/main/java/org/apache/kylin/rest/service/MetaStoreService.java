@@ -573,11 +573,21 @@ public class MetaStoreService extends BasicService {
     private void removeIndexes(String project, SchemaChangeCheckResult.ModelSchemaChange modelSchemaChange,
             IndexPlan targetIndexPlan) {
         if (modelSchemaChange != null) {
+            val newLockedItems = modelSchemaChange.getNewItems().stream()
+                    .filter(item -> item.getType() == SchemaNodeType.TO_BE_DELETED_INDEX).collect(Collectors.toSet());
+            val newLockedItemKeyAttrMap = Maps.newHashMap();
+            newLockedItems.forEach(newLockedItem -> newLockedItemKeyAttrMap.put(newLockedItem.getSchemaNode().getKey(),
+                    newLockedItem.getAttributes()));
             val toBeRemovedIndexes = Stream
                     .concat(modelSchemaChange.getReduceItems().stream()
                             .filter(schemaChange -> schemaChange.getType() == SchemaNodeType.WHITE_LIST_INDEX
                                     || schemaChange.getType() == SchemaNodeType.RULE_BASED_INDEX)
-                            .map(SchemaChangeCheckResult.ChangedItem::getDetail),
+                            .filter(schemaChange -> {
+                                val reduceItemKey = schemaChange.getSchemaNode().getKey();
+                                val reduceItemAttr = schemaChange.getAttributes();
+                                // 'toBeRemovedIndexes' should not contain locked indexes
+                                return !reduceItemAttr.equals(newLockedItemKeyAttrMap.get(reduceItemKey));
+                            }).map(SchemaChangeCheckResult.ChangedItem::getDetail),
                             modelSchemaChange.getUpdateItems().stream()
                                     .filter(schemaUpdate -> schemaUpdate.getType() == SchemaNodeType.WHITE_LIST_INDEX
                                             || schemaUpdate.getType() == SchemaNodeType.RULE_BASED_INDEX)
