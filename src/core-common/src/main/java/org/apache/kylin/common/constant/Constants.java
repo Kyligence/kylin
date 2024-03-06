@@ -61,4 +61,6 @@ public class Constants {
     public static final String BACKSLASH = "/";
 
     public static final String METADATA_FILE = "metadata.zip";
+
+    public static final String CORE_META_DIR = "core_meta";
 }

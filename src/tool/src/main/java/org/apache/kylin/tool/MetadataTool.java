@@ -18,6 +18,7 @@
 
 package org.apache.kylin.tool;
 
+import static org.apache.kylin.common.constant.Constants.CORE_META_DIR;
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.PARAMETER_NOT_SPECIFY;
 import static org.apache.kylin.common.persistence.transaction.UnitOfWork.GLOBAL_UNIT;
 
@@ -215,14 +216,14 @@ public class MetadataTool extends ExecutableApplication {
 
     private void restoreMetadata(String project, String path, boolean delete) throws Exception {
         if (StringUtils.isNotEmpty(project)) {
-            helper.restore(kylinConfig, project, StringUtils.appendIfMissing(path, "/") + "core_meta", delete, true);
+            helper.restore(kylinConfig, project, StringUtils.appendIfMissing(path, "/") + CORE_META_DIR, delete, true);
             UnitOfWork.get().doAfterUpdate(() -> {
                 queryHistoryOffsetTool.restoreProjectFromLocal(path, project, delete);
                 favoriteRuleTool.restoreProjectFromLocal(path, project, delete);
                 jobInfoTool.restoreProjectFromLocal(path, project, delete);
             });
         } else {
-            helper.restore(kylinConfig, project, StringUtils.appendIfMissing(path, "/") + "core_meta", delete, true);
+            helper.restore(kylinConfig, project, StringUtils.appendIfMissing(path, "/") + CORE_META_DIR, delete, true);
             UnitOfWork.get().doAfterUpdate(() -> {
                 queryHistoryOffsetTool.restoreFromLocal(path, delete);
                 favoriteRuleTool.restoreFromLocal(path, delete);

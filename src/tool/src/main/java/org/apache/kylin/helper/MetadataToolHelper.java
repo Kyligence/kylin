@@ -18,6 +18,7 @@
 
 package org.apache.kylin.helper;
 
+import static org.apache.kylin.common.constant.Constants.CORE_META_DIR;
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.FILE_ALREADY_EXISTS;
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.MODEL_DUPLICATE_UUID_FAILED;
 
@@ -117,7 +118,7 @@ public class MetadataToolHelper extends CancelableTask {
     public Pair<String, String> backup(KylinConfig kylinConfig, String project, String path, String folder,
             boolean compress, boolean excludeTableExd) throws Exception {
         Pair<String, String> pair = getBackupPath(path, folder);
-        String coreMetadataBackupPath = StringUtils.appendIfMissing(pair.getFirst(), "/") + "core_meta";
+        String coreMetadataBackupPath = StringUtils.appendIfMissing(pair.getFirst(), "/") + CORE_META_DIR;
         backup(kylinConfig, project, coreMetadataBackupPath, compress, excludeTableExd);
         return pair;
     }

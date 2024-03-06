@@ -17,6 +17,8 @@
  */
 package org.apache.kylin.common.persistence.metadata;
 
+import static org.apache.kylin.common.constant.Constants.CORE_META_DIR;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,13 +53,13 @@ import org.apache.kylin.common.persistence.VersionedRawResource;
 import org.apache.kylin.common.util.FileSystemUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
-
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.guava30.shaded.common.io.ByteSource;
+
 import lombok.Getter;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
@@ -94,13 +96,14 @@ public class HDFSMetadataStore extends MetadataStore {
                 if (!fs.exists(new Path(path))) {
                     fs.mkdirs(new Path(path));
                 }
-                rootPath = Stream.of(FileSystemUtil.listStatus(fs, new Path(path)))
+                Path tmpRootPath = Stream.of(FileSystemUtil.listStatus(fs, new Path(path)))
                         .filter(fileStatus -> fileStatus.getPath().getName().endsWith("_backup"))
                         .max(Comparator.comparing(FileStatus::getModificationTime)).map(FileStatus::getPath)
                         .orElse(new Path(path + "/backup_0/"));
-                if (!fs.exists(rootPath)) {
-                    fs.mkdirs(rootPath);
+                if (!fs.exists(tmpRootPath)) {
+                    fs.mkdirs(tmpRootPath);
                 }
+                rootPath = checkCoreMetaDir(tmpRootPath);
             } else {
                 Path tempPath = new Path(path);
                 if (tempPath.toUri().getScheme() != null) {
@@ -121,6 +124,22 @@ public class HDFSMetadataStore extends MetadataStore {
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
+    }
+
+    // make compatible with old version KE, 'core_meta' directory does not exist in old version KE
+    private Path checkCoreMetaDir(Path tmpRootPath) throws IOException {
+        FileStatus[] fileStatuses = fs.listStatus(tmpRootPath);
+        for (FileStatus fileStatus : fileStatuses) {
+            if (fileStatus.isDirectory() && CORE_META_DIR.equals(fileStatus.getPath().getName())) {
+                return fileStatus.getPath();
+            }
+        }
+        return tmpRootPath;
+    }
+
+    // for UT
+    public Path getRootPath() {
+        return rootPath;
     }
 
     @Override
@@ -357,7 +376,9 @@ public class HDFSMetadataStore extends MetadataStore {
 
         @Override
         public void write(OutputStream out, RawResource raw) throws IOException {
-            IOUtils.copy(raw.getByteSource().openStream(), out);
+            try (InputStream inputStream = raw.getByteSource().openStream()) {
+                IOUtils.copy(inputStream, out);
+            }
         }
     }
 

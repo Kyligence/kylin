@@ -18,6 +18,7 @@
 
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.common.constant.Constants.CORE_META_DIR;
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.METADATA_BACKUP_IS_IN_PROGRESS;
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.SYSTEM_IN_METADATA_RECOVER;
 
@@ -74,7 +75,6 @@ public class OpsService {
     public static final String PROJECT_LEVEL_METADATA_BACKUP_DIR_NAME = "_project_level_metadata_backup";
     public static final String BACKUP_STATUS = "_backup_status";
     private static final String PATH_SEP = "/";
-    public static final String CORE_META_DIR = "core_meta";
     public static final String META_BACKUP_PATH = KylinConfig.getInstanceFromEnv().getHdfsWorkingDirectory()
             + META_BACKUP_DIR;
     public static final String GLOBAL_METADATA_BACKUP_PATH = META_BACKUP_PATH + PATH_SEP
