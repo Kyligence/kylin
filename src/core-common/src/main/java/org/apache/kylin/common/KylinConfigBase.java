@@ -1778,9 +1778,13 @@ public abstract class KylinConfigBase implements Serializable {
         return Double.parseDouble(getOptional("kylin.engine.resource-request-over-limit-proportion", "1.0"));
     }
 
+    public boolean getStreamingEnabledConfig() {
+        return Boolean.parseBoolean(getOptional("kylin.streaming.enabled", FALSE));
+    }
+
     public boolean streamingEnabled() {
         boolean checkKylinInfo = KylinInfoExtension.getFactory().checkKylinInfo();
-        boolean enable = Boolean.parseBoolean(getOptional("kylin.streaming.enabled", FALSE));
+        boolean enable = getStreamingEnabledConfig();
         return enable && checkKylinInfo;
     }
 
