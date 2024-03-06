@@ -638,12 +638,12 @@ public class Message {
 
     public String getLicenseSourceOverCapacity() {
         return "The amount of data volume used（%s/%s) exceeds the license’s limit. Build index and load data is unavailable.\n"
-                + "Please contact Kyligence, or try deleting some segments.";
+                + "Please contact Kyligence, or try deleting some segments and refreshing system data usage.";
     }
 
     public String getLicenseProjectSourceOverCapacity() {
         return "The amount of data volume used（%s/%s) exceeds the project’s limit. Build index and load data is unavailable.\n"
-                + "Please contact Kyligence, or try deleting some segments.";
+                + "Please contact Kyligence, or try deleting some segments and refreshing system data usage.";
     }
 
     public String getLicenseNodesOverCapacity() {

@@ -610,12 +610,12 @@ public class CnMessage extends Message {
 
     @Override
     public String getLicenseSourceOverCapacity() {
-        return "当前已使用数据量（%s/%s）超过许可证上限。系统无法进行构建或数据加载任务。\n" + "请联系 Kyligence 销售人员，或尝试删除一些 Segment 以解除限制。";
+        return "当前已使用数据量（%s/%s）超过许可证上限。系统无法进行构建或数据加载任务。\n" + "请联系 Kyligence 销售人员，或尝试删除一些 Segment 并刷新系统数据量以解除限制。";
     }
 
     @Override
     public String getLicenseProjectSourceOverCapacity() {
-        return "当前项目已使用数据量（%s/%s）超过配置上限。系统无法进行构建或数据加载任务。\n" + "请联系 Kyligence 销售人员，或尝试删除一些 Segment 以解除限制。";
+        return "当前项目已使用数据量（%s/%s）超过配置上限。系统无法进行构建或数据加载任务。\n" + "请联系 Kyligence 销售人员，或尝试删除一些 Segment 并刷新系统数据量以解除限制。";
     }
 
     @Override
