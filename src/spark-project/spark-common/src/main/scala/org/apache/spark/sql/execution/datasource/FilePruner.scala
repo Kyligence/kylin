@@ -116,11 +116,11 @@ class FilePruner(val session: SparkSession,
   private lazy val prunedSegmentDirs: Seq[SegmentDirectory] = {
     val prunedSegmentInfo = options.getOrElse("pruningInfo", sys.error("pruningInfo option is required")).split(",")
     prunedSegmentInfo.map(segInfo => {
-      if (segInfo.contains(":")) {
-        val segmentPartitions = segInfo.split(":")
-        SegmentDirectory(segmentPartitions(0), segmentPartitions(1).split("\\|").map(id => id.toLong).toList, null)
-      } else {
-        SegmentDirectory(segInfo, List.empty[Long], null)
+      segInfo.split(":") match {
+        case Array(segmentId, partitions) =>
+          SegmentDirectory(segmentId, partitions.split("\\|").map(_.toLong).toList, null)
+        case _ =>
+          SegmentDirectory(segInfo, List.empty[Long], null)
       }
     })
   }

@@ -17,9 +17,7 @@
  */
 package org.apache.kylin.query.runtime.plan
 
-import java.util.concurrent.ConcurrentHashMap
-import java.{lang, util}
-
+import org.apache.commons.collections.CollectionUtils
 import org.apache.kylin.common.util.ClassUtil
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
 import org.apache.kylin.engine.spark.utils.{LogEx, LogUtils}
@@ -28,7 +26,7 @@ import org.apache.kylin.guava30.shaded.common.collect.{Lists, Sets}
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate
 import org.apache.kylin.metadata.cube.gridtable.NLayoutToGridTableMapping
 import org.apache.kylin.metadata.cube.model.{LayoutEntity, NDataSegment, NDataflow}
-import org.apache.kylin.metadata.model.{DeriveInfo, FunctionDesc, NTableMetadataManager, ParameterDesc, TblColRef}
+import org.apache.kylin.metadata.model._
 import org.apache.kylin.metadata.realization.HybridRealization
 import org.apache.kylin.metadata.tuple.TupleInfo
 import org.apache.kylin.query.implicits.sessionToQueryContext
@@ -44,6 +42,8 @@ import org.apache.spark.sql.manager.SparderLookupManager
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.SparderTypeUtil
 
+import java.util.concurrent.ConcurrentHashMap
+import java.{lang, util}
 import scala.collection.JavaConverters._
 
 
@@ -181,7 +181,7 @@ object TableScanPlan extends LogEx {
     printLogInfo(basePath, dataflow.getId, cuboidLayout.getId, prunedSegments, prunedPartitionMap)
 
     val pruningInfo = prunedSegments.asScala.map { seg =>
-      if (prunedPartitionMap != null) {
+      if (prunedPartitionMap != null && CollectionUtils.isNotEmpty(prunedPartitionMap.get(seg.getId))) {
         val partitions = prunedPartitionMap.get(seg.getId)
         seg.getId + ":" + Joiner.on("|").join(partitions)
       } else {
