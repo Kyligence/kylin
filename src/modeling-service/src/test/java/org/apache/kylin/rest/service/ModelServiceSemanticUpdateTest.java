@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -174,7 +175,7 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
 
-        await().until(() -> !jobContext.getJobScheduler().hasRunningJob());
+        await().atMost(30, TimeUnit.SECONDS).until(() -> !jobContext.getJobScheduler().hasRunningJob());
     }
 
     @Test

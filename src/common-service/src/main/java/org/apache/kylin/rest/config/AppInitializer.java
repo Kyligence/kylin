@@ -151,7 +151,6 @@ public class AppInitializer {
                 EventBusFactory.getInstance().register(new ModelBrokenListener(), false);
                 EventBusFactory.getInstance().register(epochChangedListener, false);
             }
-            EventBusFactory.getInstance().register(new ProcessStatusListener(), true);
 
             SparkJobFactoryUtils.initJobFactory();
             TransactionDeadLockHandler.getInstance().start();
@@ -194,7 +193,7 @@ public class AppInitializer {
                 QueryFiltersCollector.initScheduler();
             }
         }
-        EventBusFactory.getInstance().register(new ProcessStatusListener(), true);
+        EventBusFactory.getInstance().register(ProcessStatusListener.getInstance(), true);
         // register for clean cache when delete
         EventListenerRegistry.getInstance(kylinConfig).register(new CacheCleanListener(), "cacheInManager");
 
