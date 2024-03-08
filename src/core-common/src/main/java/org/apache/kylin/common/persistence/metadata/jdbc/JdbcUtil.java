@@ -27,16 +27,16 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Properties;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.StorageURL;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.metadata.PersistException;
 import org.apache.kylin.common.util.EncryptUtil;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -65,7 +65,7 @@ public class JdbcUtil {
                 retryLimit);
     }
 
-    public static boolean isInExistingTx(){
+    public static boolean isInExistingTx() {
         return txThreadLocal.get() != null;
     }
 
@@ -151,10 +151,18 @@ public class JdbcUtil {
     }
 
     public static boolean isTableExists(Connection conn, String table) throws SQLException {
-        return isAnyTableExists(conn, table, table.toUpperCase(Locale.ROOT), table.toLowerCase(Locale.ROOT));
+        return isAnyTableExists(conn, true, table, table.toUpperCase(Locale.ROOT), table.toLowerCase(Locale.ROOT));
     }
 
-    private static boolean isAnyTableExists(Connection conn, String... tables) throws SQLException {
+    // Historical debt, use this new method if you need to manually manage connection.
+    public static boolean isTableExists(Connection conn, String table, boolean autoReleaseConnection)
+            throws SQLException {
+        return isAnyTableExists(conn, autoReleaseConnection, table, table.toUpperCase(Locale.ROOT),
+                table.toLowerCase(Locale.ROOT));
+    }
+
+    private static boolean isAnyTableExists(Connection conn, boolean autoReleaseConnection, String... tables)
+            throws SQLException {
         try {
             for (String table : tables) {
                 val resultSet = conn.getMetaData().getTables(conn.getCatalog(), null, table, null);
@@ -165,7 +173,7 @@ public class JdbcUtil {
         } catch (Exception e) {
             logger.error("Fail to know if table {} exists", tables, e);
         } finally {
-            if (!conn.isClosed()) {
+            if (!conn.isClosed() && autoReleaseConnection) {
                 conn.close();
             }
         }
@@ -198,11 +206,28 @@ public class JdbcUtil {
 
     }
 
+    /**
+     * This method automatically closes the connection;
+     * if you need to manage the connection manually, call the method below with the autoReleaseConnection parameter
+     * @param conn
+     * @param table
+     * @param index
+     * @return
+     * @throws SQLException
+     */
     public static boolean isIndexExists(Connection conn, String table, String index) throws SQLException {
-        return isIndexExists(conn, index, table, table.toUpperCase(Locale.ROOT), table.toLowerCase(Locale.ROOT));
+        return isIndexExists(conn, index, true, table, table.toUpperCase(Locale.ROOT), table.toLowerCase(Locale.ROOT));
     }
 
-    private static boolean isIndexExists(Connection conn, String index, String... tables) throws SQLException {
+    // Historical debt, use this new method if you need to manually manage connection.
+    public static boolean isIndexExists(Connection conn, String table, String index, boolean autoReleaseConnection)
+            throws SQLException {
+        return isIndexExists(conn, index, autoReleaseConnection, table, table.toUpperCase(Locale.ROOT),
+                table.toLowerCase(Locale.ROOT));
+    }
+
+    private static boolean isIndexExists(Connection conn, String index, boolean autoReleaseConnection, String... tables)
+            throws SQLException {
         try {
             for (String table : tables) {
                 val resultSet = conn.getMetaData().getIndexInfo(null, null, table, false, false);
@@ -216,7 +241,7 @@ public class JdbcUtil {
         } catch (Exception e) {
             logger.error("Fail to know if table {} index {} exists", tables, index, e);
         } finally {
-            if (!conn.isClosed())
+            if (!conn.isClosed() && autoReleaseConnection)
                 conn.close();
         }
         return false;
