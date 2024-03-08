@@ -92,6 +92,7 @@ public class JdbcEpochStore extends EpochStore {
     private static String table;
     @Getter
     private static DataSourceTransactionManager transactionManager;
+    private volatile boolean createCompleted;
 
     public static EpochStore getEpochStore(KylinConfig config) {
         return Singletons.getInstance(JdbcEpochStore.class, (clz) -> new JdbcEpochStore(config));
@@ -104,6 +105,7 @@ public class JdbcEpochStore extends EpochStore {
         transactionManager = new DataSourceTransactionManager(dataSource);
         jdbcTemplate = new JdbcTemplate(dataSource);
         table = url.getIdentifier() + EPOCH_SUFFIX;
+        createCompleted = false;
     }
 
     public static String getEpochSql(String sql, String tableName) {
@@ -126,6 +128,9 @@ public class JdbcEpochStore extends EpochStore {
     
     @Override
     public void createIfNotExist() throws Exception {
+        if(createCompleted){
+            return;
+        }
         if (isTableExists(getConnection(jdbcTemplate), table)) {
             JdbcUtil.retry(() -> {
                 if (!isPrimaryKeyExists(getConnection(jdbcTemplate), table)) {
@@ -135,6 +140,7 @@ public class JdbcEpochStore extends EpochStore {
                     });
                     log.info("Succeed to add table primary key: {}", table);
                 }
+                createCompleted = true;
                 return 1;
             });
             return;
