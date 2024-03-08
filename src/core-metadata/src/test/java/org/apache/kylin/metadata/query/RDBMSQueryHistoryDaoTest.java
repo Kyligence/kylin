@@ -532,6 +532,28 @@ public class RDBMSQueryHistoryDaoTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    public void testGetByQueryIds() throws Exception {
+        QueryMetrics queryMetrics = createQueryMetrics(1580311512000L, 1L, true, PROJECT, true);
+        queryHistoryDAO.insert(queryMetrics);
+
+        List<QueryHistory> queryHistories = queryHistoryDAO
+                .getByQueryIds(Lists.newArrayList("6a9a151f-f992-4d52-a8ec-8ff3fd3de6b1"));
+        Assert.assertEquals(1, queryHistories.size());
+        Assert.assertEquals(queryMetrics.id, queryHistories.get(0).getId());
+
+        queryHistories = queryHistoryDAO.getByQueryIds(
+                Lists.newArrayList("6a9a151f-f992-4d52-a8ec-8ff3fd3de6b1", "6a9a151f-f992-4d52-a8ec-8ff3fd3de6b2"));
+        Assert.assertEquals(1, queryHistories.size());
+        Assert.assertEquals(queryMetrics.id, queryHistories.get(0).getId());
+
+        queryHistoryDAO.insert(queryMetrics);
+        queryHistories = queryHistoryDAO.getByQueryIds(Lists.newArrayList("6a9a151f-f992-4d52-a8ec-8ff3fd3de6b1"));
+        Assert.assertEquals(2, queryHistories.size());
+        Assert.assertEquals(queryMetrics.getQueryId(), queryHistories.get(0).getQueryId());
+        Assert.assertEquals(queryMetrics.getQueryId(), queryHistories.get(1).getQueryId());
+    }
+
+    @Test
     public void testGetQueryHistoryMinQueryTime() {
         QueryMetrics queryMetrics1 = createQueryMetrics(1580311512000L, 1L, true, PROJECT, true);
         QueryMetrics queryMetrics2 = createQueryMetrics(1580397912000L, 2L, false, PROJECT, true);

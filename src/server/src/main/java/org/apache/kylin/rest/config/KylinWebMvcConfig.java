@@ -17,8 +17,7 @@
  */
 package org.apache.kylin.rest.config;
 
-
-import org.apache.kylin.rest.QueryBlockCleanInterceptor;
+import org.apache.kylin.rest.QueryInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -28,13 +27,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class KylinWebMvcConfig implements WebMvcConfigurer {
 
     @Bean
-    public QueryBlockCleanInterceptor getQueryBlockCleanInterceptor() {
-        return new QueryBlockCleanInterceptor();
+    public QueryInterceptor getQueryInterceptor() {
+        return new QueryInterceptor();
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(getQueryBlockCleanInterceptor()).addPathPatterns("/api/query");
+        registry.addInterceptor(getQueryInterceptor()).addPathPatterns("/api/query");
     }
-
 }

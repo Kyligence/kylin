@@ -18,8 +18,13 @@
 
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.metadata.query.QueryMetrics.QUERY_RESPONSE_TIME;
+
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -28,13 +33,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.Singletons;
 import org.apache.kylin.common.util.ExecutorServiceUtil;
 import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
@@ -108,21 +116,52 @@ public class QueryHistoryScheduler {
                 queryMetricsQueue.drainTo(metrics);
                 List<QueryMetrics> insertMetrics;
                 if (isQuerySparkJobTraceEnabled && metrics.size() > 0) {
-                    insertMetrics = metrics.stream().filter(queryMetrics -> {
+                    insertMetrics = metrics.stream().filter(qm -> !qm.isUpdateMetrics()).filter(queryMetrics -> {
                         String queryId = queryMetrics.getQueryId();
                         SparkJobTraceMetric sparkJobTraceMetric = SparkJobTrace.getSparkJobTraceMetric(queryId);
                         return isCollectedFinished(queryId, sparkJobTraceMetric, queryMetrics);
                     }).collect(Collectors.toList());
                 } else {
-                    insertMetrics = metrics;
+                    insertMetrics = metrics.stream().filter(qm -> !qm.isUpdateMetrics()).collect(Collectors.toList());
                 }
-                collectSecondStorageMetric(insertMetrics);
-                queryHistoryDAO.insert(insertMetrics);
+                if (CollectionUtils.isNotEmpty(insertMetrics)) {
+                    collectSecondStorageMetric(insertMetrics);
+                    queryHistoryDAO.insert(insertMetrics);
+                }
+                List<QueryMetrics> updateMetrics = metrics.stream().filter(QueryMetrics::isUpdateMetrics)
+                        .collect(Collectors.toList());
+                if (CollectionUtils.isNotEmpty(updateMetrics)) {
+                    updateQueryMetricsTrace(updateMetrics);
+                }
             } catch (Exception th) {
                 logger.error("Error when write query history", th);
             }
         }
 
+        private void updateQueryMetricsTrace(List<QueryMetrics> updateMetrics) {
+            List<String> queryIds = updateMetrics.stream().map(QueryMetrics::getQueryId).collect(Collectors.toList());
+            Map<String, List<QueryMetrics>> metricsMap = updateMetrics.stream()
+                    .collect(Collectors.groupingBy(QueryMetrics::getQueryId));
+
+            List<QueryHistory> queryHistories = queryHistoryDAO.getByQueryIds(queryIds);
+
+            List<Pair<Long, QueryHistoryInfo>> idToQHInfoList = queryHistories.stream().map(hs -> {
+                Optional<QueryHistoryInfo.QueryTraceSpan> maxQueryTraceSpan = metricsMap.get(hs.getQueryId()).stream()
+                        .flatMap(qm -> qm.getQueryHistoryInfo().getTraces().stream())
+                        .filter(span -> QUERY_RESPONSE_TIME.equals(span.getName()))
+                        .max(Comparator.comparingLong(QueryHistoryInfo.QueryTraceSpan::getDuration));
+
+                if (maxQueryTraceSpan.isPresent()) {
+                    QueryHistoryInfo.QueryTraceSpan trace = maxQueryTraceSpan.get();
+                    QueryHistoryInfo qhi = hs.getQueryHistoryInfo();
+                    qhi.getTraces().add(trace);
+                    return new Pair<>(hs.getId(), qhi);
+                }
+                return null;
+            }).filter(Objects::nonNull).collect(Collectors.toList());
+
+            queryHistoryDAO.batchUpdateQueryHistoriesInfo(idToQHInfoList);
+        }
     }
 
     public boolean isCollectedFinished(String queryId, SparkJobTraceMetric sparkJobTraceMetric,

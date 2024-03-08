@@ -18,11 +18,16 @@
 
 package org.apache.kylin.rest;
 
+import static org.apache.kylin.metadata.query.QueryMetrics.QUERY_RESPONSE_TIME;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.guava30.shaded.common.base.Strings;
+import org.apache.kylin.metadata.query.QueryHistoryInfo;
+import org.apache.kylin.metadata.query.QueryMetrics;
+import org.apache.kylin.rest.service.QueryHistoryScheduler;
 import org.apache.spark.sql.SparderEnv;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -33,15 +38,29 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @Order(-200)
-public class QueryBlockCleanInterceptor implements HandlerInterceptor {
+public class QueryInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
             throws Exception {
+        long start = System.currentTimeMillis();
         String queryExecutionID = QueryContext.current().getExecutionID();
         if (!Strings.isNullOrEmpty(queryExecutionID)) {
             SparderEnv.deleteQueryTaskResultBlock(queryExecutionID);
         }
+        long responseStartTime = QueryContext.current().getResponseStartTime();
+        if (responseStartTime > 0) {
+            String queryId = QueryContext.current().getQueryId();
+            long responseTime = System.currentTimeMillis() - responseStartTime;
+            log.info("Query[{}] record QUERY_RESPONSE_TIME [{}]", queryId, responseTime);
+            QueryMetrics queryMetrics = new QueryMetrics(queryId);
+            QueryHistoryInfo info = new QueryHistoryInfo();
+            info.getTraces().add(new QueryHistoryInfo.QueryTraceSpan(QUERY_RESPONSE_TIME, null, responseTime));
+            queryMetrics.setQueryHistoryInfo(info);
+            queryMetrics.setUpdateMetrics(true);
+            QueryHistoryScheduler queryHistoryScheduler = QueryHistoryScheduler.getInstance();
+            queryHistoryScheduler.offerQueryHistoryQueue(queryMetrics);
+        }
         QueryContext.current().close();
-
+        log.debug("QueryInterceptor use time [{}]ms", System.currentTimeMillis() - start);
     }
 }

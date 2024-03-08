@@ -481,10 +481,12 @@ public class NQueryController extends NBasicController {
     public EnvelopeResponse<Map<String, Object>> getQueryHistories(@RequestParam(value = "project") String project,
             @RequestParam(value = "start_time_from", required = false) String startTimeFrom,
             @RequestParam(value = "start_time_to", required = false) String startTimeTo,
+            @RequestParam(value = "sql", required = false) String sql,
             @RequestParam(value = "page_offset", required = false, defaultValue = "0") Integer offset,
             @RequestParam(value = "page_size", required = false, defaultValue = "10") Integer size) {
         checkProjectName(project);
         QueryHistoryRequest request = new QueryHistoryRequest(project, startTimeFrom, startTimeTo);
+        Optional.ofNullable(sql).ifPresent(request::setSql);
         DataRangeUtils.validateDataRange(startTimeFrom, startTimeTo, null);
         Map<String, Object> queryHistories = QueryHisTransformStandardUtil
                 .transformQueryHistory(queryHistoryService.getQueryHistories(request, size, offset));

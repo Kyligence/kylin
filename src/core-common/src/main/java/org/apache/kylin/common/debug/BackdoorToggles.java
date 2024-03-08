@@ -115,6 +115,16 @@ public class BackdoorToggles {
         return v == null ? null : Integer.parseInt(v);
     }
 
+    public static Long getConnectionCreatingTime() {
+        String v = getString(CONNECTION_CREATING_TIME);
+        return v == null ? null : Long.parseLong(v);
+    }
+
+    public static Long getStatementToRequestTime() {
+        String v = getString(STATEMENT_TO_REQUEST_TIME);
+        return v == null ? null : Long.parseLong(v);
+    }
+
     public static boolean getPrepareOnly() {
         return getBoolean(DEBUG_TOGGLE_PREPARE_ONLY);
     }
@@ -247,4 +257,7 @@ public class BackdoorToggles {
     public static final String QUERY_FROM_AUTO_MODELING = "QUERY_FROM_AUTO_MODELING";
 
     public static final String QUERY_NON_EQUI_JOIN_MODEL_ENABLED = "QUERY_NON_EQUI_JOIN_MODEL_ENABLED";
+
+    public static final String CONNECTION_CREATING_TIME = "CONNECTION_CREATING_TIME";
+    public static final String STATEMENT_TO_REQUEST_TIME = "STATEMENT_TO_REQUEST_TIME";
 }

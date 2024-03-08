@@ -550,7 +550,7 @@ public class NQueryControllerTest extends NLocalFileMetadataTestCase {
                 .andExpect(MockMvcResultMatchers.jsonPath("$.data.query_histories[2].sql_text").value("sql3"));
 
         Mockito.verify(nQueryController).getQueryHistories(PROJECT, request.getStartTimeFrom(),
-                request.getStartTimeTo(), 2, 3);
+                request.getStartTimeTo(), null, 2, 3);
 
         HashMap<String, Object> dataWithNullHistories = Maps.newHashMap();
         dataWithNullHistories.put("query_histories", null);
@@ -559,6 +559,43 @@ public class NQueryControllerTest extends NLocalFileMetadataTestCase {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/query/query_histories").contentType(MediaType.APPLICATION_JSON)
                 .param("project", PROJECT).param("start_time_from", "0").param("start_time_to", "1000")
                 .param("page_offset", "2").param("page_size", "6")
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data.size").value(6));
+    }
+
+    @Test
+    public void testGetQueryHistoriesAPIWithSql() throws Exception {
+        QueryHistoryRequest request = new QueryHistoryRequest();
+        request.setProject(PROJECT);
+        request.setStartTimeFrom("0");
+        request.setStartTimeTo("1000");
+        request.setSql("select");
+        HashMap<String, Object> data = Maps.newHashMap();
+        data.put("query_histories", mockedQueryHistories());
+        data.put("size", 6);
+        Mockito.when(queryHistoryService.getQueryHistories(request, 3, 2)).thenReturn(data);
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/query/query_histories").contentType(MediaType.APPLICATION_JSON)
+                .param("project", PROJECT).param("start_time_from", "0").param("start_time_to", "1000")
+                .param("page_offset", "2").param("page_size", "3").param("sql", "select")
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data.size").value(6))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data.query_histories.length()").value(3))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data.query_histories[0].sql_text").value("sql1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data.query_histories[1].sql_text").value("sql2"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.data.query_histories[2].sql_text").value("sql3"));
+
+        Mockito.verify(nQueryController).getQueryHistories(PROJECT, request.getStartTimeFrom(),
+                request.getStartTimeTo(), "select", 2, 3);
+
+        HashMap<String, Object> dataWithNullHistories = Maps.newHashMap();
+        dataWithNullHistories.put("query_histories", null);
+        dataWithNullHistories.put("size", 6);
+        Mockito.when(queryHistoryService.getQueryHistories(request, 6, 2)).thenReturn(dataWithNullHistories);
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/query/query_histories").contentType(MediaType.APPLICATION_JSON)
+                .param("project", PROJECT).param("start_time_from", "0").param("start_time_to", "1000")
+                .param("page_offset", "2").param("page_size", "6").param("sql", "select")
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.data.size").value(6));
@@ -622,8 +659,8 @@ public class NQueryControllerTest extends NLocalFileMetadataTestCase {
         Mockito.doReturn(tableRefresh).when(tableService).refreshSingleCatalogCache(Mockito.any());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/api/query/single_catalog_cache")
-                        .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
-                        .accept(MediaType.parseMediaType(APPLICATION_PUBLIC_JSON)))
+                .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
+                .accept(MediaType.parseMediaType(APPLICATION_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
@@ -647,8 +684,8 @@ public class NQueryControllerTest extends NLocalFileMetadataTestCase {
         response.setMode("ALL");
         List<ServerInfoResponse> result = Lists.newArrayList(response);
         Mockito.when(clusterManager.getServers()).thenReturn(result);
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/query/servers")
-                        .param("ext", "true").accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/query/servers").param("ext", "true")
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
@@ -687,8 +724,8 @@ public class NQueryControllerTest extends NLocalFileMetadataTestCase {
         sql.setForcedToIndex(true);
         sql.setForcedToPushDown(false);
         mockMvc.perform(MockMvcRequestBuilders.post("/api/query/if_big_query").contentType(MediaType.APPLICATION_JSON)
-                        .content(JsonUtil.writeValueAsString(sql)).header("User-Agent", "Chrome/89.0.4389.82 Safari/537.36")
-                        .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .content(JsonUtil.writeValueAsString(sql)).header("User-Agent", "Chrome/89.0.4389.82 Safari/537.36")
+                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         Mockito.verify(nQueryController).ifBigQuery(Mockito.any(), Mockito.anyString());

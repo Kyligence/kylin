@@ -164,6 +164,11 @@ public class QueryContext implements Closeable {
     @Setter
     private boolean outOfSegmentRange = false;
 
+    /** Record right after record `end` */
+    @Getter
+    @Setter
+    private long responseStartTime = 0L;
+
     private QueryContext() {
         // use QueryContext.current() instead
         queryId = RandomUtil.randomUUIDStr();

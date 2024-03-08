@@ -306,6 +306,17 @@ public class JdbcQueryHistoryStore {
         }
     }
 
+    public List<QueryHistory> queryByQueryIds(List<String> queryIds) {
+        try (SqlSession session = sqlSessionFactory.openSession()) {
+            QueryHistoryMapper mapper = session.getMapper(QueryHistoryMapper.class);
+            SelectStatementProvider statementProvider = select(getSelectFields(queryHistoryTable)) //
+                    .from(queryHistoryTable) //
+                    .where(queryHistoryTable.queryId, isIn(queryIds)) //
+                    .build().render(RenderingStrategies.MYBATIS3);
+            return mapper.selectMany(statementProvider);
+        }
+    }
+
     public List<QueryHistory> queryAllQueryHistories() {
         try (SqlSession session = sqlSessionFactory.openSession()) {
             QueryHistoryMapper mapper = session.getMapper(QueryHistoryMapper.class);

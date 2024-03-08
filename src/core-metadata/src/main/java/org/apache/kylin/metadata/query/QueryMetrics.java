@@ -22,10 +22,9 @@ import java.util.List;
 
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.scheduler.SchedulerEventNotifier;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -46,6 +45,7 @@ public class QueryMetrics extends SchedulerEventNotifier {
     public static final String TOTAL_SCAN_COUNT = "totalScanCount";
     public static final String TOTAL_SCAN_BYTES = "totalScanBytes";
     public static final String SOURCE_RESULT_COUNT = "sourceResultCount";
+    public static final String QUERY_RESPONSE_TIME = "QUERY_RESPONSE_TIME";
 
     // fields below are columns in InfluxDB table which records down query history
     protected long id;
@@ -92,6 +92,8 @@ public class QueryMetrics extends SchedulerEventNotifier {
     protected String defaultServer;
 
     protected QueryHistoryInfo queryHistoryInfo;
+
+    protected boolean isUpdateMetrics = false;
 
     public QueryMetrics(String queryId) {
         this.queryId = queryId;

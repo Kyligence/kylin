@@ -20,6 +20,8 @@ package org.apache.kylin.rest.service;
 
 import static org.apache.kylin.common.QueryTrace.GET_ACL_INFO;
 import static org.apache.kylin.common.QueryTrace.SPARK_JOB_EXECUTION;
+import static org.apache.kylin.common.debug.BackdoorToggles.CONNECTION_CREATING_TIME;
+import static org.apache.kylin.common.debug.BackdoorToggles.STATEMENT_TO_REQUEST_TIME;
 import static org.apache.kylin.common.exception.ServerErrorCode.ACCESS_DENIED;
 import static org.apache.kylin.common.exception.ServerErrorCode.BLACKLIST_EXCEEDED_CONCURRENT_LIMIT;
 import static org.apache.kylin.common.exception.ServerErrorCode.BLACKLIST_QUERY_REJECTED;
@@ -47,6 +49,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -468,6 +471,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         ParquetPageFilterCollector.logParquetPages(QueryContext.current().getQueryId());
 
         QueryContext.current().record("end");
+        QueryContext.current().setResponseStartTime(System.currentTimeMillis());
 
         LogReport report = new LogReport().put(LogReport.QUERY_ID, QueryContext.current().getQueryId())
                 .put(LogReport.SQL, sql).put(LogReport.USER, user)
@@ -563,9 +567,13 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             return response;
         } finally {
             QueryLimiter.release();
+            String queryId = QueryContext.current().getQueryId();
             String queryExecutionId = QueryContext.current().getExecutionID();
+            long responseStartTime = QueryContext.current().getResponseStartTime();
             QueryContext.current().close();
+            QueryContext.current().setQueryId(queryId);
             QueryContext.current().setExecutionID(queryExecutionId);
+            QueryContext.current().setResponseStartTime(responseStartTime);
         }
     }
 
@@ -635,8 +643,14 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
     public SQLResponse doQueryWithCache(SQLRequest sqlRequest) {
         checkSqlRequest(sqlRequest);
 
-        if (sqlRequest.getBackdoorToggles() != null)
+        if (sqlRequest.getBackdoorToggles() != null) {
             BackdoorToggles.addToggles(sqlRequest.getBackdoorToggles());
+            QueryTrace queryTrace = QueryContext.currentTrace();
+            Optional.ofNullable(BackdoorToggles.getConnectionCreatingTime())
+                    .ifPresent(duration -> queryTrace.appendSpanFromRequest(CONNECTION_CREATING_TIME, duration));
+            Optional.ofNullable(BackdoorToggles.getStatementToRequestTime())
+                    .ifPresent(duration -> queryTrace.appendSpanFromRequest(STATEMENT_TO_REQUEST_TIME, duration));
+        }
 
         QueryContext queryContext = QueryContext.current();
         QueryMetricsContext.start(queryContext.getQueryId(), getDefaultServer());
