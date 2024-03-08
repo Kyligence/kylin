@@ -27,6 +27,8 @@ import org.apache.kylin.measure.MeasureType;
 import org.apache.kylin.measure.MeasureTypeFactory;
 import org.apache.kylin.measure.bitmap.BitmapIntersectDistinctCountAggFunc;
 import org.apache.kylin.measure.bitmap.BitmapIntersectDistinctCountAggV2Func;
+import org.apache.kylin.measure.bitmap.BitmapUuidFunc;
+import org.apache.kylin.measure.bitmap.BitmapUuidValueFunc;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.metadata.datatype.DataTypeSerializer;
 import org.apache.kylin.metadata.model.FunctionDesc;
@@ -76,7 +78,20 @@ public class IntersectMeasureType extends MeasureType<IntersectBitmapCounter> {
             .put(FunctionDesc.FUNC_INTERSECT_VALUE, BitmapIntersectDistinctCountAggFunc.class)
             .put(FunctionDesc.FUNC_INTERSECT_VALUE_V2, BitmapIntersectDistinctCountAggV2Func.class)
             .put(FunctionDesc.FUNC_INTERSECT_BITMAP_UUID, BitmapIntersectDistinctCountAggFunc.class)
-            .put(FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_V2, BitmapIntersectDistinctCountAggV2Func.class).build();
+            .put(FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_V2, BitmapIntersectDistinctCountAggV2Func.class)
+            .put(FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_DISTINCT, BitmapUuidFunc.class)
+            .put(FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_COUNT, BitmapUuidFunc.class)
+            .put(FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_VALUE, BitmapUuidValueFunc.class)
+            .put(FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_VALUE_ALL, BitmapUuidFunc.class)
+            .put(FunctionDesc.FUNC_UNION_BITMAP_UUID_DISTINCT, BitmapUuidFunc.class)
+            .put(FunctionDesc.FUNC_UNION_BITMAP_UUID_COUNT, BitmapUuidFunc.class)
+            .put(FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE, BitmapUuidValueFunc.class)
+            .put(FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE_ALL, BitmapUuidFunc.class)
+            .put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_DISTINCT, BitmapUuidFunc.class)
+            .put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_COUNT, BitmapUuidFunc.class)
+            .put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE, BitmapUuidValueFunc.class)
+            .put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE_ALL, BitmapUuidFunc.class)
+            .build();
 
     @Override
     public Map<String, Class<?>> getRewriteCalciteAggrFunctions() {

@@ -847,6 +847,39 @@ case class SumLCDecode(bytes: Expression, wrapDataTypeExpr: Expression) extends 
   }
 }
 
+case class BitmapUuidToArray(_child: Expression) extends UnaryExpression with ExpectsInputTypes {
+  override def child: Expression = _child
+
+  override def inputTypes: Seq[AbstractDataType] = Seq(BinaryType)
+
+  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val expressionUtils = ExpressionUtils.getClass.getName.stripSuffix("$")
+    defineCodeGen(ctx, ev, bytes => {
+      s"""$expressionUtils.bitmapUuidToArray($bytes)"""
+    })
+  }
+
+  override protected def nullSafeEval(bytes: Any): Any = {
+    ExpressionUtils.bitmapUuidToArray(bytes)
+  }
+
+  override def eval(input: InternalRow): Any = {
+    val bitmapByte = _child.eval(input)
+    if (bitmapByte != null) {
+      ExpressionUtils.bitmapUuidToArray(bitmapByte)
+    } else {
+      new GenericArrayData(new Array[Long](0))
+    }
+  }
+
+  override def dataType: DataType = ArrayType(LongType, false)
+
+  override def prettyName: String = "bitmap_uuid_to_array"
+
+  override protected def withNewChildInternal(newChild: Expression): Expression =
+    copy(_child = newChild)
+}
+
 case class YMDintBetween(first: Expression, second: Expression) extends BinaryExpression with ImplicitCastInputTypes {
 
   override def left: Expression = first

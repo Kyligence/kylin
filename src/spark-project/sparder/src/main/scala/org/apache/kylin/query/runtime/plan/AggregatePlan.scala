@@ -37,13 +37,14 @@ import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.udaf.SingleValueAgg
+import org.apache.spark.sql.udaf.{BitmapFuncType, SingleValueAgg}
 import org.apache.spark.sql.util.SparderTypeUtil
 
 import scala.collection.JavaConverters._
 
 // scalastyle:off
 object AggregatePlan extends LogEx {
+  val unSupportedOperationEp = s"limit / offset must be of constant literal"
   val binaryMeasureType =
     List("PERCENTILE", "PERCENTILE_APPROX", "INTERSECT_COUNT", "COUNT_DISTINCT", "BITMAP_UUID",
       FunctionDesc.FUNC_BITMAP_BUILD, FunctionDesc.FUNC_SUM_LC)
@@ -290,6 +291,75 @@ object AggregatePlan extends LogEx {
               case _ =>
                 collect_set(col(argNames.head)).alias(aggName)
             }
+          case FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_DISTINCT =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), BinaryType, BitmapFuncType.INTERSECT).alias(aggName)
+          case FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_COUNT =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), IntegerType, BitmapFuncType.INTERSECT).alias(aggName)
+          case FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_VALUE =>
+            rel.getInput match {
+              case projectRel: OlapProjectRel =>
+                val limitArg = projectRel.getChildExps.get(call.getArgList.get(1))
+                val offsetArg = projectRel.getChildExps.get(call.getArgList.get(2))
+                (limitArg, offsetArg) match {
+                  case (limitLit: RexLiteral, offsetLit: RexLiteral) =>
+                    val limit = limitLit.getValue.toString.toInt
+                    val offset = offsetLit.getValue.toString.toInt
+                    KapFunctions.bitmap_uuid_page_func(col(argNames.head), limit, offset, ArrayType(LongType, false),
+                      BitmapFuncType.INTERSECT).alias(aggName)
+                  case _ =>
+                    throw new UnsupportedOperationException()
+                }
+              case _ =>
+                throw new UnsupportedOperationException(unSupportedOperationEp)
+            }
+          case FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_VALUE_ALL =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), ArrayType(LongType, false), BitmapFuncType.INTERSECT).alias(aggName)
+          case FunctionDesc.FUNC_UNION_BITMAP_UUID_DISTINCT =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), BinaryType, BitmapFuncType.UNION).alias(aggName)
+          case FunctionDesc.FUNC_UNION_BITMAP_UUID_COUNT =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), IntegerType, BitmapFuncType.UNION).alias(aggName)
+          case FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE =>
+            rel.getInput match {
+              case projectRel: OlapProjectRel =>
+                val limitArg = projectRel.getChildExps.get(call.getArgList.get(1))
+                val offsetArg = projectRel.getChildExps.get(call.getArgList.get(2))
+                (limitArg, offsetArg) match {
+                  case (limitLit: RexLiteral, offsetLit: RexLiteral) =>
+                    val limit = limitLit.getValue.toString.toInt
+                    val offset = offsetLit.getValue.toString.toInt
+                    KapFunctions.bitmap_uuid_page_func(col(argNames.head), limit, offset, ArrayType(LongType, false),
+                      BitmapFuncType.UNION).alias(aggName)
+                  case _ =>
+                    throw new UnsupportedOperationException(unSupportedOperationEp)
+                }
+              case _ =>
+                throw new UnsupportedOperationException(unSupportedOperationEp)
+            }
+          case FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE_ALL =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), ArrayType(LongType, false), BitmapFuncType.UNION).alias(aggName)
+          case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_DISTINCT =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), BinaryType, BitmapFuncType.SUBTRACT).alias(aggName)
+          case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_COUNT =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), IntegerType, BitmapFuncType.SUBTRACT).alias(aggName)
+          case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE =>
+            rel.getInput match {
+              case projectRel: OlapProjectRel =>
+                val limitArg = projectRel.getChildExps.get(call.getArgList.get(1))
+                val offsetArg = projectRel.getChildExps.get(call.getArgList.get(2))
+                (limitArg, offsetArg) match {
+                  case (limitLit: RexLiteral, offsetLit: RexLiteral) =>
+                    val limit = limitLit.getValue.toString.toInt
+                    val offset = offsetLit.getValue.toString.toInt
+                    KapFunctions.bitmap_uuid_page_func(col(argNames.head), limit, offset, ArrayType(LongType, false),
+                      BitmapFuncType.SUBTRACT).alias(aggName)
+                  case _ =>
+                    throw new UnsupportedOperationException(unSupportedOperationEp)
+                }
+              case _ =>
+                throw new UnsupportedOperationException(unSupportedOperationEp)
+            }
+          case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE_ALL =>
+            KapFunctions.bitmap_uuid_func(col(argNames.head), ArrayType(LongType, false), BitmapFuncType.SUBTRACT).alias(aggName)
           case _ =>
             throw new IllegalArgumentException(
               s"""Unsupported function name $funcName""")

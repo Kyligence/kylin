@@ -27,7 +27,7 @@ import org.apache.kylin.query.util.UnsupportedSparkFunctionException
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.KapFunctions._
 import org.apache.spark.sql.catalyst.expressions
-import org.apache.spark.sql.catalyst.expressions.{Cast, If, IntersectCountByCol, Literal, Nvl, StringLocate, StringRepeat, StringReplace, SubtractBitmapUUID, SubtractBitmapValue}
+import org.apache.spark.sql.catalyst.expressions.{BitmapUuidToArray, If, IntersectCountByCol, Nvl, StringLocate, StringRepeat, StringReplace, SubtractBitmapUUID, SubtractBitmapValue}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.util.SparderTypeUtil
 
@@ -60,7 +60,9 @@ object ExpressionConverter {
   private val varArgsFunc = mutable.HashSet("months_between", "locate", "rtrim", "from_unixtime", "to_date",
     "to_timestamp", "split", "bround", "lpad", "rpad", "round")
 
-  private val bitmapUDF = mutable.HashSet("intersect_count_by_col", "subtract_bitmap_value", "subtract_bitmap_uuid");
+  private val bitmapUDF = mutable.HashSet("intersect_count_by_col", "subtract_bitmap_value", "subtract_bitmap_uuid",
+    "bitmap_uuid_to_array"
+  );
 
   // scalastyle:off
   def convert(sqlTypeName: SqlTypeName, relDataType: RelDataType, op: SqlKind, opName: String, children: Seq[Any]): Any = {
@@ -130,7 +132,7 @@ object ExpressionConverter {
         val values = children.drop(1).map(c => k_lit(c).expr)
         not(in(k_lit(children.head).expr, values))
       case DIVIDE =>
-        
+
         assert(children.size == 2)
         k_lit(children.head).divide(k_lit(children.last))
       case CASE =>
@@ -408,6 +410,8 @@ object ExpressionConverter {
                 new Column(SubtractBitmapValue(children.head.asInstanceOf[Column].expr, children.last.asInstanceOf[Column].expr, KylinConfig.getInstanceFromEnv.getBitmapValuesUpperBound))
               case "subtract_bitmap_uuid" =>
                 new Column(SubtractBitmapUUID(children.head.asInstanceOf[Column].expr, children.last.asInstanceOf[Column].expr))
+              case "bitmap_uuid_to_array" =>
+                new Column(BitmapUuidToArray(children.head.asInstanceOf[Column].expr))
             }
           case "ascii" =>
             ascii(k_lit(children.head))

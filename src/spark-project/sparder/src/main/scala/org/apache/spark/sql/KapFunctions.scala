@@ -23,9 +23,10 @@ import org.apache.spark.sql.catalyst.expressions.ExpressionUtils.expression
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateFunction
 import org.apache.spark.sql.catalyst.expressions.codegen.Block.BlockHelper
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode}
-import org.apache.spark.sql.catalyst.expressions.{ApproxCountDistinctDecode, CeilDateTime, DictEncode, DictEncodeV3, EmptyRow, Expression, ExpressionInfo, ExpressionUtils, FloorDateTime, ImplicitCastInputTypes, In, KapAddMonths, KapSubtractMonths, KylinTimestampAdd, KylinTimestampDiff, Like, Literal, PercentileDecode, PreciseCountDistinctDecode, RLike, RoundBase, KylinSplitPart, Sum0, Truncate, SumLCDecode, YMDintBetween}
+import org.apache.spark.sql.catalyst.expressions.{ApproxCountDistinctDecode, CeilDateTime, DictEncode, DictEncodeV3, EmptyRow, Expression, ExpressionInfo, ExpressionUtils, FloorDateTime, ImplicitCastInputTypes, In, KapAddMonths, KapSubtractMonths, KylinSplitPart, KylinTimestampAdd, KylinTimestampDiff, Like, Literal, PercentileDecode, PreciseCountDistinctDecode, RLike, RoundBase, Sum0, SumLCDecode, Truncate, YMDintBetween}
 import org.apache.spark.sql.types.{ArrayType, BinaryType, ByteType, DataType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType}
-import org.apache.spark.sql.udaf.{ApproxCountDistinct, IntersectCount, Percentile, PreciseBitmapBuildBase64Decode, PreciseBitmapBuildBase64WithIndex, PreciseBitmapBuildPushDown, PreciseCardinality, PreciseCountDistinct, PreciseCountDistinctAndArray, PreciseCountDistinctAndValue, ReusePreciseCountDistinct, ReuseSumLC}
+import org.apache.spark.sql.udaf.BitmapFuncType.BitmapFuncType
+import org.apache.spark.sql.udaf.{ApproxCountDistinct, BitmapUuidFunc, IntersectCount, Percentile, PreciseBitmapBuildBase64Decode, PreciseBitmapBuildBase64WithIndex, PreciseBitmapBuildPushDown, PreciseCardinality, PreciseCountDistinct, PreciseCountDistinctAndArray, PreciseCountDistinctAndValue, ReusePreciseCountDistinct, ReuseSumLC}
 
 object KapFunctions {
 
@@ -89,6 +90,17 @@ object KapFunctions {
 
   def precise_bitmap_build_pushdown(column: Column): Column =
     Column(PreciseBitmapBuildPushDown(column.expr).toAggregateExpression())
+
+  def bitmap_uuid_func(column: Column, returnDataType: DataType, funcType: BitmapFuncType): Column =
+    Column(BitmapUuidFunc(column.expr, -1, 0, returnDataType, funcType).toAggregateExpression())
+
+  def bitmap_uuid_page_func(column: Column, limit: Int, offset: Int,
+                            returnDataType: DataType, funcType: BitmapFuncType): Column = {
+    if (limit < 0 || offset < 0) {
+      throw new UnsupportedOperationException(s"both limit and offset must be >= 0")
+    }
+    Column(BitmapUuidFunc(column.expr, limit, offset, returnDataType, funcType).toAggregateExpression())
+  }
 
   def approx_count_distinct(column: Column, precision: Int): Column =
     Column(ApproxCountDistinct(column.expr, precision).toAggregateExpression())

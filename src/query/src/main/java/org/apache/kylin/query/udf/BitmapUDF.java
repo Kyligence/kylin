@@ -37,4 +37,8 @@ public class BitmapUDF {
             throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }
+
+    public Object BITMAP_UUID_TO_ARRAY(@Parameter(name = "m1") Object map1) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
 }

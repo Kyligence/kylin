@@ -219,7 +219,9 @@
             **/org/apache/kylin/engine/spark/job/stage/build/MaterializedFactTableView.scala,
             **/org/apache/spark/sql/hive/KylinHiveSessionStateBuilder.scala,
             **/org/apache/kylin/rest/service/ModelService.java,
-            **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java
+            **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java,
+            **/org/apache/spark/sql/udaf/PreciseCountDistinct.scala,
+            **/org/apache/spark/sql/catalyst/expressions/KapExpresssions.scala
         </sonar.jacoco.excludes>
         <sonar.coverage.exclusions>
             **/org/apache/kylin/**/*Exception.java,
@@ -279,7 +281,9 @@
             **/org/apache/kylin/engine/spark/job/stage/build/MaterializedFactTableView.scala,
             **/org/apache/spark/sql/hive/KylinHiveSessionStateBuilder.scala,
             **/org/apache/kylin/rest/service/ModelService.java,
-            **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java
+            **/org/apache/kylin/spark/common/logging/SparkExecutorHdfsLogAppender.java,
+            **/org/apache/spark/sql/udaf/PreciseCountDistinct.scala,
+            **/org/apache/spark/sql/catalyst/expressions/KapExpresssions.scala
         </sonar.coverage.exclusions>
         <sonar.organization>kylin</sonar.organization>
         <!--suppress UnresolvedMavenProperty -->
