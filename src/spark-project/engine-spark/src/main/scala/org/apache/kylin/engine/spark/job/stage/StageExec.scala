@@ -83,6 +83,7 @@ trait StageExec extends Logging {
       execute()
     } catch {
       case throwable: Throwable =>
+        logError(s"An exception occurred during the build stage[${this.getClass.getName}] : $throwable")
         state = ExecutableState.ERROR
         KylinBuildEnv.get().buildJobInfos.recordSegmentId(getSegmentId)
         KylinBuildEnv.get().buildJobInfos.recordStageId(getId)

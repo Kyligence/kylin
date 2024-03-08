@@ -54,6 +54,8 @@ class BuildJobInfos {
 
   private val jobRetryInfos: java.util.List[RetryInfo] = new util.LinkedList[RetryInfo]
 
+  private val jobRetryInfosForSegmentParam: util.HashMap[String, String] = new util.HashMap[String, String]
+
   var buildTime: Long = 0L
 
   private var jobStartTime: Long = 0L
@@ -148,6 +150,14 @@ class BuildJobInfos {
 
   def recordJobRetryInfos(info: RetryInfo): Unit = {
     jobRetryInfos.add(info)
+  }
+
+  def recordJobRetryInfosForSegmentParam(key: String, value: String): Unit = {
+    jobRetryInfosForSegmentParam.put(key, value)
+  }
+
+  def getJobRetryInfosForSegmentParam: util.HashMap[String, String] = {
+    jobRetryInfosForSegmentParam
   }
 
   def recordRetryTimes(times: Int): Unit = {
@@ -248,5 +258,6 @@ class BuildJobInfos {
     abnormalLayouts.clear()
     autoSparkConfs.clear()
     jobRetryInfos.clear()
+    jobRetryInfosForSegmentParam.clear()
   }
 }

@@ -373,7 +373,7 @@ public abstract class SparkApplication implements Application {
     }
 
     // Extract the real root exception that caused the spark job to fail.
-    // For example. Intercepts Spark Job that fail due to  permissions exception 
+    // For example. Intercepts Spark Job that fail due to  permissions exception
     // to prevent unnecessary retry from wasting resources
     protected Throwable extractRealRootCauseFromSparkException(Exception e) {
         Throwable rootCause = e.getCause();

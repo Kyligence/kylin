@@ -115,7 +115,7 @@ public class NBucketDictionary {
     public long encode(Object value) {
         long encodeValue = absoluteDictMap.getLong(value.toString());
         if (encodeValue == 0) {
-            throw new IllegalArgumentException(
+            throw new IllegalDictEncodeValueException(
                     String.format(Locale.ROOT, "DFTable encode key:%s with error value:%s", value, encodeValue));
         }
         return encodeValue;

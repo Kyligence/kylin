@@ -40,6 +40,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.engine.spark.builder.SnapshotBuilder;
+import org.apache.kylin.engine.spark.job.KylinBuildEnv;
 import org.apache.kylin.engine.spark.job.LogJobInfoUtils;
 import org.apache.kylin.engine.spark.job.SegmentJob;
 import org.apache.kylin.engine.spark.job.SparkJobConstants;
@@ -142,7 +143,10 @@ public class SegmentBuildJob extends SegmentJob {
                 GATHER_FLAT_TABLE_STATS.createStage(this, seg, buildParam, exec);
                 BUILD_LAYER.createStage(this, seg, buildParam, exec);
                 REFRESH_COLUMN_BYTES.createStage(this, seg, buildParam, exec);
-
+                if (KylinBuildEnv.get().buildJobInfos().getSegmentId().equals(seg.getId())) {
+                    log.info("Segment[{}] build failed, rebuild with new parms", seg.getId());
+                    seg.setExtraBuildOptions((KylinBuildEnv.get().buildJobInfos().getJobRetryInfosForSegmentParam()));
+                }
                 buildSegment(seg, exec);
 
             } catch (IOException e) {

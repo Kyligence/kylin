@@ -26,7 +26,7 @@ import org.apache.kylin.engine.spark.job.NSparkCubingUtil
 import org.apache.kylin.metadata.cube.cuboid.{AdaptiveSpanningTree, NSpanningTreeFactory}
 import org.apache.kylin.metadata.cube.model.{NDataSegment, NDataflow, NDataflowManager}
 import org.apache.kylin.metadata.model.TblColRef
-import org.apache.spark.TaskContext
+import org.apache.spark.{SparkException, TaskContext}
 import org.apache.spark.application.NoRetryException
 import org.apache.spark.dict.{NGlobalDictMetaInfo, NGlobalDictStoreFactory, NGlobalDictionaryV2}
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
@@ -65,16 +65,29 @@ class TestGlobalDictBuild extends SparderBaseFunSuite with SharedSparkSession wi
     val colName = dictColSet.iterator().next()
     val bucketPartitionSize = DictionaryBuilderHelper.calculateBucketSize(seg, colName, randomDF)
     val buildVersion = System.currentTimeMillis()
-    dictionaryBuilder.build(colName, bucketPartitionSize, randomDF, buildVersion)
-    val dict = new NGlobalDictionaryV2(seg.getProject,
+    var dict = new NGlobalDictionaryV2(seg.getProject,
       colName.getTable,
       colName.getName,
       seg.getConfig.getHdfsWorkingDirectory,
       buildVersion)
-    val meta1 = dict.getMetaInfo
-    Assert.assertEquals(1000, meta1.getDictCount)
+    var meta1 = dict.getMetaInfo
+    Assert.assertNull(meta1)
     val encode = encodeColumn(randomDF, seg, dictColSet, buildVersion)
+    // Use colloct to simulate a save operation
+    Assert.assertThrows(classOf[SparkException], () => encode.collect())
+    // if dict encode value is error, then rebuild dict
+    val rebuildVersion = System.currentTimeMillis()
+    dictionaryBuilder.build(colName, bucketPartitionSize, randomDF, rebuildVersion)
+    encode.collect()
+    dict = new NGlobalDictionaryV2(seg.getProject,
+      colName.getTable,
+      colName.getName,
+      seg.getConfig.getHdfsWorkingDirectory,
+      rebuildVersion)
+    meta1 = dict.getMetaInfo
+    Assert.assertEquals(1000, meta1.getDictCount)
     val rowsWithZero = encode.filter(encode(encode.columns(1)) === 0)
+    encode.select(encode(encode.columns(1))).show()
     Assert.assertEquals(true, rowsWithZero.isEmpty)
     // clean all
     val cleanCol = dictColSet.iterator().next()

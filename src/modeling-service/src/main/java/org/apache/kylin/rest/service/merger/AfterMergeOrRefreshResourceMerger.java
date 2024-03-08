@@ -96,7 +96,7 @@ public class AfterMergeOrRefreshResourceMerger extends MetadataMerger {
 
         if (mergedSegment.getStatus() == SegmentStatusEnum.NEW)
             mergedSegment.setStatus(SegmentStatusEnum.READY);
-
+        mergedSegment.setDictReady(false);
         toUpdateSegments.add(mergedSegment);
 
         if (JobTypeEnum.INDEX_MERGE == jobType) {
@@ -137,6 +137,7 @@ public class AfterMergeOrRefreshResourceMerger extends MetadataMerger {
         if (mergedSegment.getStatus() == SegmentStatusEnum.NEW)
             mergedSegment.setStatus(SegmentStatusEnum.READY);
         mergedSegment.setLastBuildTime(mergedSegment.getSegDetails().getLastModified());
+        mergedSegment.setDictReady(false);
         toUpdateSegments.add(mergedSegment);
 
         // only add layouts which still in segments, others maybe deleted by user
