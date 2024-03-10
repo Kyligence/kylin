@@ -31,9 +31,11 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.logical.LogicalJoin;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -63,7 +65,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
         left = convert(left, traitSet);
         right = convert(right, traitSet);
 
-        final JoinInfo info = JoinInfo.of(left, right, join.getCondition());
+        final JoinInfo info = join.analyzeCondition();
 
         // handle powerbi inner join, see https://github.com/Kyligence/KAP/issues/1823
         Join tmpJoin = transformJoinCondition(join, info, traitSet, left, right);
@@ -82,7 +84,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
         try {
             newRel = new OlapJoinRel(cluster, traitSet, left, right, //
                     info.getEquiCondition(left, right, cluster.getRexBuilder()), //
-                    info.leftKeys, info.rightKeys, join.getVariablesSet(), join.getJoinType());
+                    join.getVariablesSet(), join.getJoinType());
         } catch (InvalidRelException e) {
             // Semantic error not possible. Must be a bug. Convert to internal error.
             throw new AssertionError(e);
@@ -90,15 +92,15 @@ public class ExtensionOlapJoinRule extends ConverterRule {
             // return null;
         }
         if (!info.isEqui()) {
-            newRel = new OlapFilterRel(cluster, newRel.getTraitSet(), newRel,
-                    info.getRemaining(cluster.getRexBuilder()));
+            RexNode nonEqui = RexUtil.composeConjunction(cluster.getRexBuilder(), info.nonEquiConditions);
+            newRel = new OlapFilterRel(cluster, newRel.getTraitSet(), newRel, nonEqui);
         }
         return newRel;
     }
 
     private Join transformJoinCondition(LogicalJoin join, JoinInfo info, RelTraitSet traitSet, RelNode left,
             RelNode right) {
-        List<RexInputRef> refs = isPowerBiInnerJoin(info);
+        List<RexInputRef> refs = isPowerBiInnerJoin(info, left.getCluster().getRexBuilder());
         if (refs == null) {
             return join;
         }
@@ -114,7 +116,7 @@ public class ExtensionOlapJoinRule extends ConverterRule {
         JoinInfo newInfo = JoinInfo.of(ImmutableIntList.of(leftIndex), ImmutableIntList.of(rightIndex));
         try {
             return new OlapJoinRel(cluster, traitSet, left, right,
-                    newInfo.getEquiCondition(left, right, cluster.getRexBuilder()), newInfo.leftKeys, newInfo.rightKeys,
+                    newInfo.getEquiCondition(left, right, cluster.getRexBuilder()),
                     join.getVariablesSet(), join.getJoinType());
         } catch (InvalidRelException e) {
             throw new RuntimeException(e);
@@ -137,13 +139,13 @@ public class ExtensionOlapJoinRule extends ConverterRule {
      *
      * The two ANDs may switch position.
      */
-    private List<RexInputRef> isPowerBiInnerJoin(JoinInfo info) {
+    private List<RexInputRef> isPowerBiInnerJoin(JoinInfo info, RexBuilder rexBuilder) {
         if (info.isEqui()) {
             return null;
         }
 
         // 1. top call is OR
-        RexNode root = info.getRemaining(null);
+        RexNode root = RexUtil.composeConjunction(rexBuilder, info.nonEquiConditions);
         if (!(root instanceof RexCall && root.getKind() == SqlKind.OR)) {
             return null;
         }

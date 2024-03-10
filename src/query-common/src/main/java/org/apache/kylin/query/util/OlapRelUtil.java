@@ -19,12 +19,35 @@
 package org.apache.kylin.query.util;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.plan.RelOptCostImpl;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.plan.hep.HepPlanner;
+import org.apache.calcite.plan.hep.HepProgram;
+import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.Function;
+import org.apache.calcite.sql.parser.SqlParseException;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.query.QueryExtension;
+import org.apache.kylin.query.engine.KylinConnectionConfig;
+import org.apache.kylin.query.engine.SqlConverter;
+import org.apache.kylin.query.engine.UdfRegistry;
+import org.apache.kylin.query.schema.OlapSchema;
 
 public class OlapRelUtil {
 
@@ -33,24 +56,40 @@ public class OlapRelUtil {
     private OlapRelUtil() {
     }
 
-    public static String getDigestWithoutRelNodeId(String digest, long layoutId, String modelId) {
-        StringBuilder digestWithoutId = new StringBuilder();
-        boolean isPointToId = false;
-        for (char c : digest.toCharArray()) {
-            if (isPointToId && !isCharNum(c)) {
-                // end point to id
-                isPointToId = false;
+    public static RelNode toRel(String project, KylinConfig kylinConfig, String sql) throws SqlParseException {
+        KylinConnectionConfig connectionConfig = KylinConnectionConfig.fromKapConfig(kylinConfig);
+        CalciteSchema rootSchema = createRootSchema(project, kylinConfig);
+        String defaultSchemaName = "DEFAULT";
+        Prepare.CatalogReader catalogReader = SqlConverter.createCatalogReader(connectionConfig, rootSchema,
+                defaultSchemaName);
+
+        Collection<RelOptRule> optRules = new LinkedHashSet<>();
+        optRules.add(CoreRules.PROJECT_REDUCE_EXPRESSIONS);
+        // optRules.add(CoreRules.CALC_REDUCE_EXPRESSIONS)
+        HepProgram program = HepProgram.builder().addRuleCollection(optRules).build();
+        HepPlanner planner = new HepPlanner(program, null, true, null, RelOptCostImpl.FACTORY);
+        SqlConverter sqlConverter = new SqlConverter(connectionConfig, planner, catalogReader);
+        RelRoot relRoot = sqlConverter.convertSqlToRelNode(sql);
+        // RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(relRoot.rel.getCluster(), null)
+        // RelNode node = new RelFieldTrimmer(null, relBuilder).trim(relRoot.rel)
+        planner.setRoot(relRoot.rel);
+        return planner.findBestExp();
+    }
+
+    private static CalciteSchema createRootSchema(String project, KylinConfig kylinConfig) {
+        Map<String, List<TableDesc>> schemasMap = QueryExtension.getFactory().getSchemaMapExtension()
+                .getAuthorizedTablesAndColumns(kylinConfig, project, true, null, null);
+        Map<String, List<NDataModel>> modelsMap = NDataflowManager.getInstance(kylinConfig, project)
+                .getModelsGroupbyTable();
+        CalciteSchema rootSchema = CalciteSchema.createRootSchema(true);
+        schemasMap.forEach((schemaName, list) -> {
+            OlapSchema olapSchema = new OlapSchema(project, schemaName, schemasMap.get(schemaName), modelsMap);
+            CalciteSchema schema = rootSchema.add(schemaName, olapSchema);
+            for (Map.Entry<String, Function> entry : UdfRegistry.allUdfMap.entries()) {
+                schema.plus().add(entry.getKey().toUpperCase(Locale.ROOT), entry.getValue());
             }
-            if (isPointToId) {
-                continue;
-            }
-            if (c == '#') {
-                // start point to id
-                isPointToId = true;
-            }
-            digestWithoutId.append(c);
-        }
-        return replaceDigestCtxValueByLayoutIdAndModelId(digestWithoutId.toString(), layoutId, modelId);
+        });
+        return rootSchema;
     }
 
     public static String replaceDigestCtxValueByLayoutIdAndModelId(String digestId, long layoutId, String modelId) {
@@ -76,10 +115,6 @@ public class OlapRelUtil {
             }
         }
         return digestBuilder.toString();
-    }
-
-    private static boolean isCharNum(char c) {
-        return c >= '0' && c <= '9';
     }
 
     public static RexNode isNotDistinctFrom(RelNode left, RelNode right, RexNode condition,

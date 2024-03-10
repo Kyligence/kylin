@@ -18,6 +18,9 @@
 
 package org.apache.spark.sql.execution.datasource
 
+import java.sql.{Date, Timestamp}
+import java.util
+
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.kylin.common.exception.TargetSegmentNotFoundException
 import org.apache.kylin.common.util.{DateFormat, HadoopUtil}
@@ -35,12 +38,10 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet, Empty
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow, expressions}
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.sources._
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{BooleanType, StructType}
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.util.collection.BitSet
 
-import java.sql.{Date, Timestamp}
-import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -439,16 +440,16 @@ class FilePruner(val session: SparkSession,
     filters.map(filter => convertCastFilter(filter))
       .flatMap(f => {
         DataSourceStrategy.translateFilter(f, true) match {
-          case v @ Some(_) => v
+          case v@Some(_) => v
           case None =>
             // special cases which are forced pushed down by Kylin
             f match {
-              case expressions.In(e @ expressions.Cast(a: Attribute, _, _, _), list)
+              case expressions.In(e@expressions.Cast(a: Attribute, _, _, _), list)
                 if list.forall(_.isInstanceOf[Literal]) =>
                 val hSet = list.map(_.eval(EmptyRow))
                 val toScala = CatalystTypeConverters.createToScalaConverter(e.dataType)
                 Some(In(a.name, hSet.toArray.map(toScala)))
-              case expressions.InSet(e @ expressions.Cast(a: Attribute, _, _, _), set) =>
+              case expressions.InSet(e@expressions.Cast(a: Attribute, _, _, _), set) =>
                 val toScala = CatalystTypeConverters.createToScalaConverter(e.dataType)
                 Some(In(a.name, set.toArray.map(toScala)))
               case _ => None
@@ -533,6 +534,8 @@ class FilePruner(val session: SparkSession,
           getExpressionShards(right, shardColumnName, numShards)
       case attr: expressions.AttributeReference =>
         getShardSetFromValue(attr, true)
+      case a: Attribute if a.dataType == BooleanType && a.name == shardColumnName =>
+        getShardSetFromValue(a, true)
       case _ =>
         val matchedShards = new BitSet(numShards)
         matchedShards.setUntil(numShards)

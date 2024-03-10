@@ -95,7 +95,8 @@ public class GridTableMappingTest extends NLocalFileMetadataTestCase {
         FunctionDesc functionDesc = new FunctionDesc();
         ParameterDesc parameterDesc = new ParameterDesc();
         parameterDesc.setType("field");
-        parameterDesc.setValue("CUSTOMER_ID");
+        parameterDesc.setValue("ORDER_ID");
+        parameterDesc.setColRef(cube.getModel().getRootFactTable().getColumn("ORDER_ID"));
         functionDesc.setParameters(Lists.newArrayList(parameterDesc));
         functionDesc.setExpression("COUNT");
         functionDesc.setReturnType("bigint");

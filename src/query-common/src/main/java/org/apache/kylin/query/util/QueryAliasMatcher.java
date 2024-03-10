@@ -68,7 +68,6 @@ import org.apache.kylin.query.relnode.ColumnRowType;
 import org.apache.kylin.query.schema.OlapSchema;
 import org.apache.kylin.query.schema.OlapTable;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 // match alias in query to alias in model
@@ -84,13 +83,9 @@ public class QueryAliasMatcher {
     private final Map<String, OlapSchema> schemaMap = Maps.newHashMap();
     private final Map<String, Map<String, OlapTable>> schemaTables = Maps.newHashMap();
 
-    @Getter
-    private final ColExcludedChecker checker;
-
     public QueryAliasMatcher(String project, String defaultSchema) {
         this.project = project;
         this.defaultSchema = defaultSchema;
-        checker = new ColExcludedChecker(KylinConfig.getInstanceFromEnv(), project, null);
     }
 
     /**
@@ -185,7 +180,9 @@ public class QueryAliasMatcher {
         if (queryAlias.size() == 1) {
             Map.Entry<String, ColumnRowType> entry = queryAlias.entrySet().iterator().next();
             if (entry.getValue() == MODEL_VIEW_COLUMN_ROW_TYPE) {
-                return QueryAliasMatchInfo.fromModelView(entry.getKey(), model);
+                return QueryAliasMatchInfo.fromModelView(entry.getKey(), model,
+                        new ColExcludedChecker(KylinConfig.getInstanceFromEnv(), project, model)
+                                .filterRelatedExcludedColumn(model));
             }
         }
 
@@ -220,10 +217,9 @@ public class QueryAliasMatcher {
         if (MapUtils.isEmpty(matches)) {
             return null;
         }
-        BiMap<String, String> aliasMapping = HashBiMap.create();
-        aliasMapping.putAll(matches);
-
-        return new QueryAliasMatchInfo(aliasMapping, queryAlias);
+        return new QueryAliasMatchInfo(HashBiMap.create(matches), queryAlias, model,
+                new ColExcludedChecker(KylinConfig.getInstanceFromEnv(), project, model)
+                        .filterRelatedExcludedColumn(model));
     }
 
     private SqlSelect getSubQuery(SqlNode sqlNode) {
@@ -270,7 +266,7 @@ public class QueryAliasMatcher {
                     SqlNode node2 = CalciteParser.getExpNode(TRANSFORMER.transform(b.getDoubleQuoteInnerExpr()));
                     return ExpressionComparator.isNodeEqual(node1, node2, matchInfo, new AliasDeduceImpl(matchInfo));
                 } catch (Exception e) {
-                    // If this situation occurs, it means that there is an error in the parsing of the computed column. 
+                    // If this situation occurs, it means that there is an error in the parsing of the computed column.
                     // Therefore, we can directly assume that these two computed columns are not equal.
                     log.error("Failed to parse expressions, {} or {}", a.getComputedColumnExpr(),
                             b.getComputedColumnExpr());
@@ -331,13 +327,15 @@ public class QueryAliasMatcher {
             // record alias, since the passed in root is a FROM clause, any AS is related to table alias
             if (call instanceof SqlBasicCall && call.getOperator() instanceof SqlAsOperator) {
                 //join Table as xxx
-                SqlNode[] operands = ((SqlBasicCall) call).getOperands();
-                if (operands != null && operands.length == 2) {
+                List<SqlNode> operands = call.getOperandList();
+                if (operands != null && operands.size() == 2) {
+                    SqlNode operand0 = operands.get(0);
+                    SqlNode operand1 = operands.get(1);
 
                     //both side of the join is SqlIdentifier (not subquery), table as alias
-                    if (operands[0] instanceof SqlIdentifier && operands[1] instanceof SqlIdentifier) {
-                        String alias = operands[1].toString();
-                        SqlIdentifier tableIdentifier = (SqlIdentifier) operands[0];
+                    if (operand0 instanceof SqlIdentifier && operand1 instanceof SqlIdentifier) {
+                        String alias = operand1.toString();
+                        SqlIdentifier tableIdentifier = (SqlIdentifier) operand0;
                         Pair<String, String> schemaAndTable = getSchemaAndTable(tableIdentifier);
 
                         ColumnRowType columnRowType = buildColumnRowType(alias, schemaAndTable.getFirst(),
@@ -346,21 +344,21 @@ public class QueryAliasMatcher {
                     }
 
                     //subquery as alias
-                    if ((operands[0] instanceof SqlSelect)
-                            || ((operands[0] instanceof SqlOrderBy) && operands[1] instanceof SqlIdentifier)) {
-                        String alias = operands[1].toString();
+                    if ((operand0 instanceof SqlSelect)
+                            || ((operand0 instanceof SqlOrderBy) && operand1 instanceof SqlIdentifier)) {
+                        String alias = operand1.toString();
                         alias2CRT.put(alias, SUBQUERY_TAG);
                     }
 
                     // union-all as alias
-                    if ((operands[0] instanceof SqlBasicCall && operands[0].getKind() == SqlKind.UNION
-                            && operands[1] instanceof SqlIdentifier)) {
-                        String alias = operands[1].toString();
+                    if ((operand0 instanceof SqlBasicCall && operand0.getKind() == SqlKind.UNION
+                            && operand1 instanceof SqlIdentifier)) {
+                        String alias = operand1.toString();
                         alias2CRT.put(alias, SUBQUERY_TAG);
                     }
                 }
 
-                return null; //don't visit child any more
+                return null; //don't visit child anymore
             }
 
             List<SqlNode> operandList = call.getOperandList();

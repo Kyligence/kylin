@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.calcite.avatica.util.Quoting;
@@ -334,15 +335,13 @@ public class TblColRef implements Serializable {
             return false;
         if (!StringUtils.equals(column.getName(), other.column.getName()))
             return false;
-        if (!(table == null ? other.table == null : table.equals(other.table)))
+        if (!(Objects.equals(table, other.table)))
             return false;
         //#9121 self-join's agg pushdown sql's left and right OlapContext have identical table,
         //backupTable, containing olapContext's info, should be compared when both is not null
         if (backupTable != null && other.backupTable != null && !backupTable.equals(other.backupTable))
             return false;
-        if (this.isInnerColumn() != other.isInnerColumn())
-            return false;
-        return true;
+        return this.isInnerColumn() == other.isInnerColumn();
     }
 
     public String getIdentity() {

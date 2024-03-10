@@ -124,17 +124,16 @@ public class ContextUtil {
     }
 
     //pre-order travel to set subContexts
-    public static Set<OlapContext> setSubContexts(RelNode relNode) {
+    public static void setSubContexts(RelNode relNode) {
         Set<OlapContext> subContexts = Sets.newHashSet();
         if (relNode == null)
-            return subContexts;
+            return;
 
         for (RelNode inputNode : relNode.getInputs()) {
             setSubContexts(inputNode);
             subContexts.addAll(collectSubContext(inputNode));
         }
         ((OlapRel) relNode).setSubContexts(subContexts);
-        return subContexts;
     }
 
     public static void setParameters(Map<String, String> parameters) {
@@ -407,7 +406,7 @@ public class ContextUtil {
         }
         if (potentialSubRel instanceof OlapProjectRel) {
             if (joinRel instanceof OlapJoinRel) {
-                ((OlapJoinRel) joinRel).leftKeys.forEach(leftKey -> {
+                ((OlapJoinRel) joinRel).getLeftKeys().forEach(leftKey -> {
                     RexNode leftCol = ((OlapProjectRel) potentialSubRel).getProjects().get(leftKey);
                     if (leftCol instanceof RexCall) {
                         indexOfInputCols.add(leftKey);
@@ -456,9 +455,14 @@ public class ContextUtil {
                 expectedJoinType = joinRel.getJoinType();
             }
             if (joinRel.getJoinType() == expectedJoinType && joinRel.getCondition().getClass().equals(joinCondClz)) {
-                return olapRel == subContext.getParentOfTopNode()
-                        || areSubJoinRelsSameType(joinRel.getLeft(), subContext, expectedJoinType, joinCondClz)
-                        || areSubJoinRelsSameType(joinRel.getRight(), subContext, expectedJoinType, joinCondClz);
+                if (joinRel.getJoinType() == JoinRelType.INNER) {
+                    return olapRel == subContext.getParentOfTopNode()
+                            || areSubJoinRelsSameType(joinRel.getLeft(), subContext, expectedJoinType, joinCondClz)
+                            || areSubJoinRelsSameType(joinRel.getRight(), subContext, expectedJoinType, joinCondClz);
+                } else if (joinRel.getJoinType() == JoinRelType.LEFT) {
+                    // left join can only judge the left side
+                    return areSubJoinRelsSameType(joinRel.getLeft(), subContext, expectedJoinType, joinCondClz);
+                }
             }
             return false;
         }

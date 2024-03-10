@@ -440,6 +440,9 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
 
         // Not expired 
         updateLastModified(sparkEventLogDir + "/application_1677899901295_0989", notExpired);
+        updateLastModified(sparkEventLogDir + "/application_1554187389076_9294", notExpired);
+        updateLastModified(sparkEventLogDir + "/application_1554187389076_9295", notExpired);
+        updateLastModified(sparkEventLogDir + "/application_1554187389076_9296", notExpired);
     }
 
     public void updateLastModified(String file, long timeStamp) throws IOException {

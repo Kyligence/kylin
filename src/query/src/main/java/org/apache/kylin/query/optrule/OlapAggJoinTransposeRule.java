@@ -60,12 +60,11 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.mapping.Mapping;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.relnode.OlapAggregateRel;
 import org.apache.kylin.query.relnode.OlapJoinRel;
 import org.apache.kylin.query.util.RuleUtils;
-
-import com.google.common.collect.ImmutableList;
 
 public class OlapAggJoinTransposeRule extends RelOptRule {
 
@@ -259,8 +258,8 @@ public class OlapAggJoinTransposeRule extends RelOptRule {
                 side.split.put(aggCall.i, belowAggregateKey.cardinality() + belowAggCallRegistry.register(call1));
             }
         }
-        side.newInput = relBuilder.push(joinInput)
-                .aggregate(relBuilder.groupKey(belowAggregateKey, null), belowAggCalls).build();
+        side.newInput = relBuilder.push(joinInput).aggregate(relBuilder.groupKey(belowAggregateKey), belowAggCalls)
+                .build();
     }
 
     private static void updateCondition(List<Side> sides, Map<Integer, Integer> map, OlapAggregateRel aggregate,
@@ -315,8 +314,13 @@ public class OlapAggJoinTransposeRule extends RelOptRule {
         }
 
         if (!aggConvertedToProjects) {
-            relBuilder.aggregate(relBuilder.groupKey(Mappings.apply(mapping, aggregate.getGroupSet()),
-                    Mappings.apply2(mapping, aggregate.getGroupSets())), newAggCalls);
+            ImmutableBitSet groupSet = Mappings.apply(mapping, aggregate.getGroupSet());
+            ImmutableList<ImmutableBitSet> groupSets = Mappings.apply2(mapping, aggregate.getGroupSets());
+            if (groupSets == null) {
+                relBuilder.aggregate(relBuilder.groupKey(groupSet), newAggCalls);
+            } else {
+                relBuilder.aggregate(relBuilder.groupKey(groupSet, groupSets), newAggCalls);
+            }
         }
     }
 

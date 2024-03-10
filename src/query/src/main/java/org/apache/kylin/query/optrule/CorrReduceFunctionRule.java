@@ -29,6 +29,7 @@ import java.util.function.Function;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -159,14 +160,14 @@ public class CorrReduceFunctionRule extends RelOptRule {
         final RexNode argY = inputExprs.get(iInputY);
 
         // build RexNode of sum(x) and sum(y)
-        final AggregateCall sumXCall = AggregateCall.create(SqlStdOperatorTable.SUM, oldCall.isDistinct(),
-                ImmutableIntList.of(iInputX), oldCall.filterArg, oldAggRel.getGroupCount(), oldAggRel.getInput(), null,
-                null);
+        final AggregateCall sumXCall = AggregateCall.create(SqlStdOperatorTable.SUM, oldCall.isDistinct(), false,
+                false, ImmutableIntList.of(iInputX), oldCall.filterArg, null, RelCollations.EMPTY,
+                oldAggRel.getGroupCount(), oldAggRel.getInput(), null, null);
         final RexNode sumX = castToDouble.apply(rexBuilder.addAggCall(sumXCall, oldNGroups, oldAggRel.indicator,
                 newCalls, aggCallMapping, ImmutableList.of(inputExprs.get(iInputX).getType())));
-        final AggregateCall sumYCall = AggregateCall.create(SqlStdOperatorTable.SUM, oldCall.isDistinct(),
-                ImmutableIntList.of(iInputY), oldCall.filterArg, oldAggRel.getGroupCount(), oldAggRel.getInput(), null,
-                null);
+        final AggregateCall sumYCall = AggregateCall.create(SqlStdOperatorTable.SUM, oldCall.isDistinct(), false,
+                false, ImmutableIntList.of(iInputY), oldCall.filterArg, null, RelCollations.EMPTY,
+                oldAggRel.getGroupCount(), oldAggRel.getInput(), null, null);
         final RexNode sumY = castToDouble.apply(rexBuilder.addAggCall(sumYCall, oldNGroups, oldAggRel.indicator,
                 newCalls, aggCallMapping, ImmutableList.of(inputExprs.get(iInputY).getType())));
 
@@ -184,9 +185,9 @@ public class CorrReduceFunctionRule extends RelOptRule {
                 .apply(buildMultiplyRexNode(oldAggRel, oldCall, inputExprs, newCalls, aggCallMapping, argX, argY));
 
         // build count()
-        final AggregateCall countAggCall = AggregateCall.create(SqlStdOperatorTable.COUNT, oldCall.isDistinct(),
-                Lists.<Integer> newArrayList(), oldCall.filterArg, oldAggRel.getGroupCount(), oldAggRel.getInput(),
-                null, null);
+        final AggregateCall countAggCall = AggregateCall.create(SqlStdOperatorTable.COUNT, oldCall.isDistinct(), false,
+                false, Lists.<Integer> newArrayList(), oldCall.filterArg, null, RelCollations.EMPTY,
+                oldAggRel.getGroupCount(), oldAggRel.getInput(), null, null);
         final RexNode countArg = rexBuilder.addAggCall(countAggCall, oldNGroups, oldAggRel.indicator, newCalls,
                 aggCallMapping, ImmutableList.of(argInputXType));
 

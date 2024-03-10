@@ -20,12 +20,11 @@ package org.apache.kylin.metadata.cube.cuboid;
 
 import java.util.Comparator;
 
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Ordering;
 import org.apache.kylin.metadata.model.TableExtDesc.ColumnStats;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.TblColRef.FilterColEnum;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Ordering;
 
 /**
  * Used for select the best-cost candidate for query or auto-modeling
@@ -44,6 +43,10 @@ public class ComparatorUtils {
      * Return comparator for non-filter column
      */
     public static Comparator<TblColRef> nonFilterColComparator() {
+        return colNameDictionaryOrder();
+    }
+
+    private static Comparator<TblColRef> colNameDictionaryOrder() {
         return (col1, col2) -> {
             Preconditions.checkArgument(col1 != null && col1.getFilterLevel() == FilterColEnum.NONE);
             Preconditions.checkArgument(col2 != null && col2.getFilterLevel() == FilterColEnum.NONE);
@@ -55,7 +58,8 @@ public class ComparatorUtils {
      * Return comparator for filter column
      */
     public static Comparator<TblColRef> filterColComparator(ChooserContext chooserContext) {
-        return Ordering.from(filterLevelComparator()).compound(cardinalityComparator(chooserContext));
+        return Ordering.from(filterLevelComparator()).compound(cardinalityComparator(chooserContext))
+                .compound(colNameDictionaryOrder());
     }
 
     /**

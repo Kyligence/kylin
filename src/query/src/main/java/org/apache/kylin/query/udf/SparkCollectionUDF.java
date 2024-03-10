@@ -18,16 +18,14 @@
 
 package org.apache.kylin.query.udf;
 
-import static org.junit.Assert.assertTrue;
+import org.apache.calcite.linq4j.function.Parameter;
+import org.apache.calcite.sql.type.NotConstant;
+import org.apache.kylin.common.exception.CalciteNotSupportException;
 
-import org.apache.kylin.common.KylinVersion;
-import org.junit.Test;
+public class SparkCollectionUDF implements NotConstant {
 
-public class VersionUDFTest {
-    @Test
-    public void testVersionUDF() {
-        String currentVer = KylinVersion.getCurrentVersion().toString();
-        String udfVer = new VersionUDF().VERSION();
-        assertTrue(currentVer.equals(udfVer));
+    public int SIZE(@Parameter(name = "expr") Object expr) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
     }
+
 }

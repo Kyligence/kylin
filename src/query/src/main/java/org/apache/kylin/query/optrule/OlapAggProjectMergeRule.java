@@ -35,14 +35,13 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.relnode.OlapAggregateRel;
 import org.apache.kylin.query.relnode.OlapFilterRel;
 import org.apache.kylin.query.relnode.OlapJoinRel;
 import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.RuleUtils;
-
-import com.google.common.collect.ImmutableList;
 
 public class OlapAggProjectMergeRule extends RelOptRule {
     public static final OlapAggProjectMergeRule AGG_PROJECT_JOIN = new OlapAggProjectMergeRule(

@@ -103,7 +103,7 @@ public class AggregateProjectReduceRule extends RelOptRule {
             return;
         }
 
-        RelBuilder relBuilder = call.builder();
+        RelBuilder relBuilder = call.builder().transform(c -> c.withPruneInputOfAggregate(false));
         relBuilder.push(project.getInput());
         relBuilder.project(Pair.left(newProjects), Pair.right(newProjects));
         relBuilder.aggregate(relBuilder.groupKey(newGroupSet, false, null), newAggrCalls.build());

@@ -330,9 +330,9 @@ public class MultiPartitionPruningTest extends NLocalWithSparkSessionTest implem
         val dfName = "8c670664-8d05-466a-802f-83c023b56c79";
 
         // segment1 [2009-01-01, 2011-01-01] partition value 2010-01-01 00:56:38, 2010-01-01 04:03:59
-        // segment2 [2011-01-01, 2013-01-01] partition value 2010-01-01 04:03:59, 
+        // segment2 [2011-01-01, 2013-01-01] partition value 2010-01-01 04:03:59,
         //    2010-01-01 08:16:36, 2010-01-02 14:24:50
-        // segment3 [2013-01-01, 2015-01-01] partition value 2010-01-01 08:16:36, 
+        // segment3 [2013-01-01, 2015-01-01] partition value 2010-01-01 08:16:36,
         //    2010-01-02 14:24:50, 2010-01-03 05:15:09
         indexDataConstructor.buildMultiSegmentPartitions(dfName, "2009-01-01 00:00:00", "2011-01-01 00:00:00",
                 Lists.newArrayList(10001L), Lists.newArrayList(0L, 1L));

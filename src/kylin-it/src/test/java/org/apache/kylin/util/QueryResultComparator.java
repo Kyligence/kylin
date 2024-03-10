@@ -106,7 +106,7 @@ public class QueryResultComparator {
                     try {
                         normalizedRow.append(new BigDecimal(row.get(i)).setScale(2, RoundingMode.HALF_UP));
                     } catch (Exception e) {
-                        log.warn("try to cast to decimal failed", e);
+                        log.debug("Illegal number format: {}", row.get(i));
                         normalizedRow.append(row.get(i));
                     }
                 } else {

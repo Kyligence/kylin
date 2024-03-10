@@ -86,6 +86,9 @@ class SparderRexVisitor(val inputFieldNames: Seq[String],
     def getColumns: ListBuffer[Column] = {
       children.map {
         case null => new Column(Literal(null, DataTypes.BooleanType))
+        // see https://olapio.atlassian.net/browse/KE-42088
+        // Calcite 1.30 change child type
+        case boolCol: Boolean => new Column(Literal(boolCol.booleanValue(), DataTypes.BooleanType))
         case child =>
           assert(child.isInstanceOf[Column])
           child.asInstanceOf[Column]
@@ -162,7 +165,10 @@ class SparderRexVisitor(val inputFieldNames: Seq[String],
         left =!= right
       case PLUS =>
         assert(children.size == 2)
-        if (op.getName.equals("DATETIME_PLUS")) {
+        // see https://olapio.atlassian.net/browse/KE-42035
+        // Calcite 1.30 changed the name of operand in the SqlDatetimePlusOperator class,
+        // instead of using "DATETIME_PLUS", use "+"
+        if (op.getName.equals("+")) {
           // scalastyle:off
           children.last match {
             case num: MonthNum => {

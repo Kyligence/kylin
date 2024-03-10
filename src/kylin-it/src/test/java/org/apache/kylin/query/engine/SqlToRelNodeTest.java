@@ -93,35 +93,27 @@ public class SqlToRelNodeTest extends CalciteRuleTestBase {
 
     @Test
     public void testProjectMergeWithBloat() throws Exception {
-        String sql = "select q.x + q.x from( select (p.v + p.v) as x from (select (case when TRANS_ID > 60 then 1 else 0 end) v from test_kylin_fact) p)q";
+        String sql = "select q.x + q.x from( select (p.v + p.v) as x from ("
+                + "select (case when TRANS_ID > 60 then 1 else 0 end) v from test_kylin_fact "
+                + "left join TEST_ACCOUNT on SELLER_ID = ACCOUNT_ID) p)q";
 
         try (KylinConfig.SetAndUnsetThreadLocalConfig autoUnset = KylinConfig.setAndUnsetThreadLocalConfig(config)) {
-            config.setProperty("kylin.query.project-merge-with-bloat-enabled", "false");
-            QueryExec exec1 = new QueryExec(PROJECT, config);
-            RelRoot relRoot = exec1.sqlToRelRoot(sql);
-            RelNode rel = exec1.optimize(relRoot).rel;
-            String realPlan = NL + RelOptUtil.toString(rel);
-            diff.assertEquals("bloat_merge_sql.bloat_disabled", "${bloat_merge_sql.bloat_disabled}", realPlan);
-        }
-
-        try (KylinConfig.SetAndUnsetThreadLocalConfig autoUnset = KylinConfig.setAndUnsetThreadLocalConfig(config)) {
-            config.setProperty("kylin.query.project-merge-with-bloat-enabled", "true");
+            config.setProperty("kylin.query.project-merge-bloat-threshold", "-1");
             QueryExec exec2 = new QueryExec(PROJECT, config);
             RelRoot relRoot = exec2.sqlToRelRoot(sql);
+            System.out.println(RelOptUtil.toString(relRoot.rel));
             RelNode rel = exec2.optimize(relRoot).rel;
             String realPlan = NL + RelOptUtil.toString(rel);
-            diff.assertEquals("bloat_merge_sql.bloat_enabled", "${bloat_merge_sql.bloat_enabled}", realPlan);
+            diff.assertEquals("bloat_merge_sql.bloat_with_minus1", "${bloat_merge_sql.bloat_with_minus1}", realPlan);
         }
 
         try (KylinConfig.SetAndUnsetThreadLocalConfig autoUnset = KylinConfig.setAndUnsetThreadLocalConfig(config)) {
-            config.setProperty("kylin.query.project-merge-with-bloat-enabled", "true");
             config.setProperty("kylin.query.project-merge-bloat-threshold", "5");
             QueryExec exec3 = new QueryExec(PROJECT, config);
             RelRoot relRoot = exec3.sqlToRelRoot(sql);
             RelNode rel = exec3.optimize(relRoot).rel;
             String realPlan = NL + RelOptUtil.toString(rel);
-            diff.assertEquals("bloat_merge_sql.bloat_enabled_bloat_5", "${bloat_merge_sql.bloat_enabled_bloat_5}",
-                    realPlan);
+            diff.assertEquals("bloat_merge_sql.bloat_with_5", "${bloat_merge_sql.bloat_with_5}", realPlan);
         }
 
         try (KylinConfig.SetAndUnsetThreadLocalConfig autoUnset = KylinConfig.setAndUnsetThreadLocalConfig(config)) {
@@ -130,7 +122,7 @@ public class SqlToRelNodeTest extends CalciteRuleTestBase {
             RelRoot relRoot = exec4.sqlToRelRoot(sql);
             RelNode rel = exec4.optimize(relRoot).rel;
             String realPlan = NL + RelOptUtil.toString(rel);
-            diff.assertEquals("bloat_merge_sql.bloat_disabled", "${bloat_merge_sql.bloat_disabled}", realPlan);
+            diff.assertEquals("bloat_merge_sql.bloat_with_100", "${bloat_merge_sql.bloat_with_100}", realPlan);
         }
     }
 
@@ -179,7 +171,7 @@ public class SqlToRelNodeTest extends CalciteRuleTestBase {
 
     @Test
     public void testSelectConstantSimplify() throws Exception {
-        overwriteSystemProp("calcite.keep-in-clause", config.isCalciteInClauseEnabled() + "");
+        overwriteSystemProp("kylin.query.convert-in-to-or-threshold", "0");
         Pair<String, String> sql = readOneSQL(config, "ssb", "query/sql_sqlnode", "query01.sql");
         checkSQLOptimize("ssb", sql.getSecond(), "query01");
     }

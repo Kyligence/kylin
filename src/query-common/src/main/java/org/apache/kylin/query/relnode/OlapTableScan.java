@@ -61,7 +61,7 @@ import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.query.engine.KECalciteConfig;
+import org.apache.kylin.query.engine.KylinConnectionConfig;
 import org.apache.kylin.query.schema.OlapTable;
 import org.apache.kylin.query.util.ICutContextStrategy;
 
@@ -146,7 +146,7 @@ public class OlapTableScan extends TableScan implements EnumerableRel, OlapRel {
                 // 1. col with _KY_
                 // 2. CC col when exposeComputedColumn config is set to false
                 if (!tblColRef.getName().startsWith("_KY_") && !(tblColRef.getColumnDesc().isComputedColumn()
-                        && !KECalciteConfig.current().exposeComputedColumn())) {
+                        && !KylinConnectionConfig.current().exposeComputedColumn())) {
                     context.getAllColumns().add(tblColRef);
                 }
             }
@@ -295,7 +295,6 @@ public class OlapTableScan extends TableScan implements EnumerableRel, OlapRel {
         tableScan.context = this.context;
         tableScan.kylinConfig = this.kylinConfig;
         tableScan.digest = this.digest;
-        tableScan.id = this.id;
         tableScan.alias = this.alias;
         return tableScan;
     }

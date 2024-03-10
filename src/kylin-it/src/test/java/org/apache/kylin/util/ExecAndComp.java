@@ -281,8 +281,12 @@ public class ExecAndComp {
 
     private static List<Pair<String, String>> retrieveITSqls(File file) throws IOException {
         File[] sqlFiles = new File[0];
-        if (file != null && file.exists() && file.listFiles() != null) {
-            sqlFiles = file.listFiles((dir, name) -> name.endsWith(".sql"));
+        if (file != null && file.exists()) {
+            if (file.listFiles() != null) {
+                sqlFiles = file.listFiles((dir, name) -> name.endsWith(".sql"));
+            } else if (file.isFile()) {
+                sqlFiles = new File[] {file};
+            }
         }
         List<Pair<String, String>> ret = Lists.newArrayList();
         assert sqlFiles != null;

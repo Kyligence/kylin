@@ -31,6 +31,7 @@ import org.apache.calcite.test.DiffRepository;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.query.optrule.SumConstantConvertRule;
 import org.apache.kylin.query.rules.CalciteRuleTestBase;
 import org.apache.kylin.query.util.HepUtils;
 import org.apache.kylin.query.util.RelAggPushDownUtil;
@@ -86,6 +87,7 @@ public class EnhancedAggPushDownPlannerTest extends CalciteRuleTestBase {
                 "query/enhanced_agg_pushdown");
         QueryContext.current().setProject(defaultProject);
         Collection<RelOptRule> postOptRules = new LinkedHashSet<>();
+        postOptRules.add(SumConstantConvertRule.INSTANCE);
         postOptRules.addAll(HepUtils.SumExprRules);
         postOptRules.addAll(HepUtils.CountDistinctExprRules);
         postOptRules.addAll(HepUtils.AggPushDownRules);

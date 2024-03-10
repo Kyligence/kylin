@@ -18,14 +18,11 @@
 
 package org.apache.kylin.query.util;
 
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.rel.RelNode;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -38,13 +35,10 @@ import org.apache.kylin.query.relnode.OlapRel;
 
 public class RelAggPushDownUtil {
 
-    private static final String HEP_REL_VERTEX = "HepRelVertex#";
-    private static final String REL = "rel#";
-    private static final String OLAP = ":Olap";
-    private static final String CTX = "ctx=";
-
     private RelAggPushDownUtil() {
     }
+
+    private static final Pattern CTX_REMOVER = Pattern.compile(", ctx=\\[(.*?)]");
 
     public static void clearUnmatchedJoinDigest() {
         QueryContext.current().getUnmatchedJoinDigest().clear();
@@ -65,55 +59,24 @@ public class RelAggPushDownUtil {
     }
 
     public static void registerUnmatchedJoinDigest(RelNode relNode) {
-        RelNode joinRel = collectFirstJoinRel(relNode);
+        OlapJoinRel joinRel = collectFirstJoinRel(relNode);
         if (joinRel != null) {
-            String digest = joinRel.getDigest();
-            digest = handleDigest(digest);
-            QueryContext.current().getUnmatchedJoinDigest().put(digest, true);
+            QueryContext.current().getUnmatchedJoinDigest().put(trimExplainInfo(joinRel), true);
         }
     }
 
     // Each time a single join rel node push down， delete other join rel node
     public static synchronized boolean isUnmatchedJoinRel(OlapJoinRel joinRel) {
-        String digest = getDigest(joinRel);
-        boolean unmatched = QueryContext.current().getUnmatchedJoinDigest().get(digest) != null;
+        boolean unmatched = QueryContext.current().getUnmatchedJoinDigest().get(trimExplainInfo(joinRel)) != null;
         if (unmatched) {
             QueryContext.current().getUnmatchedJoinDigest().clear();
-            QueryContext.current().getUnmatchedJoinDigest().put(digest, true);
+            QueryContext.current().getUnmatchedJoinDigest().put(trimExplainInfo(joinRel), true);
         }
         return unmatched;
     }
 
-    private static String getDigest(OlapJoinRel joinRel) {
-        Map<String, String> cacheDescMap = new HashMap<>();
-        analysisRel(joinRel, cacheDescMap);
-        String joinRelDigest = joinRel.getDigest();
-        int times = 0;
-        int maxReplaceSize = cacheDescMap.size();
-        while (joinRelDigest.contains(RelAggPushDownUtil.HEP_REL_VERTEX) && times < maxReplaceSize) {
-            Iterator<String> iterator = cacheDescMap.keySet().iterator();
-            while (iterator.hasNext()) {
-                String key = iterator.next();
-                if (joinRelDigest.contains(key)) {
-                    joinRelDigest = joinRelDigest.replace(key, cacheDescMap.get(key));
-                    iterator.remove();
-                }
-            }
-            times++;
-        }
-        return joinRelDigest;
-    }
-
-    private static void analysisRel(RelNode relNode, Map<String, String> cacheDescMap) {
-        if (relNode instanceof HepRelVertex) {
-            HepRelVertex hepRelVertex = (HepRelVertex) relNode;
-            cacheDescMap.put(relNode.getDescription(), hepRelVertex.getCurrentRel().getDigest());
-            relNode = hepRelVertex.getCurrentRel();
-        }
-        List<RelNode> childRelNodes = relNode.getInputs();
-        for (RelNode childRelNode : childRelNodes) {
-            analysisRel(childRelNode, cacheDescMap);
-        }
+    private static String trimExplainInfo(OlapJoinRel rel) {
+        return CTX_REMOVER.matcher(rel.explain()).replaceAll("");
     }
 
     public static OlapJoinRel collectFirstJoinRel(RelNode relNode) {
@@ -130,7 +93,7 @@ public class RelAggPushDownUtil {
     // only for test
     public static void collectAllJoinRel(RelNode relNode) {
         if (relNode instanceof OlapJoinRel) {
-            QueryContext.current().getUnmatchedJoinDigest().put(handleDigest(relNode.getDigest()), true);
+            QueryContext.current().getUnmatchedJoinDigest().put(trimExplainInfo((OlapJoinRel) relNode), true);
         }
         for (RelNode rel : relNode.getInputs()) {
             collectAllJoinRel(rel);
@@ -147,39 +110,4 @@ public class RelAggPushDownUtil {
             clearCtxRelNode(childNode);
         }
     }
-
-    private static String handleDigest(String digest) {
-        digest = clearDigestRelID(digest);
-        digest = clearDigestCtx(digest);
-        return digest;
-    }
-
-    private static String clearDigestRelID(String digest) {
-        int start = digest.indexOf(REL);
-        int end = digest.indexOf(OLAP);
-        if (start > 0 && end > start) {
-            digest = digest.substring(0, start) + digest.substring(end + 1);
-            if (digest.contains(REL)) {
-                return clearDigestRelID(digest);
-            }
-        }
-        return digest;
-    }
-
-    public static String clearDigestCtx(String digest) {
-        String[] digestArray = digest.split(CTX);
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < digestArray.length; i++) {
-            String temp = digestArray[i];
-            if (i > 0 && !temp.startsWith(")")) {
-                temp = temp.substring(temp.indexOf(","));
-            }
-            builder.append(temp);
-            if (i < (digestArray.length - 1)) {
-                builder.append(CTX);
-            }
-        }
-        return builder.toString();
-    }
-
 }

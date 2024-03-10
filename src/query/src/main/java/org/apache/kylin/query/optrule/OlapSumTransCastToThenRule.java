@@ -62,7 +62,7 @@ public class OlapSumTransCastToThenRule extends RelOptRule {
             RelFactories.LOGICAL_BUILDER, "OlapSumTransCastToThenRule");
 
     public static boolean existCastCase(Project logicalProject) {
-        List<RexNode> childExps = logicalProject.getChildExps();
+        List<RexNode> childExps = logicalProject.getProjects();
         for (RexNode rexNode : childExps) {
             if (isCastCase(rexNode)) {
                 return true;
@@ -95,7 +95,7 @@ public class OlapSumTransCastToThenRule extends RelOptRule {
         Aggregate logicalAggregate = call.rel(0);
         Project logicalProject = call.rel(1);
 
-        List<RexNode> projectExps = logicalProject.getChildExps();
+        List<RexNode> projectExps = logicalProject.getProjects();
         RexNode curProExp;
         List<Integer> castIndexs = Lists.newArrayList();
         for (int i = 0; i < projectExps.size(); i++) {
@@ -148,7 +148,7 @@ public class OlapSumTransCastToThenRule extends RelOptRule {
         RexBuilder rexBuilder = relBuilder.getRexBuilder();
         relBuilder.push(logicalProject.getInput());
 
-        List<RexNode> projectExps = logicalProject.getChildExps();
+        List<RexNode> projectExps = logicalProject.getProjects();
         List<RexNode> projectRexNodes = Lists.newArrayList();
 
         // step 1. build bottom project
@@ -184,8 +184,9 @@ public class OlapSumTransCastToThenRule extends RelOptRule {
                 newAggs.add(curAgg);
             }
         }
-        RelBuilder.GroupKey groupKey = relBuilder.groupKey(logicalAggregate.getGroupSet(),
-                logicalAggregate.getGroupSets());
+        RelBuilder.GroupKey groupKey = logicalAggregate.getGroupSets() == null
+                ? relBuilder.groupKey(logicalAggregate.getGroupSet())
+                : relBuilder.groupKey(logicalAggregate.getGroupSet(), logicalAggregate.getGroupSets());
         relBuilder.aggregate(groupKey, newAggs);
 
         // step 3. if needed, build top project
@@ -277,7 +278,7 @@ public class OlapSumTransCastToThenRule extends RelOptRule {
     }
 
     private boolean canCaseType(Project logicalProject) {
-        List<RexNode> childExps = logicalProject.getChildExps();
+        List<RexNode> childExps = logicalProject.getProjects();
         Set<RelDataType> columnsDataType;
         RelDataType castReturnType;
         for (RexNode rexNode : childExps) {
@@ -326,7 +327,7 @@ public class OlapSumTransCastToThenRule extends RelOptRule {
     }
 
     private InnerCastType getCastType(Project logicalProject) {
-        List<RexNode> childExps = logicalProject.getChildExps();
+        List<RexNode> childExps = logicalProject.getProjects();
         InnerCastType castType = InnerCastType.OTHER;
         InnerCastType cur;
         for (RexNode rexNode : childExps) {

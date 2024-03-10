@@ -104,10 +104,6 @@ class KylinConfigBaseTest {
                         "org.apache.kylin.metrics.lib.impl.hive.HiveSink"));
         map.put("isConvertExpressionToCcEnabled",
                 new PropertiesEntity("kylin.query.implicit-computed-column-convert", "true", true));
-
-        map.put("isAggComputedColumnRewriteEnabled",
-                new PropertiesEntity("kylin.query.agg-computed-column-rewrite", "true", true));
-
         map.put("getConvertCcMaxIterations",
                 new PropertiesEntity("kylin.query.computed-column-max-recursion-times", "10", 10));
 
@@ -595,11 +591,7 @@ class KylinConfigBaseTest {
                 "kylin.web.timezone,kylin.env,kylin.security.profile,kylin.source.default,metadata.semi-automatic-mode,kylin.cube.aggrgroup.is-base-cuboid-always-valid,kylin.htrace.show-gui-trace-toggle,kylin.web.export-allow-admin,kylin.web.export-allow-other",
                 "kylin.web.timezone,kylin.env,kylin.security.profile,kylin.source.default,metadata.semi-automatic-mode,kylin.cube.aggrgroup.is-base-cuboid-always-valid,kylin.htrace.show-gui-trace-toggle,kylin.web.export-allow-admin,kylin.web.export-allow-other"));
 
-        map.put("isCalciteInClauseEnabled",
-                new PropertiesEntity("kylin.query.calcite-in-clause-enabled", "true", true));
-
-        map.put("isCalciteConvertMultipleColumnsIntoOrEnabled",
-                new PropertiesEntity("kylin.query.calcite-convert-multiple-columns-in-to-or-enabled", "true", true));
+        map.put("convertInSubQueryThreshold", new PropertiesEntity("kylin.query.convert-in-to-or-threshold", "20", 20));
 
         map.put("isEnumerableRulesEnabled",
                 new PropertiesEntity("kylin.query.calcite.enumerable-rules-enabled", "false", false));

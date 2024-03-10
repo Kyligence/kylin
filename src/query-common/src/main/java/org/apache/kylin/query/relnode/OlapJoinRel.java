@@ -24,11 +24,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.calcite.adapter.enumerable.EnumerableJoin;
+import org.apache.calcite.adapter.enumerable.EnumerableHashJoin;
 import org.apache.calcite.adapter.enumerable.EnumerableRel;
 import org.apache.calcite.adapter.enumerable.EnumerableRelImplementor;
 import org.apache.calcite.adapter.enumerable.PhysType;
@@ -47,7 +48,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Filter;
-import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
@@ -74,7 +74,7 @@ import lombok.Setter;
 import lombok.val;
 
 @Getter
-public class OlapJoinRel extends EnumerableJoin implements OlapRel {
+public class OlapJoinRel extends EnumerableHashJoin implements OlapRel {
 
     static final double LARGE_JOIN_FACTOR = 100.0;
     static final String[] COLUMN_ARRAY_MARKER = new String[0];
@@ -93,9 +93,8 @@ public class OlapJoinRel extends EnumerableJoin implements OlapRel {
     private boolean joinCondEqualNullSafe = false;
 
     public OlapJoinRel(RelOptCluster cluster, RelTraitSet traits, RelNode left, RelNode right, RexNode condition,
-            ImmutableIntList leftKeys, ImmutableIntList rightKeys, Set<CorrelationId> variablesSet,
-            JoinRelType joinType) throws InvalidRelException {
-        super(cluster, traits, left, right, condition, leftKeys, rightKeys, variablesSet, joinType);
+            Set<CorrelationId> variablesSet, JoinRelType joinType) throws InvalidRelException {
+        super(cluster, traits, left, right, condition, variablesSet, joinType);
         Preconditions.checkArgument(getConvention() == CONVENTION);
         this.rowType = getRowType();
     }
@@ -112,6 +111,14 @@ public class OlapJoinRel extends EnumerableJoin implements OlapRel {
     @Override
     public double estimateRowCount(RelMetadataQuery mq) {
         return super.estimateRowCount(mq) * 0.1;
+    }
+
+    //when OLAPJoinPushThroughJoinRule is applied, a "MerelyPermutation" project rel will be created
+    protected boolean isParentMerelyPermutation(OlapImpl olapImpl) {
+        if (olapImpl.getParentNode() instanceof OlapProjectRel) {
+            return ((OlapProjectRel) olapImpl.getParentNode()).isMerelyPermutation();
+        }
+        return false;
     }
 
     protected ColumnRowType buildColumnRowType() {
@@ -198,7 +205,8 @@ public class OlapJoinRel extends EnumerableJoin implements OlapRel {
         String execFunc = context.genExecFunc(this, "");
         PhysType physType = PhysTypeImpl.of(implementor.getTypeFactory(), getRowType(), pref.preferArray());
         RelOptTable factTable = context.getFirstTableScan().getTable();
-        MethodCallExpression exprCall = Expressions.call(factTable.getExpression(OlapTable.class), execFunc,
+        MethodCallExpression exprCall = Expressions.call(
+                Objects.requireNonNull(factTable.getExpression(OlapTable.class)), execFunc,
                 implementor.getRootExpression(), Expressions.constant(context.getId()));
         return implementor.result(physType, Blocks.toBlock(exprCall));
     }
@@ -222,14 +230,14 @@ public class OlapJoinRel extends EnumerableJoin implements OlapRel {
     }
 
     @Override
-    public EnumerableJoin copy(RelTraitSet traitSet, RexNode conditionExpr, RelNode left, RelNode right,
+    public EnumerableHashJoin copy(RelTraitSet traitSet, RexNode conditionExpr, RelNode left, RelNode right,
             JoinRelType joinType, boolean semiJoinDone) {
 
-        final JoinInfo joinInfo = JoinInfo.of(left, right, conditionExpr);
-        assert joinInfo.isEqui();
+        // Calcite no longer distinguishes between equal and non-equal joins,
+        // so the assertion here is no longer needed. For example: the join condition
+        // `=(CAST($3):BIGINT, $8)` is indeed an equal join condition in logical.
         try {
-            return new OlapJoinRel(getCluster(), traitSet, left, right, conditionExpr, joinInfo.leftKeys,
-                    joinInfo.rightKeys, variablesSet, joinType);
+            return new OlapJoinRel(getCluster(), traitSet, left, right, conditionExpr, variablesSet, joinType);
         } catch (InvalidRelException e) {
             // Semantic error not possible. Must be a bug. Convert to internal error.
             throw new AssertionError(e);
@@ -325,7 +333,15 @@ public class OlapJoinRel extends EnumerableJoin implements OlapRel {
 
     private boolean isCrossJoin() {
         // each side of cross join should allocate a context
-        return leftKeys.isEmpty() || rightKeys.isEmpty();
+        return joinInfo.leftKeys.isEmpty() || joinInfo.rightKeys.isEmpty();
+    }
+
+    public ImmutableIntList getLeftKeys() {
+        return joinInfo.leftKeys;
+    }
+
+    public ImmutableIntList getRightKeys() {
+        return joinInfo.rightKeys;
     }
 
     @Override
@@ -456,10 +472,9 @@ public class OlapJoinRel extends EnumerableJoin implements OlapRel {
     public EnumerableRel implementEnumerable(List<EnumerableRel> inputs) {
         if (isRuntimeJoin()) {
             try {
-                return EnumerableJoin.create(inputs.get(0), inputs.get(1), condition, leftKeys, rightKeys, variablesSet,
-                        joinType);
+                return EnumerableHashJoin.create(inputs.get(0), inputs.get(1), condition, variablesSet, joinType);
             } catch (Exception e) {
-                throw new IllegalStateException("Can't create EnumerableJoin!", e);
+                throw new IllegalStateException("Can't create EnumerableHashJoin!", e);
             }
         } else {
             return this;

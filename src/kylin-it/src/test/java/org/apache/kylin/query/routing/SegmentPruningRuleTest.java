@@ -232,6 +232,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
     public void testCancelAndInterruptPruning() throws SqlParseException {
         val dataflowId = "3718b614-5191-2254-77e9-f4c5ca64e312";
         KylinConfig kylinConfig = getTestConfig();
+        overwriteSystemProp("kylin.query.filter-condition-count", "999");
 
         String sql = "SELECT * FROM TEST_DB.DATE_TIMESTAMP_TABLE WHERE id = '121' AND (\n"
                 + "(TIMESTAMP_10 >= '2021-11-03')\n" + "AND (TIMESTAMP_10 <= '2021-11-04')\n" + ")\n" + "OR (\n"

@@ -217,11 +217,11 @@ object AggregatePlan extends LogEx {
           case FunctionDesc.FUNC_PERCENTILE =>
             rel.getInput match {
               case projectRel: OlapProjectRel =>
-                val percentageArg = projectRel.getChildExps.get(call.getArgList.get(1))
+                val percentageArg = projectRel.getProjects.get(call.getArgList.get(1))
                 val accuracyArg = if (call.getArgList.size() < 3) {
                   None
                 } else {
-                  Some(projectRel.getChildExps.get(call.getArgList.get(2)))
+                  Some(projectRel.getProjects.get(call.getArgList.get(2)))
                 }
                 (percentageArg, accuracyArg) match {
                   case (percentageLitRex: RexLiteral, accuracyArgLitRex: Option[RexLiteral]) =>
@@ -298,8 +298,8 @@ object AggregatePlan extends LogEx {
           case FunctionDesc.FUNC_INTERSECT_BITMAP_UUID_VALUE =>
             rel.getInput match {
               case projectRel: OlapProjectRel =>
-                val limitArg = projectRel.getChildExps.get(call.getArgList.get(1))
-                val offsetArg = projectRel.getChildExps.get(call.getArgList.get(2))
+                val limitArg = projectRel.getProjects.get(call.getArgList.get(1))
+                val offsetArg = projectRel.getProjects.get(call.getArgList.get(2))
                 (limitArg, offsetArg) match {
                   case (limitLit: RexLiteral, offsetLit: RexLiteral) =>
                     val limit = limitLit.getValue.toString.toInt
@@ -321,8 +321,8 @@ object AggregatePlan extends LogEx {
           case FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE =>
             rel.getInput match {
               case projectRel: OlapProjectRel =>
-                val limitArg = projectRel.getChildExps.get(call.getArgList.get(1))
-                val offsetArg = projectRel.getChildExps.get(call.getArgList.get(2))
+                val limitArg = projectRel.getProjects.get(call.getArgList.get(1))
+                val offsetArg = projectRel.getProjects.get(call.getArgList.get(2))
                 (limitArg, offsetArg) match {
                   case (limitLit: RexLiteral, offsetLit: RexLiteral) =>
                     val limit = limitLit.getValue.toString.toInt
@@ -344,8 +344,8 @@ object AggregatePlan extends LogEx {
           case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE =>
             rel.getInput match {
               case projectRel: OlapProjectRel =>
-                val limitArg = projectRel.getChildExps.get(call.getArgList.get(1))
-                val offsetArg = projectRel.getChildExps.get(call.getArgList.get(2))
+                val limitArg = projectRel.getProjects.get(call.getArgList.get(1))
+                val offsetArg = projectRel.getProjects.get(call.getArgList.get(2))
                 (limitArg, offsetArg) match {
                   case (limitLit: RexLiteral, offsetLit: RexLiteral) =>
                     val limit = limitLit.getValue.toString.toInt

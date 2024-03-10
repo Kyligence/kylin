@@ -638,7 +638,7 @@ public class NFilePruningTest extends NLocalWithSparkSessionTest implements Adap
     }
 
     private long assertResultsAndScanFiles(String modelId, String sql, long numScanFiles, boolean emptyLayout,
-            List<Pair<String, String>> expectedRanges) throws Exception {
+            List<Pair<String, String>> expectedRanges) {
         val df = ExecAndComp.queryModelWithoutCompute(getProject(), sql);
         val context = ContextUtil.listContexts().get(0);
         if (emptyLayout) {

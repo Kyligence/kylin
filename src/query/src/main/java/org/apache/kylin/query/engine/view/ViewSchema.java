@@ -92,7 +92,7 @@ public class ViewSchema extends AbstractSchema {
         }
 
         @Override
-        public TranslatableTable apply(List<Object> arguments) {
+        public TranslatableTable apply(List<? extends Object> arguments) {
             return this.viewTable(getParsed(), viewSql, schemaPath, viewPath);
         }
 

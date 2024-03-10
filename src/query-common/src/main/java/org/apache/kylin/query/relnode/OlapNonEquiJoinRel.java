@@ -27,8 +27,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.calcite.adapter.enumerable.EnumerableNestedLoopJoin;
 import org.apache.calcite.adapter.enumerable.EnumerableRel;
-import org.apache.calcite.adapter.enumerable.EnumerableThetaJoin;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -51,6 +51,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -67,7 +68,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Getter
-public class OlapNonEquiJoinRel extends EnumerableThetaJoin implements OlapRel {
+public class OlapNonEquiJoinRel extends EnumerableNestedLoopJoin implements OlapRel {
 
     private ColumnRowType columnRowType;
     private OlapContext context;
@@ -215,7 +216,8 @@ public class OlapNonEquiJoinRel extends EnumerableThetaJoin implements OlapRel {
                 : null;
         joinDescBuilder.setType(joinType);
 
-        RexNode neqCond = joinInfo.getRemaining(new RexBuilder(new JavaTypeFactoryImpl(RelDataTypeSystem.DEFAULT)));
+        RexNode neqCond = RexUtil.composeConjunction(new RexBuilder(new JavaTypeFactoryImpl(RelDataTypeSystem.DEFAULT)),
+                joinInfo.nonEquiConditions);
 
         //by default, extract foreign table form equi-join keys
         if (CollectionUtils.isNotEmpty(leftCols) && CollectionUtils.isNotEmpty(rightCols)) {
@@ -422,7 +424,7 @@ public class OlapNonEquiJoinRel extends EnumerableThetaJoin implements OlapRel {
     }
 
     @Override
-    public EnumerableThetaJoin copy(RelTraitSet traitSet, RexNode condition, RelNode left, RelNode right,
+    public EnumerableNestedLoopJoin copy(RelTraitSet traitSet, RexNode condition, RelNode left, RelNode right,
             JoinRelType joinType, boolean semiJoinDone) {
         try {
             return new OlapNonEquiJoinRel(getCluster(), traitSet, left, right, condition, variablesSet, joinType,
@@ -455,5 +457,9 @@ public class OlapNonEquiJoinRel extends EnumerableThetaJoin implements OlapRel {
         // both sides have the same first table, each side should allocate a context
         return !leftState.hasIncrementalTable() && !rightState.hasIncrementalTable() && leftState.hasFirstTable()
                 && rightState.hasFirstTable();
+    }
+
+    public int getLeftInputSizeBeforeRewrite() {
+        return leftInputSizeBeforeRewrite;
     }
 }

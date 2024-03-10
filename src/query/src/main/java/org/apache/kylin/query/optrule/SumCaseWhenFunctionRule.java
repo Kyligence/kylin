@@ -71,7 +71,7 @@ public class SumCaseWhenFunctionRule extends AbstractAggCaseWhenFunctionRule {
         }
 
         int input = aggregateCall.getArgList().get(0);
-        RexNode expression = inputProject.getChildExps().get(input);
+        RexNode expression = inputProject.getProjects().get(input);
         return AggExpressionUtil.hasSumCaseWhen(aggregateCall, expression);
     }
 

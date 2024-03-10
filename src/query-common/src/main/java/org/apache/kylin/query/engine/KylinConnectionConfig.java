@@ -27,27 +27,30 @@ import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.config.NullCollation;
 import org.apache.kylin.common.KylinConfig;
 
+import lombok.Getter;
+
 /**
  * wrapper for calcite configs defined in kylin props
  */
-public class KECalciteConfig extends CalciteConnectionConfigImpl {
+public class KylinConnectionConfig extends CalciteConnectionConfigImpl {
 
-    static final ThreadLocal<KECalciteConfig> THREAD_LOCAL = new ThreadLocal<>();
+    static final ThreadLocal<KylinConnectionConfig> THREAD_LOCAL = new ThreadLocal<>();
 
-    private KylinConfig kylinConfig;
+    @Getter
+    private final KylinConfig kylinConfig;
 
-    private KECalciteConfig(Properties properties, KylinConfig kylinConfig) {
+    private KylinConnectionConfig(Properties properties, KylinConfig kylinConfig) {
         super(properties);
         this.kylinConfig = kylinConfig;
     }
 
-    public static KECalciteConfig fromKapConfig(KylinConfig kylinConfig) {
+    public static KylinConnectionConfig fromKapConfig(KylinConfig kylinConfig) {
         Properties props = new Properties();
         props.putAll(kylinConfig.getCalciteExtrasProperties());
-        return new KECalciteConfig(props, kylinConfig);
+        return new KylinConnectionConfig(props, kylinConfig);
     }
 
-    public static KECalciteConfig current() {
+    public static KylinConnectionConfig current() {
         return THREAD_LOCAL.get();
     }
 

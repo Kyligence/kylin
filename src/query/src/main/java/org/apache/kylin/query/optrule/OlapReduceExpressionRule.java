@@ -18,12 +18,12 @@
 
 package org.apache.kylin.query.optrule;
 
+import org.apache.calcite.rel.core.Calc;
+import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
-import org.apache.calcite.rel.logical.LogicalCalc;
 import org.apache.calcite.rel.rules.ReduceExpressionsRule;
-import org.apache.kylin.query.relnode.OlapFilterRel;
-import org.apache.kylin.query.relnode.OlapJoinRel;
-import org.apache.kylin.query.relnode.OlapProjectRel;
 
 /**
  * Override {@link ReduceExpressionsRule} so that it can reduce expressions of OlapRel
@@ -33,15 +33,15 @@ public class OlapReduceExpressionRule {
     }
 
     public static final ReduceExpressionsRule FILTER_INSTANCE = new ReduceExpressionsRule.FilterReduceExpressionsRule(
-            OlapFilterRel.class, true, RelFactories.LOGICAL_BUILDER);
+            Filter.class, true, RelFactories.LOGICAL_BUILDER);
 
     public static final ReduceExpressionsRule PROJECT_INSTANCE = new ReduceExpressionsRule.ProjectReduceExpressionsRule(
-            OlapProjectRel.class, true, RelFactories.LOGICAL_BUILDER);
+            Project.class, true, RelFactories.LOGICAL_BUILDER);
 
     public static final ReduceExpressionsRule JOIN_INSTANCE = new ReduceExpressionsRule.JoinReduceExpressionsRule(
-            OlapJoinRel.class, true, RelFactories.LOGICAL_BUILDER);
+            Join.class, true, RelFactories.LOGICAL_BUILDER);
 
     public static final ReduceExpressionsRule CALC_INSTANCE = new ReduceExpressionsRule.CalcReduceExpressionsRule(
-            LogicalCalc.class, true, RelFactories.LOGICAL_BUILDER);
+            Calc.class, true, RelFactories.LOGICAL_BUILDER);
 
 }

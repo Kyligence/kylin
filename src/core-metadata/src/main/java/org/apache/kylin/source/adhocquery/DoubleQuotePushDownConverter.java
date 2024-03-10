@@ -17,21 +17,23 @@
  */
 package org.apache.kylin.source.adhocquery;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.util.SqlVisitor;
+import org.apache.calcite.sql.validate.SqlNameMatchers;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -116,13 +118,19 @@ public class DoubleQuotePushDownConverter implements IPushDownConverter {
 
         /**
          * filter the function without parentheses
-         * {@link org.apache.calcite.sql.SqlUtil#makeCall(SqlOperatorTable, SqlIdentifier)}
+         * ref {@link org.apache.calcite.sql.validate.SqlValidatorImpl#makeNullaryCall(SqlIdentifier id) }
          * @param id
          * @return
          */
         private boolean isFunctionWithoutParentheses(SqlIdentifier id) {
-            SqlOperatorTable opTab = SqlStdOperatorTable.instance();
-            return Objects.nonNull(SqlUtil.makeCall(opTab, id));
+            if (id.names.size() == 1 && !id.isComponentQuoted(0)) {
+                final List<SqlOperator> list = new ArrayList<>();
+                SqlOperatorTable opTab = SqlStdOperatorTable.instance();
+                opTab.lookupOperatorOverloads(id, null, SqlSyntax.FUNCTION, list,
+                        SqlNameMatchers.withCaseSensitive(false));
+                return list.stream().anyMatch(operator -> operator.getSyntax() == SqlSyntax.FUNCTION_ID);
+            }
+            return false;
         }
 
     }

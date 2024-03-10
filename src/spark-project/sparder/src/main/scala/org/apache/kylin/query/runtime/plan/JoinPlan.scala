@@ -25,9 +25,11 @@ import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.query.relnode.{OlapJoinRel, OlapNonEquiJoinRel}
 import org.apache.kylin.query.runtime.SparderRexVisitor
 import org.apache.kylin.query.util.OlapRelUtil
+import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, LogicalPlan}
 import org.apache.spark.sql.catalyst.plans.{Cross, JoinType}
 import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.types.DataTypes
 import org.apache.spark.sql.{Column, SparkOperation}
 
 import scala.collection.JavaConverters._
@@ -35,7 +37,7 @@ import scala.collection.JavaConverters._
 object JoinPlan extends LogEx {
   def nonEquiJoin(plans: Seq[LogicalPlan],
                   rel: OlapNonEquiJoinRel, dataContext: DataContext): LogicalPlan = {
-    var lPlan = plans.apply(0)
+    var lPlan = plans.head
     var rPlan = plans.apply(1)
 
     lPlan = SparkOperation.project(lPlan.output.map(c => col(c.name).alias("l_" + c.name)), lPlan)
@@ -66,7 +68,13 @@ object JoinPlan extends LogEx {
 
       Join(lPlan, rPlan, joinType = JoinType(rel.getJoinType.lowerName), Some(equalCond.expr), JoinHint.NONE)
     } else {
-      val conditionExprCol = rel.getCondition.accept(visitor).asInstanceOf[Column]
+      val conditionExprCol: Column = rel.getCondition.accept(visitor) match {
+        case bool: Boolean =>
+          // Calcite optimize condition in JoinRel
+          new Column(Literal(bool, DataTypes.BooleanType))
+        case expr =>
+          expr.asInstanceOf[Column]
+      }
       Join(lPlan, rPlan, joinType = JoinType(rel.getJoinType.lowerName), Some(conditionExprCol.expr), JoinHint.NONE)
     }
   }
@@ -75,7 +83,7 @@ object JoinPlan extends LogEx {
   def join(plans: Seq[LogicalPlan],
            rel: OlapJoinRel): LogicalPlan = {
 
-    var lPlan = plans.apply(0)
+    var lPlan = plans.head
     var rPlan = plans.apply(1)
 
     lPlan = SparkOperation.project(lPlan.output.map(c => col(c.name).alias("l_" + c.name)), lPlan)
@@ -104,7 +112,7 @@ object JoinPlan extends LogEx {
     }
   }
 
-  def makeEqualCond(col1: Column, col2: Column, nullSafe: Boolean): Column = {
+  private def makeEqualCond(col1: Column, col2: Column, nullSafe: Boolean): Column = {
     if (nullSafe) {
       col1.eqNullSafe(col2)
     } else {

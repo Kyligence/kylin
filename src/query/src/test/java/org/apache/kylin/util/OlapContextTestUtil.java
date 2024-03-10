@@ -26,6 +26,8 @@ import java.util.function.Consumer;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.BiMap;
+import org.apache.kylin.guava30.shaded.common.collect.HashBiMap;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -35,6 +37,8 @@ import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.routing.RealizationChooser;
+import org.apache.kylin.query.util.ComputedColumnRewriter;
+import org.apache.kylin.query.util.QueryAliasMatchInfo;
 import org.apache.kylin.query.util.QueryContextCutter;
 
 public class OlapContextTestUtil {
@@ -45,9 +49,18 @@ public class OlapContextTestUtil {
 
     public static List<OlapContext> getOlapContexts(String project, String sql, boolean reCutBanned)
             throws SqlParseException {
+        return getOlapContexts(project, sql, reCutBanned, false);
+    }
+
+    public static List<OlapContext> getOlapContexts(String project, String sql, boolean reCutBanned,
+            boolean postOptimize) throws SqlParseException {
         QueryExec queryExec = new QueryExec(project, KylinConfig.getInstanceFromEnv());
         try {
             RelNode rel = queryExec.parseAndOptimize(sql);
+            if (postOptimize) {
+                List<RelNode> relNodes = queryExec.postOptimize(rel);
+                rel = relNodes.get(0);
+            }
             QueryContextCutter.selectRealization(project, rel, reCutBanned);
         } catch (NoRealizationFoundException | NoStreamingRealizationFoundException e) {
             // When NoRealizationFoundException occurs, do nothing
@@ -118,5 +131,12 @@ public class OlapContextTestUtil {
         boolean isPartialInnerJoin = projectConfig.isQueryMatchPartialInnerJoinModel();
         boolean isPartialNonEquiJoin = projectConfig.partialMatchNonEquiJoins();
         return RealizationChooser.matchJoins(model, ctx, isPartialInnerJoin, isPartialNonEquiJoin);
+    }
+
+    public static void rewriteComputedColumns(NDataModel model, OlapContext olapContext) {
+        Map<String, String> aliasMapping = matchJoins(model, olapContext);
+        BiMap<String, String> aliasBiMap = HashBiMap.create(aliasMapping);
+        QueryAliasMatchInfo matchInfo = new QueryAliasMatchInfo(aliasBiMap, null);
+        ComputedColumnRewriter.rewriteCcInnerCol(olapContext, model, matchInfo);
     }
 }

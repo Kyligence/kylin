@@ -34,7 +34,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import lombok.val;
 

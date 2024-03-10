@@ -73,10 +73,12 @@ public class QueryMetricsListenerTest extends NLocalFileMetadataTestCase {
         List<String> sqls = Lists.newArrayList("select * from A", "select A.a, B.b from A join B on A.a2=B.b2",
                 "Select sum(a), b from A group by b", "select * from A as c limit 1");
 
-        List<String> expectedFormattedSqls = Lists.newArrayList("SELECT\n  *\nFROM \"A\"",
-                "SELECT\n  \"A\".\"A\",\n  \"B\".\"B\"\nFROM \"A\"\n  INNER JOIN \"B\" ON \"A\".\"A2\" = \"B\".\"B2\"",
-                "SELECT\n  SUM(\"A\"),\n  \"B\"\nFROM \"A\"\nGROUP BY\n  \"B\"",
-                "SELECT\n  *\nFROM \"A\" AS \"C\"\nLIMIT 1");
+        // see https://olapio.atlassian.net/browse/KE-42029
+        // Calcite 1.30 SQL format changes, not exceptions do not need to be adjusted
+        List<String> expectedFormattedSqls = Lists.newArrayList("SELECT *\nFROM \"A\"",
+                "SELECT \"A\".\"A\",\n  \"B\".\"B\"\nFROM \"A\"\n  INNER JOIN \"B\" ON \"A\".\"A2\" = \"B\".\"B2\"",
+                "SELECT SUM(\"A\"),\n  \"B\"\nFROM \"A\"\nGROUP BY \"B\"",
+                "SELECT *\nFROM \"A\" AS \"C\"\nLIMIT 1");
         val formated = queryService.format(sqls);
 
         Assert.assertEquals(sqls.size(), formated.size());
@@ -93,8 +95,10 @@ public class QueryMetricsListenerTest extends NLocalFileMetadataTestCase {
                 + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                 + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA from A");
 
-        List<String> expectedFormattedSqls = Lists.newArrayList("SELECT\n"
-                + "  \"A\".\"A\" AS \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        // see https://olapio.atlassian.net/browse/KE-42029
+        // Calcite 1.30 SQL format changes, not exceptions do not need to be adjusted
+        List<String> expectedFormattedSqls = Lists.newArrayList("SELECT "
+                + "\"A\".\"A\" AS \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                 + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                 + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                 + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"\n" + "FROM \"A\"");

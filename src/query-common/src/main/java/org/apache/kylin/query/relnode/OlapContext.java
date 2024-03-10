@@ -19,7 +19,6 @@
 package org.apache.kylin.query.relnode;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -124,7 +123,7 @@ public class OlapContext {
     @Setter
     private OlapRel topNode = null;
     /**
-     * If the join relNode is split into more sub-olapContexts, 
+     * If the join relNode is split into more sub-olapContexts,
      * then record this as the parentOfTopNode, otherwise, it should be null.
      */
     @Setter
@@ -146,9 +145,9 @@ public class OlapContext {
     private Set<TableColRefWithRel> innerGroupByColumns = new LinkedHashSet<>();
     /** Collect inner columns in filter, only for ComputedColumn recommendation. */
     @Setter
-    private Set<TblColRef> innerFilterColumns = new LinkedHashSet<>();
+    private Set<TableColRefWithRel> innerFilterColumns = new LinkedHashSet<>();
     /**
-     * subqueryJoinParticipants will be added to groupByColumns(only 
+     * subqueryJoinParticipants will be added to groupByColumns(only
      * when other group by co-exists) and allColumns.
      */
     private final Set<TblColRef> subqueryJoinParticipants = new HashSet<>();
@@ -159,7 +158,7 @@ public class OlapContext {
     private final List<RexNode> expandedFilterConditions = new LinkedList<>();
     private final List<OlapFilterRel> allFilterRels = new LinkedList<>();
     /**
-     * Tables without `not null` filters can be optimized for graph matching in the query, 
+     * Tables without `not null` filters can be optimized for graph matching in the query,
      * see configuration item `kylin.query.join-match-optimization-enabled`.
      */
     private final Set<TableRef> notNullTables = new HashSet<>();
@@ -314,13 +313,6 @@ public class OlapContext {
         this.getConstantAggregations().clear();
     }
 
-    public void addInnerGroupColumns(OlapRel rel, Collection<TblColRef> innerGroupColumns) {
-        Set<TblColRef> innerGroupColumnsSet = new HashSet<>(innerGroupColumns);
-        for (TblColRef tblColRef : innerGroupColumnsSet) {
-            this.innerGroupByColumns.add(new TableColRefWithRel(rel, tblColRef));
-        }
-    }
-
     /**
      * For streaming dataflow and fusion model, use streaming layout candidate of storage context.
      */
@@ -346,15 +338,6 @@ public class OlapContext {
         allTableScans.forEach(olapTableScan -> olapTableScan.getCluster().getPlanner().clear());
         allTableScans.forEach(olapTableScan -> simplifiedTableScans.add(olapTableScan.cleanRelOptCluster()));
         this.allTableScans = simplifiedTableScans;
-    }
-
-    /**
-     * It's very dangerous, only used for recommendation or modeling.
-     */
-    public void clean() {
-        topNode = null;
-        parentOfTopNode = null;
-        allOlapJoins.clear();
     }
 
     @Override

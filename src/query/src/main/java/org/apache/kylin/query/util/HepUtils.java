@@ -25,10 +25,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
-import org.apache.calcite.rel.rules.FilterMergeRule;
-import org.apache.calcite.rel.rules.ProjectMergeRule;
-import org.apache.calcite.rel.rules.ProjectRemoveRule;
+import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.query.optrule.AggregateProjectReduceRule;
 import org.apache.kylin.query.optrule.CountDistinctCaseWhenFunctionRule;
@@ -77,8 +74,8 @@ public class HepUtils {
             JoinFilterRule.LEFT_JOIN_LEFT_FILTER,
             // Merge Rule
             OlapProjectMergeRule.INSTANCE, //
-            FilterMergeRule.INSTANCE, //
-            ProjectRemoveRule.INSTANCE //
+            CoreRules.FILTER_MERGE, //
+            CoreRules.PROJECT_REMOVE //
     );
 
     public static final ImmutableList<RelOptRule> SumExprRules = ImmutableList.of(
@@ -114,8 +111,8 @@ public class HepUtils {
             OlapProjectRule.INSTANCE, //
             OlapJoinRule.INSTANCE, //
             // relative rules
-            ProjectMergeRule.INSTANCE, //
-            AggregateProjectMergeRule.INSTANCE, //
+            CoreRules.PROJECT_MERGE, //
+            CoreRules.AGGREGATE_PROJECT_MERGE, //
             AggregateProjectReduceRule.INSTANCE, //
             // target rules
             ScalarSubqueryJoinRule.AGG_JOIN, //

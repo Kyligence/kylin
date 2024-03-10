@@ -223,7 +223,7 @@ public class NSparkCubingUtil {
             if (!addBackTick) {
                 target = target.replace(BACK_TICK, "");
             }
-            convertResult = convertResult.replace(m.group(), target);
+            convertResult = StringUtils.replaceOnce(convertResult, m.group(), target);
         }
         return convertResult;
     }

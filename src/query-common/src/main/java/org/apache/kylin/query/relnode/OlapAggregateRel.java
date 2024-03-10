@@ -26,18 +26,22 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.calcite.adapter.enumerable.EnumerableAggregate;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableRel;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.Ord;
+import org.apache.calcite.linq4j.function.Hints;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.InvalidRelException;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Aggregate;
@@ -45,22 +49,35 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.AggregateFunction;
-import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.schema.ScalarFunction;
+import org.apache.calcite.schema.TableFunction;
+import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AggregateFunctionImpl;
+import org.apache.calcite.schema.impl.ScalarFunctionImpl;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlOperandMetadata;
+import org.apache.calcite.sql.type.SqlOperandTypeInference;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlUserDefinedAggFunction;
+import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
+import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
+import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.Optionality;
 import org.apache.calcite.util.Util;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KapConfig;
@@ -154,10 +171,9 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
     @Getter(AccessLevel.PRIVATE)
     private boolean afterAggregate;
 
-    public OlapAggregateRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, boolean indicator,
-            ImmutableBitSet groupSet, List<ImmutableBitSet> groupSets, List<AggregateCall> aggregateCalls)
-            throws InvalidRelException {
-        super(cluster, traits, child, indicator, groupSet, groupSets, aggregateCalls);
+    public OlapAggregateRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, ImmutableBitSet groupSet,
+            List<ImmutableBitSet> groupSets, List<AggregateCall> aggregateCalls) throws InvalidRelException {
+        super(cluster, traits, child, groupSet, groupSets, aggregateCalls);
         Preconditions.checkArgument(getConvention() == OlapRel.CONVENTION);
         this.afterAggregate = false;
         this.rewriteAggCalls = aggregateCalls;
@@ -189,10 +205,10 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
     }
 
     @Override
-    public Aggregate copy(RelTraitSet traitSet, RelNode input, boolean indicator, ImmutableBitSet groupSet,
+    public Aggregate copy(RelTraitSet traitSet, RelNode input, ImmutableBitSet groupSet,
             List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
         try {
-            return new OlapAggregateRel(getCluster(), traitSet, input, indicator, groupSet, groupSets, aggCalls);
+            return new OlapAggregateRel(getCluster(), traitSet, input, groupSet, groupSets, aggCalls);
         } catch (InvalidRelException e) {
             throw new IllegalStateException("Can't create OlapAggregateRel!", e);
         }
@@ -401,7 +417,10 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
                 context.getGroupByColumns().add(col);
             }
         }
-        context.addInnerGroupColumns(this, groupByInnerColumns);
+
+        for (TblColRef tblColRef : groupByInnerColumns) {
+            context.getInnerGroupByColumns().add(new TableColRefWithRel(this, tblColRef));
+        }
     }
 
     public List<TblColRef> getGroupColsOfColumnRowType() {
@@ -765,9 +784,21 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
                 .forEach(colRef -> this.context.getAllColumns().add(colRef));
 
         if (!(getInput() instanceof OlapProjectRel)) {
-            ((OlapRel) getInput()).getColumnRowType().getAllColumns().stream()
-                    .filter(colRef -> context.belongToContextTables(colRef) && !colRef.getName().startsWith("_KY_"))
-                    .forEach(colRef -> context.getAllColumns().add(colRef));
+            // see https://olapio.atlassian.net/browse/KE-42047
+            // Calcite 1.30 replaces the input RelNode with the current RelNode when the fields in the aggregate is 0
+            if (this.columnRowType.getSourceColumns() == null) {
+                context.getAllColumns().clear();
+                return;
+            }
+            for (TblColRef colRef : ((OlapRel) getInput()).getColumnRowType().getAllColumns()) {
+                if (context.belongToContextTables(colRef) && !colRef.getName().startsWith("_KY_"))
+                    context.getAllColumns().add(colRef);
+            }
+            return;
+        }
+
+        // Specifically designed to deal with count(*) issues caused by push down ProjectRel by Calcite RelFieldTrimmer
+        if (getGroupCount() == 0 && aggregations.size() == 1 && aggregations.get(0).isCountConstant()) {
             return;
         }
 
@@ -803,7 +834,7 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         if (func.isCount()) {
             newAgg = SqlStdOperatorTable.SUM0;
         } else if (udafMap != null && udafMap.containsKey(callName)) {
-            newAgg = createCustomAggFunction(callName, fieldType, udafMap.get(callName));
+            newAgg = createCustomAggFunction(callName, udafMap.get(callName));
         }
 
         // rebuild parameters
@@ -822,7 +853,8 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         }
 
         // rebuild aggregate call
-        return new AggregateCall(newAgg, false, newArgList, fieldType, callName);
+        return AggregateCall.create(newAgg, false, false, false, newArgList, -1, null, RelCollations.EMPTY, fieldType,
+                callName);
     }
 
     /**
@@ -838,27 +870,17 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         return argList.subList(0, argListLength);
     }
 
-    SqlAggFunction createCustomAggFunction(String funcName, RelDataType returnType, Class<?> customAggFuncClz) {
-        RelDataTypeFactory typeFactory = getCluster().getTypeFactory();
+    private SqlAggFunction createCustomAggFunction(String funcName, Class<?> customAggFuncClz) {
         SqlIdentifier sqlIdentifier = new SqlIdentifier(funcName, new SqlParserPos(1, 1));
         AggregateFunction aggFunction = AggregateFunctionImpl.create(customAggFuncClz);
-        List<RelDataType> argTypes = new ArrayList<>();
-        List<SqlTypeFamily> typeFamilies = new ArrayList<>();
-        for (FunctionParameter o : aggFunction.getParameters()) {
-            final RelDataType type = o.getType(typeFactory);
-            argTypes.add(type);
-            typeFamilies.add(Util.first(type.getSqlTypeName().getFamily(), SqlTypeFamily.ANY));
-        }
-        return new SqlUserDefinedAggFunction(sqlIdentifier, ReturnTypes.explicit(returnType),
-                InferTypes.explicit(argTypes), OperandTypes.family(typeFamilies), aggFunction, false, false,
-                typeFactory);
+        return (SqlAggFunction) toOp(sqlIdentifier, aggFunction);
     }
 
     @Override
     public EnumerableRel implementEnumerable(List<EnumerableRel> inputs) {
         try {
             return new EnumerableAggregate(getCluster(), getCluster().traitSetOf(EnumerableConvention.INSTANCE), //
-                    sole(inputs), indicator, this.groupSet, this.groupSets, rewriteAggCalls);
+                    sole(inputs), this.groupSet, this.groupSets, rewriteAggCalls);
         } catch (InvalidRelException e) {
             throw new IllegalStateException("Can't create EnumerableAggregate!", e);
         }
@@ -899,5 +921,98 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
     public boolean isContainCountDistinct() {
         return aggregateCalls.stream()
                 .anyMatch(agg -> agg.getAggregation().getKind() == SqlKind.COUNT && agg.isDistinct());
+    }
+
+    /**
+     * Copy toOp implementations of {@link org.apache.calcite.prepare.CalciteCatalogReader}
+     *  to create user defined aggregation functions
+     */
+
+    /** Converts a function to a {@link org.apache.calcite.sql.SqlOperator}. */
+    private static SqlOperator toOp(SqlIdentifier name, final org.apache.calcite.schema.Function function) {
+        final Function<RelDataTypeFactory, List<RelDataType>> argTypesFactory = typeFactory -> function.getParameters()
+                .stream().map(o -> o.getType(typeFactory)).collect(Util.toImmutableList());
+        final Function<RelDataTypeFactory, List<SqlTypeFamily>> typeFamiliesFactory = typeFactory -> argTypesFactory
+                .apply(typeFactory).stream()
+                .map(type -> Util.first(type.getSqlTypeName().getFamily(), SqlTypeFamily.ANY))
+                .collect(Util.toImmutableList());
+        final Function<RelDataTypeFactory, List<RelDataType>> paramTypesFactory = typeFactory -> argTypesFactory
+                .apply(typeFactory).stream().map(type -> toSql(typeFactory, type)).collect(Util.toImmutableList());
+
+        // Use a short-lived type factory to populate "typeFamilies" and "argTypes".
+        // SqlOperandMetadata.paramTypes will use the real type factory, during
+        // validation.
+        final RelDataTypeFactory dummyTypeFactory = new JavaTypeFactoryImpl();
+        final List<RelDataType> argTypes = argTypesFactory.apply(dummyTypeFactory);
+        final List<SqlTypeFamily> typeFamilies = typeFamiliesFactory.apply(dummyTypeFactory);
+
+        final SqlOperandTypeInference operandTypeInference = InferTypes.explicit(argTypes);
+
+        final SqlOperandMetadata operandMetadata = OperandTypes.operandMetadata(typeFamilies, paramTypesFactory,
+                i -> function.getParameters().get(i).getName(), i -> function.getParameters().get(i).isOptional());
+
+        final SqlKind kind = kind(function);
+        if (function instanceof ScalarFunction) {
+            final SqlReturnTypeInference returnTypeInference = infer((ScalarFunction) function);
+            return new SqlUserDefinedFunction(name, kind, returnTypeInference, operandTypeInference, operandMetadata,
+                    function);
+        } else if (function instanceof AggregateFunction) {
+            final SqlReturnTypeInference returnTypeInference = infer((AggregateFunction) function);
+            return new SqlUserDefinedAggFunction(name, kind, returnTypeInference, operandTypeInference, operandMetadata,
+                    (AggregateFunction) function, false, false, Optionality.FORBIDDEN);
+        } else if (function instanceof TableMacro) {
+            return new SqlUserDefinedTableMacro(name, kind, ReturnTypes.CURSOR, operandTypeInference, operandMetadata,
+                    (TableMacro) function);
+        } else if (function instanceof TableFunction) {
+            return new SqlUserDefinedTableFunction(name, kind, ReturnTypes.CURSOR, operandTypeInference,
+                    operandMetadata, (TableFunction) function);
+        } else {
+            throw new AssertionError("unknown function type " + function);
+        }
+    }
+
+    /** Deduces the {@link org.apache.calcite.sql.SqlKind} of a user-defined
+     * function based on a {@link Hints} annotation, if present. */
+    private static SqlKind kind(org.apache.calcite.schema.Function function) {
+        if (function instanceof ScalarFunctionImpl) {
+            Hints hints = ((ScalarFunctionImpl) function).method.getAnnotation(Hints.class);
+            if (hints != null) {
+                for (String hint : hints.value()) {
+                    if (hint.startsWith("SqlKind:")) {
+                        return SqlKind.valueOf(hint.substring("SqlKind:".length()));
+                    }
+                }
+            }
+        }
+        return SqlKind.OTHER_FUNCTION;
+    }
+
+    private static SqlReturnTypeInference infer(final ScalarFunction function) {
+        return opBinding -> {
+            final RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
+            final RelDataType type;
+            if (function instanceof ScalarFunctionImpl) {
+                type = ((ScalarFunctionImpl) function).getReturnType(typeFactory, opBinding);
+            } else {
+                type = function.getReturnType(typeFactory);
+            }
+            return toSql(typeFactory, type);
+        };
+    }
+
+    private static SqlReturnTypeInference infer(final AggregateFunction function) {
+        return opBinding -> {
+            final RelDataTypeFactory typeFactory = opBinding.getTypeFactory();
+            final RelDataType type = function.getReturnType(typeFactory);
+            return toSql(typeFactory, type);
+        };
+    }
+
+    private static RelDataType toSql(RelDataTypeFactory typeFactory, RelDataType type) {
+        if (type instanceof RelDataTypeFactoryImpl.JavaType
+                && ((RelDataTypeFactoryImpl.JavaType) type).getJavaClass() == Object.class) {
+            return typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.ANY), true);
+        }
+        return JavaTypeFactoryImpl.toSql(typeFactory, type);
     }
 }

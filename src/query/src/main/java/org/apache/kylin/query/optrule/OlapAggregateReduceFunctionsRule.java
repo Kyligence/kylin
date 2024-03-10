@@ -19,6 +19,7 @@
 package org.apache.kylin.query.optrule;
 
 import org.apache.calcite.plan.RelOptRuleOperand;
+import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.rules.AggregateReduceFunctionsRule;
@@ -38,7 +39,7 @@ public class OlapAggregateReduceFunctionsRule extends AggregateReduceFunctionsRu
     }
 
     @Override
-    protected boolean isReducible(final SqlKind kind) {
-        return SqlKind.AVG_AGG_FUNCTIONS.contains(kind);
+    public boolean canReduce(AggregateCall call) {
+        return SqlKind.AVG_AGG_FUNCTIONS.contains(call.getAggregation().getKind());
     }
 }

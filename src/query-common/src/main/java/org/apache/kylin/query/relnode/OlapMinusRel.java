@@ -107,8 +107,8 @@ public class OlapMinusRel extends Minus implements OlapRel {
 
     @Override
     public void implementOlap(OlapImpl olapImpl) {
-        for (int i = 0, n = getInputs().size(); i < n; i++) {
-            olapImpl.visitChild(getInputs().get(i), this);
+        for (RelNode input : getInputs()) {
+            olapImpl.visitChild(input, this);
         }
         this.columnRowType = buildColumnRowType();
         if (context != null && this == context.getTopNode() && !context.isHasAgg()) {

@@ -360,9 +360,9 @@ public class RowFilter implements IQueryTransformer, IPushDownConverter {
                 // the instanceof SqlIdentifier is for the case that
                 // "select * from (select * from t2) t1".subquery as table.
                 SqlBasicCall node = (SqlBasicCall) call;
-                if (node.getOperator() instanceof SqlAsOperator && node.getOperands()[0] instanceof SqlIdentifier) {
-                    SqlIdentifier id0 = (SqlIdentifier) ((SqlBasicCall) call).getOperands()[0];
-                    SqlIdentifier id1 = (SqlIdentifier) ((SqlBasicCall) call).getOperands()[1];
+                if (node.getOperator() instanceof SqlAsOperator && node.operand(0) instanceof SqlIdentifier) {
+                    SqlIdentifier id0 = (SqlIdentifier) ((SqlBasicCall) call).operand(0);
+                    SqlIdentifier id1 = (SqlIdentifier) ((SqlBasicCall) call).operand(1);
                     String table = id0.toString(); //DB.TABLE OR TABLE
                     String alias = CalciteParser.getLastNthName(id1, 1);
                     tablesWithAlias.add(new Table(table, alias));

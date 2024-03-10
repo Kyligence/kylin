@@ -642,7 +642,7 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             });
 
             return relBuilder.push(input) //
-                    .aggregate(relBuilder.groupKey(belowAggGroupSet, null), //
+                    .aggregate(relBuilder.groupKey(belowAggGroupSet), //
                             Preconditions.checkNotNull(belowAggCallList)) //
                     .build();
         }

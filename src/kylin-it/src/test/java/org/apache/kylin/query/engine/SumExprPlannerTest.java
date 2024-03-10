@@ -35,6 +35,7 @@ import org.apache.kylin.query.optrule.OlapAggregateRule;
 import org.apache.kylin.query.optrule.OlapCountDistinctJoinRule;
 import org.apache.kylin.query.optrule.OlapFilterJoinRule;
 import org.apache.kylin.query.optrule.OlapJoinRule;
+import org.apache.kylin.query.optrule.OlapProjectJoinTransposeRule;
 import org.apache.kylin.query.optrule.OlapProjectRule;
 import org.apache.kylin.query.optrule.OlapSumCastTransposeRule;
 import org.apache.kylin.query.optrule.OlapSumTransCastToThenRule;
@@ -191,12 +192,10 @@ public class SumExprPlannerTest extends CalciteRuleTestBase {
                 + "     (SELECT LSTG_FORMAT_NAME, ORDER_ID, SUM (\"PRICE\") AS \"X_measure__0\"\n"
                 + "      FROM TEST_KYLIN_FACT  GROUP  BY LSTG_FORMAT_NAME, ORDER_ID) \"t0\" ON \"自定义 SQL 查询\".\"ORDER_ID\" = \"t0\".\"ORDER_ID\"\n"
                 + "GROUP  BY \"自定义 SQL 查询\".\"CAL_DT\"\n";
-        super.checkSQLPostOptimize(defaultProject, SQL, null, null, ImmutableList.of(
-                OlapAggProjectMergeRule.AGG_PROJECT_JOIN, OlapAggProjectMergeRule.AGG_PROJECT_FILTER_JOIN,
-                OlapAggProjectTransposeRule.AGG_PROJECT_FILTER_JOIN, OlapAggProjectTransposeRule.AGG_PROJECT_JOIN,
-                OlapAggFilterTransposeRule.AGG_FILTER_JOIN, OlapAggJoinTransposeRule.INSTANCE_JOIN_RIGHT_AGG,
-                OlapCountDistinctJoinRule.COUNT_DISTINCT_JOIN_ONE_SIDE_AGG, OlapAggregateRule.INSTANCE,
-                OlapJoinRule.INSTANCE, OlapProjectRule.INSTANCE));
+        List<RelOptRule> rules = Lists.newArrayList();
+        rules.addAll(HepUtils.AggPushDownRules);
+        rules.add(OlapProjectJoinTransposeRule.INSTANCE);
+        super.checkSQLPostOptimize(defaultProject, SQL, null, null, rules);
     }
 
     @Test

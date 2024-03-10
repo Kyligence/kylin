@@ -109,10 +109,9 @@ class ProjectSchemaFactory {
     }
 
     private void addProjectSchemas(CalciteSchema parentSchema) {
-
+        addUDFs(parentSchema);
         for (String schemaName : schemasMap.keySet()) {
-            CalciteSchema added = parentSchema.add(schemaName, createSchema(schemaName));
-            addUDFs(added);
+            parentSchema.add(schemaName, createSchema(schemaName));
         }
     }
 
@@ -151,7 +150,7 @@ class ProjectSchemaFactory {
     }
 
     private void addUDFs(CalciteSchema calciteSchema) {
-        for (Map.Entry<String, Function> entry : UDFRegistry.allUdfMap.entries()) {
+        for (Map.Entry<String, Function> entry : UdfRegistry.allUdfMap.entries()) {
             calciteSchema.plus().add(entry.getKey().toUpperCase(Locale.ROOT), entry.getValue());
         }
     }

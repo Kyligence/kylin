@@ -249,13 +249,14 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($17, 164000), '[0,164000)', <($17, 166000), '[164000, 166000)', '[166000, +∞')], PRICE=[$8], ctx=[])
-      OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-        OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($3, 164000), '[0,164000)':VARCHAR(16), <($3, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], PRICE=[$1], ctx=[])
+      OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+        OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
           OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+            OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+              OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                 OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -263,16 +264,17 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)', <($0, 166000), '[164000, 166000)', '[166000, +∞')], $1=[$1], ctx=[])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)':VARCHAR(16), <($0, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], $1=[$1], ctx=[])
       OlapAggregateRel(group-set=[[1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
         OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
           OlapProjectRel(LSTG_FORMAT_NAME=[$0], X_measure__0=[$3], usr_GMV_SUM_ok=[$1], ctx=[])
             OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
-              OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-                OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-              OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+              OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
                 OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-                  OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+                  OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+              OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+                OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+                  OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                     OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -280,13 +282,14 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0, 1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($17, 164000), '[0,164000)', <($17, 166000), '[164000, 166000)', '[166000, +∞')], LSTG_FORMAT_NAME=[$16], PRICE=[$8], ctx=[])
-      OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-        OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($3, 164000), '[0,164000)':VARCHAR(16), <($3, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], LSTG_FORMAT_NAME=[$2], PRICE=[$1], ctx=[])
+      OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+        OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
           OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+            OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+              OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                 OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -294,16 +297,17 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0, 1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($1, 164000), '[0,164000)', <($1, 166000), '[164000, 166000)', '[166000, +∞')], LSTG_FORMAT_NAME=[$0], $2=[$2], ctx=[])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($1, 164000), '[0,164000)':VARCHAR(16), <($1, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], LSTG_FORMAT_NAME=[$0], $2=[$2], ctx=[])
       OlapAggregateRel(group-set=[[1, 2]], groups=[null], usr_GMV_SUM_ok=[SUM($3)], ctx=[])
         OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
           OlapProjectRel(LSTG_FORMAT_NAME=[$0], LSTG_FORMAT_NAME0=[$2], X_measure__0=[$3], usr_GMV_SUM_ok=[$1], ctx=[])
             OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
-              OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-                OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-              OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+              OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
                 OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-                  OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+                  OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+              OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+                OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+                  OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                     OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -311,83 +315,94 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($1, 164000), '[0,164000)', <($1, 166000), '[164000, 166000)', '[166000, +∞')], PRICE=[$10], ctx=[])
-      OlapFilterRel(condition=[NOT(=($5, 'Auction'))], ctx=[])
-        OlapJoinRel(condition=[=($0, $5)], joinType=[inner], ctx=[])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($1, 164000), '[0,164000)':VARCHAR(16), <($1, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], PRICE=[$3], ctx=[])
+      OlapFilterRel(condition=[<>($2, 'Auction')], ctx=[])
+        OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
           OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+            OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+              OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                 OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
         <Resource name="query03.planAfter">
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)', <($0, 166000), '[164000, 166000)', '[166000, +∞')], $1=[$1], ctx=[])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)':VARCHAR(16), <($0, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], $1=[$1], ctx=[])
       OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
         OlapFilterRel(condition=[<>($1, 'Auction')], ctx=[])
           OlapProjectRel(X_measure__0=[$1], LSTG_FORMAT_NAME=[$2], usr_GMV_SUM_ok=[$3], ctx=[])
             OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
               OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-                OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-                  OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+                OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+                  OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                     OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-              OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-                OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+              OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
+                OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+                  OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
         <Resource name="query04.planBefore">
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($22, 164000), '[0,164000)', <($22, 166000), '[164000, 166000)', '[166000, +∞')], PRICE=[$8], ctx=[])
-      OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-        OlapJoinRel(condition=[=($3, $21)], joinType=[inner], ctx=[])
-          OlapJoinRel(condition=[=($7, $16)], joinType=[inner], ctx=[])
-            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-            OlapTableScan(table=[[DEFAULT, TEST_ACCOUNT]], ctx=[], fields=[[0, 1, 2, 3, 4]])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($5, 164000), '[0,164000)':VARCHAR(16), <($5, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], PRICE=[$2], ctx=[])
+      OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+        OlapJoinRel(condition=[=($0, $4)], joinType=[inner], ctx=[])
+          OlapJoinRel(condition=[=($1, $3)], joinType=[inner], ctx=[])
+            OlapProjectRel(LSTG_FORMAT_NAME=[$3], SELLER_ID=[$7], PRICE=[$8], ctx=[])
+              OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+            OlapProjectRel(ACCOUNT_ID=[$0], ctx=[])
+              OlapTableScan(table=[[DEFAULT, TEST_ACCOUNT]], ctx=[], fields=[[0, 1, 2, 3, 4]])
           OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-                OlapJoinRel(condition=[=($7, $16)], joinType=[inner], ctx=[])
-                  OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-                  OlapTableScan(table=[[DEFAULT, TEST_ACCOUNT]], ctx=[], fields=[[0, 1, 2, 3, 4]])
+            OlapProjectRel(LSTG_FORMAT_NAME=[$0], PRICE=[$2], ctx=[])
+              OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+                OlapJoinRel(condition=[=($1, $3)], joinType=[inner], ctx=[])
+                  OlapProjectRel(LSTG_FORMAT_NAME=[$3], SELLER_ID=[$7], PRICE=[$8], ctx=[])
+                    OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+                  OlapProjectRel(ACCOUNT_ID=[$0], ctx=[])
+                    OlapTableScan(table=[[DEFAULT, TEST_ACCOUNT]], ctx=[], fields=[[0, 1, 2, 3, 4]])
 ]]>
         </Resource>
         <Resource name="query04.planAfter">
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)', <($0, 166000), '[164000, 166000)', '[166000, +∞')], $1=[$1], ctx=[])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)':VARCHAR(16), <($0, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], $1=[$1], ctx=[])
       OlapAggregateRel(group-set=[[1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
         OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
           OlapProjectRel(LSTG_FORMAT_NAME=[$0], X_measure__0=[$3], usr_GMV_SUM_ok=[$1], ctx=[])
             OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
-              OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-                OlapJoinRel(condition=[=($7, $16)], joinType=[inner], ctx=[])
-                  OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-                  OlapTableScan(table=[[DEFAULT, TEST_ACCOUNT]], ctx=[], fields=[[0, 1, 2, 3, 4]])
+              OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
+                OlapJoinRel(condition=[=($1, $3)], joinType=[inner], ctx=[])
+                  OlapProjectRel(LSTG_FORMAT_NAME=[$3], SELLER_ID=[$7], PRICE=[$8], ctx=[])
+                    OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+                  OlapProjectRel(ACCOUNT_ID=[$0], ctx=[])
+                    OlapTableScan(table=[[DEFAULT, TEST_ACCOUNT]], ctx=[], fields=[[0, 1, 2, 3, 4]])
               OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-                OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-                  OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-                    OlapJoinRel(condition=[=($7, $16)], joinType=[inner], ctx=[])
-                      OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-                      OlapTableScan(table=[[DEFAULT, TEST_ACCOUNT]], ctx=[], fields=[[0, 1, 2, 3, 4]])
+                OlapProjectRel(LSTG_FORMAT_NAME=[$0], PRICE=[$2], ctx=[])
+                  OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+                    OlapJoinRel(condition=[=($1, $3)], joinType=[inner], ctx=[])
+                      OlapProjectRel(LSTG_FORMAT_NAME=[$3], SELLER_ID=[$7], PRICE=[$8], ctx=[])
+                        OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+                      OlapProjectRel(ACCOUNT_ID=[$0], ctx=[])
+                        OlapTableScan(table=[[DEFAULT, TEST_ACCOUNT]], ctx=[], fields=[[0, 1, 2, 3, 4]])
 ]]>
         </Resource>
         <Resource name="query05.planBefore">
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[$17], PRICE=[$8], ctx=[])
-      OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-        OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+    OlapProjectRel(Calculation_1162491713472385025=[$3], PRICE=[$1], ctx=[])
+      OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+        OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
           OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+            OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+              OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                 OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -395,14 +410,15 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
-    OlapFilterRel(condition=[NOT(=($0, 'Auction'))], ctx=[])
+    OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
       OlapProjectRel(LSTG_FORMAT_NAME=[$0], X_measure__0=[$3], usr_GMV_SUM_ok=[$1], ctx=[])
         OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
-          OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-          OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+          OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
             OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+              OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+          OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+            OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+              OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                 OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -410,13 +426,14 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(AND(<($17, 164000), =($16, 'ABIN')), '[0,164000)', AND(<($17, 166000), =($16, 'ABIN')), '[164000, 166000)', '[166000, +∞')], PRICE=[$8], ctx=[])
-      OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-        OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(AND(<($3, 164000), =($2, 'ABIN')), '[0,164000)':VARCHAR(16), AND(<($3, 166000), =($2, 'ABIN')), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], PRICE=[$1], ctx=[])
+      OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+        OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
           OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+            OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+              OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                 OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -424,16 +441,17 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(AND(<($1, 164000), =($0, 'ABIN')), '[0,164000)', AND(<($1, 166000), =($0, 'ABIN')), '[164000, 166000)', '[166000, +∞')], $2=[$2], ctx=[])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(AND(<($1, 164000), =($0, 'ABIN')), '[0,164000)':VARCHAR(16), AND(<($1, 166000), =($0, 'ABIN')), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], $2=[$2], ctx=[])
       OlapAggregateRel(group-set=[[1, 2]], groups=[null], usr_GMV_SUM_ok=[SUM($3)], ctx=[])
         OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
           OlapProjectRel(LSTG_FORMAT_NAME=[$0], LSTG_FORMAT_NAME0=[$2], X_measure__0=[$3], usr_GMV_SUM_ok=[$1], ctx=[])
             OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
-              OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-                OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-              OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+              OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
                 OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-                  OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+                  OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+              OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+                OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+                  OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                     OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -441,13 +459,14 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_COUNT_ok=[COUNT($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($17, 164000), '[0,164000)', <($17, 166000), '[164000, 166000)', '[166000, +∞')], PRICE=[$8], ctx=[])
-      OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-        OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($3, 164000), '[0,164000)':VARCHAR(16), <($3, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], PRICE=[$1], ctx=[])
+      OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+        OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
           OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+            OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+              OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                 OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -455,16 +474,17 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_COUNT_ok=[$SUM0($1)], ctx=[])
-    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)', <($0, 166000), '[164000, 166000)', '[166000, +∞')], $1=[$1], ctx=[])
+    OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)':VARCHAR(16), <($0, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], $1=[$1], ctx=[])
       OlapAggregateRel(group-set=[[1]], groups=[null], usr_GMV_COUNT_ok=[$SUM0($2)], ctx=[])
         OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
           OlapProjectRel(LSTG_FORMAT_NAME=[$0], X_measure__0=[$3], usr_GMV_COUNT_ok=[$1], ctx=[])
             OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
-              OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_COUNT_ok=[COUNT($8)], ctx=[])
-                OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-              OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+              OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_COUNT_ok=[COUNT($1)], ctx=[])
                 OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-                  OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+                  OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+              OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+                OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+                  OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                     OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -473,25 +493,27 @@ OlapToEnumerableConverter
         <Resource name="query05.planBefore">
             <![CDATA[
 OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-  OlapProjectRel(Calculation_1162491713472385025=[$17], PRICE=[$8], ctx=[])
-    OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-      OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-        OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+  OlapProjectRel(Calculation_1162491713472385025=[$3], PRICE=[$1], ctx=[])
+    OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+      OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+        OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
         OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-            OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+          OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
               OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
         <Resource name="query05.planAfter">
             <![CDATA[
-OlapAggregateRel(group-set=[[17]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-  OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-    OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-      OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
+  OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+    OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+      OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+        OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
       OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-        OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-          OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+        OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
             OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -500,27 +522,29 @@ OlapAggregateRel(group-set=[[17]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=
         <Resource name="query01.planBefore">
             <![CDATA[
 OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-  OlapProjectRel(Calculation_1162491713472385025=[CASE(<($17, 164000), '[0,164000)', <($17, 166000), '[164000, 166000)', '[166000, +∞')], PRICE=[$8], ctx=[])
-    OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-      OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-        OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+  OlapProjectRel(Calculation_1162491713472385025=[CASE(<($3, 164000), '[0,164000)':VARCHAR(16), <($3, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], PRICE=[$1], ctx=[])
+    OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+      OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+        OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
         OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-            OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+          OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
               OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
         <Resource name="query01.planAfter">
             <![CDATA[
 OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
-  OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)', <($0, 166000), '[164000, 166000)', '[166000, +∞')], $1=[$1], ctx=[])
-    OlapAggregateRel(group-set=[[17]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-      OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-        OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+  OlapProjectRel(Calculation_1162491713472385025=[CASE(<($0, 164000), '[0,164000)':VARCHAR(16), <($0, 166000), '[164000, 166000)':VARCHAR(16), '[166000, +∞':VARCHAR(16))], $1=[$1], ctx=[])
+    OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
+      OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+        OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
           OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-              OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+            OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+              OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
                 OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -528,26 +552,28 @@ OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[
     <TestCase name="testAggFilterTransposeRule">
         <Resource name="query05.planBefore">
             <![CDATA[
-OlapAggregateRel(group-set=[[17]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-  OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
-    OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-      OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
+  OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+    OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+      OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+        OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
       OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-        OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-          OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+        OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
             OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
         <Resource name="query05.planAfter">
             <![CDATA[
 OlapAggregateRel(group-set=[[1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
-  OlapFilterRel(condition=[NOT(=($0, 'Auction'))], ctx=[])
-    OlapAggregateRel(group-set=[[3, 17]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-      OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-        OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+  OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+    OlapAggregateRel(group-set=[[0, 3]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
+      OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+        OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
         OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-            OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+          OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
               OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
@@ -556,27 +582,29 @@ OlapAggregateRel(group-set=[[1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[
         <Resource name="query05.planBefore">
             <![CDATA[
 OlapAggregateRel(group-set=[[1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
-  OlapFilterRel(condition=[NOT(=($0, 'Auction'))], ctx=[])
-    OlapAggregateRel(group-set=[[3, 17]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-      OlapJoinRel(condition=[=($3, $16)], joinType=[inner], ctx=[])
-        OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+  OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+    OlapAggregateRel(group-set=[[0, 3]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
+      OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
+        OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
+          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
         OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
-          OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-            OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+          OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
               OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>
         <Resource name="query05.planAfter">
             <![CDATA[
 OlapAggregateRel(group-set=[[1]], groups=[null], usr_GMV_SUM_ok=[SUM($2)], ctx=[])
-  OlapFilterRel(condition=[NOT(=($0, 'Auction'))], ctx=[])
+  OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
     OlapProjectRel(LSTG_FORMAT_NAME=[$0], X_measure__0=[$3], usr_GMV_SUM_ok=[$1], ctx=[])
       OlapJoinRel(condition=[=($0, $2)], joinType=[inner], ctx=[])
-        OlapAggregateRel(group-set=[[3]], groups=[null], usr_GMV_SUM_ok=[SUM($8)], ctx=[])
-          OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
-        OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+        OlapAggregateRel(group-set=[[0]], groups=[null], usr_GMV_SUM_ok=[SUM($1)], ctx=[])
           OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
-            OlapFilterRel(condition=[NOT(=($3, 'Auction'))], ctx=[])
+            OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
+        OlapAggregateRel(group-set=[[0]], groups=[null], X_measure__0=[SUM($1)], ctx=[])
+          OlapFilterRel(condition=[<>($0, 'Auction')], ctx=[])
+            OlapProjectRel(LSTG_FORMAT_NAME=[$3], PRICE=[$8], ctx=[])
               OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]])
 ]]>
         </Resource>

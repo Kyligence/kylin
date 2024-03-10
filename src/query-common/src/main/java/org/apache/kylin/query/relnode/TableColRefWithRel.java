@@ -20,6 +20,11 @@ package org.apache.kylin.query.relnode;
 
 import org.apache.kylin.metadata.model.TblColRef;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class TableColRefWithRel {
 
     private OlapRel relNode;
@@ -34,17 +39,4 @@ public class TableColRefWithRel {
     public <T extends OlapRel> T getRelNodeAs(Class<? extends T> targetClz) {
         return targetClz.cast(relNode);
     }
-
-    public void setRelNode(OlapRel relNode) {
-        this.relNode = relNode;
-    }
-
-    public TblColRef getTblColRef() {
-        return tblColRef;
-    }
-
-    public void setTblColRef(TblColRef tblColRef) {
-        this.tblColRef = tblColRef;
-    }
-
 }

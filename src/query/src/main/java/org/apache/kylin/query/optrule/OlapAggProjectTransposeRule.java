@@ -52,15 +52,15 @@ import org.apache.kylin.query.relnode.OlapFilterRel;
 import org.apache.kylin.query.relnode.OlapJoinRel;
 import org.apache.kylin.query.relnode.OlapProjectRel;
 import org.apache.kylin.query.util.RuleUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * agg-project-join  ->  agg-project-agg-join
  * agg-project-filter-join -> agg-project-filter-agg-join
  */
+@Slf4j
 public class OlapAggProjectTransposeRule extends RelOptRule {
-    private static final Logger logger = LoggerFactory.getLogger(OlapAggProjectTransposeRule.class);
     public static final OlapAggProjectTransposeRule AGG_PROJECT_FILTER_JOIN = new OlapAggProjectTransposeRule(
             operand(OlapAggregateRel.class,
                     operand(OlapProjectRel.class, operand(OlapFilterRel.class, operand(OlapJoinRel.class, any())))),
@@ -216,9 +216,10 @@ public class OlapAggProjectTransposeRule extends RelOptRule {
         try {
             call.transformTo(topAggregate);
         } catch (AssertionError e) {
-            // may cause AssertionError, the case is: org.apache.kylin.query.util.CCOnRealModelTest.testSubQuery
-            // and org.apache.kylin.newten.NAggPushDownTest.testBasic
-            logger.warn("Applying OlapAggProjectTransposeRule failed! {}", e.getMessage());
+            // may cause AssertionError, the cases are:
+            // 1) org.apache.kylin.query.util.CCOnRealModelTest.testSubQuery
+            // 2) org.apache.kylin.newten.NAggPushDownTest.testBasic
+            log.warn("Applying OlapAggProjectTransposeRule failed! {}", e.getMessage());
         }
     }
 

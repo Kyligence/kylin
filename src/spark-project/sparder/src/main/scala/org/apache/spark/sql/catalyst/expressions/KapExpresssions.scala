@@ -23,10 +23,11 @@ import java.util.Locale
 import org.apache.kylin.common.util.TimeUtil
 import org.apache.spark.dict.{NBucketDictionary, NGlobalDictionaryV2}
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, TypeCheckResult}
 import org.apache.spark.sql.catalyst.expressions.aggregate.DeclarativeAggregate
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
-import org.apache.spark.sql.catalyst.util.{DateTimeUtils, GenericArrayData, KapDateTimeUtils}
+import org.apache.spark.sql.catalyst.util.{DateTimeUtils, GenericArrayData, KapDateTimeUtils, TypeUtils}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.udf._
@@ -125,9 +126,6 @@ case class KapSubtractMonths(a: Expression, b: Expression)
   }
 
 }
-
-import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
-import org.apache.spark.sql.catalyst.util.TypeUtils
 
 @ExpressionDescription(
   usage = "_FUNC_(expr) - Returns the sum calculated from values of a group. " +
@@ -911,4 +909,88 @@ case class YMDintBetween(first: Expression, second: Expression) extends BinaryEx
     val newChildren = Seq(newFirst, newSecond)
     super.legacyWithNewChildren(newChildren)
   }
+}
+
+// support 2 or 3 param instr function, refer to StringLocate in Spark.
+case class KylinInstr(str: Expression, substr: Expression, start: Expression)
+  extends TernaryExpression with ImplicitCastInputTypes {
+
+  def this(str: Expression, substr: Expression) = {
+    this(str, substr, Literal(1))
+  }
+
+  override def first: Expression = str
+
+  override def second: Expression = substr
+
+  override def third: Expression = start
+
+  override def nullable: Boolean = str.nullable || substr.nullable
+
+  override def dataType: DataType = IntegerType
+
+  override def inputTypes: Seq[DataType] = Seq(StringType, StringType, IntegerType)
+
+  override def eval(input: InternalRow): Any = {
+    val s = start.eval(input)
+    if (s == null) {
+      0
+    } else {
+      val r = substr.eval(input)
+      if (r == null) {
+        null
+      } else {
+        val l = str.eval(input)
+        if (l == null) {
+          null
+        } else {
+          val sVal = s.asInstanceOf[Int]
+          if (sVal < 1) {
+            0
+          } else {
+            l.asInstanceOf[UTF8String].indexOf(
+              r.asInstanceOf[UTF8String],
+              s.asInstanceOf[Int] - 1) + 1
+          }
+        }
+      }
+    }
+  }
+
+  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val strGen = str.genCode(ctx)
+    val substrGen = substr.genCode(ctx)
+    val startGen = start.genCode(ctx)
+    ev.copy(code =
+      code"""
+      int ${ev.value} = 0;
+      boolean ${ev.isNull} = false;
+      ${startGen.code}
+      if (!${startGen.isNull}) {
+        ${substrGen.code}
+        if (!${substrGen.isNull}) {
+          ${strGen.code}
+          if (!${strGen.isNull}) {
+            if (${startGen.value} > 0) {
+              ${ev.value} = ${strGen.value}.indexOf(${substrGen.value},
+                ${startGen.value} - 1) + 1;
+            }
+          } else {
+            ${ev.isNull} = true;
+          }
+        } else {
+          ${ev.isNull} = true;
+        }
+      }
+     """)
+  }
+
+  override def prettyName: String =
+    getTagValue(FunctionRegistry.FUNC_ALIAS).getOrElse("instr")
+
+  override protected def withNewChildrenInternal(newFirst: Expression,
+                                                 newSecond: Expression,
+                                                 newThird: Expression): KylinInstr =
+    copy(str = newFirst, substr = newSecond, start = newThird)
+
 }

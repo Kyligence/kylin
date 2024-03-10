@@ -267,7 +267,7 @@ public class QueryDependentColumnMask implements QueryResultMask {
     private List<ColumnReferences> getProjectColRefs(Project project) {
         List<ColumnReferences> inputRefs = getRefCols(project.getInput(0));
         List<ColumnReferences> refs = new LinkedList<>();
-        for (RexNode expr : project.getChildExps()) {
+        for (RexNode expr : project.getProjects()) {
             ColumnReferences ref = new ColumnReferences();
             for (Integer input : RelOptUtil.InputFinder.bits(expr)) {
                 ref = ref.merge(inputRefs.get(input));

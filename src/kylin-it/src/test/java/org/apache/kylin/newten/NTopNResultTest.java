@@ -57,7 +57,7 @@ public class NTopNResultTest extends NLocalWithSparkSessionTest {
     }
 
     @Test
-    public void testTopNWithtwoSameMeasure() throws Exception {
+    public void testWithTwoSameMeasuresOfTopN() throws Exception {
         String dfID1 = "d9f564ce-bf63-498e-b346-db982fcf91f9";
         String dfID2 = "c6381db2-802f-4a25-98f0-bfe021c304eg";
         String sqlHitCube = "select sum(price)  from TEST_KYLIN_FACT group by TRANS_ID order by sum(price)  desc limit 10";

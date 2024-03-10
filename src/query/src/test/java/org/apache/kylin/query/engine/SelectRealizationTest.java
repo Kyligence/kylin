@@ -64,7 +64,7 @@ class SelectRealizationTest {
     @Test
     void testDerivedFromSameContext() throws SqlParseException {
         val kylinConfig = getTestConfig();
-        val config = KECalciteConfig.fromKapConfig(kylinConfig);
+        val config = KylinConnectionConfig.fromKapConfig(kylinConfig);
         String prj = "default";
         val schemaFactory = new ProjectSchemaFactory(prj, kylinConfig);
         val rootSchema = schemaFactory.createProjectRootSchema();
@@ -74,7 +74,7 @@ class SelectRealizationTest {
         SimpleDataContext dataContext = new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(),
                 kylinConfig);
         planner.setExecutor(new RexExecutorImpl(dataContext));
-        val sqlConverter = SQLConverter.createConverter(config, planner, catalogReader);
+        val sqlConverter = QueryExec.createConverter(config, planner, catalogReader);
         val queryOptimizer = new QueryOptimizer(planner);
         RelRoot relRoot = sqlConverter
                 .convertSqlToRelNode("SELECT count(1)\n" + "FROM \"SSB\".\"LINEORDER\" \"LINEORDER\"\n"

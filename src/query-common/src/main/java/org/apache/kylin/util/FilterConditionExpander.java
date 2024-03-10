@@ -30,6 +30,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
@@ -128,7 +129,8 @@ public class FilterConditionExpander {
 
         // single operand expr(col)
         if (call.getOperands().size() == 1) {
-            return rexBuilder.makeCall(call.getOperator(), lInputRef);
+            // ifnull(flag, true) simplified by calcite as  `cast(flag): boolean not null`
+            return call.isA(SqlKind.CAST) ? lInputRef : rexBuilder.makeCall(call.getOperator(), lInputRef);
         }
 
         if (call.getOperands().size() > 1) {
@@ -221,9 +223,10 @@ public class FilterConditionExpander {
             if (rexInputRef != null) {
                 String tableAliasColName = currentRel.getColumnRowType().getColumnByIndex(originInputRef.getIndex())
                         .getTableAliasColName();
+                RelDataType targetType = call.isA(SqlKind.CAST) ? call.getType() : rexInputRef.getType();
                 resultInputRef = tableAliasColName == null
-                        ? new RexInputRef(rexInputRef.getName(), rexInputRef.getIndex(), rexInputRef.getType())
-                        : new RexInputRef(tableAliasColName, rexInputRef.getIndex(), rexInputRef.getType());
+                        ? new RexInputRef(rexInputRef.getName(), rexInputRef.getIndex(), targetType)
+                        : new RexInputRef(tableAliasColName, rexInputRef.getIndex(), targetType);
             }
         }
         return resultInputRef;
@@ -276,7 +279,7 @@ public class FilterConditionExpander {
     }
 
     private RexInputRef extractProjectInputRef(Project projectRel, RexInputRef rexInputRef) {
-        val expression = projectRel.getChildExps().get(rexInputRef.getIndex());
+        val expression = projectRel.getProjects().get(rexInputRef.getIndex());
         return expression instanceof RexInputRef
                 ? extractTableScanInputRef((RexInputRef) expression, projectRel.getInput(0))
                 : null;

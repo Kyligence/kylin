@@ -17,6 +17,7 @@
  */
 package org.apache.kylin.query.util;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -315,6 +316,9 @@ public class RexUtils {
             try {
                 SqlTypeName sqlTypeName = SqlTypeName.get(colType.getName().toUpperCase(Locale.ROOT));
                 int precision = colType.getPrecision();
+                if (sqlTypeName == null) {
+                    throw new IllegalArgumentException(colType + " data type is not supported for filter column");
+                }
                 relDataType = precision == -1 ? rexBuilder.getTypeFactory().createSqlType(sqlTypeName)
                         : rexBuilder.getTypeFactory().createSqlType(sqlTypeName, precision);
                 return rexBuilder.makeLiteral(parsedValue, relDataType, false);
@@ -340,5 +344,50 @@ public class RexUtils {
 
         throw new IllegalStateException(
                 String.format(Locale.ROOT, "Cannot find column %s in all tableScans", tblColRef.getIdentity()));
+    }
+
+    // At present: `a * b * c` equals to `b * a * c`, but not equals to `a * c * b`.
+    public static RexNode symmetricalExchange(RexBuilder rexBuilder, RexNode rexNode) {
+        if (!(rexNode instanceof RexCall)) {
+            return rexNode;
+        }
+        RexCall call = (RexCall) rexNode;
+        SqlOperator operator = call.getOperator();
+        List<RexNode> operands = call.getOperands();
+        final SqlKind kind = operator.getKind();
+        final SqlKind reversedKind = kind.reverse();
+        final int x = reversedKind.compareTo(kind);
+        if (operands.size() == 2) {
+            RexNode operand0 = operands.get(0);
+            RexNode operand1 = operands.get(1);
+            RexNode newOperand0 = symmetricalExchange(rexBuilder, operand0);
+            RexNode newOperand1 = symmetricalExchange(rexBuilder, operand1);
+            if (x < 0) {
+                SqlOperator reverseOp = operator.reverse();
+                if (reverseOp == null) {
+                    return call.clone(call.getType(), Arrays.asList(newOperand0, newOperand1));
+                }
+                return rexBuilder.makeCall(call.getType(), reverseOp, Arrays.asList(newOperand1, newOperand0));
+            } else if (rexNode.isA(SqlKind.SYMMETRICAL_SAME_ARG_TYPE)) {
+                if (reorderOperands(operand0, operand1) < 0) {
+                    return call.clone(call.getType(), Arrays.asList(newOperand1, newOperand0));
+                }
+            } else {
+                return call.clone(call.getType(), Arrays.asList(newOperand0, newOperand1));
+            }
+        }
+        List<RexNode> newOperands = operands.stream() //
+                .map(rex -> symmetricalExchange(rexBuilder, rex)).collect(Collectors.toList());
+        return call.clone(call.getType(), newOperands);
+    }
+
+    // copy from calcite
+    private static int reorderOperands(RexNode operand0, RexNode operand1) {
+        // Reorder the operands based on the SqlKind enumeration sequence,
+        // smaller is in the behind, e.g. the literal is behind of input ref and AND, OR.
+        int x = operand0.getKind().compareTo(operand1.getKind());
+        // If the operands are same kind, use the hashcode to reorder.
+        // Note: the RexInputRef's hash code is its index.
+        return x != 0 ? x : operand1.hashCode() - operand0.hashCode();
     }
 }

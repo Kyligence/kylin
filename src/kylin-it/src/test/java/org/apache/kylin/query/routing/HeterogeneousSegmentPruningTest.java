@@ -410,7 +410,7 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
             assertFiltersAndLayout(context, null,
                     ">=(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-01),<=(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-03),"
                             + "OR(=(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-01), =(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-02), =(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-03)),"
-                            + "OR(IS NOT NULL(DEFAULT.TEST_KYLIN_FACT.CAL_DT), OR(=(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-01), =(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-02)))");
+                            + "OR(IS NOT NULL(DEFAULT.TEST_KYLIN_FACT.CAL_DT), =(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-01), =(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-02))");
         }
 
         { // invalid filters with or
@@ -434,9 +434,11 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
             val sqlFilter = sql + "select * from T1\n"
                     + "where trans_id = 123 and (not(trans_id = 234) or trans_id = 345) and (not(trans_id + 1 = 132))";
             val context = OlapContextTestUtil.getOlapContexts(project, sqlFilter).get(0);
+            // see https://olapio.atlassian.net/browse/KE-42043
+            // Calcite 1.30 simplifies the filtering conditions by merging them in a more advanced way in the onMatch of
+            // the FilterReduceExpressionsRule, and we need to adjust the test expectations to accommodate this change
             assertFiltersAndLayout(context, null,
-                    ">=(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-01),<=(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-03),"
-                            + "=(DEFAULT.TEST_KYLIN_FACT.TRANS_ID, 123),OR(<>(DEFAULT.TEST_KYLIN_FACT.TRANS_ID, 234), =(DEFAULT.TEST_KYLIN_FACT.TRANS_ID, 345))");
+                    ">=(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-01),<=(DEFAULT.TEST_KYLIN_FACT.CAL_DT, 2012-01-03),=(DEFAULT.TEST_KYLIN_FACT.TRANS_ID, 123)");
         }
     }
 

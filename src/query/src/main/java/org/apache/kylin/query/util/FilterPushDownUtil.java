@@ -41,14 +41,13 @@ import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 public class FilterPushDownUtil {
 
@@ -186,7 +185,7 @@ public class FilterPushDownUtil {
 
             if (call instanceof SqlBasicCall) {
                 SqlBasicCall basicCall = (SqlBasicCall) call;
-                for (SqlNode node : basicCall.getOperands()) {
+                for (SqlNode node : basicCall.getOperandList()) {
                     node.accept(this);
                 }
                 return null;
@@ -259,10 +258,10 @@ public class FilterPushDownUtil {
         private void extractNames(List<Pair<String, String>> nameAndAliasNames, SqlNode node) {
             if (node instanceof SqlBasicCall) {
                 SqlBasicCall call = (SqlBasicCall) node;
-                final SqlNode sqlNode = call.getOperands()[0];
+                final SqlNode sqlNode = call.operand(0);
                 if (sqlNode instanceof SqlIdentifier) {
                     String name = sqlNode.toString();
-                    String aliasName = call.getOperands()[1].toString();
+                    String aliasName = call.operand(1).toString();
                     nameAndAliasNames.add(new Pair<>(name, aliasName));
                 }
             }
@@ -302,7 +301,7 @@ public class FilterPushDownUtil {
             if (call instanceof SqlBasicCall) {
                 SqlBasicCall basicCall = (SqlBasicCall) call;
 
-                for (SqlNode node : basicCall.getOperands()) {
+                for (SqlNode node : basicCall.getOperandList()) {
                     node.accept(this);
                 }
             }

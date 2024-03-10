@@ -22,8 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
-import org.apache.calcite.rel.rules.ProjectMergeRule;
+import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.test.DiffRepository;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
@@ -102,8 +101,8 @@ public class ScalarSubqueryJoinRuleTest extends CalciteRuleTestBase {
                 OlapProjectRule.INSTANCE, //
                 OlapJoinRule.INSTANCE, //
                 // relative rules
-                ProjectMergeRule.INSTANCE, //
-                AggregateProjectMergeRule.INSTANCE, //
+                CoreRules.PROJECT_MERGE, //
+                CoreRules.AGGREGATE_PROJECT_MERGE, //
                 AggregateProjectReduceRule.INSTANCE, //
                 OlapReduceExpressionRule.PROJECT_INSTANCE, //
                 // target rules

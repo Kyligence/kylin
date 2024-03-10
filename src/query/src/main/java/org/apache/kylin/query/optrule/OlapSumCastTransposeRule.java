@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.hep.HepRelVertex;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -73,7 +74,7 @@ public class OlapSumCastTransposeRule extends RelOptRule {
                 && ((HepRelVertex) project.getInput()).getCurrentRel() instanceof OlapAggregateRel) {
             return false;
         }
-        List<RexNode> childExps = project.getChildExps();
+        List<RexNode> childExps = project.getProjects();
         for (RexNode rexNode : childExps) {
             if (RuleUtils.containCast(rexNode)) {
                 return true;
@@ -129,7 +130,7 @@ public class OlapSumCastTransposeRule extends RelOptRule {
 
         // #2 Build bottom aggregate
         ImmutableBitSet bottomAggGroupSet = oldAgg.getGroupSet();
-        RelBuilder.GroupKey groupKey = relBuilder.groupKey(bottomAggGroupSet, null);
+        RelBuilder.GroupKey groupKey = relBuilder.groupKey(bottomAggGroupSet);
         List<AggregateCall> aggCalls = buildBottomAggregate(relBuilder, aggExpressions,
                 bottomAggGroupSet.cardinality());
         relBuilder.aggregate(groupKey, aggCalls);
@@ -143,7 +144,7 @@ public class OlapSumCastTransposeRule extends RelOptRule {
 
     private List<RexNode> buildBottomProject(Project oldProject, List<AggExpressionUtil.AggExpression> aggExpressions) {
         List<RexNode> bottomProjectList = Lists.newArrayList();
-        bottomProjectList.addAll(oldProject.getChildExps());
+        bottomProjectList.addAll(oldProject.getProjects());
 
         RelDataTypeSystem typeSystem = new KylinRelDataTypeSystem();
         RelDataTypeFactory typeFactory = new SqlTypeFactoryImpl(typeSystem);
@@ -175,9 +176,9 @@ public class OlapSumCastTransposeRule extends RelOptRule {
             AggregateCall aggCall = aggExpression.getAggCall();
             if (AggExpressionUtil.isSum(aggCall.getAggregation().kind)) {
                 AggregateCall oldAggCall = aggExpression.getAggCall();
-                bottomAggCalls.add(AggregateCall.create(SqlStdOperatorTable.SUM, false, false,
-                        aggExpression.getAggCall().getArgList(), -1, bottomAggOffset, relBuilder.peek(),
-                        aggExpression.getType(), oldAggCall.name));
+                bottomAggCalls.add(AggregateCall.create(SqlStdOperatorTable.SUM, false, false, false,
+                        aggExpression.getAggCall().getArgList(), -1, null, RelCollations.EMPTY, bottomAggOffset,
+                        relBuilder.peek(), aggExpression.getType(), oldAggCall.name));
             } else {
                 bottomAggCalls.add(aggExpression.getAggCall());
             }

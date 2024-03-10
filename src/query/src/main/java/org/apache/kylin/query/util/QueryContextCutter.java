@@ -26,15 +26,12 @@ import java.util.Locale;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.kylin.common.QueryContext;
-import org.apache.kylin.common.exception.KylinRuntimeException;
-import org.apache.kylin.common.exception.KylinTimeoutException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.metadata.model.ISourceAware;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.metadata.realization.NoStreamingRealizationFoundException;
-import org.apache.kylin.query.exception.UserStopQueryException;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.relnode.OlapRel;
@@ -72,13 +69,16 @@ public class QueryContextCutter {
     public static List<OlapContext> selectRealization(String project, RelNode root, boolean isReCutBanned) {
         ContextInitialCutStrategy firstRoundStrategy = new ContextInitialCutStrategy();
         ContextReCutStrategy reCutStrategy = new ContextReCutStrategy();
-
+        boolean printPlan = NProjectManager.getProjectConfig(project).isPrintQueryPlanEnabled();
+        if (printPlan) {
+            log.info("The relNode before cutting:\n{}\n", RelOptUtil.toString(root));
+        }
         QueryContextCutter.cutContext(firstRoundStrategy, (OlapRel) root.getInput(0), root);
         int retryCutTimes = 0;
-        boolean printPlan = NProjectManager.getProjectConfig(project).isPrintQueryPlanEnabled();
         while (retryCutTimes++ < MAX_RETRY_TIMES_OF_CONTEXT_CUT) {
             if (printPlan) {
-                log.info("Cut context {} time(s)\n", RelOptUtil.toString(root));
+                log.info("The {} time{} of cutting OlapContext\n{}\n", retryCutTimes, retryCutTimes > 1 ? "s" : "",
+                        RelOptUtil.toString(root));
             }
             try {
                 fillOlapContextPropertiesWithRelTree(root);
@@ -90,8 +90,6 @@ public class QueryContextCutter {
             } catch (NoRealizationFoundException | NoStreamingRealizationFoundException e) {
                 throwIfReCutBanned(isReCutBanned, e);
                 reCutStrategy.tryCutToSmallerContexts(root, e);
-            } catch (UserStopQueryException | KylinTimeoutException | KylinRuntimeException e) {
-                throw e;
             } finally {
                 // auto-modeling should invoke unfixModel() because it may select some realizations.
                 if (isReCutBanned) {

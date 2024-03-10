@@ -393,9 +393,9 @@ public class FunctionDesc implements Serializable {
         return !this.isCount() && CollectionUtils.isNotEmpty(parameters) && parameters.get(0).isConstantParameterDesc();
     }
 
-    public boolean isCountConstant() {//count(*) and count(1)
-        return FUNC_COUNT.equalsIgnoreCase(expression)
-                && (CollectionUtils.isEmpty(parameters) || parameters.get(0).isConstant());
+    public boolean isCountConstant() {//count(*) and count(1) and count(constant_udf_expression)
+        return FUNC_COUNT.equalsIgnoreCase(expression) && (CollectionUtils.isEmpty(parameters)
+                || parameters.get(0).isConstant() || parameters.get(0).isConstantParameterDesc());
     }
 
     public boolean isCountDistinct() {
@@ -501,7 +501,8 @@ public class FunctionDesc implements Serializable {
         final int prime = 31;
         int result = 1;
         result = prime * result + ((expression == null) ? 0 : expression.hashCode());
-        result = prime * result + ((isCount() || CollectionUtils.isEmpty(parameters)) ? 0 : parameters.hashCode());
+        boolean isConstant = isCountConstant() || CollectionUtils.isEmpty(parameters);
+        result = prime * result + (isConstant ? 0 : parameters.hashCode());
         // NOTE: don't compare returnType, FunctionDesc created at query engine does not have a returnType
         return result;
     }

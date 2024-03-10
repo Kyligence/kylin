@@ -43,6 +43,7 @@ import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.measure.MeasureTypeFactory;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
+import org.apache.kylin.query.util.SqlFunctionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,10 +142,6 @@ public class ComputedColumnDesc implements Serializable {
                 : ccNameWithPrefix;
     }
 
-    public String getInternalCcName() {
-        return ComputedColumnDesc.CC_PREFIX + columnName;
-    }
-
     public String getIdentityCcName() {
         return tableIdentity + "." + columnName;
     }
@@ -175,7 +172,8 @@ public class ComputedColumnDesc implements Serializable {
             }
 
             @Override
-            public Object visit(SqlCall call) {
+            public Object visit(SqlCall unresolvedCall) {
+                SqlCall call = SqlFunctionUtil.resolveCallIfNeed(unresolvedCall);
                 if (call instanceof SqlBasicCall) {
                     if (call.getOperator() instanceof SqlAsOperator) {
                         throw new IllegalArgumentException("Computed column expression should not contain keyword AS");

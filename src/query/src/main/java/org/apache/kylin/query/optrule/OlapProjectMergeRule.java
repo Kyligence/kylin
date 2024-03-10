@@ -48,9 +48,8 @@ import org.apache.kylin.guava30.shaded.common.collect.Sets;
  * Once CALCITE-2223 fixed, this rule is supposed to retire
  *
  * see also:
- *   https://issues.apache.org/jira/browse/CALCITE-2223
- *   https://issues.apache.org/jira/browse/DRILL-6212
- *   and https://github.com/apache/drill/pull/1319/files
+ *   <a href="https://issues.apache.org/jira/browse/CALCITE-2223">CALCITE-2223</a>
+ *   <a href="https://issues.apache.org/jira/browse/DRILL-6212">DRILL-6212</a>
  *
  * @author yifanzhang
  *
@@ -129,16 +128,11 @@ public class OlapProjectMergeRule extends RelOptRule {
             return;
         }
 
-        List<RexNode> newProjects;
-        if (KylinConfig.getInstanceFromEnv().isProjectMergeWithBloatEnabled()) {
-            newProjects = RelOptUtil.pushPastProjectUnlessBloat(topProject.getProjects(), bottomProject,
-                    KylinConfig.getInstanceFromEnv().getProjectMergeRuleBloatThreshold());
-            if (newProjects == null) {
-                // Merged projects are significantly more complex. Do not merge.
-                return;
-            }
-        } else {
-            newProjects = RelOptUtil.pushPastProject(topProject.getProjects(), bottomProject);
+        List<RexNode> newProjects = RelOptUtil.pushPastProjectUnlessBloat(topProject.getProjects(), bottomProject,
+                KylinConfig.getInstanceFromEnv().getProjectBloatThreshold());
+        if (newProjects == null) {
+            // Merged projects are significantly more complex. Do not merge.
+            return;
         }
         newProjects = simplifyCast(newProjects, topProject.getCluster().getRexBuilder());
         final RelNode input = bottomProject.getInput();

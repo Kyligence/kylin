@@ -31,6 +31,7 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.hep.HepRelVertex;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -47,6 +48,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.datatype.DataType;
 import org.apache.kylin.query.relnode.ContextUtil;
@@ -56,8 +58,6 @@ import org.apache.kylin.query.util.AggExpressionUtil.GroupExpression;
 import org.apache.kylin.query.util.RuleUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * expand agg(sum case when .. then col else col end) to agg(sum case when agg(col) else agg(col) end)
@@ -81,7 +81,7 @@ public abstract class AbstractAggCaseWhenFunctionRule extends RelOptRule {
 
     public void onMatch(RelOptRuleCall ruleCall) {
         try {
-            RelBuilder relBuilder = ruleCall.builder();
+            RelBuilder relBuilder = ruleCall.builder().transform(c -> c.withPruneInputOfAggregate(false));
             Aggregate originalAgg = ruleCall.rel(0);
             Project originalProject = ruleCall.rel(1);
 
@@ -197,18 +197,21 @@ public abstract class AbstractAggCaseWhenFunctionRule extends RelOptRule {
         // preserve the original project exprs for simplicity
         // clone input rel node since we may create multiple copy of aggregates
         relBuilder.push(cloneRelNode(oriProject.getInput()));
-        List<RexNode> newChildExps = new ArrayList<>(oriProject.getChildExps().size());
-        for (int i = 0; i < oriProject.getChildExps().size(); i++) {
+        List<RexNode> newChildExps = new ArrayList<>(oriProject.getProjects().size());
+        for (int i = 0; i < oriProject.getProjects().size(); i++) {
             if (nonSumInputIdxes.contains(i)) {
-                newChildExps.add(oriProject.getChildExps().get(i));
+                newChildExps.add(oriProject.getProjects().get(i));
             } else {
                 // simply fill zero values for values that we are not going to use
                 newChildExps
-                        .add(relBuilder.getRexBuilder().makeZeroLiteral(oriProject.getChildExps().get(i).getType()));
+                        .add(relBuilder.getRexBuilder().makeZeroLiteral(oriProject.getProjects().get(i).getType()));
             }
         }
         relBuilder.project(newChildExps);
-        relBuilder.aggregate(relBuilder.groupKey(oriAgg.getGroupSet(), oriAgg.getGroupSets()), aggCalls);
+        ImmutableList<ImmutableBitSet> groupSets = oriAgg.getGroupSets() == null
+                ? ImmutableList.of(oriAgg.getGroupSet())
+                : oriAgg.getGroupSets();
+        relBuilder.aggregate(relBuilder.groupKey(oriAgg.getGroupSet(), groupSets), aggCalls);
         return (Aggregate) relBuilder.build();
     }
 
@@ -243,7 +246,7 @@ public abstract class AbstractAggCaseWhenFunctionRule extends RelOptRule {
             }
         }
         ImmutableBitSet bottomAggGroupSet = groupSetBuilder.build();
-        RelBuilder.GroupKey groupKey = relBuilder.groupKey(bottomAggGroupSet, null);
+        RelBuilder.GroupKey groupKey = relBuilder.groupKey(bottomAggGroupSet);
         List<AggregateCall> aggCalls = buildBottomAggregate(relBuilder, aggExpressions,
                 bottomAggGroupSet.cardinality());
         relBuilder.aggregate(groupKey, aggCalls);
@@ -273,7 +276,8 @@ public abstract class AbstractAggCaseWhenFunctionRule extends RelOptRule {
         ImmutableBitSet topGroupSet = topGroupSetBuilder.build();
         List<AggregateCall> topAggregates = buildTopAggregate(oldAgg.getAggCallList(), topGroupSet.cardinality(),
                 aggExpressions);
-        RelBuilder.GroupKey topGroupKey = relBuilder.groupKey(topGroupSet, newGroupSets);
+        RelBuilder.GroupKey topGroupKey = newGroupSets == null ? relBuilder.groupKey(topGroupSet)
+                : relBuilder.groupKey(topGroupSet, newGroupSets);
         relBuilder.aggregate(topGroupKey, topAggregates);
         RelNode relNode = relBuilder.build();
         ContextUtil.dumpCalcitePlan("new plan", relNode, logger);
@@ -361,7 +365,7 @@ public abstract class AbstractAggCaseWhenFunctionRule extends RelOptRule {
                 List<Integer> args = Lists.newArrayList(aggExpression.getBottomAggValuesInput()[valueIdx]);
                 aggExpression.getTopProjValuesInput()[valueIdx] = bottomAggOffset + bottomAggCalls.size();
                 bottomAggCalls.add(AggregateCall.create(getBottomAggFunc(aggExpression.getAggCall()), false, false,
-                        args, -1, bottomAggOffset, relBuilder.peek(), null, aggName));
+                        false, args, -1, null, RelCollations.EMPTY, bottomAggOffset, relBuilder.peek(), null, aggName));
             }
             aggCaseIdx++;
         }

@@ -54,7 +54,7 @@ public class OlapAggregateRule extends ConverterRule {
         RelNode convertedInput = agg.getInput() instanceof HepRelVertex ? agg.getInput()
                 : convert(agg.getInput(), CONVENTION);
         try {
-            return new OlapAggregateRel(agg.getCluster(), traitSet, convertedInput, agg.indicator, agg.getGroupSet(),
+            return new OlapAggregateRel(agg.getCluster(), traitSet, convertedInput, agg.getGroupSet(),
                     agg.getGroupSets(), agg.getAggCallList());
         } catch (InvalidRelException e) {
             throw new IllegalStateException("Can't create OlapAggregateRel!", e);

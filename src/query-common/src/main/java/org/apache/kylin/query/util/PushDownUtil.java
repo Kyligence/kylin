@@ -83,7 +83,6 @@ import org.apache.kylin.query.security.AccessDeniedException;
 import org.apache.kylin.source.adhocquery.IPushDownConverter;
 import org.apache.kylin.source.adhocquery.IPushDownRunner;
 import org.apache.kylin.source.adhocquery.PushdownResult;
-import org.codehaus.commons.compiler.CompileException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +94,7 @@ public class PushDownUtil {
     private static final Pattern SQL_HINT_PATTERN = Pattern
             .compile("/\\*\\s*\\+\\s*(?i)MODEL_PRIORITY\\s*\\([\\s\\S]*\\)\\s*\\*/");
     public static final String DEFAULT_SCHEMA = "DEFAULT";
-    private static final String CC_SPLITTER = "'##CC_PUSH_DOWN_TOKEN##'";
+    public static final String CC_SPLITTER = "'##CC_PUSH_DOWN_TOKEN##'";
     private static final String UNDER_LINE = "_";
     private static final ExecutorService asyncExecutor = Executors.newCachedThreadPool();
     private static final Map<String, IPushDownConverter> PUSH_DOWN_CONVERTER_MAP = Maps.newConcurrentMap();
@@ -315,7 +314,7 @@ public class PushDownUtil {
             ccSql = new EscapeTransformer().transform(ccSql);
             ccSql = RestoreFromComputedColumn.convertWithGivenModels(ccSql, project, DEFAULT_SCHEMA, modelMap);
         } catch (Exception e) {
-            logger.warn("Failed to massage SQL expression [{}] with input model {}", ccSql, model.getUuid(), e);
+            logger.warn("Failed to massage SQL expression [{}] with input model {}", ccSql, model.getUuid());
         }
         return ccSql;
     }
@@ -515,8 +514,7 @@ public class PushDownUtil {
         //query pushdown may create tables, and the tables are not in the model, so will throw SqlValidatorException.
         if (rootCause instanceof KylinTimeoutException || rootCause instanceof AccessDeniedException) {
             return false;
-        } else if (rootCause instanceof RoutingIndicatorException || rootCause instanceof CalciteNotSupportException
-                || rootCause instanceof CompileException) {
+        } else if (rootCause instanceof RoutingIndicatorException || rootCause instanceof CalciteNotSupportException) {
             return true;
         }
 

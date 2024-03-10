@@ -97,9 +97,8 @@ public class AggregateMultipleExpandRule extends RelOptRule {
                     aggr.getGroupCount(), groupSet.cardinality()));
         }
         // push the simple aggregate with one group set
-        LogicalAggregate newAggr = aggr.copy(aggr.getTraitSet(), input, false, groupSet, asList(groupSet),
-                newAggCallList);
-        relBuilder.push(newAggr);
+        LogicalAggregate newAgg = aggr.copy(aggr.getTraitSet(), input, groupSet, asList(groupSet), newAggCallList);
+        relBuilder.push(newAgg);
 
         ImmutableList.Builder<RexNode> rexNodes = new ImmutableList.Builder<>();
         int index = 0;
@@ -114,8 +113,8 @@ public class AggregateMultipleExpandRule extends RelOptRule {
             RelDataType targetType = typeIterator.next().getType();
             if (groupKey == aggrGroupKey) {
                 // caseSensitive=true as we are comparing fields on the same rel
-                RelDataTypeField field = newAggr.getRowType()
-                        .getField(newAggr.getInput().getRowType().getFieldList().get(groupKey).getName(), true, false);
+                RelDataTypeField field = newAgg.getRowType()
+                        .getField(newAgg.getInput().getRowType().getFieldList().get(groupKey).getName(), true, false);
                 RexNode node = rexBuilder.makeInputRef(field.getType(), index++);
                 // ensure the type is the same as the original aggr
                 rexNodes.add(rexBuilder.ensureType(targetType, node, false));

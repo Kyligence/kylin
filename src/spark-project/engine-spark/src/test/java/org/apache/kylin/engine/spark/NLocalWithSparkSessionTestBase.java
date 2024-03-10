@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.net.BindException;
 import java.util.Locale;
 
+import org.apache.calcite.util.CancelFlag;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.util.Shell;
@@ -121,6 +122,11 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
             ss.close();
         }
         FileUtils.deleteQuietly(new File("../kap-it/metastore_db"));
+        // see https://olapio.atlassian.net/browse/KE-42054
+        // After the completion of setting the CancelFlag flag in Calcite, certain optimization rules will be canceled,
+        // which can affect the execution of subsequent query scenarios in the module. It is necessary to reset the
+        // CancelFlag flag after the completion of this particular use case execution.
+        CancelFlag.getContextCancelFlag().clearCancel();
     }
 
 

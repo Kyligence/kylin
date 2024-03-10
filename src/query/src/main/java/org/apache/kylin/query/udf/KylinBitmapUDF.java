@@ -18,11 +18,27 @@
 
 package org.apache.kylin.query.udf;
 
+import java.util.List;
+
 import org.apache.calcite.linq4j.function.Parameter;
+import org.apache.kylin.common.exception.CalciteNotSupportException;
 
-public class MassInUDF {
+public class KylinBitmapUDF {
+    public Long INTERSECT_COUNT_BY_COL(List maps) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
 
-    public Boolean MASSIN(@Parameter(name = "col") Object col, @Parameter(name = "filterTable") String filterTable) {
-        return true;
+    public Object SUBTRACT_BITMAP_VALUE(@Parameter(name = "m1") byte[] map1, @Parameter(name = "m2") byte[] map2)
+            throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
+    public Object SUBTRACT_BITMAP_UUID(@Parameter(name = "m1") byte[] map1, @Parameter(name = "m2") byte[] map2)
+            throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
+    public Object BITMAP_UUID_TO_ARRAY(@Parameter(name = "m1") Object map1) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
     }
 }

@@ -16,13 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.kylin.query.udf.stringUdf;
+package org.apache.kylin.query.engine;
 
-import org.apache.calcite.linq4j.function.Parameter;
+import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
 
-public class StrPosUDF {
+public class TypeSystem {
 
-    public int STRPOS(@Parameter(name = "str1") String s1, @Parameter(name = "str2") String s2) {
-        return s1.indexOf(s2) + 1;
+    private TypeSystem() {
     }
+
+    public static RelDataTypeSystem relDataTypeSystem() {
+        return new KylinRelDataTypeSystem();
+    }
+
+    public static JavaTypeFactory javaTypeFactory() {
+        return new JavaTypeFactoryImpl(relDataTypeSystem());
+    }
+
 }

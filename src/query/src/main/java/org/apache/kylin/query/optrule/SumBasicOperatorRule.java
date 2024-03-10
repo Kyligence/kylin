@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -42,6 +43,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.exception.SumExprUnSupportException;
 import org.apache.kylin.query.relnode.ContextUtil;
@@ -52,8 +54,6 @@ import org.apache.kylin.query.util.AggExpressionUtil.AggExpression;
 import org.apache.kylin.query.util.AggExpressionUtil.GroupExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * sql: select sum(price*3) from KYLIN_SALES; <p>
@@ -125,7 +125,7 @@ public class SumBasicOperatorRule extends RelOptRule {
                 }
             }
             ImmutableBitSet bottomAggGroupSet = groupSetBuilder.build();
-            RelBuilder.GroupKey groupKey = relBuilder.groupKey(bottomAggGroupSet, null);
+            RelBuilder.GroupKey groupKey = relBuilder.groupKey(bottomAggGroupSet);
 
             List<AggregateCall> bottomAggregates = buildBottomAggregate(relBuilder, aggExpressions,
                     bottomAggGroupSet.cardinality());
@@ -152,7 +152,8 @@ public class SumBasicOperatorRule extends RelOptRule {
             ImmutableBitSet topGroupSet = topGroupSetBuilder.build();
             List<AggregateCall> topAggregates = buildTopAggregate(oldAgg.getAggCallList(), topGroupSet.cardinality(),
                     aggExpressions);
-            RelBuilder.GroupKey topGroupKey = relBuilder.groupKey(topGroupSet, newGroupSets);
+            RelBuilder.GroupKey topGroupKey = newGroupSets == null ? relBuilder.groupKey(topGroupSet)
+                    : relBuilder.groupKey(topGroupSet, newGroupSets);
             relBuilder.aggregate(topGroupKey, topAggregates);
 
             RelNode relNode = relBuilder.build();
@@ -203,8 +204,8 @@ public class SumBasicOperatorRule extends RelOptRule {
                         "SumBasicOperatorRule only handles aggregation of single source column");
                 String aggName = "SUM_OP$" + (sumOpIndex++);
                 List<Integer> aggList = Lists.newArrayList(aggExpression.getBottomAggInput()[0]);
-                aggCall = AggregateCall.create(SqlStdOperatorTable.SUM, false, false, aggList, -1, bottomAggOffset,
-                        relBuilder.peek(), null, aggName);
+                aggCall = AggregateCall.create(SqlStdOperatorTable.SUM, false, false, false, aggList, -1, null,
+                        RelCollations.EMPTY, bottomAggOffset, relBuilder.peek(), null, aggName);
             } else {
                 AggregateCall oldAggCall = aggExpression.getAggCall();
                 List<Integer> args = Arrays.stream(aggExpression.getBottomAggInput()).boxed()

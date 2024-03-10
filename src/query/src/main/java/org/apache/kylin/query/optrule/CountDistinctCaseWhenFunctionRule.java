@@ -51,6 +51,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlUserDefinedAggFunction;
 import org.apache.calcite.tools.RelBuilderFactory;
+import org.apache.calcite.util.Optionality;
 import org.apache.calcite.util.Util;
 import org.apache.kylin.measure.bitmap.BitmapCountAggFunc;
 import org.apache.kylin.metadata.model.FunctionDesc;
@@ -87,7 +88,7 @@ public class CountDistinctCaseWhenFunctionRule extends AbstractAggCaseWhenFuncti
         }
 
         int input = aggregateCall.getArgList().get(0);
-        RexNode expression = inputProject.getChildExps().get(input);
+        RexNode expression = inputProject.getProjects().get(input);
         // check if it's in the form of case when ... then col else null
         if (expression.getKind() != SqlKind.CASE) {
             return false;
@@ -180,7 +181,7 @@ public class CountDistinctCaseWhenFunctionRule extends AbstractAggCaseWhenFuncti
             explicitReturnTypeInference = ReturnTypes.explicit(returnType);
         }
         return new SqlUserDefinedAggFunction(sqlIdentifier, explicitReturnTypeInference, InferTypes.explicit(argTypes),
-                OperandTypes.family(typeFamilies), aggFunction, false, false, typeFactory);
+                OperandTypes.family(typeFamilies), aggFunction, false, false, Optionality.FORBIDDEN, typeFactory);
 
     }
 

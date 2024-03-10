@@ -32,7 +32,7 @@ object SortPlan extends LogEx {
            rel: OlapSortRel,
            dataContext: DataContext): LogicalPlan = logTime("sort", debug = true) {
 
-    val columns = rel.getChildExps.asScala
+    val columns = rel.getSortExps.asScala
       .map(rex => {
         val visitor = new SparderRexVisitor(plan.output.map(_.name),
           rel.getInput.getRowType,

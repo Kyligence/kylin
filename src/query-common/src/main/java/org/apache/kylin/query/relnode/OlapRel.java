@@ -127,6 +127,10 @@ public interface OlapRel extends RelNode {
         public Deque<RelNode> getParentNodeStack() {
             return parentNodeStack;
         }
+
+        public RelNode getParentNode() {
+            return parentNodeStack.peekLast();
+        }
     }
 
     /**

@@ -105,7 +105,7 @@ public class QueryUtil {
 
     /**
      * Remove comment from query statement. There are two kind of comment patterns:<br/>
-     * 1. single line comment begins with "--", 
+     * 1. single line comment begins with "--",
      * with <strong>-- CubePriority(m1,m2)</strong> excluded.<br/>
      * 2. block comment like "/* comment content *&frasl;,
      * with <strong>/*+ MODEL_PRIORITY(m1,m2) *&frasl;</strong> excluded.<br/>

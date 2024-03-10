@@ -20,19 +20,15 @@ package org.apache.kylin.query.engine;
 
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.apache.calcite.adapter.java.JavaTypeFactory;
-import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.jdbc.CalcitePrepare;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
@@ -40,7 +36,6 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Values;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutorImpl;
 import org.apache.calcite.rex.RexNode;
@@ -57,16 +52,17 @@ import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.query.StructField;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
-import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
 import org.apache.kylin.query.engine.data.QueryResult;
 import org.apache.kylin.query.engine.exec.CalcitePlanExec;
 import org.apache.kylin.query.engine.exec.ExecuteResult;
 import org.apache.kylin.query.engine.exec.SparderPlanExec;
 import org.apache.kylin.query.engine.meta.SimpleDataContext;
+import org.apache.kylin.query.engine.view.ModelViewExpander;
 import org.apache.kylin.query.engine.view.ViewAnalyzer;
 import org.apache.kylin.query.mask.QueryResultMasks;
 import org.apache.kylin.query.optrule.OlapFilterJoinRule;
 import org.apache.kylin.query.optrule.OlapFilterRule;
+import org.apache.kylin.query.optrule.OlapProjectJoinTransposeRule;
 import org.apache.kylin.query.optrule.OlapProjectRule;
 import org.apache.kylin.query.optrule.OlapReduceExpressionRule;
 import org.apache.kylin.query.optrule.OlapValuesRule;
@@ -74,7 +70,6 @@ import org.apache.kylin.query.optrule.SumConstantConvertRule;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapAggregateRel;
 import org.apache.kylin.query.relnode.OlapContext;
-import org.apache.kylin.query.schema.KylinJavaTypeFactoryImpl;
 import org.apache.kylin.query.util.AsyncQueryUtil;
 import org.apache.kylin.query.util.CalcitePlanRouterVisitor;
 import org.apache.kylin.query.util.HepUtils;
@@ -104,11 +99,11 @@ public class QueryExec {
     private String sparderQueryOptimizedExceptionMsg = "";
 
     private final KylinConfig kylinConfig;
-    private final KECalciteConfig config;
+    private final KylinConnectionConfig connectionConfig;
     private final RelOptPlanner planner;
     private final ProjectSchemaFactory schemaFactory;
     private final Prepare.CatalogReader catalogReader;
-    private final SQLConverter sqlConverter;
+    private final SqlConverter sqlConverter;
     private final QueryOptimizer queryOptimizer;
     private final SimpleDataContext dataContext;
     private final boolean allowAlternativeQueryPlan;
@@ -118,13 +113,13 @@ public class QueryExec {
     public QueryExec(String project, KylinConfig kylinConfig, boolean allowAlternativeQueryPlan) {
         this.project = project;
         this.kylinConfig = kylinConfig;
-        config = KECalciteConfig.fromKapConfig(kylinConfig);
+        connectionConfig = KylinConnectionConfig.fromKapConfig(kylinConfig);
         schemaFactory = new ProjectSchemaFactory(project, kylinConfig);
         rootSchema = schemaFactory.createProjectRootSchema();
         String defaultSchemaName = schemaFactory.getDefaultSchema();
-        catalogReader = createCatalogReader(config, rootSchema, defaultSchemaName);
-        planner = new PlannerFactory(kylinConfig).createVolcanoPlanner(config);
-        sqlConverter = SQLConverter.createConverter(config, planner, catalogReader);
+        catalogReader = SqlConverter.createCatalogReader(connectionConfig, rootSchema, defaultSchemaName);
+        planner = new PlannerFactory(kylinConfig).createVolcanoPlanner(connectionConfig);
+        sqlConverter = QueryExec.createConverter(connectionConfig, planner, catalogReader);
         dataContext = createDataContext(rootSchema);
         planner.setExecutor(new RexExecutorImpl(dataContext));
         queryOptimizer = new QueryOptimizer(planner);
@@ -147,9 +142,10 @@ public class QueryExec {
 
         @Override
         public CalcitePrepare.AnalyzeViewResult analyzeView(String sql) throws SqlParseException {
-            Prepare.CatalogReader viewCatalogReader = createCatalogReader(config, rootSchema, defaultSchemaName);
-            RelOptPlanner viewPlanner = new PlannerFactory(kylinConfig).createVolcanoPlanner(config);
-            SQLConverter viewSqlConverter = SQLConverter.createConverter(config, viewPlanner, viewCatalogReader);
+            Prepare.CatalogReader viewCatalogReader = SqlConverter.createCatalogReader(connectionConfig, rootSchema,
+                    defaultSchemaName);
+            RelOptPlanner viewPlanner = new PlannerFactory(kylinConfig).createVolcanoPlanner(connectionConfig);
+            SqlConverter viewSqlConverter = createConverter(connectionConfig, viewPlanner, viewCatalogReader);
             SimpleDataContext viewDataContext = createDataContext(rootSchema);
             viewPlanner.setExecutor(new RexExecutorImpl(viewDataContext));
             return viewSqlConverter.analyzeSQl(sql);
@@ -158,6 +154,14 @@ public class QueryExec {
 
     public QueryExec(String project, KylinConfig kylinConfig) {
         this(project, kylinConfig, false);
+    }
+
+    public static SqlConverter createConverter(KylinConnectionConfig connectionConfig, RelOptPlanner planner,
+            Prepare.CatalogReader catalogReader) {
+        // this could be a bit awkward that SQLConverter and ViewExpander seem to have a cyclical reference
+        SqlConverter sqlConverter = new SqlConverter(connectionConfig, planner, catalogReader);
+        return new SqlConverter(connectionConfig, planner, catalogReader,
+                new ModelViewExpander(sqlConverter::convertSqlToRelNode));
     }
 
     public void plannerRemoveRules(List<RelOptRule> rules) {
@@ -303,6 +307,8 @@ public class QueryExec {
         }
 
         postOptRules.add(OlapFilterJoinRule.FILTER_ON_JOIN);
+        // this rule should after sum-expression and count-distinct-expression
+        postOptRules.add(OlapProjectJoinTransposeRule.INSTANCE);
 
         RelNode transformed = HepUtils.runRuleCollection(node, postOptRules, false);
         if (transformed != node && allowAlternativeQueryPlan) {
@@ -354,12 +360,12 @@ public class QueryExec {
 
     private void beforeQuery() {
         Prepare.CatalogReader.THREAD_LOCAL.set(catalogReader);
-        KECalciteConfig.THREAD_LOCAL.set(config);
+        KylinConnectionConfig.THREAD_LOCAL.set(connectionConfig);
     }
 
     private void afterQuery() {
         Prepare.CatalogReader.THREAD_LOCAL.remove();
-        KECalciteConfig.THREAD_LOCAL.remove();
+        KylinConnectionConfig.THREAD_LOCAL.remove();
         FileSegments.clearFileSegFilterLocally();
         clearAcceptCacheTimeLocally();
     }
@@ -476,14 +482,6 @@ public class QueryExec {
         }
     }
 
-    private Prepare.CatalogReader createCatalogReader(CalciteConnectionConfig connectionConfig,
-            CalciteSchema rootSchema, String defaultSchemaName) {
-        RelDataTypeSystem relTypeSystem = new KylinRelDataTypeSystem();
-        JavaTypeFactory javaTypeFactory = new KylinJavaTypeFactoryImpl(relTypeSystem);
-        return new CalciteCatalogReader(rootSchema, Collections.singletonList(defaultSchemaName), javaTypeFactory,
-                connectionConfig);
-    }
-
     private SimpleDataContext createDataContext(CalciteSchema rootSchema) {
         return new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(), kylinConfig);
     }
@@ -516,12 +514,12 @@ public class QueryExec {
     private boolean isCalciteEngineCapable(RelNode rel) {
         if (rel instanceof Project) {
             Project projectRelNode = (Project) rel;
-            if (projectRelNode.getChildExps().stream().filter(RexCall.class::isInstance)
+            if (projectRelNode.getProjects().stream().filter(RexCall.class::isInstance)
                     .anyMatch(pRelNode -> pRelNode.accept(new CalcitePlanRouterVisitor()))) {
                 return false;
             }
-            if (projectRelNode.getChildExps() != null
-                    && projectRelNode.getChildExps().stream().anyMatch(this::isPlusString)) {
+            if (projectRelNode.getProjects() != null
+                    && projectRelNode.getProjects().stream().anyMatch(this::isPlusString)) {
                 return false;
             }
         }

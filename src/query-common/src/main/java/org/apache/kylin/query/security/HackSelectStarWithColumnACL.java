@@ -151,7 +151,7 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
             }
             if (call instanceof SqlBasicCall) {
                 SqlBasicCall basicCall = (SqlBasicCall) call;
-                Arrays.stream(basicCall.getOperands()).filter(Objects::nonNull).forEach(node -> node.accept(this));
+                basicCall.getOperandList().stream().filter(Objects::nonNull).forEach(node -> node.accept(this));
             }
 
             if (call instanceof SqlJoin) {
@@ -177,10 +177,10 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
                 resolved.put(operand, replaced);
                 return;
             } else if (isCallWithAlias(operand)) {
-                SqlNode[] operands = ((SqlBasicCall) operand).getOperands();
-                SqlNode tableNode = operands[0];
+                List<SqlNode> operandList = ((SqlBasicCall) operand).getOperandList();
+                SqlNode tableNode = operandList.get(0);
                 if (tableNode instanceof SqlIdentifier) {
-                    String replaced = markTableIdentifier((SqlIdentifier) tableNode, operands[1]);
+                    String replaced = markTableIdentifier((SqlIdentifier) tableNode, operandList.get(1));
                     resolved.put(operand, replaced);
                 } else {
                     tableNode.accept(this);

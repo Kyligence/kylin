@@ -155,8 +155,12 @@ class IndexDependencyParser(val model: NDataModel) {
     val originDf = fullFlatTableDF.get
     val colFields = originDf.schema.fields
     val ccList = model.getComputedColumnDescs
-    val ds = originDf.selectExpr(ccList.asScala.map(_.getInnerExpression)
-      .map(NSparkCubingUtil.convertFromDotWithBackTick): _*)
+    // see https://olapio.atlassian.net/browse/KE-42053
+    val validCCs = ccList.asScala
+      .filterNot(_.getDatatype.equalsIgnoreCase("ANY"))
+      .map(_.getInnerExpression)
+      .map(NSparkCubingUtil.convertFromDotWithBackTick)
+    val ds = originDf.selectExpr(validCCs: _*)
     ccList.asScala.zip(ds.schema.fields).foreach(pair => {
       val ccFieldName = pair._2.name
       colFields.foreach(col => {

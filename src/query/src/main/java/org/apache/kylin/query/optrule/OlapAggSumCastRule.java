@@ -105,7 +105,7 @@ public class OlapAggSumCastRule extends RelOptRule {
         RelDataTypeFactory sqlTypeFactory = new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
         List<RexNode> bottomProjectRexNodes = new LinkedList<>();
         List<RexNode> rewriteProjectRexNodes = new LinkedList<>();
-        List<RexNode> exprList = oldProject.getChildExps();
+        List<RexNode> exprList = oldProject.getProjects();
         Set<Integer> groupBySet = oldAgg.getGroupSet().asSet();
         for (int i = 0; i < exprList.size(); i++) {
             AggregateCall aggregateCall = sumMatchMap.get(i);
@@ -166,7 +166,9 @@ public class OlapAggSumCastRule extends RelOptRule {
                 newAggregateCallList.add(aggCall);
             }
         });
-        RelBuilder.GroupKey groupKey = relBuilder.groupKey(oldAgg.getGroupSet(), oldAgg.getGroupSets());
+        RelBuilder.GroupKey groupKey = oldAgg.getGroupSets() == null
+                ? relBuilder.groupKey(oldAgg.getGroupSet())
+                : relBuilder.groupKey(oldAgg.getGroupSet(), oldAgg.getGroupSets());
         relBuilder.aggregate(groupKey, newAggregateCallList);
         List<RexNode> topProjList = buildTopProject(relBuilder, oldAgg, rewriteAggCallMap);
         relBuilder.project(topProjList);

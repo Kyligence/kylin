@@ -230,9 +230,9 @@ public class QuerySensitiveDataMask implements QueryResultMask {
 
     private List<SensitiveDataMask.MaskType> getProjectSensitiveCols(Project project) {
         List<SensitiveDataMask.MaskType> inputMasks = getSensitiveCols(project.getInput(0));
-        SensitiveDataMask.MaskType[] masks = new SensitiveDataMask.MaskType[project.getChildExps().size()];
-        for (int i = 0; i < project.getChildExps().size(); i++) {
-            RexNode expr = project.getChildExps().get(i);
+        SensitiveDataMask.MaskType[] masks = new SensitiveDataMask.MaskType[project.getProjects().size()];
+        for (int i = 0; i < project.getProjects().size(); i++) {
+            RexNode expr = project.getProjects().get(i);
             for (Integer input : RelOptUtil.InputFinder.bits(expr)) {
                 if (inputMasks.get(input) != null) {
                     masks[i] = inputMasks.get(input).merge(masks[i]);

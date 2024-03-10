@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -118,16 +119,16 @@ public class OlapJoinRule extends ConverterRule {
             RexBuilder rexBuilder = join.getCluster().getRexBuilder();
             RexNode cnfCondition = RexUtil.toCnf(rexBuilder, join.getCondition());
             info = JoinInfo.of(left, right, cnfCondition);
-            if (!info.isEqui()) {
+            boolean isSpecialNonEquivJoin = isSpecialNonEquivJoin(join);
+            if (!info.isEqui() || isSpecialNonEquivJoin) {
                 List<RexInputRef> scd2Refs = Lists.newArrayList();
                 boolean isScd2Rel = isScd2Enabled && isScd2JoinCondition(info, join, scd2Refs);
-                if (join.getJoinType() == JoinRelType.INNER && !isScd2Rel
+                if (!isSpecialNonEquivJoin && join.getJoinType() == JoinRelType.INNER && !isScd2Rel
                         && hasEqualJoinPart(left, right, join.getCondition())) {
                     OlapJoinRel joinRel = new OlapJoinRel(join.getCluster(), traitSet, left, right,
-                            info.getEquiCondition(left, right, rexBuilder), info.leftKeys, info.rightKeys,
-                            join.getVariablesSet(), join.getJoinType());
+                            info.getEquiCondition(left, right, rexBuilder), join.getVariablesSet(), join.getJoinType());
                     joinRel.setJoinCondEqualNullSafe(joinCondEqualNullSafe);
-                    RexNode rexNode = info.getRemaining(rexBuilder);
+                    RexNode rexNode = RexUtil.composeConjunction(rexBuilder, info.nonEquiConditions);
                     return rexNode.isAlwaysTrue() ? joinRel
                             : new OlapFilterRel(join.getCluster(), joinRel.getTraitSet(), joinRel, rexNode);
                 }
@@ -138,14 +139,17 @@ public class OlapJoinRule extends ConverterRule {
                         join.getVariablesSet(), join.getJoinType(), isScd2Rel);
             } else {
                 OlapJoinRel joinRel = new OlapJoinRel(join.getCluster(), traitSet, left, right,
-                        info.getEquiCondition(left, right, rexBuilder), info.leftKeys, info.rightKeys,
-                        join.getVariablesSet(), join.getJoinType());
+                        info.getEquiCondition(left, right, rexBuilder), join.getVariablesSet(), join.getJoinType());
                 joinRel.setJoinCondEqualNullSafe(joinCondEqualNullSafe);
                 return joinRel;
             }
         } catch (InvalidRelException e) {
             throw new AssertionError(e);
         }
+    }
+
+    private static boolean isSpecialNonEquivJoin(LogicalJoin join) {
+        return RexUtil.findOperatorCall(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, join.getCondition()) != null;
     }
 
     private RexNode normalizeCondition(RexBuilder rexBuilder, RexNode cnfCondition, List<RexInputRef> scd2Refs) {
@@ -171,7 +175,7 @@ public class OlapJoinRule extends ConverterRule {
             }
             newNodes.add(invert);
         }
-        if (!newNodes.equals(oriNodes)) {
+        if (!Objects.equals(newNodes.toString(), oriNodes.toString())) {
             return rexBuilder.makeCall(cnfCondition.getType(), ((RexCall) cnfCondition).getOperator(), newNodes);
         }
         return cnfCondition;
@@ -187,7 +191,7 @@ public class OlapJoinRule extends ConverterRule {
 
     private Join transformJoinCondition(LogicalJoin join, JoinInfo info, RelTraitSet traitSet, RelNode left,
             RelNode right) {
-        List<RexInputRef> refs = isPowerBiInnerJoin(info);
+        List<RexInputRef> refs = isPowerBiInnerJoin(info, left.getCluster().getRexBuilder());
         if (refs.isEmpty()) {
             return join;
         }
@@ -203,8 +207,8 @@ public class OlapJoinRule extends ConverterRule {
         JoinInfo newInfo = JoinInfo.of(ImmutableIntList.of(leftIndex), ImmutableIntList.of(rightIndex));
         try {
             return new OlapJoinRel(cluster, traitSet, left, right,
-                    newInfo.getEquiCondition(left, right, cluster.getRexBuilder()), newInfo.leftKeys, newInfo.rightKeys,
-                    join.getVariablesSet(), join.getJoinType());
+                    newInfo.getEquiCondition(left, right, cluster.getRexBuilder()), join.getVariablesSet(),
+                    join.getJoinType());
         } catch (InvalidRelException e) {
             throw new IllegalStateException(e);
         }
@@ -226,13 +230,13 @@ public class OlapJoinRule extends ConverterRule {
      *
      * The two ANDs may switch position.
      */
-    private List<RexInputRef> isPowerBiInnerJoin(JoinInfo info) {
+    private List<RexInputRef> isPowerBiInnerJoin(JoinInfo info, RexBuilder rexBuilder) {
         if (info.isEqui()) {
             return Collections.emptyList();
         }
 
         // 1. top call is OR
-        RexNode root = info.getRemaining(null);
+        RexNode root = RexUtil.composeConjunction(rexBuilder, info.nonEquiConditions);
         if (!(root instanceof RexCall && root.getKind() == SqlKind.OR)) {
             return Collections.emptyList();
         }
@@ -350,12 +354,12 @@ public class OlapJoinRule extends ConverterRule {
             return false;
         }
         RexBuilder rexBuilder = join.getCluster().getRexBuilder();
-        RexNode remaining = joinInfo.getRemaining(rexBuilder);
+        RexNode remaining = RexUtil.composeConjunction(rexBuilder, joinInfo.nonEquiConditions);
 
         if (remaining == null) {
             return false;
         }
-        RexNode cnf = RexUtil.toCnf(rexBuilder, joinInfo.getRemaining(rexBuilder));
+        RexNode cnf = RexUtil.toCnf(rexBuilder, remaining);
         if (!(cnf instanceof RexCall) || cnf.getKind() != SqlKind.AND) {
             return false;
         }

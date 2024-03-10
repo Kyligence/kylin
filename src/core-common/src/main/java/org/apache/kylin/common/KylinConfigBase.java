@@ -770,7 +770,7 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.server.https.enable", FALSE));
     }
 
-    public Boolean isQueryNodeRequestForwardEnabled() {
+    public boolean isQueryNodeRequestForwardEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.query.request-forward-enabled", TRUE));
     }
 
@@ -815,10 +815,6 @@ public abstract class KylinConfigBase implements Serializable {
 
     public boolean isConvertExpressionToCcEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.query.implicit-computed-column-convert", TRUE));
-    }
-
-    public boolean isAggComputedColumnRewriteEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.query.agg-computed-column-rewrite", TRUE));
     }
 
     public int getConvertCcMaxIterations() {
@@ -1175,7 +1171,7 @@ public abstract class KylinConfigBase implements Serializable {
         return Integer.parseInt(getOptional("kylin.streaming.job.max-concurrent-jobs", "10"));
     }
 
-    public Boolean getAutoSetConcurrentJob() {
+    public boolean getAutoSetConcurrentJob() {
         if (isDevOrUT()) {
             return Boolean.parseBoolean(getOptional("kylin.job.auto-set-concurrent-jobs", FALSE));
         }
@@ -1345,7 +1341,8 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     public Map<Integer, List<Integer>> getSourceProviderFamilyMapping() {
-        Map<Integer, String> originalMapping = convertKeyToInteger(getPropertiesByPrefix("kylin.source.provider-family."));
+        Map<Integer, String> originalMapping = convertKeyToInteger(
+                getPropertiesByPrefix("kylin.source.provider-family."));
         Map<Integer, List<Integer>> ret = Maps.newHashMap();
         for (Map.Entry<Integer, String> entry : originalMapping.entrySet()) {
             if (StringUtils.isNotBlank(entry.getValue())) {
@@ -1762,7 +1759,7 @@ public abstract class KylinConfigBase implements Serializable {
         return getOptional("kylin.engine.spark.sample-split-threshold", "256m");
     }
 
-    public Boolean getSparkEngineTaskImpactInstanceEnabled() {
+    public boolean getSparkEngineTaskImpactInstanceEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.engine.spark.task-impact-instance-enabled", TRUE));
     }
 
@@ -2157,37 +2154,14 @@ public abstract class KylinConfigBase implements Serializable {
 
     public Map<String, String> getUDFs() {
         Map<String, String> udfMap = Maps.newLinkedHashMap();
-        udfMap.put("regexp_like", "org.apache.kylin.query.udf.otherUdf.RegexpLikeUDF");
-        udfMap.put("rlike", "org.apache.kylin.query.udf.otherUdf.RlikeUDF");
-        udfMap.put("if", "org.apache.kylin.query.udf.otherUdf.IfUDF");
-        udfMap.put("version", "org.apache.kylin.query.udf.VersionUDF");
-        udfMap.put("bitmap_function", "org.apache.kylin.query.udf.BitmapUDF");
-        udfMap.put("concat", "org.apache.kylin.query.udf.stringUdf.ConcatUDF");
-        udfMap.put("concat_ws", "org.apache.kylin.query.udf.stringUdf.ConcatwsUDF");
-        udfMap.put("massin", "org.apache.kylin.query.udf.MassInUDF");
-        udfMap.put("initcapb", "org.apache.kylin.query.udf.stringUdf.InitCapbUDF");
-        udfMap.put("substr", "org.apache.kylin.query.udf.stringUdf.SubStrUDF");
-        udfMap.put("left", "org.apache.kylin.query.udf.stringUdf.LeftUDF");
-        udfMap.put("date_part", "org.apache.kylin.query.udf.dateUdf.DatePartUDF");
-        udfMap.put("date_trunc", "org.apache.kylin.query.udf.dateUdf.DateTruncUDF");
-        udfMap.put("datediff", "org.apache.kylin.query.udf.dateUdf.DateDiffUDF");
-        udfMap.put("unix_timestamp", "org.apache.kylin.query.udf.dateUdf.UnixTimestampUDF");
-        udfMap.put("length", "org.apache.kylin.query.udf.stringUdf.LengthUDF");
-        udfMap.put("repeat", "org.apache.kylin.query.udf.stringUdf.RepeatUDF");
-        udfMap.put("to_char", "org.apache.kylin.query.udf.formatUdf.ToCharUDF");
-        udfMap.put("instr", "org.apache.kylin.query.udf.stringUdf.InStrUDF");
-        udfMap.put("strpos", "org.apache.kylin.query.udf.stringUdf.StrPosUDF");
-        udfMap.put("nvl", "org.apache.kylin.query.udf.nullHandling.NvlUDF");
-        udfMap.put("isnull", "org.apache.kylin.query.udf.nullHandling.IsNullUDF");
-        udfMap.put("split_part", "org.apache.kylin.query.udf.stringUdf.SplitPartUDF");
+        udfMap.put("bitmap_function", "org.apache.kylin.query.udf.KylinBitmapUDF");
+        udfMap.put("kylin_udf_function", "org.apache.kylin.query.udf.KylinOtherUDF");
         udfMap.put("spark_leaf_function", "org.apache.kylin.query.udf.SparkLeafUDF");
         udfMap.put("spark_string_function", "org.apache.kylin.query.udf.SparkStringUDF");
         udfMap.put("spark_misc_function", "org.apache.kylin.query.udf.SparkMiscUDF");
         udfMap.put("spark_time_function", "org.apache.kylin.query.udf.SparkTimeUDF");
         udfMap.put("spark_math_function", "org.apache.kylin.query.udf.SparkMathUDF");
-        udfMap.put("spark_other_function", "org.apache.kylin.query.udf.SparkOtherUDF");
-        udfMap.put("tableau_string_func", "org.apache.kylin.query.udf.stringUdf.TableauStringUDF");
-        udfMap.put("size", "org.apache.kylin.query.udf.SizeUDF");
+        udfMap.put("spark_other_function", "org.apache.kylin.query.udf.SparkCollectionUDF");
         Map<String, String> overrideUdfMap = getPropertiesByPrefix("kylin.query.udf.");
         udfMap.putAll(overrideUdfMap);
         return udfMap;
@@ -2492,7 +2466,7 @@ public abstract class KylinConfigBase implements Serializable {
         return allServers;
     }
 
-    public Boolean getStreamingChangeMeta() {
+    public boolean getStreamingChangeMeta() {
         return Boolean.parseBoolean(this.getOptional("kylin.server.streaming-change-meta", FALSE));
     }
 
@@ -2704,15 +2678,11 @@ public abstract class KylinConfigBase implements Serializable {
                         + "kylin.htrace.show-gui-trace-toggle,kylin.web.export-allow-admin,kylin.web.export-allow-other");
     }
 
-    public Boolean isCalciteInClauseEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.query.calcite-in-clause-enabled", TRUE));
+    public int convertInSubQueryThreshold() {
+        return Integer.parseInt(getOptional("kylin.query.convert-in-to-or-threshold", "20"));
     }
 
-    public Boolean isCalciteConvertMultipleColumnsIntoOrEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.query.calcite-convert-multiple-columns-in-to-or-enabled", TRUE));
-    }
-
-    public Boolean isEnumerableRulesEnabled() {
+    public boolean isEnumerableRulesEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.query.calcite.enumerable-rules-enabled", FALSE));
     }
 
@@ -2811,7 +2781,7 @@ public abstract class KylinConfigBase implements Serializable {
                 TimeUnit.MILLISECONDS);
     }
 
-    public Boolean getTimeMachineEnabled() {
+    public boolean getTimeMachineEnabled() {
         return Boolean.parseBoolean(this.getOptional("kylin.storage.time-machine-enabled", FALSE));
     }
 
@@ -2913,7 +2883,7 @@ public abstract class KylinConfigBase implements Serializable {
         return getOptional("kylin.engine.streaming-jobs-location", getHdfsWorkingDirectory() + "/streaming/jobs");
     }
 
-    public Boolean getStreamingMetricsEnabled() {
+    public boolean getStreamingMetricsEnabled() {
         return Boolean.parseBoolean(this.getOptional("kylin.engine.streaming-metrics-enabled", FALSE));
     }
 
@@ -2936,7 +2906,7 @@ public abstract class KylinConfigBase implements Serializable {
                 TimeUnit.DAYS);
     }
 
-    public Boolean getTriggerOnce() {
+    public boolean getTriggerOnce() {
         return Boolean.parseBoolean(getOptional("kylin.engine.streaming-trigger-once", FALSE));
     }
 
@@ -3041,7 +3011,7 @@ public abstract class KylinConfigBase implements Serializable {
         return result;
     }
 
-    public Boolean isSmartModelEnabled() {
+    public boolean isSmartModelEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.env.smart-mode-enabled", FALSE));
     }
 
@@ -3255,7 +3225,7 @@ public abstract class KylinConfigBase implements Serializable {
                 "org.apache.spark.sql.kylin.external.KylinSessionStateBuilder");
     }
 
-    public Boolean isSparderAsync() {
+    public boolean isSparderAsync() {
         return Boolean.parseBoolean(this.getOptional("kylin.query.init-sparder-async", TRUE));
     }
 
@@ -4163,12 +4133,8 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.engine.job-tmp-dir-all-permission-enabled", FALSE));
     }
 
-    public boolean isProjectMergeWithBloatEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.query.project-merge-with-bloat-enabled", "true"));
-    }
-
-    public int getProjectMergeRuleBloatThreshold() {
-        return Integer.parseInt(getOptional("kylin.query.project-merge-bloat-threshold", "0"));
+    public int getProjectBloatThreshold() {
+        return Integer.parseInt(getOptional("kylin.query.project-merge-bloat-threshold", "100"));
     }
 
     public boolean isStorageQuotaEnabled() {
@@ -4354,6 +4320,10 @@ public abstract class KylinConfigBase implements Serializable {
         boolean notUseCrontabPeriodicGC = StringUtils.isBlank(queryEnginePeriodicGCCrontab)
                 || StringUtils.equals(Scheduled.CRON_DISABLED, queryEnginePeriodicGCCrontab);
         return String.valueOf(notUseCrontabPeriodicGC);
+    }
+
+    public int getMaxFilterConditionCnt() {
+        return Integer.parseInt(getOptional("kylin.query.filter-condition-count", "20"));
     }
 
     public String getSourceJDBCExtend() {

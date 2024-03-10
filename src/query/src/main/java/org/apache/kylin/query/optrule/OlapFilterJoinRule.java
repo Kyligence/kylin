@@ -31,7 +31,6 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rel.core.EquiJoin;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -53,6 +52,7 @@ import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
+import org.apache.kylin.query.relnode.OlapJoinRel;
 import org.apache.kylin.query.util.RexUtils;
 
 /**
@@ -182,7 +182,6 @@ public class OlapFilterJoinRule extends RelOptRule {
             // to make such filters to be able to be pushed down to join conditions
             aboveFilters = aboveFilters.stream().map(RexUtils::stripOffCastInColumnEqualPredicate)
                     .collect(Collectors.toList());
-            final ImmutableList<RexNode> origAboveFilters = ImmutableList.copyOf(aboveFilters);
 
             JoinRelType joinType = topJoinRel.getJoinType();
             List<RexNode> leftFilters = new ArrayList<>();
@@ -279,7 +278,10 @@ public class OlapFilterJoinRule extends RelOptRule {
             final JoinRelType joinType = topJoinRel.getJoinType();
             final List<RexNode> origJoinFilters = ImmutableList.copyOf(joinFilters);
             boolean filterPushed = false;
-            if (RelOptUtil.classifyFilters(topJoinRel, aboveFilters, joinType, !(topJoinRel instanceof EquiJoin),
+            // see https://olapio.atlassian.net/browse/KE-42040
+            // Calcite 1.30 remove EquiJoinInfo and NonEquiJoinInfo, change to an equivalent judgment condition
+            boolean pushInto = !(topJoinRel instanceof OlapJoinRel) || !(topJoinRel.analyzeCondition().isEqui());
+            if (RelOptUtil.classifyFilters(topJoinRel, aboveFilters, joinType, pushInto,
                     !joinType.generatesNullsOnLeft(), !joinType.generatesNullsOnRight(), joinFilters, leftFilters,
                     rightFilters)) {
                 filterPushed = true;
@@ -350,7 +352,7 @@ public class OlapFilterJoinRule extends RelOptRule {
             while (itr.hasNext()) {
                 RexNode filter = itr.next();
                 final RelOptUtil.InputFinder inputFinder = RelOptUtil.InputFinder.analyze(filter);
-                if (!(inputFinder.inputBitSet.build().asList().size() == 2 && SqlKind.EQUALS == filter.getKind())) {
+                if (!(inputFinder.build().asList().size() == 2 && SqlKind.EQUALS == filter.getKind())) {
                     aboveFilters.add(filter.accept(new RelOptUtil.RexInputConverter(rexBuilder, srcFields,
                             topJoinRel.getRowType().getFieldList(), offsets)));
                     itr.remove();

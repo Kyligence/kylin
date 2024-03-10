@@ -57,6 +57,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TableRef;
@@ -366,8 +367,8 @@ public class OlapFilterRel extends Filter implements OlapRel {
         context.getInnerFilterColumns().addAll(collectInnerColumnInFilter());
     }
 
-    private Collection<TblColRef> collectInnerColumnInFilter() {
-        Collection<TblColRef> resultSet = new HashSet<>();
+    private Collection<TableColRefWithRel> collectInnerColumnInFilter() {
+        Collection<TableColRefWithRel> resultSet = new HashSet<>();
         if (condition instanceof RexCall) {
             // collection starts from the sub rexNodes
             for (RexNode childCondition : ((RexCall) condition).getOperands()) {
@@ -377,7 +378,7 @@ public class OlapFilterRel extends Filter implements OlapRel {
         return resultSet;
     }
 
-    private void doCollectInnerColumnInFilter(RexNode rexNode, Collection<TblColRef> resultSet) {
+    private void doCollectInnerColumnInFilter(RexNode rexNode, Collection<TableColRefWithRel> resultSet) {
         if (rexNode instanceof RexCall) {
             RexCall rexCall = (RexCall) rexNode;
             // for comparison operators, continue with its operands
@@ -399,7 +400,7 @@ public class OlapFilterRel extends Filter implements OlapRel {
                 }
                 // inner column and contains any actual cols
                 if (colRef.isInnerColumn() && !colRef.getSourceColumns().isEmpty()) {
-                    resultSet.add(colRef);
+                    resultSet.add(new TableColRefWithRel(this, colRef));
                 }
             }
         }
@@ -447,6 +448,9 @@ public class OlapFilterRel extends Filter implements OlapRel {
 
     private static class MatchWithFilterVisitor extends RexVisitorImpl<RexNode> {
 
+        static final Set<SqlOperator> NULL_OPERATORS = ImmutableSet.of(SqlStdOperatorTable.IS_NULL,
+                SqlStdOperatorTable.IS_NOT_TRUE);
+
         private final ColumnRowType columnRowType;
         private final Set<TableRef> notNullTables;
 
@@ -478,7 +482,7 @@ public class OlapFilterRel extends Filter implements OlapRel {
                 return null;
             }
 
-            if (SqlStdOperatorTable.IS_NULL.equals(call.getOperator())) {
+            if (NULL_OPERATORS.contains(call.getOperator())) {
                 return null;
             }
 

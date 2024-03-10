@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.RelCollations;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
@@ -40,6 +41,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.query.exception.SumExprUnSupportException;
 import org.apache.kylin.query.relnode.ContextUtil;
@@ -50,8 +52,6 @@ import org.apache.kylin.query.util.AggExpressionUtil.AggExpression;
 import org.apache.kylin.query.util.AggExpressionUtil.GroupExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * sql: select sum(3) from KYLIN_SALES;<p>
@@ -94,7 +94,7 @@ public class SumConstantConvertRule extends RelOptRule {
     @Override
     public void onMatch(RelOptRuleCall ruleCall) {
         try {
-            RelBuilder relBuilder = ruleCall.builder();
+            RelBuilder relBuilder = ruleCall.builder().transform(c -> c.withPruneInputOfAggregate(false));
             Aggregate oldAgg = ruleCall.rel(0);
             Project oldProject = ruleCall.rel(1);
 
@@ -120,7 +120,7 @@ public class SumConstantConvertRule extends RelOptRule {
                 }
             }
             ImmutableBitSet bottomAggGroupSet = groupSetBuilder.build();
-            RelBuilder.GroupKey groupKey = relBuilder.groupKey(bottomAggGroupSet, null);
+            RelBuilder.GroupKey groupKey = relBuilder.groupKey(bottomAggGroupSet);
             List<AggregateCall> aggCalls = buildBottomAggCall(relBuilder, aggExpressions,
                     bottomAggGroupSet.cardinality());
             relBuilder.aggregate(groupKey, aggCalls);
@@ -143,7 +143,8 @@ public class SumConstantConvertRule extends RelOptRule {
             ImmutableBitSet topGroupSet = topGroupSetBuilder.build();
             List<AggregateCall> topAggregates = buildTopAggregate(oldAgg.getAggCallList(), topGroupSet.cardinality(),
                     aggExpressions);
-            RelBuilder.GroupKey topGroupKey = relBuilder.groupKey(topGroupSet, newGroupSets);
+            RelBuilder.GroupKey topGroupKey = newGroupSets == null ? relBuilder.groupKey(topGroupSet)
+                    : relBuilder.groupKey(topGroupSet, newGroupSets);
             relBuilder.aggregate(topGroupKey, topAggregates);
 
             RelNode relNode = relBuilder.build();
@@ -184,8 +185,8 @@ public class SumConstantConvertRule extends RelOptRule {
             String aggName = "SUM_CONST$" + (sumConstIdx++);
             AggregateCall aggCall;
             if (sumExpr.isSumConst()) {
-                aggCall = AggregateCall.create(SqlStdOperatorTable.COUNT, false, false, Lists.newArrayList(), -1,
-                        bottomAggOffset, relBuilder.peek(), null, aggName);
+                aggCall = AggregateCall.create(SqlStdOperatorTable.COUNT, false, false, false, Lists.newArrayList(), -1,
+                        null, RelCollations.EMPTY, bottomAggOffset, relBuilder.peek(), null, aggName);
             } else {
                 AggregateCall oldAggCall = sumExpr.getAggCall();
                 List<Integer> args = Arrays.stream(sumExpr.getBottomAggInput()).boxed().collect(Collectors.toList());

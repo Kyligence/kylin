@@ -44,6 +44,7 @@ import org.apache.kylin.metadata.project.NProjectLoader;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.streaming.JdbcStreamingJobStatsStore;
+import org.apache.kylin.query.util.ComputedColumnRewriter;
 import org.apache.kylin.rest.config.initialize.AclTCRListener;
 import org.apache.kylin.rest.config.initialize.AfterMetadataReadyEvent;
 import org.apache.kylin.rest.config.initialize.CacheCleanListener;
@@ -174,6 +175,7 @@ public class AppInitializer {
         kylinConfig.getDistributedLockFactory().initialize();
         if (!isResource) {
             warmUpSystemCache();
+            cacheCcRexNode();
         }
         context.publishEvent(new AfterMetadataReadyEvent(context));
 
@@ -230,6 +232,17 @@ public class AppInitializer {
             NProjectLoader.removeCache();
         });
         log.info("The system cache is warmed up.");
+    }
+
+    private void cacheCcRexNode() {
+        Thread thread = new Thread(() -> {
+            log.info("cache ComputedColumn RexNode cache.");
+            KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+            List<ProjectInstance> projects = NProjectManager.getInstance(kylinConfig).listAllProjects();
+            projects.forEach(prjInstance -> ComputedColumnRewriter.cacheCcRexNode(kylinConfig, prjInstance.getName()));
+        });
+        thread.setName("CacheComputedColumnRexNodeThread");
+        thread.start();
     }
 
     private void resetProjectOffsetId() {
