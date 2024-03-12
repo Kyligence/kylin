@@ -495,7 +495,7 @@ object TableScanPlan extends LogEx {
       .map(
         column =>
           if (column.isComputedColumn || column.getZeroBasedIndex < 0) {
-            RuntimeHelper.literalOne.as(column.toString)
+            RuntimeHelper.intOne.as(column.toString)
           } else {
             col(
               SchemaProcessor
