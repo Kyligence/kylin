@@ -578,6 +578,8 @@ public class MetaStoreService extends BasicService {
             val newLockedItemKeyAttrMap = Maps.newHashMap();
             newLockedItems.forEach(newLockedItem -> newLockedItemKeyAttrMap.put(newLockedItem.getSchemaNode().getKey(),
                     newLockedItem.getAttributes()));
+
+            // filter indexes which should be removed form dataflow
             val toBeRemovedIndexes = Stream
                     .concat(modelSchemaChange.getReduceItems().stream()
                             .filter(schemaChange -> schemaChange.getType() == SchemaNodeType.WHITE_LIST_INDEX
@@ -596,7 +598,23 @@ public class MetaStoreService extends BasicService {
             if (!toBeRemovedIndexes.isEmpty()) {
                 indexPlanService.removeIndexes(project, targetIndexPlan.getId(), toBeRemovedIndexes);
             }
+
+            // for locked layout, just remove from 'indexes' json fields, keep in dataflow
+            Set<Long> newLockedIndexIds = newLockedItems.stream().map(SchemaChangeCheckResult.ChangedItem::getDetail)
+                    .map(Long::parseLong).collect(Collectors.toSet());
+            removeLockedLayoutFromIndexes(newLockedIndexIds, targetIndexPlan, project);
         }
+    }
+
+    private void removeLockedLayoutFromIndexes(Set<Long> newLockedIndexIds, IndexPlan targetIndexPlan, String project) {
+        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getConfig(), project);
+        indexPlanManager.updateIndexPlan(targetIndexPlan.getId(), copyForWrite -> {
+            copyForWrite.removeLayouts(newLockedIndexIds, true, true);
+            // set locked indexes, to be avoided from deleting in dataflow
+            List<IndexEntity> toBeDeletedIndexes = copyForWrite.getToBeDeletedIndexes();
+            toBeDeletedIndexes.clear();
+            toBeDeletedIndexes.addAll(targetIndexPlan.getToBeDeletedIndexes());
+        });
     }
 
     private void addWhiteListIndex(String project, SchemaChangeCheckResult.ModelSchemaChange modelSchemaChange,

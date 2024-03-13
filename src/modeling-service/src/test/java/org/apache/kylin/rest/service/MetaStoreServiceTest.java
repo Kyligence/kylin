@@ -1240,38 +1240,45 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testImportModelMetadataAndOverwriteWithLockedIndexes() throws Exception {
         File file = new File(
-                "src/test/resources/ut_model_metadata/test_import_overwrite_model_metadata_2024_02_26_15_17_46_E5CC543C8FAE022CAC1C120F62449763.zip");
+                "src/test/resources/ut_model_metadata/test_lock_2_model_metadata_2024_03_12_16_14_19_5F0BA3D7D7FF885BC5971425BEF1B27B.zip");
         var multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         ModelImportRequest request = new ModelImportRequest();
         List<ModelImportRequest.ModelImport> models = new ArrayList<>();
-        models.add(new ModelImportRequest.ModelImport("test_import_overwrite", "test_import_overwrite",
+        models.add(new ModelImportRequest.ModelImport("test_lock_m1", "test_lock_m1",
                 ModelImportRequest.ImportType.OVERWRITE));
 
         request.setModels(models);
         metaStoreService.importModelMetadata("original_project", multipartFile, request);
 
         NDataflowManager nDataflowManager = NDataflowManager.getInstance(getTestConfig(), "original_project");
-        NDataflow dataflow = nDataflowManager.getDataflow("a1c2ef4a-e647-1af6-0d09-6eabb1ffc805");
+        NDataflow dataflow = nDataflowManager.getDataflow("f26dec69-99f5-6bb8-5af5-05809812efce");
         Segments<NDataSegment> segments = dataflow.getSegments();
         Assert.assertNotNull(segments);
         Assert.assertEquals(1, segments.size());
 
         NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), "original_project");
-        IndexPlan indexPlan = indexPlanManager.getIndexPlan("a1c2ef4a-e647-1af6-0d09-6eabb1ffc805");
+        IndexPlan indexPlan = indexPlanManager.getIndexPlan("f26dec69-99f5-6bb8-5af5-05809812efce");
         List<IndexEntity> toBeDeletedIndexes = indexPlan.getToBeDeletedIndexes();
         List<Long> toBeDeletedIndexIdList = Lists.newArrayList();
         for (IndexEntity toBeDeletedIndex : toBeDeletedIndexes) {
             toBeDeletedIndexIdList.add(toBeDeletedIndex.getId());
         }
-        Assert.assertEquals(toBeDeletedIndexIdList, Lists.newArrayList(80000L, 30000L, 70000L, 20000L));
+
+        Assert.assertEquals(indexPlan.getIndexes().get(0).getId(), 120000L);
+        Assert.assertEquals(indexPlan.getIndexes().get(1).getId(), 20000010000L);
+
+        Assert.assertEquals(toBeDeletedIndexIdList,
+                Lists.newArrayList(70000L, 10000L, 50000L, 20000L, 0L, 20000000000L));
 
         NDataSegment segment = segments.get(0);
         NDataSegDetails segDetails = segment.getSegDetails();
-        Assert.assertNotNull(segDetails.getLayoutById(80001L));
-        Assert.assertNotNull(segDetails.getLayoutById(30001L));
         Assert.assertNotNull(segDetails.getLayoutById(70001L));
+        Assert.assertNotNull(segDetails.getLayoutById(10001L));
+        Assert.assertNotNull(segDetails.getLayoutById(50001L));
         Assert.assertNotNull(segDetails.getLayoutById(20001L));
+        Assert.assertNotNull(segDetails.getLayoutById(1L));
+        Assert.assertNotNull(segDetails.getLayoutById(20000000001L));
     }
 
     @Test
