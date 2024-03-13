@@ -54,6 +54,11 @@
         <constructor-arg ref="aclPermissionFactory"/>
     </bean>
 
+    <bean id="concurrencyFilter"
+          class="org.springframework.security.web.session.ConcurrentSessionFilter">
+        <constructor-arg name="sessionRegistry" ref="sessionRegistry" />
+    </bean>
+
     <bean id="aclAuthorizationStrategy"
           class="org.springframework.security.acls.domain.AclAuthorizationStrategyImpl">
         <constructor-arg>
@@ -255,6 +260,7 @@
             </scr:headers>
             <scr:csrf disabled="true"/>
             <scr:custom-filter before="BASIC_AUTH_FILTER" ref="fillEmptyAuthorizationFilter" />
+            <scr:custom-filter position="CONCURRENT_SESSION_FILTER" ref="concurrencyFilter" />
             <scr:http-basic entry-point-ref="nUnauthorisedEntryPoint"/>
             <scr:intercept-url pattern="/api/job_delegate/feign/**" access="permitAll"/>
             <scr:intercept-url pattern="/api/jobs/feign/**" access="permitAll"/>
@@ -394,6 +400,7 @@
             <scr:intercept-url pattern="/sparder/**" access="isAuthenticated()"/>
 
             <scr:form-login login-page="/login"/>
+            <scr:custom-filter position="CONCURRENT_SESSION_FILTER" ref="concurrencyFilter" />
             <scr:logout invalidate-session="true" delete-cookies="JSESSIONID" logout-url="/j_spring_security_logout"
                         logout-success-url="/."/>
             <scr:session-management session-fixation-protection="newSession"/>
@@ -406,6 +413,7 @@
             <scr:intercept-url pattern="/**" access="IS_AUTHENTICATED_FULLY"/>
             <scr:custom-filter before="FIRST" ref="metadataGeneratorFilter"/>
             <scr:custom-filter after="BASIC_AUTH_FILTER" ref="samlFilter"/>
+            <scr:custom-filter position="CONCURRENT_SESSION_FILTER" ref="concurrencyFilter" />
         </scr:http>
 
 
