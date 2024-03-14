@@ -681,6 +681,11 @@ public class NDataSegment implements ISegment, Serializable {
         isDictReady = dictReady;
     }
 
+    public boolean buildedDictColShouldRebuild() {
+        return Boolean.parseBoolean(extraBuildOptions.getOrDefault("job.retry.segment.force-build-dict", "false"));
+    }
+
+
     public boolean isFlatTableReady() {
         return isFlatTableReady;
     }

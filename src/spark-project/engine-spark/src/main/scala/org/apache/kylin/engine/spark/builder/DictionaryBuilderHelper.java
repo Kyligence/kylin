@@ -145,7 +145,9 @@ public class DictionaryBuilderHelper {
         }
         Set<TblColRef> buildedColRefSet = findNeedDictCols(buildedLayouts);
         Set<TblColRef> toBuildColRefSet = findNeedDictCols(toBuildCuboids);
-        toBuildColRefSet.removeIf(col -> buildedColRefSet.contains(col));
+        if (!seg.buildedDictColShouldRebuild()) {
+            toBuildColRefSet.removeIf(col -> buildedColRefSet.contains(col));
+        }
         return toBuildColRefSet;
     }
 
