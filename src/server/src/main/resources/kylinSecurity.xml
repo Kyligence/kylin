@@ -57,6 +57,7 @@
     <bean id="concurrencyFilter"
           class="org.springframework.security.web.session.ConcurrentSessionFilter">
         <constructor-arg name="sessionRegistry" ref="sessionRegistry" />
+        <constructor-arg name="sessionInformationExpiredStrategy" ref="kylinSessionInformationExpiredStrategy" />
     </bean>
 
     <bean id="aclAuthorizationStrategy"
