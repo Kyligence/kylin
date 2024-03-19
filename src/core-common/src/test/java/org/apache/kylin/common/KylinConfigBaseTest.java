@@ -944,6 +944,10 @@ class KylinConfigBaseTest {
                 new PropertiesEntity("kylin.query.calcite.bindable.cache.maxSize", "10", 10));
         map.put("getCalciteBindableCacheConcurrencyLevel",
                 new PropertiesEntity("kylin.query.calcite.bindable.cache.concurrencyLevel", "5", 5));
+        map.put("allowNegativeScaleOfDecimalEnabled", new PropertiesEntity(
+                "kylin.storage.columnar.spark-conf.spark.sql.legacy.allowNegativeScaleOfDecimal", "false", false));
+        map.put("decimalOperationsAllowPrecisionLoss", new PropertiesEntity(
+                "kylin.storage.columnar.spark-conf.spark.sql.decimalOperations.allowPrecisionLoss", "true", true));
     }
 
     @Test

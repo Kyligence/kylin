@@ -18,6 +18,8 @@
 
 package org.apache.kylin.query.calcite;
 
+import java.util.Locale;
+
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
@@ -26,12 +28,15 @@ import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.kylin.common.KapConfig;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@SuppressWarnings("unused") //used by reflection
 public class KylinRelDataTypeSystem extends RelDataTypeSystemImpl {
 
     private static final int MINIMUM_ADJUSTED_SCALE = 6;
+    private static final int MAX_PRECISION = 38;
+    private static final int MAX_SCALE = 38;
 
     @Override
     public RelDataType deriveAvgAggType(RelDataTypeFactory typeFactory, RelDataType argumentType) {
@@ -80,22 +85,68 @@ public class KylinRelDataTypeSystem extends RelDataTypeSystemImpl {
             int p2 = type2.getPrecision();
             int s1 = type1.getScale();
             int s2 = type2.getScale();
-            int intDig = p1 - s1 + s2;
-            int scale = Math.max(MINIMUM_ADJUSTED_SCALE, s1 + p2 + 1);
-            int precision = intDig + scale;
+            boolean decimalOperationsAllowPrecisionLoss = KylinConfig.getInstanceFromEnv()
+                    .decimalOperationsAllowPrecisionLoss();
             RelDataType ret;
-            int maxNumericPrecision = getMaxNumericPrecision();
-            if (precision <= maxNumericPrecision) {
-                return typeFactory.createSqlType(SqlTypeName.DECIMAL, precision, scale);
+            if (decimalOperationsAllowPrecisionLoss) {
+                int intDig = p1 - s1 + s2;
+                int scale = Math.max(MINIMUM_ADJUSTED_SCALE, s1 + p2 + 1);
+                int prec = intDig + scale;
+                ret = adjustPrecisionScale(typeFactory, prec, scale);
             } else {
-                int intDigits = precision - scale;
-                int minScaleValue = Math.min(scale, MINIMUM_ADJUSTED_SCALE);
-                int adjustedScale = Math.max(maxNumericPrecision - intDigits, minScaleValue);
-                ret = typeFactory.createSqlType(SqlTypeName.DECIMAL, maxNumericPrecision, adjustedScale);
+                int intDig = Math.min(MAX_SCALE, p1 - s1 + s2);
+                int decDig = Math.min(MAX_SCALE, Math.max(6, s1 + p2 + 1));
+                int diff = (intDig + decDig) - MAX_SCALE;
+                if (diff > 0) {
+                    decDig -= diff / 2 + 1;
+                    intDig = MAX_SCALE - decDig;
+                }
+                ret = bounded(typeFactory, intDig + decDig, decDig);
             }
             return ret;
         }
         return null;
+    }
+
+    private void checkNegativeScale(int scale) {
+        if (scale < 0 && !KylinConfig.getInstanceFromEnv().allowNegativeScaleOfDecimalEnabled()) {
+            throw new KylinRuntimeException(String.format(Locale.ROOT,
+                    "Negative scale is not allowed: %s. You can use %s=true to enable legacy mode to allow it.", scale,
+                    KylinConfig.LEGACY_ALLOW_NEGATIVE_SCALE_OF_DECIMAL_ENABLED));
+        }
+    }
+
+    private RelDataType adjustPrecisionScale(RelDataTypeFactory typeFactory, int precision, int scale) {
+        // Assumptions:
+        checkNegativeScale(scale);
+        assert (precision >= scale);
+
+        if (precision <= MAX_PRECISION) {
+            // Adjustment only needed when we exceed max precision
+            return typeFactory.createSqlType(SqlTypeName.DECIMAL, precision, scale);
+        } else if (scale < 0) {
+            // Decimal can have negative scale (SPARK-24468). In this case, we cannot allow a precision
+            // loss since we would cause a loss of digits in the integer part.
+            // In this case, we are likely to meet an overflow.
+            return typeFactory.createSqlType(SqlTypeName.DECIMAL, MAX_PRECISION, scale);
+        } else {
+            // Precision/scale exceed maximum precision. Result must be adjusted to MAX_PRECISION.
+            int intDigits = precision - scale;
+            // If original scale is less than MINIMUM_ADJUSTED_SCALE, use original scale value; otherwise
+            // preserve at least MINIMUM_ADJUSTED_SCALE fractional digits
+            int minScaleValue = Math.min(scale, MINIMUM_ADJUSTED_SCALE);
+            // The resulting scale is the maximum between what is available without causing a loss of
+            // digits for the integer part of the decimal and the minimum guaranteed scale, which is
+            // computed above
+            int adjustedScale = Math.max(MAX_PRECISION - intDigits, minScaleValue);
+
+            return typeFactory.createSqlType(SqlTypeName.DECIMAL, MAX_PRECISION, adjustedScale);
+        }
+    }
+
+    private RelDataType bounded(RelDataTypeFactory typeFactory, int precision, int scale) {
+        return typeFactory.createSqlType(SqlTypeName.DECIMAL, Math.min(precision, MAX_PRECISION),
+                Math.min(scale, MAX_SCALE));
     }
 
     @Override
@@ -111,23 +162,18 @@ public class KylinRelDataTypeSystem extends RelDataTypeSystemImpl {
             int p2 = type2.getPrecision();
             int s1 = type1.getScale();
             int s2 = type2.getScale();
+            boolean decimalOperationsAllowPrecisionLoss = KylinConfig.getInstanceFromEnv()
+                    .decimalOperationsAllowPrecisionLoss();
 
-            int scale = s1 + s2;
-            int precision = p1 + p2 + 1;
             RelDataType ret;
-            int maxNumericPrecision = getMaxNumericPrecision();
-            if (precision <= maxNumericPrecision) {
-                ret = typeFactory.createSqlType(SqlTypeName.DECIMAL, precision, scale);
-            } else if (scale < 0) {
-                ret = typeFactory.createSqlType(SqlTypeName.DECIMAL, maxNumericPrecision, scale);
+            int resultScale = s1 + s2;
+            int resultPrecision = p1 + p2 + 1;
+            if (decimalOperationsAllowPrecisionLoss) {
+                ret = adjustPrecisionScale(typeFactory, resultPrecision, resultScale);
             } else {
-                int intDigits = precision - scale;
-                int minScaleValue = Math.min(scale, MINIMUM_ADJUSTED_SCALE);
-                int adjustedScale = Math.max(maxNumericPrecision - intDigits, minScaleValue);
-                ret = typeFactory.createSqlType(SqlTypeName.DECIMAL, maxNumericPrecision, adjustedScale);
+                ret = bounded(typeFactory, resultPrecision, resultScale);
             }
             return ret;
-
         }
 
         return null;
@@ -141,7 +187,7 @@ public class KylinRelDataTypeSystem extends RelDataTypeSystemImpl {
      */
     @Override
     public int getMaxNumericPrecision() {
-        return 38;
+        return MAX_PRECISION;
     }
 
     @Override
