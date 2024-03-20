@@ -58,6 +58,7 @@ import org.apache.kylin.rest.service.FusionModelService;
 import org.apache.kylin.rest.service.ModelBuildService;
 import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.params.IncrementBuildSegmentParams;
+import org.apache.kylin.rest.service.params.IndexBuildParams;
 import org.apache.kylin.rest.service.params.MergeSegmentParams;
 import org.apache.kylin.rest.service.params.RefreshSegmentParams;
 import org.apache.kylin.rest.util.ModelUtils;
@@ -353,9 +354,14 @@ public class SegmentController extends NBasicController {
         ProjectInstance prjInstance = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
                 .getProject(buildSegmentsRequest.getProject());
         checkParamLength("tag", buildSegmentsRequest.getTag(), prjInstance.getConfig().getJobTagMaxSize());
-        JobInfoResponseWithFailure response = modelBuildService.addIndexesToSegments(buildSegmentsRequest.getProject(),
-                modelId, buildSegmentsRequest.getSegmentIds(), null, buildSegmentsRequest.isParallelBuildBySegment(),
-                buildSegmentsRequest.getPriority());
+        JobInfoResponseWithFailure response = modelBuildService.addIndexesToSegments(IndexBuildParams.builder()
+                        .project(buildSegmentsRequest.getProject())
+                        .modelId(modelId)
+                        .segmentIds(buildSegmentsRequest.getSegmentIds())
+                        .layoutIds(null)
+                        .parallelBuildBySegment(buildSegmentsRequest.isParallelBuildBySegment())
+                        .priority(buildSegmentsRequest.getPriority())
+                        .build());
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
     }
 

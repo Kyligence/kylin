@@ -65,7 +65,7 @@ public class IndexBuildJobUtil extends ExecutableUtil {
 
         if (targetLayouts.isEmpty()) {
             allLayouts.forEach(layout -> {
-                if (layout.isToBeDeleted()) {
+                if (jobParam.isDeleteTBDLayouts() && layout.isToBeDeleted()) {
                     toBeDeletedLayouts.add(layout);
                 } else if (!mixLayouts.contains(layout.getId())) {
                     toBeProcessedLayouts.add(layout);

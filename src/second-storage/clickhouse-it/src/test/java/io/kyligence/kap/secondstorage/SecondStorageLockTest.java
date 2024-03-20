@@ -147,6 +147,7 @@ import org.apache.kylin.rest.service.NUserGroupService;
 import org.apache.kylin.rest.service.QueryHistoryScheduler;
 import org.apache.kylin.rest.service.QueryHistoryService;
 import org.apache.kylin.rest.service.SegmentHelper;
+import org.apache.kylin.rest.service.params.IndexBuildParams;
 import org.apache.kylin.rest.service.params.MergeSegmentParams;
 import org.apache.kylin.rest.service.params.ModelQueryParams;
 import org.apache.kylin.rest.service.params.RefreshSegmentParams;
@@ -562,9 +563,15 @@ public class SecondStorageLockTest implements JobWaiter {
                 long layout = updateIndex("LSTG_SITE_ID");
                 val jobs = getExecutableManager().getAllExecutables().stream().map(AbstractExecutable::getId)
                         .collect(Collectors.toSet());
-                modelBuildService.addIndexesToSegments(getProject(), modelId,
-                        Collections.singletonList(getDataFlow().getSegments().getFirstSegment().getId()), null, false,
-                        3);
+                modelBuildService.addIndexesToSegments(IndexBuildParams.builder()
+                                .project(getProject())
+                                .modelId(modelId)
+                                .segmentIds(Collections.singletonList(
+                                        getDataFlow().getSegments().getFirstSegment().getId()))
+                                .layoutIds(null)
+                                .parallelBuildBySegment(false)
+                                .priority(3)
+                                .build());
                 waitAllJobFinish();
                 val existLayouts = getTableFlow().getTableDataList().stream().map(TableData::getLayoutID).distinct()
                         .collect(Collectors.toList());

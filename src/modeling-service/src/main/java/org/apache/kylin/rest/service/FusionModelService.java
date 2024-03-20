@@ -44,6 +44,7 @@ import org.apache.kylin.rest.response.JobInfoResponse;
 import org.apache.kylin.rest.response.JobInfoResponseWithFailure;
 import org.apache.kylin.rest.response.NDataModelResponse;
 import org.apache.kylin.rest.service.params.IncrementBuildSegmentParams;
+import org.apache.kylin.rest.service.params.IndexBuildParams;
 import org.apache.kylin.streaming.event.StreamingJobKillEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -207,11 +208,18 @@ public class FusionModelService extends AbstractModelService implements TableFus
                     String.format(Locale.ROOT, MsgPicker.getMsg().getFixStreamingSegment()));
         }
 
-        return modelBuildService.addIndexesToSegments(buildSegmentsRequest.getProject(), targetModelId,
-                buildSegmentsRequest.getSegmentIds(), buildSegmentsRequest.getIndexIds(),
-                buildSegmentsRequest.isParallelBuildBySegment(), buildSegmentsRequest.getPriority(),
-                buildSegmentsRequest.isPartialBuild(), buildSegmentsRequest.getYarnQueue(),
-                buildSegmentsRequest.getTag());
+        return modelBuildService.addIndexesToSegments(IndexBuildParams.builder()
+                        .project(buildSegmentsRequest.getProject())
+                        .modelId(targetModelId)
+                        .segmentIds(buildSegmentsRequest.getSegmentIds())
+                        .layoutIds(buildSegmentsRequest.getIndexIds())
+                        .deleteTBDLayouts(false)
+                        .parallelBuildBySegment(buildSegmentsRequest.isParallelBuildBySegment())
+                        .priority(buildSegmentsRequest.getPriority())
+                        .partialBuild(buildSegmentsRequest.isPartialBuild())
+                        .yarnQueue(buildSegmentsRequest.getYarnQueue())
+                        .tag(buildSegmentsRequest.getTag())
+                        .build());
     }
 
     private NDataModel getBatchModel(String fusionModelId, String project) {

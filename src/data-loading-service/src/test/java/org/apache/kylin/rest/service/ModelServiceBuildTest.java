@@ -106,6 +106,7 @@ import org.apache.kylin.rest.response.RefreshAffectedSegmentsResponse;
 import org.apache.kylin.rest.response.RelatedModelResponse;
 import org.apache.kylin.rest.response.SimplifiedMeasure;
 import org.apache.kylin.rest.service.params.IncrementBuildSegmentParams;
+import org.apache.kylin.rest.service.params.IndexBuildParams;
 import org.apache.kylin.rest.service.params.MergeSegmentParams;
 import org.apache.kylin.rest.service.params.RefreshSegmentParams;
 import org.apache.kylin.rest.util.AclEvaluate;
@@ -1391,9 +1392,14 @@ public class ModelServiceBuildTest extends SourceTestCase {
         update2.setToUpdateSegs(segments.toArray(new NDataSegment[] {}));
         dfManager.updateDataflow(update2);
 
-        modelBuildService.addIndexesToSegments(project, modelId,
-                Lists.newArrayList(dataSegment1.getId(), dataSegment2.getId()), Lists.newArrayList(80001L), false,
-                ExecutablePO.DEFAULT_PRIORITY);
+        modelBuildService.addIndexesToSegments(IndexBuildParams.builder()
+                        .project(project)
+                        .modelId(modelId)
+                        .segmentIds(Lists.newArrayList(dataSegment1.getId(), dataSegment2.getId()))
+                        .layoutIds(Lists.newArrayList(80001L))
+                        .parallelBuildBySegment(false)
+                        .priority(ExecutablePO.DEFAULT_PRIORITY)
+                        .build());
         val executables = getRunningExecutables(getProject(), modelId);
         val job = executables.get(0);
         Assert.assertEquals(1, executables.size());

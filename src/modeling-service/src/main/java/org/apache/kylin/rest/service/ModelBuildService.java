@@ -89,6 +89,7 @@ import org.apache.kylin.rest.response.RefreshAffectedSegmentsResponse;
 import org.apache.kylin.rest.service.params.BasicSegmentParams;
 import org.apache.kylin.rest.service.params.FullBuildSegmentParams;
 import org.apache.kylin.rest.service.params.IncrementBuildSegmentParams;
+import org.apache.kylin.rest.service.params.IndexBuildParams;
 import org.apache.kylin.rest.service.params.MergeSegmentParams;
 import org.apache.kylin.rest.service.params.RefreshSegmentParams;
 import org.apache.kylin.source.SourceFactory;
@@ -706,16 +707,18 @@ public class ModelBuildService extends AbstractModelService implements ModelBuil
         return result;
     }
 
-    public JobInfoResponseWithFailure addIndexesToSegments(String project, String modelId, List<String> segmentIds,
-            List<Long> indexIds, boolean parallelBuildBySegment, int priority) {
-        return addIndexesToSegments(project, modelId, segmentIds, indexIds, parallelBuildBySegment, priority, false,
-                null, null);
-    }
-
     @Override
-    public JobInfoResponseWithFailure addIndexesToSegments(String project, String modelId, List<String> segmentIds,
-            List<Long> indexIds, boolean parallelBuildBySegment, int priority, boolean partialBuild, String yarnQueue,
-            Object tag) {
+    public JobInfoResponseWithFailure addIndexesToSegments(IndexBuildParams params) {
+        String project = params.getProject();
+        String modelId = params.getModelId();
+        List<String> segmentIds = params.getSegmentIds();
+        List<Long> indexIds = params.getLayoutIds();
+        boolean parallelBuildBySegment = params.isParallelBuildBySegment();
+        int priority = params.getPriority();
+        boolean partialBuild = params.isPartialBuild();
+        String yarnQueue = params.getYarnQueue();
+        Object tag = params.getTag();
+
         aclEvaluate.checkProjectOperationPermission(project);
         checkModelPermission(project, modelId);
         val dfManger = getManager(NDataflowManager.class, project);
@@ -731,13 +734,19 @@ public class ModelBuildService extends AbstractModelService implements ModelBuil
                 Set<Long> targetLayouts = indexIds == null ? null : Sets.newHashSet(indexIds);
                 JobParam jobParam = new JobParam(Sets.newHashSet(segmentIds), targetLayouts, modelId, getUsername())
                         .withPriority(priority).withYarnQueue(yarnQueue).withTag(tag).withProject(project);
+
                 if (partialBuild) {
                     jobParam.addExtParams(NBatchConstants.P_PARTIAL_BUILD, String.valueOf(true));
                 }
-                JobInfoResponse.JobInfo jobInfo = new JobInfoResponse.JobInfo(JobTypeEnum.INDEX_BUILD.toString(),
-                        getManager(SourceUsageManager.class).licenseCheckWrap(project,
-                                () -> getManager(JobManager.class, project).addRelatedIndexJob(jobParam)));
-                jobs.add(jobInfo);
+                if (!params.isDeleteTBDLayouts()) {
+                    jobParam.setDeleteTBDLayouts(false);
+                }
+
+                String jobId = getManager(SourceUsageManager.class).licenseCheckWrap(project,
+                        () -> getManager(JobManager.class, project).addRelatedIndexJob(jobParam));
+
+                jobs.add(new JobInfoResponse.JobInfo(JobTypeEnum.INDEX_BUILD.toString(), jobId));
+
             } catch (JobSubmissionException e) {
                 result.addFailedSeg(dataflow, e);
             }
