@@ -3,6 +3,7 @@
   "alias": "nmodel_basic_inner",
   "fact_table": "DEFAULT.TEST_KYLIN_FACT",
   "owner": "ADMIN",
+  "description": "nmodel_basic_inner description",
   "join_tables": [
     {
       "table": "DEFAULT.TEST_ORDER",

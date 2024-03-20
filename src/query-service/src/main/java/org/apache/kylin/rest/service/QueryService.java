@@ -1273,7 +1273,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
                 val modelManager = NDataModelManager.getInstance(getConfig(), project);
                 val model = modelManager.getDataModelDescByAlias(tableMetaIdentify.tableName);
                 // Set table name comment of this model view
-                if (!model.getDescription().isEmpty()) {
+                if (StringUtils.isNotBlank(model.getDescription())) {
                     tableMap.get(tableMetaIdentify).setREMARKS(model.getDescription());
                 }
                 int colIdInMode = model.getColumnByColumnNameInModel(columnMetaWithType.getCOLUMN_NAME()).getId();

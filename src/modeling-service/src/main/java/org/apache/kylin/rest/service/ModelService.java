@@ -1580,13 +1580,13 @@ public class ModelService extends AbstractModelService
         NDataModel nDataModel = getModelById(modelId, project);
         //rename
 
-        if (StringUtils.isNotBlank(description) && nDataModel.getAlias().equalsIgnoreCase(newAlias)) {
+        if (description != null && nDataModel.getAlias().equalsIgnoreCase(newAlias)) {
             nDataModel.setDescription(description);
         } else {
             checkAliasExist(modelId, newAlias, project);
             checkAliasIsExceededLimit(newAlias);
             nDataModel.setAlias(newAlias);
-            if (StringUtils.isNotBlank(description)) {
+            if (description != null) {
                 nDataModel.setDescription(description);
             }
         }

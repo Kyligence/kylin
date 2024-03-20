@@ -5069,7 +5069,7 @@ public class ModelServiceTest extends SourceTestCase {
         }
 
         String expected = FileUtils.readFileToString(
-                new File("src/test/resources/ut_meta/internal_measure.model_desc/nmodel_test_expected.json"));
+                new File("src/test/resources/ut_meta/internal_measure.model_desc/nmodel_test_expected.json")).trim();
         Assert.assertEquals(expected, dump);
 
         val index = NIndexPlanManager.getInstance(getTestConfig(), getProject()).getIndexPlan(saved.getId());

@@ -506,6 +506,9 @@ public class NModelController extends NBasicController {
         checkRequiredArg(MODEL_ID, modelId);
         String newAlias = modelRenameRequest.getNewModelName();
         String description = modelRenameRequest.getDescription();
+        if (description == null) {
+            description = StringUtils.EMPTY;
+        }
         if (!StringUtils.containsOnly(newAlias, AbstractModelService.VALID_NAME_FOR_MODEL)) {
             throw new KylinException(MODEL_NAME_INVALID, newAlias);
         }

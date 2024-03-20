@@ -164,7 +164,7 @@ public class NDataModel extends RootPersistentEntity {
 
     @EqualsAndHashCode.Include
     @JsonProperty("description")
-    private String description;
+    private String description = "";
 
     @EqualsAndHashCode.Include
     @JsonProperty("fact_table")
