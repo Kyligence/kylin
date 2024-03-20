@@ -106,7 +106,7 @@ OlapToEnumerableConverter
 OlapToEnumerableConverter
   OlapProjectRel(COL1=[$2], COL2=[$3], COL3=[$0], COL4=[$4], COL5=[$5], COL6=[*(3, $4)], COL7=[$6], COL8=[$7], COL9=[$1], COL91=[CASE(OR(=($8, 0), AND(<>($4, 0), =($8, 0))), 0:DECIMAL(38, 4), *($4, $8))], ctx=[])
     OlapAggregateRel(group-set=[[0, 1]], groups=[null], COL1=[COUNT()], COL2=[SUM($2)], COL4=[SUM($3)], COL5=[COUNT($3)], COL7=[SUM($4)], COL8=[SUM($5)], agg#6=[SUM($6)], ctx=[])
-      OlapProjectRel(COL3=[$6], COL9=[$11], $f2=[CASE(<=($11, 2012-12-31), *($7, 4), 1)], PRICE=[$7], $f4=[*($7, 3)], $f5=[/($7, 2)], ITEM_COUNT=[$8], ctx=[])
+      OlapProjectRel(COL3=[$6], COL9=[$11], $f2=[IF(<=($11, 2012-12-31), *($7, 4), 1)], PRICE=[$7], $f4=[*($7, 3)], $f5=[/($7, 2)], ITEM_COUNT=[$8], ctx=[])
         OlapFilterRel(condition=[=($2, 'FP-GTC')], ctx=[])
           OlapJoinRel(condition=[=($19, $21)], joinType=[inner], ctx=[])
             OlapJoinRel(condition=[=($17, $20)], joinType=[inner], ctx=[])

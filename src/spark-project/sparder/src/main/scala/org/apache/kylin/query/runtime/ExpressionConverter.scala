@@ -302,6 +302,9 @@ object ExpressionConverter {
       // Calcite 1.30 changed SqlKind.OTHER_FUNCTION with SqlKind.ITEM in SqlItemOperator
       case ITEM =>
         element_at(k_lit(children.head), k_lit(children.apply(1).asInstanceOf[Int] + 1))
+      // Calcite 1.30 changed the if operator to case, eliminate this change
+      case IF =>
+        call_udf("if", children.map(k_lit): _*)
       case unsupportedFunc =>
         throw new UnsupportedOperationException(unsupportedFunc.toString)
     }
