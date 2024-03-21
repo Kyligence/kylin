@@ -42,7 +42,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <arthas.version>3.6.8-kyarthas-r1</arthas.version>
-        <tomcat-embed.version>9.0.83</tomcat-embed.version>
+        <tomcat-embed.version>9.0.87</tomcat-embed.version>
         <logback.version>1.2.13</logback.version>
 
         <!-- Keep same order with dependencyManagement -->
@@ -168,7 +168,7 @@
         <spring-session.version>2.6.1-kylin-r4</spring-session.version>
         <spring.framework.security.config.version>5.7.10</spring.framework.security.config.version>
         <spring.framework.security.extensions.version>1.0.10.RELEASE</spring.framework.security.extensions.version>
-        <spring-web.version>5.3.32</spring-web.version>
+        <spring-web.version>5.3.33</spring-web.version>
         <spring-webmvc.version>5.3.31</spring-webmvc.version>
         <opensaml.version>2.6.6</opensaml.version>
         <aspectj.version>1.8.9</aspectj.version>
@@ -2521,6 +2521,16 @@
             <dependency>
                 <groupId>org.apache.tomcat.embed</groupId>
                 <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat-embed.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat</groupId>
+                <artifactId>tomcat-annotations-api</artifactId>
+                <version>${tomcat-embed.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-websocket</artifactId>
                 <version>${tomcat-embed.version}</version>
             </dependency>
 
