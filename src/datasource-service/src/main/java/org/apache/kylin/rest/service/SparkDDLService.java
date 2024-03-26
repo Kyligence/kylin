@@ -22,7 +22,6 @@ import static org.apache.spark.ddl.DDLConstant.CREATE_LOGICAL_VIEW;
 import static org.apache.spark.ddl.DDLConstant.DROP_LOGICAL_VIEW;
 import static org.apache.spark.ddl.DDLConstant.REPLACE_LOGICAL_VIEW;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -38,6 +37,7 @@ import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
+import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.view.LogicalView;
 import org.apache.kylin.metadata.view.LogicalViewManager;
 import org.apache.kylin.rest.ddl.SourceTableCheck;
@@ -60,7 +60,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class SparkDDLService extends BasicService {
 
-    private final List<DDLCheck> ddlChecks = Lists.newArrayList(new SourceTableCheck(), new ViewCheck());
+    private final List<DDLCheck> allChecks = Lists.newArrayList(new SourceTableCheck(), new ViewCheck());
 
     public String executeSQL(ViewRequest request) {
         if (!KylinConfig.getInstanceFromEnv().isDDLEnabled()) {
@@ -71,7 +71,7 @@ public class SparkDDLService extends BasicService {
         val context = new DDLCheckContext(request.getSql(), request.getDdlProject(), request.getRestrict(),
                 AclPermissionUtil.getCurrentUsername(), groups, UserGroupInformation.isSecurityEnabled());
 
-        ArrayList<DDLCheck> ddlCheckers = Lists.newArrayList(this.ddlChecks.iterator());
+        List<DDLCheck> ddlCheckers = getFilterChecks(request.getDdlProject());
         Collections.sort(ddlCheckers);
         for (DDLCheck checker : ddlCheckers) {
             checker.check(context);
@@ -101,6 +101,12 @@ public class SparkDDLService extends BasicService {
         return result.toString();
     }
 
+    private List<DDLCheck> getFilterChecks(String project) {
+        String skips = NProjectManager.getProjectConfig(project).getDDLCheckToSkip();
+        return allChecks.stream().filter(check -> !skips.contains(check.getClass().getName()))
+                .collect(Collectors.toList());
+    }
+
     public List<List<String>> pluginsDescription(String project, String pageType) {
         if (!KylinConfig.getInstanceFromEnv().isDDLEnabled()) {
             throw new KylinException(DDL_CHECK_ERROR, "DDL function has not been turned on.");
@@ -108,7 +114,8 @@ public class SparkDDLService extends BasicService {
         LogicalViewLoader.checkConfigIfNeed();
         List<String> descriptionEN = Lists.newArrayList();
         List<String> descriptionCN = Lists.newArrayList();
-        for (DDLCheck checker : ddlChecks) {
+        List<DDLCheck> ddlCheckers = getFilterChecks(project);
+        for (DDLCheck checker : ddlCheckers) {
             String[] description = checker.description(project, pageType);
             descriptionEN.addAll(Arrays.asList(description[0].split("\t")));
             descriptionCN.addAll(Arrays.asList(description[1].split("\t")));

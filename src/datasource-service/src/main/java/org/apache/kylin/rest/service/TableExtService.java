@@ -387,10 +387,11 @@ public class TableExtService extends BasicService {
     private List<Pair<TableDesc, TableExtDesc>> extractTableMeta(String[] tables, String project,
             LoadTableResponse tableResponse) throws IOException, InterruptedException {
         UserGroupInformation ugi = KerberosLoginManager.getInstance().getProjectUGI(project);
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
         return ugi.doAs((PrivilegedExceptionAction<List<Pair<TableDesc, TableExtDesc>>>) () -> {
             ProjectInstance projectInstance = getManager(NProjectManager.class).getProject(project);
             List<Pair<TableDesc, TableExtDesc>> extractTableMetas = tableService.extractTableMeta(tables, project);
-            if (projectInstance.isProjectKerberosEnabled()) {
+            if (config.getTableAccessFilterEnable() && projectInstance.isProjectKerberosEnabled()) {
                 return extractTableMetas.stream().map(pair -> {
                     TableDesc tableDesc = pair.getFirst();
                     String tableName = tableDesc.getIdentity();
