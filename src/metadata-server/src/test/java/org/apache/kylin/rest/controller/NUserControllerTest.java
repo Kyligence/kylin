@@ -69,7 +69,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -107,9 +106,6 @@ public class NUserControllerTest extends NLocalFileMetadataTestCase {
 
     @Mock
     private IUserGroupService userGroupService;
-
-    @Mock
-    private SessionRegistry sessionRegistry;
 
     @Mock
     Environment env;

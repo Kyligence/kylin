@@ -86,8 +86,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.session.SessionInformation;
-import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -139,9 +137,6 @@ public class NUserController extends NBasicController implements ApplicationList
     @Autowired
     @Qualifier("userAclService")
     UserAclService userAclService;
-
-    @Autowired
-    SessionRegistry sessionRegistry;
 
     @Autowired
     private Environment env;
@@ -489,7 +484,7 @@ public class NUserController extends NBasicController implements ApplicationList
 
         completeAuthorities(existingUser);
         userService.updateUser(existingUser);
-        sessionRegistry.getAllSessions(existingUser, false).forEach(SessionInformation::expireNow);
+
         // update authentication
         if (StringUtils.equals(getPrincipal(), user.getUsername())) {
             UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(existingUser,
