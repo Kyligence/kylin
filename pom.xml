@@ -43,7 +43,6 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <arthas.version>3.6.8-kyarthas-r1</arthas.version>
         <tomcat-embed.version>9.0.87</tomcat-embed.version>
-        <logback.version>1.2.13</logback.version>
 
         <!-- Keep same order with dependencyManagement -->
 
@@ -2255,17 +2254,6 @@
                 <artifactId>log4j-layout-template-json</artifactId>
                 <version>${log4j2.version}</version>
             </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>${logback.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-core</artifactId>
-                <version>${logback.version}</version>
-            </dependency>
-
 
             <!-- Test -->
             <dependency>
