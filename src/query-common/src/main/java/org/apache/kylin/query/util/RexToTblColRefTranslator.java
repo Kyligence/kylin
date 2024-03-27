@@ -261,6 +261,8 @@ public class RexToTblColRefTranslator {
                     } else if (compareResultType == CompareResultType.UNKNOWN) {
                         unknownWhenCalls++;
                     }
+                } else if (children.get(i) instanceof RexInputRef) {
+                    unknownWhenCalls++;
                 }
             }
 
