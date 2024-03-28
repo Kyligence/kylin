@@ -460,6 +460,15 @@ public class NProjectController extends NBasicController {
     }
 
     @ApiOperation(value = "deleteProjectConfig", tags = { "SM" })
+    @DeleteMapping(value = "/{project:.+}/config")
+    @ResponseBody
+    public EnvelopeResponse<String> deleteProjectConfig(@PathVariable("project") String project,
+            @RequestParam(value = "config_name") String configName) {
+        ProjectConfigRequest request = new ProjectConfigRequest(project, configName);
+        return deleteProjectConfig(request);
+    }
+
+    @ApiOperation(value = "deleteProjectConfig", tags = { "SM" })
     @PostMapping(value = "/config/deletion")
     @ResponseBody
     public EnvelopeResponse<String> deleteProjectConfig(@RequestBody ProjectConfigRequest request) {
