@@ -322,6 +322,8 @@ object ExpressionConverter {
       // Calcite 1.30 changed the if operator to case, eliminate this change
       case IF =>
         call_udf("if", children.map(k_lit): _*)
+      case NVL =>
+        call_udf("ifnull", children.map(k_lit): _*)
       case unsupportedFunc =>
         throw new UnsupportedOperationException(unsupportedFunc.toString)
     }
