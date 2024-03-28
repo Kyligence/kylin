@@ -87,10 +87,6 @@ public class IntersectMeasureType extends MeasureType<IntersectBitmapCounter> {
             .put(FunctionDesc.FUNC_UNION_BITMAP_UUID_COUNT, BitmapUuidFunc.class)
             .put(FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE, BitmapUuidValueFunc.class)
             .put(FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE_ALL, BitmapUuidFunc.class)
-            .put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_DISTINCT, BitmapUuidFunc.class)
-            .put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_COUNT, BitmapUuidFunc.class)
-            .put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE, BitmapUuidValueFunc.class)
-            .put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE_ALL, BitmapUuidFunc.class)
             .build();
 
     @Override

@@ -102,8 +102,6 @@ public class NBitmapFunctionTest extends NLocalWithSparkSessionTest {
         testUnionBimapUuidFunc();
 
         testBimapUuidToArrayFunc();
-
-        testSubtractBimapUuidFunc();
     }
 
     private void testBitmapBuild() throws SQLException {
@@ -581,65 +579,6 @@ public class NBitmapFunctionTest extends NLocalWithSparkSessionTest {
         List<Object> valueResult = ExecAndComp.queryModel(getProject(), valueSql).collectAsList().get(0).getList(0);
         for (int i = 0; i < ArrayResult.size(); i++) {
             Assert.assertEquals(ArrayResult.get(i).toString(), valueResult.get(i).toString());
-        }
-    }
-
-    private void testSubtractBimapUuidFunc() throws Exception {
-        Dataset<Row> expect = ss.sql("select LSTG_FORMAT_NAME, collect_set(SELLER_ID) "
-                + "from TEST_KYLIN_FACT where LSTG_FORMAT_NAME = 'ABIN' or LSTG_FORMAT_NAME ='Auction' "
-                + "group by LSTG_FORMAT_NAME order by LSTG_FORMAT_NAME asc");
-
-        List<Row> rows = expect.collectAsList();
-        List<Object> list0 = rows.get(0).getList(1);
-        List<Object> list1 = rows.get(1).getList(1);
-        List subtract = ListUtils.subtract(list0, list1);
-        Collections.sort(subtract);
-
-        String valueSql = "select bitmap_uuid_to_array(subtract_bitmap_uuid_distinct(uuid)) uuid from ( "
-                + "select intersect_bitmap_uuid(SELLER_ID, LSTG_FORMAT_NAME, array['ABIN']) as uuid "
-                + "from TEST_KYLIN_FACT UNION "
-                + "select intersect_bitmap_uuid(SELLER_ID, LSTG_FORMAT_NAME, array['Auction']) as uuid "
-                + "from TEST_KYLIN_FACT ) t1";
-        List<Object> valueResult = ExecAndComp.queryModel(getProject(), valueSql).collectAsList().get(0).getList(0);
-        for (int i = 0; i < subtract.size(); i++) {
-            Assert.assertEquals(subtract.get(i).toString(), valueResult.get(i).toString());
-        }
-
-        String countSql = "select subtract_bitmap_uuid_count(uuid) uuid from ( "
-                + "select intersect_bitmap_uuid(SELLER_ID, LSTG_FORMAT_NAME, array['ABIN']) as uuid "
-                + "from TEST_KYLIN_FACT UNION "
-                + "select intersect_bitmap_uuid(SELLER_ID, LSTG_FORMAT_NAME, array['Auction']) as uuid "
-                + "from TEST_KYLIN_FACT) t1";
-        int countResult = ExecAndComp.queryModel(getProject(), countSql).collectAsList().get(0).getInt(0);
-        Assert.assertEquals(subtract.size(), countResult);
-
-        valueSql = "select subtract_bitmap_uuid_value_all(uuid) uuid from ( "
-                + "select intersect_bitmap_uuid(SELLER_ID, LSTG_FORMAT_NAME, array['ABIN']) as uuid "
-                + "from TEST_KYLIN_FACT UNION "
-                + "select intersect_bitmap_uuid(SELLER_ID, LSTG_FORMAT_NAME, array['Auction']) as uuid "
-                + "from TEST_KYLIN_FACT) t1";
-        valueResult = ExecAndComp.queryModel(getProject(), valueSql).collectAsList().get(0).getList(0);
-        for (int i = 0; i < subtract.size(); i++) {
-            Assert.assertEquals(subtract.get(i).toString(), valueResult.get(i).toString());
-        }
-
-        String valueTmp = "select subtract_bitmap_uuid_value(uuid,limit,offset) uuid from ( "
-                + "select intersect_bitmap_uuid(SELLER_ID, LSTG_FORMAT_NAME, array['ABIN']) as uuid "
-                + "from TEST_KYLIN_FACT UNION "
-                + "select intersect_bitmap_uuid(SELLER_ID, LSTG_FORMAT_NAME, array['Auction']) as uuid "
-                + "from TEST_KYLIN_FACT) t1";
-
-        int limit = 100;
-        int offset = 0;
-        int pageSize = subtract.size() / limit + 1;
-        for (int page = 1; page <= pageSize; page++) {
-            offset = (page - 1) * limit;
-            valueSql = valueTmp.replace("limit", limit + "").replace("offset", offset + "");
-            valueResult = ExecAndComp.queryModel(getProject(), valueSql).collectAsList().get(0).getList(0);
-            for (int i = 0; i < valueResult.size(); i++) {
-                Assert.assertEquals(subtract.get(offset).toString(), valueResult.get(i).toString());
-                offset += 1;
-            }
         }
     }
 }

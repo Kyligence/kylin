@@ -30,6 +30,7 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.util.SparderTypeUtil
 
+import scala.collection.convert.ImplicitConversions.`seq AsJavaList`
 import scala.collection.mutable
 
 object ExpressionConverter {
@@ -68,7 +69,9 @@ object ExpressionConverter {
   )
 
   private val bitmapUDF = mutable.HashSet("intersect_count_by_col",
-    "subtract_bitmap_value", "subtract_bitmap_uuid", "bitmap_uuid_to_array");
+    "subtract_bitmap_value", "subtract_bitmap_uuid", "bitmap_uuid_to_array",
+    "subtract_bitmap_uuid_count", "subtract_bitmap_uuid_distinct", "subtract_bitmap_uuid_value_all", "subtract_bitmap_uuid_value"
+  )
 
   // scalastyle:off
   def convert(sqlTypeName: SqlTypeName, relDataType: RelDataType, op: SqlKind, opName: String, children: Seq[Any]): Any = {
@@ -240,14 +243,28 @@ object ExpressionConverter {
             func match {
               case "intersect_count_by_col" =>
                 new Column(IntersectCountByCol(children.head.asInstanceOf[Column].expr.children))
-              case "subtract_bitmap_value" =>
-                new Column(SubtractBitmapValue(children.head.asInstanceOf[Column].expr,
+              case "subtract_bitmap_value" | "subtract_bitmap_uuid_value_all" =>
+                new Column(SubtractBitmapAllValues(children.head.asInstanceOf[Column].expr,
                   children.last.asInstanceOf[Column].expr,
                   KylinConfig.getInstanceFromEnv.getBitmapValuesUpperBound))
-              case "subtract_bitmap_uuid" =>
+              case "subtract_bitmap_uuid" | "subtract_bitmap_uuid_distinct" =>
                 new Column(SubtractBitmapUUID(children.head.asInstanceOf[Column].expr,
                   children.last.asInstanceOf[Column].expr))
-                new Column(SubtractBitmapUUID(children.head.asInstanceOf[Column].expr, children.last.asInstanceOf[Column].expr))
+              case "subtract_bitmap_uuid_count" =>
+                new Column(SubtractBitmapCount(children.head.asInstanceOf[Column].expr,
+                  children.last.asInstanceOf[Column].expr))
+              case "subtract_bitmap_uuid_value" =>
+                val left = children.head.asInstanceOf[Column].expr
+                val right = children.get(1).asInstanceOf[Column].expr
+                val limitArg = children.get(2)
+                val offsetArg = children.get(3)
+                val limit = limitArg.toString.toInt
+                val offset = offsetArg.toString.toInt
+                if (limit < 0 || offset < 0) {
+                  throw new UnsupportedOperationException(s"both limit and offset must be >= 0")
+                }
+                new Column(SubtractBitmapValue(left, right, limit, offset,
+                  KylinConfig.getInstanceFromEnv.getBitmapValuesUpperBound))
               case "bitmap_uuid_to_array" =>
                 new Column(BitmapUuidToArray(children.head.asInstanceOf[Column].expr))
             }

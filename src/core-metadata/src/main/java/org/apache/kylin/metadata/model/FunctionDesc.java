@@ -173,10 +173,6 @@ public class FunctionDesc implements Serializable {
     public static final String FUNC_UNION_BITMAP_UUID_COUNT = "UNION_BITMAP_UUID_COUNT";
     public static final String FUNC_UNION_BITMAP_UUID_VALUE = "UNION_BITMAP_UUID_VALUE";
     public static final String FUNC_UNION_BITMAP_UUID_VALUE_ALL = "UNION_BITMAP_UUID_VALUE_ALL";
-    public static final String FUNC_SUBTRACT_BITMAP_UUID_DISTINCT = "SUBTRACT_BITMAP_UUID_DISTINCT";
-    public static final String FUNC_SUBTRACT_BITMAP_UUID_COUNT = "SUBTRACT_BITMAP_UUID_COUNT";
-    public static final String FUNC_SUBTRACT_BITMAP_UUID_VALUE = "SUBTRACT_BITMAP_UUID_VALUE";
-    public static final String FUNC_SUBTRACT_BITMAP_UUID_VALUE_ALL = "SUBTRACT_BITMAP_UUID_VALUE_ALL";
     public static final String FUNC_CORR = "CORR";
     public static final String FUNC_COUNT_DISTINCT_HLLC10 = "hllc(10)";
     public static final String FUNC_COUNT_DISTINCT_BIT_MAP = "bitmap";

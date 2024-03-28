@@ -143,12 +143,6 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         AGGR_FUNC_MAP.put(FunctionDesc.FUNC_UNION_BITMAP_UUID_COUNT, FunctionDesc.FUNC_UNION_BITMAP_UUID_COUNT);
         AGGR_FUNC_MAP.put(FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE, FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE);
         AGGR_FUNC_MAP.put(FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE_ALL, FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE_ALL);
-        AGGR_FUNC_MAP.put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_DISTINCT,
-                FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_DISTINCT);
-        AGGR_FUNC_MAP.put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_COUNT, FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_COUNT);
-        AGGR_FUNC_MAP.put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE, FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE);
-        AGGR_FUNC_MAP.put(FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE_ALL,
-                FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE_ALL);
     }
 
     private OlapContext context;

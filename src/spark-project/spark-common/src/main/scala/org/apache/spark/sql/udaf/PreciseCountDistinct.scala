@@ -434,7 +434,6 @@ case class BitmapUuidFunc(child: Expression,
     funcType match {
       case BitmapFuncType.INTERSECT => buffer.and(bitmap)
       case BitmapFuncType.UNION => buffer.or(bitmap)
-      case BitmapFuncType.SUBTRACT => buffer.andNot(bitmap)
       case _ => throw new UnsupportedOperationException(s"Unsupported funcType")
     }
     buffer
@@ -446,7 +445,6 @@ case class BitmapUuidFunc(child: Expression,
     funcType match {
       case BitmapFuncType.INTERSECT => buffer.and(input)
       case BitmapFuncType.UNION => buffer.or(input)
-      case BitmapFuncType.SUBTRACT => buffer.andNot(input)
       case _ => throw new UnsupportedOperationException(s"Unsupported funcType")
     }
     buffer
@@ -498,5 +496,5 @@ case class BitmapUuidFunc(child: Expression,
 }
 object BitmapFuncType extends Enumeration {
   type BitmapFuncType = Value
-  val INTERSECT, UNION, SUBTRACT = Value
+  val INTERSECT, UNION = Value
 }

@@ -17,9 +17,6 @@
  */
 package org.apache.spark.sql.catalyst.expressions
 
-import java.time.ZoneId
-import java.util.Locale
-
 import org.apache.kylin.common.util.TimeUtil
 import org.apache.spark.dict.{NBucketDictionary, NGlobalDictionaryV2}
 import org.apache.spark.sql.catalyst.InternalRow
@@ -33,6 +30,8 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.udf._
 import org.apache.spark.unsafe.types.UTF8String
 
+import java.time.ZoneId
+import java.util.Locale
 import scala.collection.JavaConverters._
 
 // Returns the date that is num_months after start_date.
@@ -615,66 +614,6 @@ case class IntersectCountByCol(childrenExp: Seq[Expression]) extends Expression 
 
   override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
     super.legacyWithNewChildren(newChildren)
-}
-
-case class SubtractBitmapUUID(child1: Expression, child2: Expression) extends BinaryExpression with ExpectsInputTypes {
-  override def nullable: Boolean = false
-
-  override def eval(input: InternalRow): Array[Byte] = {
-    val map1 = child1.eval(input).asInstanceOf[Array[Byte]]
-    val map2 = child2.eval(input).asInstanceOf[Array[Byte]]
-    SubtractBitmapImpl.evaluate2Bytes(map1, map2)
-  }
-
-  override def dataType: DataType = BinaryType
-
-  override def left: Expression = child1
-
-  override def right: Expression = child2
-
-  override def inputTypes: Seq[AbstractDataType] = Seq(BinaryType, BinaryType)
-
-  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    val sb = SubtractBitmapImpl.getClass.getName.stripSuffix("$")
-    defineCodeGen(ctx, ev, (arg1, arg2) => {
-      s"""$sb.evaluate2Bytes($arg1, $arg2)"""
-    })
-  }
-
-  override protected def withNewChildrenInternal(newLeft: Expression, newRight: Expression): Expression = {
-    val newChildren = Seq(newLeft, newRight)
-    super.legacyWithNewChildren(newChildren)
-  }
-}
-
-case class SubtractBitmapValue(child1: Expression, child2: Expression, upperBound: Int) extends BinaryExpression with ExpectsInputTypes {
-  override def nullable: Boolean = false
-
-  override def eval(input: InternalRow): GenericArrayData = {
-    val map1 = child1.eval(input).asInstanceOf[Array[Byte]]
-    val map2 = child2.eval(input).asInstanceOf[Array[Byte]]
-    SubtractBitmapImpl.evaluate2Values(map1, map2, upperBound)
-  }
-
-  override def dataType: DataType = ArrayType.apply(LongType)
-
-  override def left: Expression = child1
-
-  override def right: Expression = child2
-
-  override def inputTypes: Seq[AbstractDataType] = Seq(BinaryType, BinaryType)
-
-  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    val sb = SubtractBitmapImpl.getClass.getName.stripSuffix("$")
-    defineCodeGen(ctx, ev, (arg1, arg2) => {
-      s"""$sb.evaluate2Values($arg1, $arg2, $upperBound)"""
-    })
-  }
-
-  override protected def withNewChildrenInternal(newLeft: Expression, newRight: Expression): Expression = {
-    val newChildren = Seq(newLeft, newRight)
-    super.legacyWithNewChildren(newChildren)
-  }
 }
 
 case class PreciseCountDistinctDecode(_child: Expression)

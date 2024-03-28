@@ -17,8 +17,6 @@
  */
 package org.apache.kylin.query.runtime.plan
 
-import java.util.Locale
-
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.sql.SqlKind
@@ -40,6 +38,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.udaf.{BitmapFuncType, SingleValueAgg}
 import org.apache.spark.sql.util.SparderTypeUtil
 
+import java.util.Locale
 import scala.collection.JavaConverters._
 
 // scalastyle:off
@@ -337,29 +336,6 @@ object AggregatePlan extends LogEx {
             }
           case FunctionDesc.FUNC_UNION_BITMAP_UUID_VALUE_ALL =>
             KapFunctions.bitmap_uuid_func(col(argNames.head), ArrayType(LongType, false), BitmapFuncType.UNION).alias(aggName)
-          case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_DISTINCT =>
-            KapFunctions.bitmap_uuid_func(col(argNames.head), BinaryType, BitmapFuncType.SUBTRACT).alias(aggName)
-          case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_COUNT =>
-            KapFunctions.bitmap_uuid_func(col(argNames.head), IntegerType, BitmapFuncType.SUBTRACT).alias(aggName)
-          case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE =>
-            rel.getInput match {
-              case projectRel: OlapProjectRel =>
-                val limitArg = projectRel.getProjects.get(call.getArgList.get(1))
-                val offsetArg = projectRel.getProjects.get(call.getArgList.get(2))
-                (limitArg, offsetArg) match {
-                  case (limitLit: RexLiteral, offsetLit: RexLiteral) =>
-                    val limit = limitLit.getValue.toString.toInt
-                    val offset = offsetLit.getValue.toString.toInt
-                    KapFunctions.bitmap_uuid_page_func(col(argNames.head), limit, offset, ArrayType(LongType, false),
-                      BitmapFuncType.SUBTRACT).alias(aggName)
-                  case _ =>
-                    throw new UnsupportedOperationException(unSupportedOperationEp)
-                }
-              case _ =>
-                throw new UnsupportedOperationException(unSupportedOperationEp)
-            }
-          case FunctionDesc.FUNC_SUBTRACT_BITMAP_UUID_VALUE_ALL =>
-            KapFunctions.bitmap_uuid_func(col(argNames.head), ArrayType(LongType, false), BitmapFuncType.SUBTRACT).alias(aggName)
           case _ =>
             throw new IllegalArgumentException(
               s"""Unsupported function name $funcName""")

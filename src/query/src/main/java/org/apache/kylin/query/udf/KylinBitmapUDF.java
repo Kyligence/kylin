@@ -41,4 +41,25 @@ public class KylinBitmapUDF {
     public Object BITMAP_UUID_TO_ARRAY(@Parameter(name = "m1") Object map1) throws CalciteNotSupportException {
         throw new CalciteNotSupportException();
     }
+
+    public Object SUBTRACT_BITMAP_UUID_COUNT(@Parameter(name = "left") Object left,
+            @Parameter(name = "right") Object right) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
+    public Object SUBTRACT_BITMAP_UUID_DISTINCT(@Parameter(name = "left") Object left,
+            @Parameter(name = "right") Object right) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
+    public Object SUBTRACT_BITMAP_UUID_VALUE_ALL(@Parameter(name = "left") Object left,
+            @Parameter(name = "right") Object right) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
+    public Object SUBTRACT_BITMAP_UUID_VALUE(@Parameter(name = "first") Object first,
+            @Parameter(name = "second") Object second, @Parameter(name = "third") Object third,
+            @Parameter(name = "four") Object four) throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
 }
