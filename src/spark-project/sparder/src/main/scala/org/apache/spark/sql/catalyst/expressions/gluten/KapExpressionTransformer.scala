@@ -141,7 +141,8 @@ case class CustomerExpressionTransformer() extends ExpressionExtensionTrait {
     Sig[ReusePreciseCountDistinct]("ke_bitmap_or_data"),
     Sig[PreciseCountDistinctAndValue]("ke_bitmap_and_value"),
     Sig[PreciseCountDistinctAndArray]("ke_bitmap_and_ids"),
-    Sig[PreciseCountDistinct]("ke_bitmap_or_cardinality")
+    Sig[PreciseCountDistinct]("ke_bitmap_or_cardinality"),
+    Sig[KylinTimestampAdd]("kylin_timestamp_add")
   )
 
   /** Replace extension expression to transformer. */
@@ -170,6 +171,16 @@ case class CustomerExpressionTransformer() extends ExpressionExtensionTrait {
         ExpressionConverter
           .replaceWithExpressionTransformer(preciseCountDistinctDecode.child, attributeSeq),
         preciseCountDistinctDecode
+      )
+    case kylinTimestampAdd: KylinTimestampAdd =>
+      new TimestampAddTransformer(
+        ExpressionConverter
+          .replaceWithExpressionTransformer(kylinTimestampAdd.left, attributeSeq),
+        ExpressionConverter
+          .replaceWithExpressionTransformer(kylinTimestampAdd.mid, attributeSeq),
+        ExpressionConverter
+          .replaceWithExpressionTransformer(kylinTimestampAdd.right, attributeSeq),
+        kylinTimestampAdd
       )
     case other =>
       throw new UnsupportedOperationException(
