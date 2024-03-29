@@ -21,7 +21,6 @@ package org.apache.kylin.rest.service.params;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.junit.jupiter.api.Test;
@@ -35,7 +34,6 @@ class IndexBuildParamsTest {
         assertNull(params.getModelId());
         assertNull(params.getSegmentIds());
         assertNull(params.getLayoutIds());
-        assertTrue(params.isDeleteTBDLayouts());
         assertFalse(params.isParallelBuildBySegment());
         assertEquals(ExecutablePO.DEFAULT_PRIORITY, params.getPriority());
         assertFalse(params.isPartialBuild());

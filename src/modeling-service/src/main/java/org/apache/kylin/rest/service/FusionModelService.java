@@ -213,7 +213,6 @@ public class FusionModelService extends AbstractModelService implements TableFus
                         .modelId(targetModelId)
                         .segmentIds(buildSegmentsRequest.getSegmentIds())
                         .layoutIds(buildSegmentsRequest.getIndexIds())
-                        .deleteTBDLayouts(false)
                         .parallelBuildBySegment(buildSegmentsRequest.isParallelBuildBySegment())
                         .priority(buildSegmentsRequest.getPriority())
                         .partialBuild(buildSegmentsRequest.isPartialBuild())

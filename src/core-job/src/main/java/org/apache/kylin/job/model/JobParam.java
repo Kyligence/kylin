@@ -87,8 +87,6 @@ public class JobParam {
      */
     private Set<LayoutEntity> processLayouts;
 
-    private boolean deleteTBDLayouts = true;
-
     private Set<LayoutEntity> deleteLayouts;
 
     private Set<Long> secondStorageDeleteLayoutIds;

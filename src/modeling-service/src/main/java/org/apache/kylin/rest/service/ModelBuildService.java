@@ -738,9 +738,6 @@ public class ModelBuildService extends AbstractModelService implements ModelBuil
                 if (partialBuild) {
                     jobParam.addExtParams(NBatchConstants.P_PARTIAL_BUILD, String.valueOf(true));
                 }
-                if (!params.isDeleteTBDLayouts()) {
-                    jobParam.setDeleteTBDLayouts(false);
-                }
 
                 String jobId = getManager(SourceUsageManager.class).licenseCheckWrap(project,
                         () -> getManager(JobManager.class, project).addRelatedIndexJob(jobParam));

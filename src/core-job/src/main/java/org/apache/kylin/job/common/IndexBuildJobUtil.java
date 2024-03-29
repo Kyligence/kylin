@@ -21,15 +21,22 @@ package org.apache.kylin.job.common;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_MULTI_PARTITION_EMPTY;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_SEGMENT_READY_FAIL;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
@@ -65,12 +72,17 @@ public class IndexBuildJobUtil extends ExecutableUtil {
 
         if (targetLayouts.isEmpty()) {
             allLayouts.forEach(layout -> {
-                if (jobParam.isDeleteTBDLayouts() && layout.isToBeDeleted()) {
-                    toBeDeletedLayouts.add(layout);
-                } else if (!mixLayouts.contains(layout.getId())) {
+                if (!layout.isToBeDeleted() && !mixLayouts.contains(layout.getId())) {
                     toBeProcessedLayouts.add(layout);
                 }
             });
+            toBeDeletedLayouts.addAll(pruneTBDelLayouts(
+                    allLayouts.stream().filter(LayoutEntity::isToBeDeleted)
+                            .collect(Collectors.toCollection(LinkedHashSet::new)),
+                    toBeProcessedLayouts,
+                    df,
+                    indexPlan,
+                    readySegs));
         } else {
             allLayouts.forEach(layout -> {
                 long layoutId = layout.getId();
@@ -79,8 +91,12 @@ public class IndexBuildJobUtil extends ExecutableUtil {
                 }
             });
         }
+
         jobParam.setProcessLayouts(filterTobeDelete(toBeProcessedLayouts));
         jobParam.setDeleteLayouts(toBeDeletedLayouts);
+        log.info("toBeProcessedLayouts: {}, toBeDeletedLayouts: {}",
+                jobParam.getProcessLayouts().stream().map(LayoutEntity::getId).collect(Collectors.toList()),
+                jobParam.getDeleteLayouts().stream().map(LayoutEntity::getId).collect(Collectors.toList()));
     }
 
     @Override
@@ -96,5 +112,82 @@ public class IndexBuildJobUtil extends ExecutableUtil {
             partitionIds.addAll(segment.getAllPartitionIds());
         });
         jobParam.setTargetPartitions(partitionIds);
+    }
+
+    public static Set<LayoutEntity> pruneTBDelLayouts(Set<LayoutEntity> tbDelLayouts, Set<LayoutEntity> tbProLayouts,
+                                               NDataflow df, IndexPlan indexPlan, List<NDataSegment> readySegs) {
+        Set<LayoutEntity> newTBDelLayouts = Sets.newLinkedHashSet();
+        if (tbDelLayouts.isEmpty()) {
+            return newTBDelLayouts;
+        }
+
+        for (LayoutEntity layout : tbDelLayouts.stream()
+                .filter(LayoutEntity::isBaseIndex).collect(Collectors.toList())) {
+            if (baseLayoutDeletable(layout, tbProLayouts, df, readySegs)) {
+                newTBDelLayouts.add(layout);
+            }
+        }
+
+        List<LayoutEntity> allLayouts = indexPlan.getAllLayouts();
+        boolean regularLayoutDeletable = true;
+        Set<LayoutEntity> tbDelBaseLayouts = Collections.unmodifiableSet(newTBDelLayouts);
+        for (LayoutEntity layout : tbDelLayouts.stream().filter(le -> !le.isBaseIndex()).collect(Collectors.toList())) {
+             if (regularLayoutDeletable) {
+                for (NDataSegment segment : df.getSegments()) {
+                    if (segmentLayoutsNotFull(segment, tbDelBaseLayouts, tbProLayouts, allLayouts, readySegs)) {
+                        regularLayoutDeletable = false;
+                        break;
+                    }
+                }
+                if (regularLayoutDeletable) {
+                    newTBDelLayouts.add(layout);
+                }
+            }
+        }
+        return newTBDelLayouts;
+    }
+
+    private static boolean baseLayoutDeletable(LayoutEntity layout, Set<LayoutEntity> tbProLayouts, NDataflow df,
+                                               List<NDataSegment> readySegs) {
+        List<NDataSegment> segmentsHaveTheTBDel = df.getSegments().stream()
+                .filter(segment -> segment.getLayoutIds().contains(layout.getId()))
+                .collect(Collectors.toList());
+        LayoutEntity newBaseLayout = tbProLayouts.stream().filter(LayoutEntity::isBaseIndex)
+                .filter(lay -> filterSameTypeLayout(lay, layout))
+                .findFirst()
+                .orElse(null);
+        if (newBaseLayout != null) {
+            Set<NDataSegment> segmentsHaveTheTBPro = df.getSegments().stream()
+                    .filter(segment -> segment.getLayoutIds().contains(newBaseLayout.getId()))
+                    .collect(Collectors.toSet());
+            segmentsHaveTheTBPro.addAll(readySegs);
+
+            return segmentsHaveTheTBDel.stream().allMatch(segTBDLayout ->
+                    segmentsHaveTheTBPro.stream().anyMatch(segTBPLayout ->
+                            segTBPLayout.getId().equals(segTBDLayout.getId())));
+        }
+        return false;
+    }
+
+    private static boolean filterSameTypeLayout(LayoutEntity target, LayoutEntity refer) {
+        return IndexEntity.isTableIndex(refer.getId())
+                ? IndexEntity.isTableIndex(target.getId()) : IndexEntity.isAggIndex(target.getId());
+    }
+
+    private static boolean segmentLayoutsNotFull(NDataSegment segment, Set<LayoutEntity> tbDelBaseLayouts,
+                                                 Set<LayoutEntity> tbProLayouts, List<LayoutEntity> allLayouts,
+                                                 List<NDataSegment> readySegs) {
+
+        if (segment.getLayoutIds().size() != allLayouts.size()) {
+            Set<Long> segmentLayouts = Sets.newHashSet(segment.getLayoutIds());
+            // For segment not belongs to readySegs
+            segmentLayouts.removeAll(tbDelBaseLayouts.stream().map(LayoutEntity::getId).collect(Collectors.toSet()));
+            if (readySegs.stream().anyMatch(seg -> seg.getId().equals(segment.getId()))) {
+                // For segment in readySegs
+                segmentLayouts.addAll(tbProLayouts.stream().map(LayoutEntity::getId).collect(Collectors.toSet()));
+            }
+            return segmentLayouts.size() != allLayouts.size() - tbDelBaseLayouts.size();
+        }
+        return false;
     }
 }

@@ -144,6 +144,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.SecondStorageJobParamUtil;
+import org.apache.kylin.job.common.IndexBuildJobUtil;
 import org.apache.kylin.job.common.SegmentUtil;
 import org.apache.kylin.job.domain.JobInfo;
 import org.apache.kylin.job.execution.AbstractExecutable;
@@ -1989,15 +1990,50 @@ public class ModelService extends AbstractModelService
             return;
         }
 
-        String toBeDeletedLayoutIdsStr = mergerInfo.getToBeDeleteLayoutIdsStr();
-        if (StringUtils.isNotBlank(toBeDeletedLayoutIdsStr)) {
-            logger.info("Try to delete the toBeDeletedLayoutIdsStr: {}, jobId: {}", toBeDeletedLayoutIdsStr,
-                    mergerInfo.getJobId());
-            Set<Long> toBeDeletedLayoutIds = new LinkedHashSet<>();
-            for (String id : toBeDeletedLayoutIdsStr.split(",")) {
-                toBeDeletedLayoutIds.add(Long.parseLong(id));
+        // Notice: The following df & indexPlan have been updated in transaction
+        NDataflow df = NDataflowManager.getInstance(getConfig(), project).getDataflow(job.getTargetModelId());
+        IndexPlan indexPlan = NIndexPlanManager.getInstance(getConfig(), project).getIndexPlan(job.getTargetModelId());
+        Set<Long> toBeDeletedLayoutIds = indexPlan.getAllToBeDeleteLayoutId();
+
+        if (!toBeDeletedLayoutIds.isEmpty()) {
+            Set<Long> processedLayouts = mergerInfo.getTaskMergeInfoList().stream()
+                    .flatMap(taskMergeInfo -> taskMergeInfo.getLayoutIds().stream())
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            List<NDataSegment> targetSegments = df.getSegments(Sets.newHashSet(job.getTargetSegments()));
+
+            // Almost the final layouts which will be deleted for sure
+            Set<Long> prunedToBeDeletedLayoutIds = IndexBuildJobUtil.pruneTBDelLayouts(
+                            toBeDeletedLayoutIds.stream().map(indexPlan::getLayoutEntity)
+                                    .collect(Collectors.toCollection(LinkedHashSet::new)),
+                            processedLayouts.stream().map(indexPlan::getLayoutEntity)
+                                    .collect(Collectors.toCollection(LinkedHashSet::new)),
+                            df,
+                            indexPlan,
+                            targetSegments).stream().map(LayoutEntity::getId)
+                    .collect(Collectors.toSet());
+
+            if (SecondStorageUtil.isModelEnable(df.getProject(), job.getTargetSubject())) {
+                Set<Long> initialTBDelLayoutIds = Sets.newHashSet();
+                if (StringUtils.isNotBlank(mergerInfo.getToBeDeleteLayoutIdsStr())) {
+                    initialTBDelLayoutIds = Arrays.stream(mergerInfo.getToBeDeleteLayoutIdsStr().split(","))
+                            .map(Long::parseLong)
+                            .collect(Collectors.toSet());
+                }
+
+                Set<Long> diff = Sets.difference(prunedToBeDeletedLayoutIds, initialTBDelLayoutIds);
+                // The newly scanned base table layout should not be deleted to prevent against
+                // inconsistency state with second storage.
+                diff.stream().filter(IndexEntity::isTableIndex)
+                        .map(indexPlan::getLayoutEntity)
+                        .filter(LayoutEntity::isBaseIndex)
+                        .findFirst()
+                        .ifPresent(notTBDelLayout -> prunedToBeDeletedLayoutIds.remove(notTBDelLayout.getId()));
             }
-            updateIndex(project, -1, mergerInfo.getModelId(), toBeDeletedLayoutIds, true, true);
+
+            log.info("The final toBeDeletedLayouts: {}", prunedToBeDeletedLayoutIds);
+            if (!prunedToBeDeletedLayoutIds.isEmpty()) {
+                updateIndex(project, -1, mergerInfo.getModelId(), prunedToBeDeletedLayoutIds, true, true);
+            }
         }
     }
 

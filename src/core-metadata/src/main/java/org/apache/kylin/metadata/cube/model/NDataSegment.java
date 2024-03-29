@@ -33,6 +33,10 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.model.ISegment;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.SegmentRange;
@@ -45,10 +49,6 @@ import org.apache.kylin.metadata.model.util.MultiPartitionUtil;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -435,6 +435,16 @@ public class NDataSegment implements ISegment, Serializable {
             return segDetails;
         }
 
+    }
+
+    /**
+     * Expose private {@link LayoutInfo} ONLY for tests!
+     */
+    public class LayoutInfoOnlyForTest extends LayoutInfo {
+
+        public LayoutInfoOnlyForTest(Map<Long, NDataLayout> layoutsMap) {
+            super(layoutsMap);
+        }
     }
 
     @Override

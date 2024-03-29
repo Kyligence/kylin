@@ -42,12 +42,6 @@ public class IndexBuildParams {
 
     private List<Long> layoutIds;
 
-    /**
-     * should delete to be deleted layouts or not, default true
-     */
-    @Builder.Default
-    private boolean deleteTBDLayouts = true;
-
     private boolean parallelBuildBySegment;
 
     @Builder.Default
