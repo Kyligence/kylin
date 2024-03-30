@@ -51,13 +51,13 @@ public class SegmentsTest {
         seg.setSegmentRange(new SegmentRange.TimePartitionedSegmentRange(0L, 10L));
         seg.setStatus(SegmentStatusEnum.NEW);
         segments.add(seg);
-        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null);
         Assert.assertEquals(status, SegmentStatusEnumToDisplay.LOADING);
 
         seg.setStatus(SegmentStatusEnum.READY);
         Mockito.mockStatic(SegmentUtil.class);
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null)).thenCallRealMethod();
-        Mockito.when(SegmentUtil.anyIndexJobRunning(seg)).thenReturn(true);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(seg, null, null)).thenReturn(true);
         Assert.assertEquals(status, SegmentStatusEnumToDisplay.LOADING);
     }
 
@@ -83,11 +83,11 @@ public class SegmentsTest {
         segments.add(seg2);
 
         Mockito.mockStatic(SegmentUtil.class);
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null, null)).thenCallRealMethod();
         Mockito.when(SegmentUtil.anyIncSegmentJobRunning(seg2)).thenReturn(true);
-        Mockito.when(SegmentUtil.anyIndexJobRunning(seg2)).thenReturn(false);
+        Mockito.when(SegmentUtil.anyIndexJobRunning(seg2, null, null)).thenReturn(false);
 
-        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null, null);
         Assert.assertEquals(SegmentStatusEnumToDisplay.LOADING, status);
 
         val seg3 = NDataSegment.empty();
@@ -96,11 +96,11 @@ public class SegmentsTest {
         seg3.setStatus(SegmentStatusEnum.NEW);
         segments.add(seg3);
 
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg3, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg3, null, null)).thenCallRealMethod();
         Mockito.when(SegmentUtil.anyIncSegmentJobRunning(seg3)).thenReturn(false);
-        Mockito.when(SegmentUtil.anyIndexJobRunning(seg3)).thenReturn(false);
+        Mockito.when(SegmentUtil.anyIndexJobRunning(seg3, null, null)).thenReturn(false);
 
-        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg3, null);
+        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg3, null, null);
         Assert.assertEquals(SegmentStatusEnumToDisplay.MERGING, status2);
     }
 
@@ -113,9 +113,9 @@ public class SegmentsTest {
         seg.setStatus(SegmentStatusEnum.READY);
         segments.add(seg);
         Mockito.mockStatic(SegmentUtil.class);
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null)).thenCallRealMethod();
-        Mockito.when(SegmentUtil.anyIndexJobRunning(seg)).thenReturn(false);
-        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(seg, null, null)).thenReturn(false);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null);
         Assert.assertEquals(status, SegmentStatusEnumToDisplay.ONLINE);
     }
 
@@ -133,10 +133,10 @@ public class SegmentsTest {
         newSeg.setSegmentRange(new SegmentRange.TimePartitionedSegmentRange(0L, 10L));
         newSeg.setStatus(SegmentStatusEnum.NEW);
         segments.add(newSeg);
-        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, newSeg, null);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, newSeg, null, null);
         Assert.assertEquals(status, SegmentStatusEnumToDisplay.REFRESHING);
 
-        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null);
+        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null);
         Assert.assertEquals(status2, SegmentStatusEnumToDisplay.LOCKED);
     }
 
@@ -154,10 +154,10 @@ public class SegmentsTest {
         newSeg.setSegmentRange(new SegmentRange.TimePartitionedSegmentRange(0L, 10L));
         newSeg.setStatus(SegmentStatusEnum.NEW);
         segments.add(newSeg);
-        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, newSeg, null);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, newSeg, null, null);
         Assert.assertEquals(status, SegmentStatusEnumToDisplay.REFRESHING);
 
-        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null);
+        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null);
         Assert.assertEquals(status2, SegmentStatusEnumToDisplay.LOCKED);
     }
 
@@ -171,13 +171,13 @@ public class SegmentsTest {
         segments.add(seg);
 
         Mockito.mockStatic(SegmentUtil.class);
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null)).thenCallRealMethod();
-        Mockito.when(SegmentUtil.anyIndexJobRunning(seg)).thenReturn(false);
-        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(seg, null, null)).thenReturn(false);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null);
         Assert.assertEquals(SegmentStatusEnumToDisplay.WARNING, status);
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null)).thenCallRealMethod();
-        Mockito.when(SegmentUtil.anyIndexJobRunning(seg)).thenReturn(true);
-        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(seg, null, null)).thenReturn(true);
+        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null);
         Assert.assertEquals(SegmentStatusEnumToDisplay.LOADING, status2);
     }
 
@@ -203,19 +203,19 @@ public class SegmentsTest {
         segments.add(newSeg);
 
         Mockito.mockStatic(SegmentUtil.class);
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, newSeg, null)).thenCallRealMethod();
-        Mockito.when(SegmentUtil.anyIndexJobRunning(newSeg)).thenReturn(false);
-        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, newSeg, null);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, newSeg, null, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(newSeg, null, null)).thenReturn(false);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, newSeg, null, null);
         Assert.assertEquals(status, SegmentStatusEnumToDisplay.MERGING);
 
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null)).thenCallRealMethod();
-        Mockito.when(SegmentUtil.anyIndexJobRunning(seg)).thenReturn(false);
-        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(seg, null, null)).thenReturn(false);
+        SegmentStatusEnumToDisplay status2 = SegmentUtil.getSegmentStatusToDisplay(segments, seg, null, null);
         Assert.assertEquals(status2, SegmentStatusEnumToDisplay.LOCKED);
 
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null)).thenCallRealMethod();
-        Mockito.when(SegmentUtil.anyIndexJobRunning(seg2)).thenReturn(false);
-        SegmentStatusEnumToDisplay status3 = SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null, null)).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(seg2, null, null)).thenReturn(false);
+        SegmentStatusEnumToDisplay status3 = SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null, null);
         Assert.assertEquals(status3, SegmentStatusEnumToDisplay.LOCKED);
     }
 
@@ -253,14 +253,12 @@ public class SegmentsTest {
         segmentList.add(seg);
 
         Mockito.mockStatic(SegmentUtil.class);
-        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(
-                Mockito.any(),
-                Mockito.any(NDataSegment.class),
-                Mockito.any())).thenCallRealMethod();
-        Mockito.when(SegmentUtil.anyIndexJobRunning(Mockito.anyObject())).thenReturn(false);
-        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null);
+        Mockito.when(SegmentUtil.getSegmentStatusToDisplay(Mockito.any(), Mockito.any(NDataSegment.class),
+                Mockito.any(), Mockito.any())).thenCallRealMethod();
+        Mockito.when(SegmentUtil.anyIndexJobRunning(Mockito.anyObject(), Mockito.any(), Mockito.any()))
+                .thenReturn(false);
+        SegmentStatusEnumToDisplay status = SegmentUtil.getSegmentStatusToDisplay(segments, seg2, null, null);
         Assert.assertEquals(status, SegmentStatusEnumToDisplay.OVERLAP);
-
 
     }
 

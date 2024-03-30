@@ -1122,8 +1122,8 @@ public class ModelService extends AbstractModelService
         segmentResponseList = segs.stream()
                 .filter(segment -> filterSeg(withAllIndexes, withoutAnyIndexes, allToComplement,
                         indexPlan.getAllLayoutIds(false), segment))
-                .filter(segment -> !StringUtils.isNotEmpty(status) || status
-                        .equalsIgnoreCase(SegmentUtil.getSegmentStatusToDisplay(segs, segment, executables).toString()))
+                .filter(segment -> !StringUtils.isNotEmpty(status) || status.equalsIgnoreCase(
+                        SegmentUtil.getSegmentStatusToDisplay(segs, segment, executables, null).toString()))
                 .map(segment -> new NDataSegmentResponse(dataflow, segment, executables)).collect(Collectors.toList());
         return segmentResponseList;
     }
@@ -1822,8 +1822,11 @@ public class ModelService extends AbstractModelService
     }
 
     private void checkSegRefreshingInLagBehindModel(Segments<NDataSegment> segments) {
+        Set<String> allIndexJobRunningSegments = segments.getFirstSegment() == null ? null
+                : SegmentUtil.getAllIndexJobRunningSegments(segments.getFirstSegment().getModel());
         for (val seg : segments) {
-            if (SegmentStatusEnumToDisplay.REFRESHING == SegmentUtil.getSegmentStatusToDisplay(segments, seg, null)) {
+            if (SegmentStatusEnumToDisplay.REFRESHING == SegmentUtil.getSegmentStatusToDisplay(segments, seg, null,
+                    allIndexJobRunningSegments)) {
                 throw new KylinException(SEGMENT_REFRESH_IN_BUILDING);
             }
         }
@@ -2002,31 +2005,27 @@ public class ModelService extends AbstractModelService
             List<NDataSegment> targetSegments = df.getSegments(Sets.newHashSet(job.getTargetSegments()));
 
             // Almost the final layouts which will be deleted for sure
-            Set<Long> prunedToBeDeletedLayoutIds = IndexBuildJobUtil.pruneTBDelLayouts(
+            Set<Long> prunedToBeDeletedLayoutIds = IndexBuildJobUtil
+                    .pruneTBDelLayouts(
                             toBeDeletedLayoutIds.stream().map(indexPlan::getLayoutEntity)
                                     .collect(Collectors.toCollection(LinkedHashSet::new)),
-                            processedLayouts.stream().map(indexPlan::getLayoutEntity)
-                                    .collect(Collectors.toCollection(LinkedHashSet::new)),
-                            df,
-                            indexPlan,
-                            targetSegments).stream().map(LayoutEntity::getId)
-                    .collect(Collectors.toSet());
+                            processedLayouts.stream().map(indexPlan::getLayoutEntity).collect(
+                                    Collectors.toCollection(LinkedHashSet::new)),
+                            df, indexPlan, targetSegments)
+                    .stream().map(LayoutEntity::getId).collect(Collectors.toSet());
 
             if (SecondStorageUtil.isModelEnable(df.getProject(), job.getTargetSubject())) {
                 Set<Long> initialTBDelLayoutIds = Sets.newHashSet();
                 if (StringUtils.isNotBlank(mergerInfo.getToBeDeleteLayoutIdsStr())) {
                     initialTBDelLayoutIds = Arrays.stream(mergerInfo.getToBeDeleteLayoutIdsStr().split(","))
-                            .map(Long::parseLong)
-                            .collect(Collectors.toSet());
+                            .map(Long::parseLong).collect(Collectors.toSet());
                 }
 
                 Set<Long> diff = Sets.difference(prunedToBeDeletedLayoutIds, initialTBDelLayoutIds);
                 // The newly scanned base table layout should not be deleted to prevent against
                 // inconsistency state with second storage.
-                diff.stream().filter(IndexEntity::isTableIndex)
-                        .map(indexPlan::getLayoutEntity)
-                        .filter(LayoutEntity::isBaseIndex)
-                        .findFirst()
+                diff.stream().filter(IndexEntity::isTableIndex).map(indexPlan::getLayoutEntity)
+                        .filter(LayoutEntity::isBaseIndex).findFirst()
                         .ifPresent(notTBDelLayout -> prunedToBeDeletedLayoutIds.remove(notTBDelLayout.getId()));
             }
 
@@ -3294,9 +3293,10 @@ public class ModelService extends AbstractModelService
         NDataflow dataflow = dataflowManager.getDataflow(indexPlan.getUuid());
         Segments<NDataSegment> segments = dataflow.getSegments();
         ErrorCodeServer serverErrorCode = SegmentStatusEnumToDisplay.LOCKED == status ? SEGMENT_LOCKED : SEGMENT_STATUS;
+        Set<String> allIndexJobRunningSegments = SegmentUtil.getAllIndexJobRunningSegments(dataflow.getModel());
         for (String id : ids) {
             val segment = dataflow.getSegment(id);
-            if (SegmentUtil.getSegmentStatusToDisplay(segments, segment, null) == status) {
+            if (SegmentUtil.getSegmentStatusToDisplay(segments, segment, null, allIndexJobRunningSegments) == status) {
                 throw new KylinException(serverErrorCode, segment.displayIdName(), status);
             }
         }

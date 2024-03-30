@@ -745,7 +745,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         long allIndexCountWithoutTobeDel = indexPlan.getAllLayoutsSize(false);
         for (NDataSegment seg : readySegments) {
             val lockedIndexCountInSeg = seg.getLayoutsMap().values().stream()
-                    .filter(nDataLayout -> nDataLayout.getLayout().isToBeDeleted()).count();
+                    .filter(nDataLayout -> nDataLayout.getLayoutByIndexPlan(indexPlan).isToBeDeleted()).count();
             if ((seg.getSegDetails().getAllLayouts().size() - lockedIndexCountInSeg) != allIndexCountWithoutTobeDel) {
                 segmentToComplementCount += 1;
             }

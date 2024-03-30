@@ -145,7 +145,7 @@ public class NDataSegmentResponse extends NDataSegment {
         setBytesSize(segment.getStorageBytesSize());
         getAdditionalInfo().put(SEGMENT_PATH, dataflow.getSegmentHdfsPath(segment.getId()));
         getAdditionalInfo().put(FILE_COUNT, segment.getStorageFileCount() + "");
-        setStatusToDisplay(SegmentUtil.getSegmentStatusToDisplay(dataflow.getSegments(), segment, executables));
+        setStatusToDisplay(SegmentUtil.getSegmentStatusToDisplay(dataflow.getSegments(), segment, executables, null));
         setSourceBytesSize(segment.getSourceBytesSize());
         setLastBuildTime(segment.getLastBuildTime());
         setMaxBucketId(segment.getMaxBucketId());
