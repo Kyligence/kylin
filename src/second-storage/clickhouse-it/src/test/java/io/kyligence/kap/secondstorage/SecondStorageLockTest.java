@@ -566,8 +566,8 @@ public class SecondStorageLockTest implements JobWaiter {
                 modelBuildService.addIndexesToSegments(IndexBuildParams.builder()
                                 .project(getProject())
                                 .modelId(modelId)
-                                .segmentIds(Collections.singletonList(
-                                        getDataFlow().getSegments().getFirstSegment().getId()))
+                                .segmentIds(getDataFlow().getSegments().stream().map(NDataSegment::getId)
+                                        .collect(Collectors.toList()))
                                 .layoutIds(null)
                                 .parallelBuildBySegment(false)
                                 .priority(3)
