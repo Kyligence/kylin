@@ -337,6 +337,10 @@ public abstract class SparkApplication implements Application {
             if (!config.isUTEnv()) {
                 Unsafe.setProperty("kylin.env", config.getDeployEnv());
             }
+
+            // disable gluten in build job
+            ss.sparkContext().setLocalProperty("gluten.enabledForCurrentThread", "false");
+
             logger.info("Start job");
             infos.startJob();
             // should be invoked after method prepareSparkSession
@@ -355,6 +359,7 @@ public abstract class SparkApplication implements Application {
             if (infos != null) {
                 infos.jobEnd();
             }
+            ss.sparkContext().setLocalProperty("gluten.enabledForCurrentThread", null);
             destroySparkSession();
             extraDestroy();
             executeFinish();

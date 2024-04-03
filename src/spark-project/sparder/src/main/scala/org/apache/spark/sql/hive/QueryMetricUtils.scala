@@ -51,7 +51,7 @@ object QueryMetricUtils extends Logging {
       case exec: KylinFileSourceScanExec =>
         (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + exec.metrics.apply("readBytes").value)
       case transformer: FileSourceScanExecTransformer => // for native file scan
-        (scanRow + transformer.metrics.apply("outputRows").value, scanBytes + transformer.metrics.apply("outputBytes").value)
+        (scanRow + transformer.metrics.apply("numOutputRows").value, scanBytes + transformer.metrics.apply("outputBytes").value)
       case exec: FileSourceScanExec =>
         (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + exec.metrics.apply("readBytes").value)
       case exec: HiveTableScanExec =>

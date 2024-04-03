@@ -73,7 +73,7 @@
         <spark.version>3.3.0-kylin-4.6.26.0</spark.version>
         <delta.version>2.1.0</delta.version>
 
-        <gluten.version>1.2.0-kylin-240403</gluten.version>
+        <gluten.version>1.2.0-kylin-240417</gluten.version>
         <gluten.deps.scope>provided</gluten.deps.scope>
         <substrait.version>0.5.0</substrait.version>
         <celeborn.version>0.3.0-incubating</celeborn.version>
@@ -3389,6 +3389,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.version}</version>
+                <configuration>
+                    <useSystemClassLoader>false</useSystemClassLoader>
+                    <reuseForks>false</reuseForks> <!-- This will make sure to spawn a fresh jvm for each test -->
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>de.thetaphi</groupId>

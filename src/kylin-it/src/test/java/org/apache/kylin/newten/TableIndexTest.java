@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.kylin.GlutenDisabled;
+import org.apache.kylin.GlutenRunner;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.job.util.JobContextUtil;
@@ -33,7 +35,9 @@ import org.apache.spark.sql.SparderEnv;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(GlutenRunner.class)
 public class TableIndexTest extends NLocalWithSparkSessionTest {
 
     @Override
@@ -60,6 +64,7 @@ public class TableIndexTest extends NLocalWithSparkSessionTest {
     }
 
     @Test
+    @GlutenDisabled("Position 1 is out of bound While executing GraceMergingAggregatedTransform")
     public void testUseTableIndexAnswerNonRawQuery() throws Exception {
         overwriteSystemProp("kylin.query.use-tableindex-answer-non-raw-query", "true");
         fullBuild("acfde546-2cc9-4eec-bc92-e3bd46d4e2ee");

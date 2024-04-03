@@ -24,7 +24,6 @@ import java.util.Locale;
 
 import org.apache.calcite.util.CancelFlag;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.util.Shell;
 import org.apache.kylin.common.KylinConfig;
@@ -45,6 +44,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparderEnv;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.optimizer.ConvertInnerJoinToSemiJoin;
+import org.apache.spark.sql.common.SharedSparkSession;
 import org.apache.spark.sql.internal.StaticSQLConf;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -112,65 +112,18 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
         sparkConf.set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog");
         sparkConf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false");
         sparkConf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true");
+
+        SharedSparkSession.configGluten(sparkConf);
+        // sparkConf.set("spark.eventLog.enabled", "true");
+        // sparkConf.set("spark.eventLog.dir", "file:///tmp/spark-events");
+        // sparkConf.set("spark.eventLog.compress", "true");
+        // sparkConf.set("spark.eventLog.compression.codec", "snappy");
+
         ss = SparkSession.builder().withExtensions(ext -> {
             ext.injectOptimizerRule(ss -> new ConvertInnerJoinToSemiJoin());
             return null;
         }).config(sparkConf).getOrCreate();
         SparderEnv.setSparkSession(ss);
-    }
-
-    protected static void configGluten(SparkConf conf) {
-        String chLibPath = System.getProperty(GLUTEN_CH_LIB_PATH_KEY);
-        if (StringUtils.isEmpty(chLibPath) || !new File(chLibPath).exists()) {
-            log.warn("-Dclickhouse.lib.path is not set or path not exists, skip gluten config");
-        }
-        conf.set("spark.gluten.enabled", "true");
-        conf.set("spark.plugins", "org.apache.gluten.GlutenPlugin");
-        conf.set("spark.gluten.sql.columnar.libpath", chLibPath);
-        conf.set("spark.gluten.sql.columnar.extended.columnar.pre.rules", "org.apache.spark.sql.execution.gluten.ConvertKylinFileSourceToGlutenRule");
-        conf.set("spark.gluten.sql.columnar.extended.expressions.transformer", "org.apache.spark.sql.catalyst.expressions.gluten.CustomerExpressionTransformer");
-        // FIXME, enable this after we fix the issue of AutoSinaiPocTest and AutoTpchTest
-        conf.set("spark.sql.adaptive.enabled", "false");
-        // conf.set("spark.eventLog.enabled", "true");
-        // conf.set("spark.eventLog.dir", "file:///tmp/spark-events");
-        // conf.set("spark.eventLog.compress", "true");
-        // conf.set("spark.eventLog.compression.codec", "snappy");
-
-        conf.set("spark.sql.columnVector.offheap.enabled", "true");
-        conf.set("spark.memory.offHeap.enabled", "true");
-        conf.set("spark.memory.offHeap.size", "1g");
-        conf.set("spark.gluten.sql.enable.native.validation", "false");
-        conf.set("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager");
-        conf.set("spark.gluten.sql.columnar.iterator", "true");
-        conf.set("spark.gluten.sql.columnar.sort", "true");
-        conf.set("spark.sql.exchange.reuse", "true");
-        conf.set("spark.gluten.sql.columnar.forceshuffledhashjoin", "true");
-        conf.set("spark.locality.wait", "0");
-        conf.set("spark.locality.wait.node", "0");
-        conf.set("spark.locality.wait.process", "0");
-        conf.set("spark.sql.autoBroadcastJoinThreshold", "20MB");
-        conf.set("spark.gluten.sql.columnar.columnartorow", "true");
-        conf.set("spark.gluten.sql.columnar.loadnative", "true");
-        conf.set("spark.gluten.sql.columnar.loadarrow", "false");
-        conf.set("spark.gluten.sql.columnar.hashagg.enablefinal", "true");
-        conf.set("spark.gluten.sql.columnar.separate.scan.rdd.for.ch", "false");
-        conf.set("spark.databricks.delta.maxSnapshotLineageLength", "20");
-        conf.set("spark.databricks.delta.snapshotPartitions", "1");
-        conf.set("spark.databricks.delta.properties.defaults.checkpointInterval", "5");
-        conf.set("spark.databricks.delta.stalenessLimit", "3600000");
-        conf.set("spark.gluten.sql.columnar.backend.ch.worker.id", "1");
-        conf.set("spark.gluten.sql.columnar.coalesce.batches", "false");
-        conf.set("spark.gluten.sql.columnar.backend.ch.runtime_conf.logger.level", "error");
-        conf.set("spark.io.compression.codec", "LZ4");
-        conf.set("spark.gluten.sql.columnar.shuffle.customizedCompression.codec", "LZ4");
-        conf.set("spark.gluten.sql.columnar.backend.ch.customized.shuffle.codec.enable", "true");
-        conf.set("spark.gluten.sql.columnar.backend.ch.customized.buffer.size", "4096");
-        conf.set("spark.gluten.sql.columnar.backend.ch.files.per.partition.threshold", "5");
-        conf.set("spark.gluten.sql.columnar.backend.ch.runtime_conf.enable_nullable", "true");
-        conf.set("spark.gluten.sql.columnar.backend.ch.runtime_conf.local_engine.settings.metrics_perf_events_enabled", "false");
-        conf.set("spark.gluten.sql.columnar.backend.ch.runtime_conf.local_engine.settings.max_bytes_before_external_group_by", "5000000000");
-        conf.set("spark.gluten.sql.columnar.maxBatchSize", "65409");
-        conf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false");
     }
 
     @AfterClass
