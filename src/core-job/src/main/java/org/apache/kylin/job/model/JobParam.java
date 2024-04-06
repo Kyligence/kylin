@@ -89,6 +89,11 @@ public class JobParam {
 
     private Set<LayoutEntity> deleteLayouts;
 
+    /**
+     * Used only for {@link JobTypeEnum#INDEX_BUILD} job
+     */
+    private boolean layoutsDeletableAfterBuild = false;
+
     private Set<Long> secondStorageDeleteLayoutIds;
 
     public JobParam addExtParams(String key, String value) {

@@ -166,6 +166,7 @@ import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRangeManager;
@@ -1990,6 +1991,11 @@ public class ModelService extends AbstractModelService
         }
         NSparkCubingJob job = (NSparkCubingJob) executable;
         if (job.getSparkCubingStep().getStatus() != ExecutableState.SUCCEED) {
+            return;
+        }
+        boolean layoutsDeletableAfterBuild = Boolean.parseBoolean(
+                job.getParam(NBatchConstants.P_LAYOUTS_DELETABLE_AFTER_BUILD));
+        if (!layoutsDeletableAfterBuild) {
             return;
         }
 

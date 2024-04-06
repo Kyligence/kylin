@@ -49,6 +49,7 @@ import org.apache.kylin.job.execution.JobSchedulerModeEnum;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.execution.step.JobStepType;
 import org.apache.kylin.job.factory.JobFactory;
+import org.apache.kylin.job.handler.AddIndexHandler;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -118,10 +119,18 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
     public static NSparkCubingJob create(JobFactory.JobBuildParams jobBuildParams) {
 
         NSparkCubingJob sparkCubingJob = innerCreate(jobBuildParams);
+
+        if (jobBuildParams instanceof AddIndexHandler.AddIndexJobBuildParams) {
+            boolean layoutsDeletableAfterBuild =((AddIndexHandler.AddIndexJobBuildParams) jobBuildParams)
+                    .isLayoutsDeletableAfterBuild();
+            sparkCubingJob.setParam(NBatchConstants.P_LAYOUTS_DELETABLE_AFTER_BUILD,
+                    String.valueOf(layoutsDeletableAfterBuild));
+        }
         if (CollectionUtils.isNotEmpty(jobBuildParams.getToBeDeletedLayouts())) {
             sparkCubingJob.setParam(NBatchConstants.P_TO_BE_DELETED_LAYOUT_IDS,
                     NSparkCubingUtil.ids2Str(NSparkCubingUtil.toLayoutIds(jobBuildParams.getToBeDeletedLayouts())));
         }
+
         return sparkCubingJob;
     }
 
