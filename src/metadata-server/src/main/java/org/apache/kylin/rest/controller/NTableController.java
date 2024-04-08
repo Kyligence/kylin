@@ -66,6 +66,7 @@ import org.apache.kylin.rest.response.PreReloadTableResponse;
 import org.apache.kylin.rest.response.PreUnloadTableResponse;
 import org.apache.kylin.rest.response.RefreshAffectedSegmentsResponse;
 import org.apache.kylin.rest.response.TableNameResponse;
+import org.apache.kylin.rest.response.TableRefreshAll;
 import org.apache.kylin.rest.response.TablesAndColumnsResponse;
 import org.apache.kylin.rest.response.UpdateAWSTableExtDescResponse;
 import org.apache.kylin.rest.service.ModelService;
@@ -73,7 +74,6 @@ import org.apache.kylin.rest.service.TableExtService;
 import org.apache.kylin.rest.service.TableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -84,7 +84,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.View;
 
 import io.swagger.annotations.ApiOperation;
 import lombok.val;
@@ -493,12 +492,18 @@ public class NTableController extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, tableService.checkSSBDataBase(), "");
     }
 
+    /**
+     * The interface was migrated to /kylin/api/query/catalog_cache
+     * @param refreshRequest
+     * @return
+     */
     @Deprecated
     @ApiOperation(value = "catalogCache", tags = { "DW" })
     @PutMapping(value = "catalog_cache", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
-    public String refreshCatalogCache(final HttpServletRequest refreshRequest) {
-        refreshRequest.setAttribute(View.RESPONSE_STATUS_ATTRIBUTE, HttpStatus.PERMANENT_REDIRECT);
-        return "redirect:/api/query/catalog_cache";
+    @ResponseBody
+    public EnvelopeResponse refreshCatalogCache(final HttpServletRequest refreshRequest) {
+        TableRefreshAll response = tableService.refreshAllCatalogCache(refreshRequest);
+        return new EnvelopeResponse<>(response.getCode(), response, response.getMsg());
     }
 
     @ApiOperation(value = "modelTables", tags = { "AI" })

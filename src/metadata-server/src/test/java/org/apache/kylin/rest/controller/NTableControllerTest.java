@@ -25,10 +25,12 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_SAMPLIN
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
@@ -52,6 +54,7 @@ import org.apache.kylin.rest.request.UpdateAWSTableExtDescRequest;
 import org.apache.kylin.rest.response.ExcludedTableDetailResponse;
 import org.apache.kylin.rest.response.LoadTableResponse;
 import org.apache.kylin.rest.response.TableNameResponse;
+import org.apache.kylin.rest.response.TableRefreshAll;
 import org.apache.kylin.rest.response.TablesAndColumnsResponse;
 import org.apache.kylin.rest.response.UpdateAWSTableExtDescResponse;
 import org.apache.kylin.rest.service.ModelService;
@@ -722,6 +725,22 @@ public class NTableControllerTest extends NLocalFileMetadataTestCase {
                 .accept(MediaType.parseMediaType(APPLICATION_JSON))) //
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(nTableController).reloadHiveTablename("", false);
+    }
+
+    @Test
+    public void testRefreshCatalogCache() throws Exception {
+        List<String> tables = Lists.newArrayList();
+        tables.add("DEFAULT.TEST_KYLIN_FACT");
+        HashMap request = new HashMap();
+        request.put("tables", tables);
+        TableRefreshAll tableRefreshAll = new TableRefreshAll();
+        tableRefreshAll.setCode(KylinException.CODE_SUCCESS);
+        Mockito.doReturn(tableRefreshAll).when(tableService).refreshAllCatalogCache(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/tables/catalog_cache")
+                        .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
+                        .accept(MediaType.parseMediaType(APPLICATION_PUBLIC_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test
