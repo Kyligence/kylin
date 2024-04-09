@@ -164,6 +164,8 @@ public class ModelSemanticHelper extends BasicService {
             allTablesMap.put(factTableIdentity, extendTable);
         }
         dataModel.setUuid(modelRequest.getUuid() != null ? modelRequest.getUuid() : RandomUtil.randomUUIDStr());
+        dataModel.setDescription(modelRequest.getDescription() != null ? modelRequest.getDescription()
+                : StringUtils.EMPTY);
         dataModel.setProject(modelRequest.getProject());
         dataModel.setAllMeasures(convertMeasure(simplifiedMeasures));
         dataModel.setAllNamedColumns(convertNamedColumns(modelRequest.getProject(), dataModel, modelRequest));
