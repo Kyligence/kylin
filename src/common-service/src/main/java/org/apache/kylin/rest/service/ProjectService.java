@@ -129,7 +129,6 @@ import org.apache.kylin.rest.security.KerberosLoginManager;
 import org.apache.kylin.rest.service.task.QueryHistoryMetaUpdateScheduler;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.streaming.manager.StreamingJobManager;
-import org.apache.kylin.tool.garbage.IndexCleaner;
 import org.apache.kylin.tool.garbage.MetadataCleaner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -425,17 +424,6 @@ public class ProjectService extends BasicService {
         updateStatMetaImmediately(project);
         MetadataCleaner.clean(project, needAggressiveOpt);
         asyncTaskService.cleanupStorage();
-    }
-
-    public void optimizeIndex(String project, String modelId, boolean approveRecommend, boolean autoBuildIndex) {
-        val indexCleaner = new IndexCleaner(project, true, modelId, approveRecommend, autoBuildIndex);
-        indexCleaner.prepare();
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            indexCleaner.beforeExecute();
-            indexCleaner.execute();
-            indexCleaner.afterExecute();
-            return 0;
-        }, project);
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")

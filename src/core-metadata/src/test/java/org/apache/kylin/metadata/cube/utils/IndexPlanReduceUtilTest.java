@@ -148,30 +148,21 @@ public class IndexPlanReduceUtilTest {
     @Test
     public void testMergeSameDimLayout() {
         LayoutEntity layout1 = new LayoutEntity();
-        layout1.setId(30001);
+        layout1.setId(1);
         layout1.setColOrder(Lists.newArrayList(1, 2, 3, 4, 100000, 100001));
         layout1.setInProposing(false);
         LayoutEntity layout2 = new LayoutEntity();
-        layout2.setId(40001);
+        layout2.setId(10001);
         layout2.setColOrder(Lists.newArrayList(1, 2, 3, 4, 100000, 100001, 100002));
         layout2.setInProposing(true);
 
         IndexPlan indexPlan = new IndexPlan();
         List<Set<LayoutEntity>> sameDimLayouts = Lists
                 .newArrayList(Collections.singleton(Sets.newHashSet(layout1, layout2)));
-        IndexPlan indexPlanMerged = IndexPlanReduceUtil.mergeSameDimLayout(indexPlan, sameDimLayouts).getKey();
-        //Generate new index
+        IndexPlan indexPlanMerged = IndexPlanReduceUtil.mergeSameDimLayout(indexPlan, sameDimLayouts);
         Assert.assertEquals(1, indexPlanMerged.getAllIndexes().size());
-        LayoutEntity mergeLayout = indexPlanMerged.getAllIndexes().get(0).getLayouts().get(0);
-        Assert.assertEquals(ImmutableList.of(1, 2, 3, 4, 100000, 100001, 100002), mergeLayout.getColOrder());
-
-        IndexPlan indexPlan2 = new IndexPlan();
-        indexPlan2.setIndexes(indexPlanMerged.getAllIndexes());
-        sameDimLayouts = Lists.newArrayList(Collections.singleton(Sets.newHashSet(layout1, mergeLayout)));
-        Set<Long> existMergeLayoutIds = IndexPlanReduceUtil.mergeSameDimLayout(indexPlan2, sameDimLayouts).getValue();
-        //No need to generate a new index
-        Assert.assertTrue(existMergeLayoutIds.contains(mergeLayout.getId()));
-
+        Assert.assertEquals(ImmutableList.of(1, 2, 3, 4, 100000, 100001, 100002),
+                indexPlanMerged.getAllIndexes().get(0).getLayouts().get(0).getColOrder());
     }
 
     @Test

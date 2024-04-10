@@ -20,20 +20,16 @@ package org.apache.kylin.metadata.cube.optimization;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.annotation.Clarification;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflow;
-import org.apache.kylin.metadata.cube.model.NDataflowManager;
+
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.val;
 
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Enterprise")
 public abstract class AbstractOptStrategy {
@@ -61,19 +57,6 @@ public abstract class AbstractOptStrategy {
     }
 
     protected abstract void skipOptimizeIndex(List<LayoutEntity> inputLayouts);
-
-    protected void removeNotReadyLayouts(List<LayoutEntity> inputLayouts) {
-        if (CollectionUtils.isEmpty(inputLayouts)) {
-            return;
-        }
-
-        val indexPlan = inputLayouts.get(0).getIndex().getIndexPlan();
-        val config = KylinConfig.getInstanceFromEnv();
-        val dataflow = NDataflowManager.getInstance(config, indexPlan.getProject()).getDataflow(indexPlan.getId());
-        val readyLayouts = dataflow.extractReadyLayouts().stream().map(LayoutEntity::getId).collect(Collectors.toSet());
-
-        inputLayouts.removeIf(layout -> !readyLayouts.contains(layout.getId()));
-    }
 
     private void afterCollect(List<LayoutEntity> inputLayouts, Set<Long> garbages) {
         inputLayouts.removeIf(layout -> garbages.contains(layout.getId()));

@@ -50,8 +50,8 @@ public class IndexOptimizer {
         this.needLog = needLog;
     }
 
-    private List<LayoutEntity> filterAllAutoLayouts(NDataflow dataflow) {
-        return dataflow.getIndexPlan().getAllLayouts().stream() //
+    protected List<LayoutEntity> filterAutoLayouts(NDataflow dataflow) {
+        return dataflow.extractReadyLayouts().stream() //
                 .filter(layout -> !layout.isManual() && layout.isAuto()) //
                 .filter(layout -> !layout.isBase()) //
                 .filter(layout -> !layout.isToBeDeleted()) //
@@ -71,7 +71,7 @@ public class IndexOptimizer {
         }
 
         Map<Long, GarbageLayoutType> garbageLayoutTypeMap = Maps.newHashMap();
-        List<LayoutEntity> autoLayouts = filterAllAutoLayouts(dataflow);
+        List<LayoutEntity> autoLayouts = filterAutoLayouts(dataflow);
         for (AbstractOptStrategy strategy : getStrategiesForAuto()) {
             strategy.collectGarbageLayouts(autoLayouts, dataflow, needLog)
                     .forEach(id -> garbageLayoutTypeMap.put(id, strategy.getType()));

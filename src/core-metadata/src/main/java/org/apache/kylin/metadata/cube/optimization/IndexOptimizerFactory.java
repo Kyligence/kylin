@@ -60,14 +60,6 @@ public class IndexOptimizerFactory {
         return optimizer;
     }
 
-
-    public static IndexOptimizer getMergedLayoutOptStrategyOptimizer(boolean needLog) {
-        IndexOptimizer optimizer = new IndexOptimizer(needLog);
-        //When invoked manually, only the index policy needs to be merged
-        optimizer.getStrategiesForAuto().addAll(Lists.newArrayList(MERGED_OPT_STRATEGY));
-        return optimizer;
-    }
-
     private static void printLog(boolean needLog, int indexOptimizationLevel, boolean isFastBitmapEnabled) {
         if (!needLog) {
             return;

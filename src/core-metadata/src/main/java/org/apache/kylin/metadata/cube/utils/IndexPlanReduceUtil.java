@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -35,8 +34,6 @@ import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import lombok.val;
 
 public class IndexPlanReduceUtil {
     private static final Logger log = LoggerFactory.getLogger(IndexPlanReduceUtil.class);
@@ -92,10 +89,8 @@ public class IndexPlanReduceUtil {
         return sameDimAggLayouts;
     }
 
-    public static Pair<IndexPlan, Set<Long>> mergeSameDimLayout(IndexPlan indexPlan,
-            List<Set<LayoutEntity>> sameDimLayouts) {
+    public static IndexPlan mergeSameDimLayout(IndexPlan indexPlan, List<Set<LayoutEntity>> sameDimLayouts) {
         IndexPlan.IndexPlanUpdateHandler updateHandler = indexPlan.createUpdateHandler();
-        Set<Long> existMergeLayoutIds = Sets.newHashSet();
         for (Set<LayoutEntity> layoutEntities : sameDimLayouts) {
             Set<Integer> colOrder = Sets.newLinkedHashSet();
             List<Integer> allColOrders = Lists.newArrayList();
@@ -105,17 +100,13 @@ public class IndexPlanReduceUtil {
                 allColOrders.addAll(layoutEntity.getColOrder());
                 shardByCol = layoutEntity.getShardByColumns();
             }
-            LayoutEntity mergedLayout = indexPlan.createLayout(Lists.newArrayList(colOrder), true, false, shardByCol);
 
-            val layoutLongMap = layoutEntities.stream().collect(Collectors.toMap(key -> key, LayoutEntity::getId));
-            val mergedLayoutId = layoutLongMap.get(mergedLayout);
-            if (mergedLayoutId != null && indexPlan.getLayoutEntity(mergedLayoutId) != null) {
-                existMergeLayoutIds.add(mergedLayoutId);
-            }
+            LayoutEntity mergedLayout = indexPlan.createLayout(Lists.newArrayList(colOrder), true, false, shardByCol);
             log.info("merge colOrders: {} into {}", allColOrders, mergedLayout.getColOrder());
             updateHandler.add(mergedLayout, true, false);
         }
-        return Pair.newPair(updateHandler.complete(), existMergeLayoutIds);
+
+        return updateHandler.complete();
     }
 
     /**
