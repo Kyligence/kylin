@@ -54,12 +54,20 @@ public class ComparatorUtils {
         };
     }
 
+    private static Comparator<TblColRef> filterColNameDictionaryOrder() {
+        return (col1, col2) -> {
+            Preconditions.checkArgument(col1 != null);
+            Preconditions.checkArgument(col2 != null);
+            return col1.getIdentity().compareToIgnoreCase(col2.getIdentity());
+        };
+    }
+
     /**
      * Return comparator for filter column
      */
     public static Comparator<TblColRef> filterColComparator(ChooserContext chooserContext) {
         return Ordering.from(filterLevelComparator()).compound(cardinalityComparator(chooserContext))
-                .compound(colNameDictionaryOrder());
+                .compound(filterColNameDictionaryOrder());
     }
 
     /**
