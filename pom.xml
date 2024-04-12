@@ -123,7 +123,7 @@
         <!-- Utility -->
         <mssql-jdbc.version>6.1.0.jre7</mssql-jdbc.version>
         <mysql-connector.version>8.0.28</mysql-connector.version>
-        <postgresql.version>42.4.1</postgresql.version>
+        <postgresql.version>42.4.4</postgresql.version>
         <commons-dbcp.version>2.9.0</commons-dbcp.version>
         <lmax.disruptor.versoin>3.4.2</lmax.disruptor.versoin>
         <log4j2.version>2.18.0</log4j2.version>
