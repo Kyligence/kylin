@@ -153,6 +153,11 @@ public class SparkStringUDF implements NotConstant {
         throw new CalciteNotSupportException();
     }
 
+    public String RIGHT(@Parameter(name = "str") String s, @Parameter(name = "length") int len)
+            throws CalciteNotSupportException {
+        throw new CalciteNotSupportException();
+    }
+
     public Boolean RLIKE(@Parameter(name = "str") String str, @Parameter(name = "regexp") String regexp)
             throws CalciteNotSupportException {
         throw new CalciteNotSupportException();

@@ -40,7 +40,7 @@ object ExpressionConverter {
     "ascii", "base64", "btrim", "chr", "char", "char_length", "character_length", "concat_ws",
     "decode", "encode", "find_in_set", "initcap", "initcapb", "instr",
     "lcase", "length", "left", "levenshtein", "locate", "lower", "lpad", "ltrim", "overlay",
-    "replace", "regexp_extract", "regexp_like", "rlike", "rpad", "repeat", "rtrim",
+    "replace", "regexp_extract", "regexp_like", "right", "rlike", "rpad", "repeat", "rtrim",
     "sentences", "space", "split", "split_part", "strpos", "substring_index", "substring", "substr",
     "ucase", "unbase64", "upper",
 
