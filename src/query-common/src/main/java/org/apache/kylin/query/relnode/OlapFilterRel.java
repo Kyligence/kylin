@@ -317,6 +317,9 @@ public class OlapFilterRel extends Filter implements OlapRel {
 
     private boolean isJoinMatchOptimizationEnabled() {
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+        if (this.context != null && this.context.getOlapSchema() != null) {
+            kylinConfig = NProjectManager.getProjectConfig(context.getOlapSchema().getProjectName());
+        }
         return kylinConfig.isJoinMatchOptimizationEnabled();
     }
 

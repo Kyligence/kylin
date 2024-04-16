@@ -286,7 +286,7 @@ public class RealizationChooser {
             // discard the props of OlapContext modified by rewriteCcInnerCol
             restoreOlapContextProps(context, preservedOlapProps);
 
-            // The matchJoin() method has the potential to optimize the JoinsGraph, 
+            // The matchJoin() method has the potential to optimize the JoinsGraph,
             // therefore we perform a check on ready segments at this point.
             if (!hasReadySegments(model)) {
                 logger.info("Exclude this model {} because there are no ready segments", model.getAlias());
@@ -703,7 +703,7 @@ public class RealizationChooser {
             matched = ctx.getJoinsGraph().match(model.getJoinsGraph(), matchedAliasMap, partialMatchInnerJoin,
                     partialMatchNonEquiJoin);
             if (!matched) {
-                KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+                KylinConfig kylinConfig = NProjectManager.getProjectConfig(model.getProject());
                 if (kylinConfig.isJoinMatchOptimizationEnabled()) {
                     logger.info(
                             "Query match join with join match optimization mode, trying to match with newly rewrite join graph.");
