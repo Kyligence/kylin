@@ -68,16 +68,14 @@ public class QueryHisStoreUtil {
 
     private static final Charset DEFAULT_CHARSET = Charset.defaultCharset();
     private static final String CREATE_QUERY_HISTORY_TABLE = "create.queryhistory.store.table";
-    private static final String CREATE_QUERY_HISTORY_INDEX1 = "create.queryhistory.store.tableindex1";
-    private static final String CREATE_QUERY_HISTORY_INDEX2 = "create.queryhistory.store.tableindex2";
-    private static final String CREATE_QUERY_HISTORY_INDEX3 = "create.queryhistory.store.tableindex3";
-    private static final String CREATE_QUERY_HISTORY_INDEX4 = "create.queryhistory.store.tableindex4";
-    private static final String CREATE_QUERY_HISTORY_INDEX5 = "create.queryhistory.store.tableindex5";
-    private static final String CREATE_QUERY_HISTORY_INDEX6 = "create.queryhistory.store.tableindex6";
-    private static final String CREATE_QUERY_HISTORY_INDEX7 = "create.queryhistory.store.tableindex7";
-    static final String[] QUERY_HISTORY_INDEX_NAMES = { CREATE_QUERY_HISTORY_INDEX1, CREATE_QUERY_HISTORY_INDEX2,
-            CREATE_QUERY_HISTORY_INDEX3, CREATE_QUERY_HISTORY_INDEX4, CREATE_QUERY_HISTORY_INDEX5,
-            CREATE_QUERY_HISTORY_INDEX6, CREATE_QUERY_HISTORY_INDEX7 };
+    private static final String CREATE_QUERY_HISTORY_INDEX_PREFIX = "create.queryhistory.store.tableindex";
+    private static final int CREATE_QUERY_HISTORY_INDEX_SIZE = 12;
+    static final String[] QUERY_HISTORY_INDEX_NAMES = new String[CREATE_QUERY_HISTORY_INDEX_SIZE];
+    static {
+        for (int i = 0; i < CREATE_QUERY_HISTORY_INDEX_SIZE; i++) {
+            QUERY_HISTORY_INDEX_NAMES[i] = CREATE_QUERY_HISTORY_INDEX_PREFIX + (i + 1);
+        }
+    }
 
     private static final String CREATE_QUERY_HISTORY_REALIZATION_TABLE = "create.queryhistoryrealization.store.table";
     private static final String CREATE_QUERY_HISTORY_REALIZATION_INDEX1 = "create.queryhistoryrealization.store.tableindex1";
