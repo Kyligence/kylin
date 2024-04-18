@@ -79,6 +79,14 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
                                     null, j -> j instanceof OlapJoinRel || j instanceof OlapNonEquiJoinRel, any()))),
             RelFactories.LOGICAL_BUILDER, "ScalarSubqueryJoinRule:AGG_PRJ_JOIN");
 
+    public static final ScalarSubqueryJoinRule AGG_FLT_JOIN = new ScalarSubqueryJoinRule(//
+            operand(OlapAggregateRel.class, //
+                    operand(OlapFilterRel.class, //
+                            operand(Join.class, //
+                                    null, //
+                                    j -> j instanceof OlapJoinRel || j instanceof OlapNonEquiJoinRel, any()))),
+            RelFactories.LOGICAL_BUILDER, "ScalarSubqueryJoinRule:AGG_FLT_JOIN");
+
     public static final ScalarSubqueryJoinRule AGG_PRJ_FLT_JOIN = new ScalarSubqueryJoinRule(//
             operand(OlapAggregateRel.class, //
                     operand(OlapProjectRel.class, //
@@ -203,6 +211,14 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
             final RexNode joinCond = RexUtil.apply(aggUnitJoinMapping, join.getCondition());
             relBuilder.push(left.getNewInput()).push(right.getNewInput()).join(join.getJoinType(), joinCond);
 
+            if (aggUnit instanceof AggregateFilter) {
+                // create new filter
+                // To-do: maybe we could also push down the relative filter.
+                final RexNode filterCond = RexUtil.apply(aggUnitJoinMapping, //
+                        ((AggregateFilter) aggUnit).getFilterCond());
+                relBuilder.filter(filterCond);
+            }
+
             if (aggUnit instanceof AggregateProjectFilter) {
                 // create new filter
                 // To-do: maybe we could also push down the relative filter.
@@ -259,7 +275,8 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
                 return new AggregateProjectFilter(call.rel(0), call.rel(1), call.rel(2));
             }
             if (call.rels.length > 2) {
-                return new AggregateProject(call.rel(0), call.rel(1));
+                return call.rel(1) instanceof OlapFilterRel ? new AggregateFilter(call.rel(0), call.rel(1))
+                        : new AggregateProject(call.rel(0), call.rel(1));
             }
             return new AggregateUnit(call.rel(0));
         }
@@ -436,6 +453,26 @@ public class ScalarSubqueryJoinRule extends RelOptRule {
         }
 
     } // end of AggregateProject
+
+    private static class AggregateFilter extends AggregateUnit {
+
+        private final OlapFilterRel filter;
+
+        public AggregateFilter(OlapAggregateRel aggregate, OlapFilterRel filter) {
+            super(aggregate);
+            this.filter = filter;
+        }
+
+        @Override
+        public ImmutableBitSet getUnitSet() {
+            ImmutableBitSet filterSet = RelOptUtil.InputFinder.bits(filter.getCondition());
+            return getGroupSet().union(filterSet);
+        }
+
+        public RexNode getFilterCond() {
+            return filter.getCondition();
+        }
+    }
 
     private static class AggregateProjectFilter extends AggregateProject {
 

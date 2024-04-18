@@ -541,20 +541,21 @@ OlapToEnumerableConverter
             <![CDATA[
 OlapToEnumerableConverter
   OlapProjectRel(D_DATEKEY=[$1], COUNT_YEAR=[$2], DATE_TIME=[$0], ctx=[])
-    OlapAggregateRel(group-set=[[0, 1]], groups=[null], COUNT_YEAR=[COUNT($3)], ctx=[])
-      OlapFilterRel(condition=[=($2, 'May')], ctx=[])
-        OlapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
-          OlapUnionRel(all=[true], ctx=[], all=[true])
+    OlapAggregateRel(group-set=[[0, 1]], groups=[null], COUNT_YEAR=[$SUM0($2)], ctx=[])
+      OlapProjectRel(DATE_TIME=[$0], D_DATEKEY=[$1], $f3=[CASE(IS NULL($3), 0:BIGINT, $3)], ctx=[])
+        OlapFilterRel(condition=[=($2, 'May')], ctx=[])
+          OlapJoinRel(condition=[=($0, $1)], joinType=[left], ctx=[])
             OlapUnionRel(all=[true], ctx=[], all=[true])
               OlapUnionRel(all=[true], ctx=[], all=[true])
-                OlapUnionRel(all=[false], ctx=[], all=[false])
+                OlapUnionRel(all=[true], ctx=[], all=[true])
+                  OlapUnionRel(all=[false], ctx=[], all=[false])
+                    OlapValuesRel(tuples=[[{ '1995-03-29' }]])
+                    OlapValuesRel(tuples=[[{ '1995-04-01' }]])
                   OlapValuesRel(tuples=[[{ '1995-03-29' }]])
-                  OlapValuesRel(tuples=[[{ '1995-04-01' }]])
-                OlapValuesRel(tuples=[[{ '1995-03-29' }]])
-              OlapValuesRel(tuples=[[{ '1995-04-01' }]])
-            OlapValuesRel(tuples=[[{ '1995-05-17' }]])
-          OlapProjectRel(D_DATEKEY=[$0], D_MONTH=[$3], D_YEAR=[$4], ctx=[])
-            OlapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+                OlapValuesRel(tuples=[[{ '1995-04-01' }]])
+              OlapValuesRel(tuples=[[{ '1995-05-17' }]])
+            OlapAggregateRel(group-set=[[0, 3]], groups=[null], COUNT_YEAR=[COUNT($4)], ctx=[])
+              OlapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
 ]]>
         </Resource>
         <Resource name="query17.planBefore">
@@ -671,6 +672,48 @@ OlapToEnumerableConverter
           OlapProjectRel(LO_ORDERDATE=[$5], LO_EXTENDEDPRICE=[$9], ctx=[])
             OlapTableScan(table=[[SSB, P_LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]])
           OlapValuesRel(tuples=[[{ 19931014 }]])
+]]>
+        </Resource>
+        <Resource name="query20.planBefore">
+            <![CDATA[
+OlapToEnumerableConverter
+  OlapProjectRel(D_DATEKEY=[$1], COUNT_YEAR=[$2], DATE_TIME=[$0], ctx=[])
+    OlapAggregateRel(group-set=[[0, 1]], groups=[null], COUNT_YEAR=[COUNT($2)], ctx=[])
+      OlapProjectRel(DATE_TIME=[$0], D_DATEKEY=[$1], D_YEAR=[$3], ctx=[])
+        OlapFilterRel(condition=[=($2, 'May')], ctx=[])
+          OlapNonEquiJoinRel(condition=[>(CAST($0):INTEGER NOT NULL, $1)], joinType=[left], ctx=[])
+            OlapUnionRel(all=[true], ctx=[], all=[true])
+              OlapUnionRel(all=[true], ctx=[], all=[true])
+                OlapUnionRel(all=[true], ctx=[], all=[true])
+                  OlapUnionRel(all=[false], ctx=[], all=[false])
+                    OlapValuesRel(tuples=[[{ '1995-03-29' }]])
+                    OlapValuesRel(tuples=[[{ '1995-04-01' }]])
+                  OlapValuesRel(tuples=[[{ '1995-03-29' }]])
+                OlapValuesRel(tuples=[[{ '1995-04-01' }]])
+              OlapValuesRel(tuples=[[{ '1995-05-17' }]])
+            OlapProjectRel(D_DATEKEY=[$0], D_MONTH=[$3], D_YEAR=[$4], ctx=[])
+              OlapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
+]]>
+        </Resource>
+        <Resource name="query20.planAfter">
+            <![CDATA[
+OlapToEnumerableConverter
+  OlapProjectRel(D_DATEKEY=[$1], COUNT_YEAR=[$2], DATE_TIME=[$0], ctx=[])
+    OlapAggregateRel(group-set=[[0, 1]], groups=[null], COUNT_YEAR=[$SUM0($2)], ctx=[])
+      OlapProjectRel(DATE_TIME=[$0], D_DATEKEY=[$1], $f3=[CASE(IS NULL($3), 0:BIGINT, $3)], ctx=[])
+        OlapFilterRel(condition=[=($2, 'May')], ctx=[])
+          OlapNonEquiJoinRel(condition=[>(CAST($0):INTEGER NOT NULL, $1)], joinType=[left], ctx=[])
+            OlapUnionRel(all=[true], ctx=[], all=[true])
+              OlapUnionRel(all=[true], ctx=[], all=[true])
+                OlapUnionRel(all=[true], ctx=[], all=[true])
+                  OlapUnionRel(all=[false], ctx=[], all=[false])
+                    OlapValuesRel(tuples=[[{ '1995-03-29' }]])
+                    OlapValuesRel(tuples=[[{ '1995-04-01' }]])
+                  OlapValuesRel(tuples=[[{ '1995-03-29' }]])
+                OlapValuesRel(tuples=[[{ '1995-04-01' }]])
+              OlapValuesRel(tuples=[[{ '1995-05-17' }]])
+            OlapAggregateRel(group-set=[[0, 3]], groups=[null], COUNT_YEAR=[COUNT($4)], ctx=[])
+              OlapTableScan(table=[[SSB, DATES]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]])
 ]]>
         </Resource>
 

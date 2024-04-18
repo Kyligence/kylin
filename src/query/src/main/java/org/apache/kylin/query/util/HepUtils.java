@@ -117,6 +117,7 @@ public class HepUtils {
             // target rules
             ScalarSubqueryJoinRule.AGG_JOIN, //
             ScalarSubqueryJoinRule.AGG_PRJ_JOIN, //
+            ScalarSubqueryJoinRule.AGG_FLT_JOIN, //
             ScalarSubqueryJoinRule.AGG_PRJ_FLT_JOIN //
     );
 

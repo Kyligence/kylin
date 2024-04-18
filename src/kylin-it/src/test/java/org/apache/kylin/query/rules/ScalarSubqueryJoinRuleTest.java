@@ -29,6 +29,7 @@ import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.query.optrule.AggregateProjectReduceRule;
 import org.apache.kylin.query.optrule.OlapAggregateRule;
+import org.apache.kylin.query.optrule.OlapFilterRule;
 import org.apache.kylin.query.optrule.OlapJoinRule;
 import org.apache.kylin.query.optrule.OlapProjectRule;
 import org.apache.kylin.query.optrule.OlapReduceExpressionRule;
@@ -99,6 +100,7 @@ public class ScalarSubqueryJoinRuleTest extends CalciteRuleTestBase {
         return ImmutableList.of(// basic rules
                 OlapAggregateRule.INSTANCE, //
                 OlapProjectRule.INSTANCE, //
+                OlapFilterRule.INSTANCE, //
                 OlapJoinRule.INSTANCE, //
                 // relative rules
                 CoreRules.PROJECT_MERGE, //
@@ -108,6 +110,7 @@ public class ScalarSubqueryJoinRuleTest extends CalciteRuleTestBase {
                 // target rules
                 ScalarSubqueryJoinRule.AGG_JOIN, //
                 ScalarSubqueryJoinRule.AGG_PRJ_JOIN, //
+                ScalarSubqueryJoinRule.AGG_FLT_JOIN, //
                 ScalarSubqueryJoinRule.AGG_PRJ_FLT_JOIN);
     }
 }
