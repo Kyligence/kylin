@@ -116,6 +116,8 @@ public class JdbcAuditLogStore implements AuditLogStore {
             + Joiner.on(",").join(AUDIT_LOG_TABLE_ID, AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS,
                     AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE)
             + " from %s where meta_key = '%s' and meta_mvcc = %s";
+    static final String SELECT_COUNT_ID_ALL = "select count(id) from %s";
+    static final String SELECT_MAX_ID_WITH_OFFSET = "select id from %s order by id limit 1 offset %s ";
 
     private final KylinConfig config;
     @Getter
@@ -270,6 +272,18 @@ public class JdbcAuditLogStore implements AuditLogStore {
                 .orElse(0L);
     }
 
+    public long countAll() {
+        return Optional.ofNullable(
+                getJdbcTemplate().queryForObject(String.format(Locale.ROOT, SELECT_COUNT_ID_ALL, table), Long.class))
+                .orElse(0L);
+    }
+
+    public long getMaxIdWithOffset(long offset) {
+        return Optional.ofNullable(jdbcTemplate
+                .queryForObject(String.format(Locale.ROOT, SELECT_MAX_ID_WITH_OFFSET, table, offset), Long.class))
+                .orElse(0L);
+    }
+
     @Override
     public void restore(long currentId) {
         if ((config.isJobNode() || config.isMetadataNode()) && !config.isUTEnv()) {
@@ -331,17 +345,30 @@ public class JdbcAuditLogStore implements AuditLogStore {
 
     @Override
     public void rotate() {
-        withTransaction(transactionManager, () -> {
-            val retainMaxSize = config.getMetadataAuditLogMaxSize();
-            val currentMaxId = getMaxId();
-            val deletableMaxId = currentMaxId - retainMaxSize + 1;
-            log.info("try to delete audit_logs which id < {}", deletableMaxId);
-            log.info("retainMaxSize: {}, currentMaxId: {}", retainMaxSize, currentMaxId);
+        val retainMaxSize = config.getMetadataAuditLogMaxSize();
+        val batchSize = KylinConfig.getInstanceFromEnv().getAuditLogDeleteBatchSize();
+        val totalCount = countAll();
+        if (totalCount <= retainMaxSize) {
+            log.info("Audit log size:[{}] is less than or equal to maximum limit:[{}], so skip it.", totalCount,
+                    retainMaxSize);
+            return;
+        }
+        var toBeDeletedRows = totalCount - retainMaxSize;
+        log.info("Total audit_logs rows [{}], need to delete [{}] rows", totalCount, toBeDeletedRows);
+        while (toBeDeletedRows > 0) {
             val startTime = System.currentTimeMillis();
-            val update = jdbcTemplate.update(String.format(Locale.ROOT, DELETE_ID_LESSTHAN_SQL, table), deletableMaxId);
-            log.info("delete audit_logs count: {}, cost: {}ms", update, System.currentTimeMillis() - startTime);
-            return null;
-        });
+            val offset = Math.min(toBeDeletedRows, batchSize);
+            val toBeDeleteMaxId = getMaxIdWithOffset(offset);
+            val actualCount = miniBatchRotate(toBeDeleteMaxId);
+            log.info("delete audit_logs count: {}, cost: {}ms", actualCount, System.currentTimeMillis() - startTime);
+            toBeDeletedRows -= offset;
+        }
+    }
+
+    // Delete audit_logs in mini batches, delete audit_logs which id < maxId
+    public int miniBatchRotate(long maxId) {
+        return withTransaction(transactionManager,
+                () -> jdbcTemplate.update(String.format(Locale.ROOT, DELETE_ID_LESSTHAN_SQL, table), maxId));
     }
 
     private Properties loadMedataProperties() throws IOException {

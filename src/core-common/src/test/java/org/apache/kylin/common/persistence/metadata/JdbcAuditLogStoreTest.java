@@ -477,6 +477,48 @@ class JdbcAuditLogStoreTest {
         auditLogStore.close();
     }
 
+    @OverwriteProp(key = "kylin.metadata.audit-log.max-size", value = "2000")
+    @OverwriteProp(key = "kylin.metadata.audit-log.delete-batch-size", value = "100")
+    @Test
+    void testRotateDelete(JdbcInfo info) throws Exception {
+        val config = getTestConfig();
+        val jdbcTemplate = info.getJdbcTemplate();
+        val url = config.getMetadataUrl();
+        val props = datasourceParameters(url);
+        val dataSource = BasicDataSourceFactory.createDataSource(props);
+        val transactionManager = new DataSourceTransactionManager(dataSource);
+        val auditLogStore = new JdbcAuditLogStore(config, jdbcTemplate, transactionManager,
+                info.getTableName() + "_audit_log");
+        auditLogStore.createIfNotExist();
+
+        val auditLogTableName = info.getTableName() + "_audit_log";
+        for (int i = 0; i < 1000; i++) {
+            val projectName = "p" + (i + 1000);
+            String unitId = RandomUtil.randomUUIDStr();
+            jdbcTemplate.batchUpdate(String.format(Locale.ROOT, JdbcAuditLogStore.INSERT_SQL, auditLogTableName),
+                    Arrays.asList(
+                            new Object[] { "/" + projectName + "/abc", "abc".getBytes(charset),
+                                    System.currentTimeMillis(), 0, unitId, null, LOCAL_INSTANCE },
+                            new Object[] { "/" + projectName + "/abc2", "abc".getBytes(charset),
+                                    System.currentTimeMillis(), 0, unitId, null, LOCAL_INSTANCE },
+                            new Object[] { "/" + projectName + "/abc3", "abc".getBytes(charset),
+                                    System.currentTimeMillis(), 0, unitId, null, LOCAL_INSTANCE },
+                            new Object[] { "/" + projectName + "/abc3", "abc".getBytes(charset),
+                                    System.currentTimeMillis(), 1, unitId, null, LOCAL_INSTANCE },
+                            new Object[] { "/" + projectName + "/abc", null, null, null, unitId, null,
+                                    LOCAL_INSTANCE }));
+        }
+        auditLogStore.rotate();
+        long count = jdbcTemplate.queryForObject("select count(1) from " + auditLogTableName, Long.class);
+        Assert.assertEquals(2000, count);
+
+        auditLogStore.rotate();
+        count = jdbcTemplate.queryForObject("select count(1) from " + auditLogTableName, Long.class);
+        Assert.assertEquals(2000, count);
+
+        auditLogStore.close();
+    }
+
     @Test
     public void testGet() throws IOException {
         UnitOfWork.doInTransactionWithRetry(() -> {
