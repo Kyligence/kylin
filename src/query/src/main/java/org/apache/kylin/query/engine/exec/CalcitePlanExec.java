@@ -18,6 +18,7 @@
 
 package org.apache.kylin.query.engine.exec;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -106,6 +107,9 @@ public class CalcitePlanExec implements QueryPlanExec {
             return DateFormat.castTimestampToString(Long.parseLong(value), TimeZone.getTimeZone("GMT"));
         case TIME:
             return DateFormat.formatToTimeStr(Long.parseLong(value), "HH:mm:ss", TimeZone.getTimeZone("GMT"));
+        // TODO Once KE-42058 has a better fix, this code can be removed
+        case DECIMAL:
+            return ((BigDecimal) object).stripTrailingZeros().toPlainString();
         default:
             return value;
         }
