@@ -83,7 +83,7 @@ public class JdbcAuditLogRecoveryTest {
         jdbcTemplate.batchUpdate("DROP ALL OBJECTS");
     }
 
-    @OverwriteProp(key = "kylin.metadata.url", value = "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=")
+    @OverwriteProp(key = "kylin.metadata.url", value = "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=")
     @Test
     public void testAuditLogOutOfOrder() throws Exception {
         val listener = new StatusListener();

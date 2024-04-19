@@ -21,10 +21,7 @@ package org.apache.kylin.newten;
 
 import java.sql.SQLException;
 
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -37,16 +34,10 @@ public class SupportTypeAnyTest extends NLocalWithSparkSessionTest {
     @Before
     public void setup() {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
     }
 
     @After
     public void after() {
-        NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
     }
 

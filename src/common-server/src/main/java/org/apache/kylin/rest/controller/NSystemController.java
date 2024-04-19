@@ -22,7 +22,6 @@ import static org.apache.kylin.common.constant.Constants.METADATA_FILE;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 import static org.apache.kylin.common.exception.KylinException.CODE_SUCCESS;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.TIME_INVALID_RANGE_NOT_CONSISTENT;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,39 +36,23 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.lock.DeadLockInfo;
-import org.apache.kylin.common.persistence.transaction.EpochCheckBroadcastNotifier;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
-import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.helper.MetadataToolHelper;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.ProjectInstance;
-import org.apache.kylin.rest.cluster.ClusterManager;
-import org.apache.kylin.rest.request.DiagPackageRequest;
-import org.apache.kylin.rest.request.DiagProgressRequest;
-import org.apache.kylin.rest.request.MaintenanceModeRequest;
 import org.apache.kylin.rest.request.MetadataBackupRequest;
-import org.apache.kylin.rest.request.QueryDiagPackageRequest;
-import org.apache.kylin.rest.response.DiagStatusResponse;
 import org.apache.kylin.rest.response.EnvelopeResponse;
-import org.apache.kylin.rest.response.MaintenanceModeResponse;
-import org.apache.kylin.rest.response.ServerExtInfoResponse;
-import org.apache.kylin.rest.response.ServerInfoResponse;
-import org.apache.kylin.rest.response.ServersResponse;
 import org.apache.kylin.rest.service.ArthasService;
 import org.apache.kylin.rest.service.FileService;
-import org.apache.kylin.rest.service.MaintenanceModeService;
-import org.apache.kylin.rest.service.MetadataBackupService;
 import org.apache.kylin.rest.service.ProjectService;
+import org.apache.kylin.rest.service.ScheduleService;
 import org.apache.kylin.rest.service.SystemService;
 import org.apache.kylin.rest.util.AclEvaluate;
-import org.apache.kylin.tool.HDFSMetadataTool;
 import org.apache.kylin.tool.util.ToolUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -98,17 +81,10 @@ public class NSystemController extends NBasicController {
     private SystemService systemService;
 
     @Autowired
-    @Qualifier("maintenanceModeService")
-    private MaintenanceModeService maintenanceModeService;
-
-    @Autowired
-    private ClusterManager clusterManager;
-
-    @Autowired
     private AclEvaluate aclEvaluate;
 
     @Autowired
-    private MetadataBackupService metadataBackupService;
+    private ScheduleService scheduleService;
 
     @Autowired
     @Qualifier("projectService")
@@ -116,8 +92,6 @@ public class NSystemController extends NBasicController {
 
     @Autowired
     private ArthasService arthasService;
-
-    private MetadataToolHelper metadataToolHelper = new MetadataToolHelper();
 
     @Autowired
     private FileService fileService;
@@ -132,71 +106,6 @@ public class NSystemController extends NBasicController {
         return this.aclEvaluate;
     }
 
-    @ApiOperation(value = "dump ke inner metadata responding to system kylinconfig")
-    @GetMapping(value = "/metadata/dump")
-    @ResponseBody
-    public EnvelopeResponse<String> dumpMetadata(@RequestParam(value = "dump_path") String dumpPath) throws Exception {
-        val kylinConfig = KylinConfig.getInstanceFromEnv();
-        HDFSMetadataTool.cleanBeforeBackup(kylinConfig);
-        val backupConfig = kylinConfig.getMetadataBackupFromSystem() ? kylinConfig
-                : KylinConfig.createKylinConfig(kylinConfig);
-        metadataToolHelper.backup(backupConfig, null, dumpPath, null, true, false);
-        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
-    }
-
-    @ApiOperation(value = "diag", tags = { "SM" })
-    @PostMapping(value = "/diag")
-    @ResponseBody
-    public EnvelopeResponse<String> getRemoteDumpDiagPackage(
-            @RequestParam(value = "host", required = false) String host,
-            @RequestBody DiagPackageRequest diagPackageRequest, final HttpServletRequest request) throws Exception {
-        host = decodeHost(host);
-        if (StringUtils.isNotBlank(diagPackageRequest.getJobId())) {
-            diagPackageRequest.setStart("");
-            diagPackageRequest.setEnd("");
-        } else {
-            if (StringUtils.isBlank(diagPackageRequest.getStart())
-                    || StringUtils.isBlank(diagPackageRequest.getEnd())) {
-                throw new KylinException(TIME_INVALID_RANGE_NOT_CONSISTENT);
-            }
-        }
-        validateDataRange(diagPackageRequest.getStart(), diagPackageRequest.getEnd());
-        if (StringUtils.isEmpty(host)) {
-            String uuid = systemService.dumpLocalDiagPackage(diagPackageRequest.getStart(), diagPackageRequest.getEnd(),
-                    diagPackageRequest.getJobId(), diagPackageRequest.getProject());
-            return new EnvelopeResponse<>(CODE_SUCCESS, uuid, "");
-        } else {
-            String url = host + "/kylin/api/system/diag";
-            return generateTaskForRemoteHost(request, url);
-        }
-    }
-
-    @ApiOperation(value = "queryDiag", tags = { "QE" })
-    @PostMapping(value = "/diag/query")
-    @ResponseBody
-    public EnvelopeResponse<String> getRemoteDumpQueryDiagPackage(
-            @RequestParam(value = "host", required = false) String host,
-            @RequestBody QueryDiagPackageRequest queryDiagPackageRequest, final HttpServletRequest request)
-            throws Exception {
-        host = decodeHost(host);
-        if (StringUtils.isEmpty(host)) {
-            String uuid = systemService.dumpLocalQueryDiagPackage(queryDiagPackageRequest.getQueryId(),
-                    queryDiagPackageRequest.getProject());
-            return new EnvelopeResponse<>(CODE_SUCCESS, uuid, "");
-        } else {
-            String url = host + "/kylin/api/system/diag/query";
-            return generateTaskForRemoteHost(request, url);
-        }
-    }
-
-    @ApiOperation(value = "diagProgress", tags = { "SM" })
-    @PutMapping(value = "/diag/progress")
-    @ResponseBody
-    public EnvelopeResponse<String> updateDiagProgress(@RequestBody DiagProgressRequest diagProgressRequest) {
-        systemService.updateDiagProgress(diagProgressRequest);
-        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
-    }
-
     @PutMapping(value = "/roll_event_log")
     @ResponseBody
     public EnvelopeResponse<String> rollEventLog() {
@@ -204,101 +113,6 @@ public class NSystemController extends NBasicController {
             return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
         }
         return new EnvelopeResponse<>(KylinException.CODE_UNDEFINED, "", "Rollup sparder eventLog failed.");
-    }
-
-    @ApiOperation(value = "diagStatus", tags = { "SM" })
-    @GetMapping(value = "/diag/status")
-    @ResponseBody
-    public EnvelopeResponse<DiagStatusResponse> getRemotePackageStatus(
-            @RequestParam(value = "host", required = false) String host, @RequestParam(value = "id") String id,
-            @RequestParam(value = "project", required = false) String project, final HttpServletRequest request)
-            throws Exception {
-        host = decodeHost(host);
-        if (StringUtils.isEmpty(host)) {
-            return systemService.getExtractorStatus(id, project);
-        } else {
-            String url = host + "/kylin/api/system/diag/status?id=" + id;
-            if (StringUtils.isNotEmpty(project)) {
-                url = url + "&project=" + project;
-            }
-            return generateTaskForRemoteHost(request, url);
-        }
-    }
-
-    @ApiOperation(value = "diagDownload", tags = { "SM" })
-    @GetMapping(value = "/diag")
-    @ResponseBody
-    public void remoteDownloadPackage(@RequestParam(value = "host", required = false) String host,
-            @RequestParam(value = "id") String id, @RequestParam(value = "project", required = false) String project,
-            final HttpServletRequest request, final HttpServletResponse response) throws IOException {
-        host = decodeHost(host);
-        if (StringUtils.isEmpty(host)) {
-            setDownloadResponse(systemService.getDiagPackagePath(id, project), MediaType.APPLICATION_OCTET_STREAM_VALUE,
-                    response);
-        } else {
-            String url = host + "/kylin/api/system/diag?id=" + id;
-            if (StringUtils.isNotEmpty(project)) {
-                url = url + "&project=" + project;
-            }
-            downloadFromRemoteHost(request, url, response);
-        }
-    }
-
-    @ApiOperation(value = "cancelDiag", tags = { "SM" })
-    @DeleteMapping(value = "/diag")
-    @ResponseBody
-    public EnvelopeResponse<String> remoteStopPackage(@RequestParam(value = "host", required = false) String host,
-            @RequestParam(value = "id") String id, final HttpServletRequest request) throws Exception {
-        host = decodeHost(host);
-        if (StringUtils.isEmpty(host)) {
-            systemService.stopDiagTask(id);
-            return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
-        } else {
-            String url = host + "/kylin/api/system/diag?id=" + id;
-            return generateTaskForRemoteHost(request, url);
-        }
-    }
-
-    @ApiOperation(value = "enterMaintenance", tags = { "DW" })
-    @PostMapping(value = "/maintenance_mode", produces = { HTTP_VND_APACHE_KYLIN_JSON })
-    @ResponseBody
-    public EnvelopeResponse<String> setMaintenanceMode(@RequestBody MaintenanceModeRequest maintenanceModeRequest) {
-        maintenanceModeService.setMaintenanceMode(maintenanceModeRequest.getReason());
-        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
-    }
-
-    @ApiOperation(value = "exitMaintenance", tags = { "DW" })
-    @DeleteMapping(value = "/maintenance_mode", produces = { HTTP_VND_APACHE_KYLIN_JSON })
-    @ResponseBody
-    public EnvelopeResponse<String> unsetReadMode(@RequestParam(value = "reason") String reason) {
-        maintenanceModeService.unsetMaintenanceMode(reason);
-        EventBusFactory.getInstance().postAsync(new EpochCheckBroadcastNotifier());
-        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
-    }
-
-    @ApiOperation(value = "getMaintenance", tags = { "DW" })
-    @GetMapping(value = "/maintenance_mode", produces = { HTTP_VND_APACHE_KYLIN_JSON })
-    @ResponseBody
-    public EnvelopeResponse<MaintenanceModeResponse> getMaintenanceMode() {
-        return new EnvelopeResponse<>(CODE_SUCCESS, maintenanceModeService.getMaintenanceMode(), "");
-    }
-
-    @ApiOperation(value = "servers", tags = { "DW" })
-    @GetMapping(value = "/servers")
-    @ResponseBody
-    public EnvelopeResponse<ServersResponse> getServers(
-            @RequestParam(value = "ext", required = false, defaultValue = "false") boolean ext) {
-        val response = new ServersResponse();
-        val servers = clusterManager.getServers();
-        response.setStatus(maintenanceModeService.getMaintenanceMode());
-        if (ext) {
-            response.setServers(servers.stream().map(
-                    server -> new ServerExtInfoResponse().setServer(server).setSecretName(encodeHost(server.getHost())))
-                    .collect(Collectors.toList()));
-        } else {
-            response.setServers(servers.stream().map(ServerInfoResponse::getHost).collect(Collectors.toList()));
-        }
-        return new EnvelopeResponse<>(CODE_SUCCESS, response, "");
     }
 
     @ApiOperation(value = "host", tags = { "DW" })
@@ -334,6 +148,14 @@ public class NSystemController extends NBasicController {
         return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
     }
 
+    @ApiOperation(value = "cleanup garbage", tags = { "MID" })
+    @PostMapping(value = "/do_cleanup_garbage")
+    @ResponseBody
+    public EnvelopeResponse<String> doCleanupGarbage(final HttpServletRequest request) throws Exception {
+        scheduleService.routineTask();
+        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
+    }
+
     @PostMapping(value = "/transaction/simulation/insert_meta")
     @ResponseBody
     public EnvelopeResponse<String> simulateInsertMeta(
@@ -355,12 +177,11 @@ public class NSystemController extends NBasicController {
 
             log.debug("insert_meta begin to create project");
 
-            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(UnitOfWorkParams.<Map> builder()
+            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(UnitOfWorkParams.<Map>builder()
                     .unitName(UnitOfWork.GLOBAL_UNIT).sleepMills(TimeUnit.SECONDS.toMillis(sleepSec)).processor(() -> {
                         projectList.forEach(p -> projectService.createProject(p, new ProjectInstance()));
                         return null;
                     }).build());
-
         }
         return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
     }

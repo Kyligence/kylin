@@ -409,10 +409,9 @@ class FilePruner(val session: SparkSession,
 
   private def pruneSegmentsDimRange(filters: Seq[Expression],
                                     segDirs: Seq[SegmentDirectory]): Seq[SegmentDirectory] = {
+    val reducedFilters = translateToSourceFilter(filters)
     val hitColumns = Sets.newHashSet[String]()
     val project = options.getOrElse("project", "")
-    val reducedFilters = translateToSourceFilter(filters)
-
     val filteredStatuses = if (reducedFilters.isEmpty) {
       segDirs
     } else {
@@ -531,6 +530,8 @@ class FilePruner(val session: SparkSession,
       case expressions.Or(left, right) =>
         getExpressionShards(left, shardColumnName, numShards) |
           getExpressionShards(right, shardColumnName, numShards)
+      case attr: expressions.AttributeReference =>
+        getShardSetFromValue(attr, true)
       case _ =>
         val matchedShards = new BitSet(numShards)
         matchedShards.setUntil(numShards)

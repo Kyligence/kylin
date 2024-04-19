@@ -106,10 +106,11 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.guava30.shaded.common.primitives.Longs;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.junit.rule.TransactionExceptedException;
 import org.apache.kylin.metadata.acl.AclTCR;
 import org.apache.kylin.metadata.acl.AclTCRManager;
@@ -219,10 +220,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import io.kyligence.kap.clickhouse.MockSecondStorage;
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
-import io.kyligence.kap.secondstorage.config.Node;
-import io.kyligence.kap.secondstorage.metadata.NodeGroup;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;
@@ -266,8 +264,8 @@ public class ModelServiceTest extends SourceTestCase {
     protected IUserGroupService userGroupService = Mockito.spy(NUserGroupService.class);
 
     private final ModelBrokenListener modelBrokenListener = new ModelBrokenListener();
+    private StreamingJobListener eventListener = new StreamingJobListener();
 
-    private final StreamingJobListener eventListener = new StreamingJobListener();
 
     protected String getProject() {
         return "default";
@@ -309,6 +307,9 @@ public class ModelServiceTest extends SourceTestCase {
         }
         EventBusFactory.getInstance().register(eventListener, true);
         EventBusFactory.getInstance().register(modelBrokenListener, false);
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobInfoDao(getTestConfig());
     }
 
     @After
@@ -318,6 +319,7 @@ public class ModelServiceTest extends SourceTestCase {
         EventBusFactory.getInstance().unregister(modelBrokenListener);
         EventBusFactory.getInstance().restart();
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -1522,9 +1524,10 @@ public class ModelServiceTest extends SourceTestCase {
 
     @Test
     public void testGetRelatedModels_HasNoErrorJobs() {
-        NExecutableManager executableManager = mock(NExecutableManager.class);
-        when(modelService.getManager(NExecutableManager.class, "default")).thenReturn(executableManager);
-        when(executableManager.getExecutablesByStatus(ExecutableState.ERROR)).thenReturn(Lists.newArrayList());
+        ExecutableManager executableManager = mock(ExecutableManager.class);
+        when(modelService.getManager(ExecutableManager.class, "default")).thenReturn(executableManager);
+        when(executableManager.getExecutablePOsByStatus(Lists.newArrayList(ExecutableState.ERROR)))
+                .thenReturn(Lists.newArrayList());
         List<RelatedModelResponse> responses = modelService.getRelateModels("default", "DEFAULT.TEST_KYLIN_FACT",
                 "nmodel_basic");
         Assert.assertEquals(2, responses.size());
@@ -4445,7 +4448,7 @@ public class ModelServiceTest extends SourceTestCase {
         val modelMgr = NDataModelManager.getInstance(getTestConfig(), "default");
         modelMgr.updateDataModel(modelId, model -> model.setManagementType(ManagementType.MODEL_BASED));
         modelService.updatePartitionColumn(project, modelId, null, null);
-        val runningExecutables = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
+        val runningExecutables = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
                 .getRunningExecutables(project, modelId);
         Assert.assertEquals(0, runningExecutables.size());
     }
@@ -4979,46 +4982,6 @@ public class ModelServiceTest extends SourceTestCase {
         okModelRequest.setProject(project);
         semanticService.updateModelColumns(okModel, okModelRequest);
         Assert.assertEquals("SUM_L", okModel.getAllMeasures().get(1).getName());
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    public void testListNodesByProject() throws IOException {
-        val project = "default";
-        MockSecondStorage.mock(project, new ArrayList<>(), this);
-        val nodeGroupManagerOption = SecondStorageUtil.nodeGroupManager(KylinConfig.getInstanceFromEnv(), project);
-
-        Assert.assertTrue(nodeGroupManagerOption.isPresent());
-        val nodeGroupManager = nodeGroupManagerOption.get();
-
-        NodeGroup nodeGroup1 = new NodeGroup();
-        nodeGroup1.setNodeNames(Lists.newArrayList("node01", "node02"));
-        NodeGroup nodeGroup2 = new NodeGroup();
-        nodeGroup2.setNodeNames(Lists.newArrayList("node01"));
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            nodeGroupManager.createAS(nodeGroup1);
-            return null;
-        }, project);
-
-        val mockNodeMap = (Map<String, Node>) (ReflectionTestUtils.getField(SecondStorageNodeHelper.class, "NODE_MAP"));
-        mockNodeMap.put("node01", new Node().setName("node01").setIp("127.0.0.1").setPort(9000));
-        mockNodeMap.put("node02", new Node().setName("node02").setIp("127.0.0.2").setPort(9000));
-        mockNodeMap.put("node03", new Node().setName("node03").setIp("127.0.0.3").setPort(9000));
-
-        Assert.assertEquals(2, SecondStorageNodeHelper.getALlNodesInProject(project).size());
-        Assert.assertEquals(3, SecondStorageNodeHelper.getALlNodes().size());
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    public void testAllListNodes() throws IOException {
-        MockSecondStorage.mock("default", new ArrayList<>(), this);
-
-        val mockNodeMap = (Map<String, Node>) (ReflectionTestUtils.getField(SecondStorageNodeHelper.class, "NODE_MAP"));
-        mockNodeMap.put("node01", new Node().setName("node01").setIp("127.0.0.1").setPort(9000));
-        mockNodeMap.put("node02", new Node().setName("node02").setIp("127.0.0.2").setPort(9000));
-        mockNodeMap.put("node03", new Node().setName("node03").setIp("127.0.0.3").setPort(9000));
-        Assert.assertEquals(3, SecondStorageNodeHelper.getALlNodes().size());
     }
 
     @Test

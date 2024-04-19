@@ -33,7 +33,6 @@ import org.apache.kylin.common.exception.QueryErrorCode;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.query.KylinTestBase;
@@ -63,7 +62,6 @@ public class NBadQueryAndPushDownTest extends NLocalWithSparkSessionTest {
 
     @After
     public void teardown() {
-        NDefaultScheduler.destroyInstance();
         super.cleanupTestMetadata();
     }
 
@@ -100,7 +98,7 @@ public class NBadQueryAndPushDownTest extends NLocalWithSparkSessionTest {
             Assert.fail();
         } catch (Exception e) {
             Assert.assertTrue(e instanceof AnalysisException);
-            Assert.assertTrue(e.getMessage().contains("cannot resolve 'NEST4' given input columns"));
+            Assert.assertTrue(e.getMessage().contains("Column 'NEST4' does not exist"));
         }
     }
 

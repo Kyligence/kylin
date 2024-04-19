@@ -18,6 +18,7 @@
 
 package io.kyligence.kap.metadata.recommendation.util;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -25,20 +26,23 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
-import io.kyligence.kap.metadata.recommendation.entity.CCRecItemV2;
-import io.kyligence.kap.metadata.recommendation.entity.LayoutRecItemV2;
-import io.kyligence.kap.metadata.recommendation.entity.MeasureRecItemV2;
+import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.model.ColumnDesc;
+import org.apache.kylin.metadata.model.ComputedColumnDesc;
+import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.ParameterDesc;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.metadata.cube.model.LayoutEntity;
-import org.apache.kylin.metadata.model.ComputedColumnDesc;
-import org.apache.kylin.metadata.model.NDataModel;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
+import org.springframework.util.DigestUtils;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
+import io.kyligence.kap.metadata.recommendation.entity.CCRecItemV2;
+import io.kyligence.kap.metadata.recommendation.entity.LayoutRecItemV2;
+import io.kyligence.kap.metadata.recommendation.entity.MeasureRecItemV2;
 
 public class RawRecUtil {
 
@@ -116,5 +120,55 @@ public class RawRecUtil {
 
     public static LayoutEntity getLayout(RawRecItem rawRecItem) {
         return getLayoutRecItemV2(rawRecItem).getLayout();
+    }
+
+    public static String getContent(RawRecItem recItem) {
+        return getContent(recItem.getProject(), recItem.getModelID(), recItem.getRecEntity().getUniqueContent(),
+                recItem.getType());
+    }
+
+    public static String getContent(String project, String model, String uniqueContent, RawRecItem.RawRecType type) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(project).append(',');
+        sb.append(model).append(',');
+        sb.append(uniqueContent).append(',');
+        sb.append(type);
+        return sb.toString();
+    }
+
+    public static String computeMD5(String content) {
+        return DigestUtils.md5DigestAsHex(content.getBytes());
+    }
+
+    public static Map<String, List<String>> uniqueFlagsToMd5Map(Set<String> uniqueFlags) {
+        Map<String, List<String>> md5ToFlags = Maps.newHashMap();
+        uniqueFlags.forEach(uniqueFlag -> {
+            if (uniqueFlag != null) {
+                String md5 = uniqueFlag.substring(0, 32);
+                List<String> flags = md5ToFlags.getOrDefault(md5, new ArrayList<>());
+                flags.add(uniqueFlag);
+                md5ToFlags.put(md5, flags);
+            }
+        });
+        return md5ToFlags;
+    }
+
+    public static Pair<String, RawRecItem> getRawRecItemFromMap(String md5, String content,
+                                                                Map<String, List<String>> md5ToFlags, Map<String, RawRecItem> layoutRecommendations) {
+        List<String> flags = md5ToFlags.getOrDefault(md5, new ArrayList<>());
+        int maxItemId = 0;
+        for (String flag : flags) {
+            RawRecItem item = layoutRecommendations.get(flag);
+            if (RawRecUtil.getContent(item).equals(content)) {
+                return Pair.newPair(flag, item);
+            }
+            maxItemId = Math.max(item.getId(), maxItemId);
+        }
+        if (!flags.contains(md5)) {
+            return Pair.newPair(md5, null);
+        } else {
+            String uniqueFlag = String.format("%s_%d", md5, maxItemId);
+            return Pair.newPair(uniqueFlag, null);
+        }
     }
 }

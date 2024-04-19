@@ -111,7 +111,7 @@ public class StreamingScheduler {
     public synchronized void init() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
 
-        if (!config.isJobNode()) {
+        if (!config.isJobNode() && !config.isDataLoadingNode()) {
             log.info("server mode: {}, no need to run job scheduler", config.getServerMode());
             return;
         }

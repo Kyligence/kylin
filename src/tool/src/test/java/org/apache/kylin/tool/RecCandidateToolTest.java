@@ -37,10 +37,10 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.OptionBuilder;
+import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.metadata.project.NProjectManager;
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
@@ -105,19 +105,19 @@ public class RecCandidateToolTest extends NLocalFileMetadataTestCase {
         RawRecItem recItem1 = new RawRecItem("gc_test", "6381db2-802f-4a25-98f0-bfe021c304ed", 1,
                 RawRecItem.RawRecType.COMPUTED_COLUMN);
         recItem1.setState(RawRecItem.RawRecState.INITIAL);
-        recItem1.setUniqueFlag("innerExp");
+        recItem1.setUniqueFlag("innerExp1");
         recItem1.setRecEntity(ccRecItemV2);
         recItem1.setDependIDs(new int[] { 0 });
         RawRecItem recItem2 = new RawRecItem("gc_test", "6381db2-802f-4a25-98f0-bfe021c304ed", 1,
                 RawRecItem.RawRecType.COMPUTED_COLUMN);
         recItem2.setState(RawRecItem.RawRecState.INITIAL);
-        recItem2.setUniqueFlag("innerExp");
+        recItem2.setUniqueFlag("innerExp2");
         recItem2.setRecEntity(ccRecItemV2);
         recItem2.setDependIDs(new int[] { 0 });
         RawRecItem recItem3 = new RawRecItem("gc_test", "6381db2-802f-4a25-98f0-bfe021c304ed", 1,
                 RawRecItem.RawRecType.COMPUTED_COLUMN);
         recItem3.setState(RawRecItem.RawRecState.INITIAL);
-        recItem3.setUniqueFlag("innerExp");
+        recItem3.setUniqueFlag("innerExp3");
         recItem3.setRecEntity(ccRecItemV2);
         recItem3.setDependIDs(new int[] { 0 });
         recItem1.setProject("gc_test");

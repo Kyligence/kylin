@@ -96,7 +96,7 @@ public class ClickHouseRefresh extends ClickHouseLoad {
                     tableData.removePartitions(p -> oldSegmentIds.contains(p.getSegmentId()))
             ));
             return null;
-        }, project, 1, getEpochId());
+        }, project, 1);
     }
 
     @Override
@@ -122,7 +122,7 @@ public class ClickHouseRefresh extends ClickHouseLoad {
             }
 
             return null;
-        }, project, 1, getEpochId());
+        }, project, 1);
     }
 
     private TableFlow getTableFlow() {
@@ -178,6 +178,6 @@ public class ClickHouseRefresh extends ClickHouseLoad {
 
             markDFStatus(mc.getDataflowId());
             return null;
-        }, project, 1, getEpochId());
+        }, project, 1);
     }
 }

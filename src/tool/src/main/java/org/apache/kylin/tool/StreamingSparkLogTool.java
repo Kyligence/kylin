@@ -43,11 +43,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.HadoopUtil;
-import org.apache.kylin.common.util.OptionsHelper;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.common.util.OptionBuilder;
+import org.apache.kylin.common.util.OptionsHelper;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.streaming.manager.StreamingJobManager;
 import org.apache.kylin.streaming.metadata.StreamingJobMeta;
 
@@ -181,7 +181,7 @@ public class StreamingSparkLogTool extends ExecutableApplication {
 
         // streaming job driver log in hdfs directory
         String outputStoreDirPath = kylinConfig.getStreamingJobTmpOutputStorePath(project, jobId);
-        NExecutableManager executableManager = NExecutableManager.getInstance(kylinConfig, project);
+        ExecutableManager executableManager = ExecutableManager.getInstance(kylinConfig, project);
         FileSystem fs = HadoopUtil.getWorkingFileSystem();
 
         if (!executableManager.isHdfsPathExists(outputStoreDirPath)) {
@@ -322,7 +322,7 @@ public class StreamingSparkLogTool extends ExecutableApplication {
         String hdfsStreamLogRootPath = kylinConfig.getHdfsWorkingDirectoryWithoutScheme();
         String hdfsStreamJobCheckPointPath = String.format(Locale.ROOT, "%s%s%s", hdfsStreamLogRootPath,
                 "streaming/checkpoint/", modelId);
-        NExecutableManager executableManager = NExecutableManager.getInstance(kylinConfig, project);
+        ExecutableManager executableManager = ExecutableManager.getInstance(kylinConfig, project);
         FileSystem fs = HadoopUtil.getWorkingFileSystem();
 
         if (!executableManager.isHdfsPathExists(hdfsStreamJobCheckPointPath)) {
@@ -368,7 +368,7 @@ public class StreamingSparkLogTool extends ExecutableApplication {
         String hdfsStreamLogRootPath = kylinConfig.getHdfsWorkingDirectoryWithoutScheme();
         String hdfsStreamLogProjectPath = String.format(Locale.ROOT, "%s%s%s", hdfsStreamLogRootPath,
                 "streaming/spark_logs/", project);
-        NExecutableManager executableManager = NExecutableManager.getInstance(kylinConfig, project);
+        ExecutableManager executableManager = ExecutableManager.getInstance(kylinConfig, project);
         FileSystem fs = HadoopUtil.getWorkingFileSystem();
 
         if (!executableManager.isHdfsPathExists(hdfsStreamLogProjectPath)) {

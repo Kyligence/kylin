@@ -18,35 +18,42 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+import java.util.Set;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.engine.spark.ExecutableUtils;
-import org.apache.kylin.engine.spark.job.JobStepType;
-import org.apache.kylin.engine.spark.job.NSparkExecutable;
 import org.apache.kylin.engine.spark.stats.utils.HiveTableRefChecker;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.constant.ExecutableConstants;
-import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.execution.DefaultExecutableOnTable;
-import org.apache.kylin.job.execution.ExecutableContext;
+import org.apache.kylin.job.execution.ExecutableHandler;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.job.execution.MergerInfo;
+import org.apache.kylin.job.execution.NSparkExecutable;
+import org.apache.kylin.job.execution.step.JobStepType;
+import org.apache.kylin.job.factory.JobFactory;
+import org.apache.kylin.job.factory.JobFactoryConstant;
+import org.apache.kylin.job.handler.TableSamplingJobHandler;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.rest.feign.MetadataInvoker;
 
-import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class NTableSamplingJob extends DefaultExecutableOnTable {
+
+    static {
+        JobFactory.register(JobFactoryConstant.TABLE_SAMPLING_JOB_FACTORY, new NTableSamplingJob.TableSamplingJobFactory());
+    }
     public NTableSamplingJob() {
         super();
     }
@@ -55,18 +62,23 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
         super(notSetId);
     }
 
-    public static NTableSamplingJob create(TableDesc tableDesc, String project, String submitter, int rows) {
-        return create(tableDesc, project, submitter, rows, ExecutablePO.DEFAULT_PRIORITY, null, null);
+    public static NTableSamplingJob create(TableSamplingJobHandler.TableSamplingJobBuildParam param) {
+        NTableMetadataManager tblMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                param.getProject());
+        TableDesc tableDesc = tblMgr.getTableDesc(param.getTable());
+        return internalCreate(tableDesc, param.getProject(), param.getSubmitter(), param.getRow(), param.getJobId());
     }
 
-    public static NTableSamplingJob create(TableDesc tableDesc, String project, String submitter, int rows,
-                                           int priority, String yarnQueue, Object tag) {
+    public static NTableSamplingJob internalCreate(TableDesc tableDesc, String project, String submitter, int rows) {
+        return internalCreate(tableDesc, project, submitter, rows, RandomUtil.randomUUIDStr());
+    }
+    public static NTableSamplingJob internalCreate(TableDesc tableDesc, String project, String submitter, int rows, String jobId) {
         Preconditions.checkArgument(tableDesc != null, //
                 "Create table sampling job failed for table not exist!");
 
         log.info("start creating a table sampling job on table {}", tableDesc.getIdentity());
         NTableSamplingJob job = new NTableSamplingJob();
-        job.setId(RandomUtil.randomUUIDStr());
+        job.setId(jobId);
         job.setName(JobTypeEnum.TABLE_SAMPLING.toString());
         job.setProject(project);
         job.setJobType(JobTypeEnum.TABLE_SAMPLING);
@@ -77,9 +89,6 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
         job.setParam(NBatchConstants.P_JOB_ID, job.getId());
         job.setParam(NBatchConstants.P_TABLE_NAME, tableDesc.getIdentity());
         job.setParam(NBatchConstants.P_SAMPLING_ROWS, String.valueOf(rows));
-        job.setPriority(priority);
-        job.setSparkYarnQueueIfEnabled(project, yarnQueue);
-        job.setTag(tag);
 
         KylinConfig globalConfig = KylinConfig.getInstanceFromEnv();
         KylinConfig config = NProjectManager.getInstance(globalConfig).getProject(project).getConfig();
@@ -131,6 +140,7 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
             super(notSetId);
         }
 
+
         // Ensure metadata compatibility
         public SamplingStep(String sparkSubmitClassName) {
             this.setSparkSubmitClassName(sparkSubmitClassName);
@@ -142,37 +152,20 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
         }
 
         @Override
-        public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+        protected ExecuteResult doWork(JobContext context) throws ExecuteException {
             ExecuteResult result = super.doWork(context);
             if (!result.succeed()) {
                 return result;
             }
-            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                if (checkSuicide()) {
-                    log.info(
-                            "This Table Sampling job seems meaningless now, quit before mergeRemoteMetaAfterSampling()");
-                    return null;
-                }
-                mergeRemoteMetaAfterSampling();
+            if (checkSuicide()) {
+                log.info(
+                        "This Table Sampling job seems meaningless now, quit before mergeRemoteMetaAfterSampling()");
                 return null;
-            }, getProject());
-            return result;
-        }
-
-        private void mergeRemoteMetaAfterSampling() {
-            try (val remoteStore = ExecutableUtils.getRemoteStore(KylinConfig.getInstanceFromEnv(), this)) {
-                val remoteTblMgr = NTableMetadataManager.getInstance(remoteStore.getConfig(), getProject());
-                val localTblMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
-                localTblMgr.mergeAndUpdateTableExt(localTblMgr.getOrCreateTableExt(getTableIdentity()),
-                        remoteTblMgr.getOrCreateTableExt(getTableIdentity()));
-
-                // use create time of sampling job to update the create time of TableExtDesc
-                final TableDesc tableDesc = localTblMgr.getTableDesc(getTableIdentity());
-                final TableExtDesc tableExt = localTblMgr.getTableExtIfExists(tableDesc);
-                TableExtDesc copyForWrite = localTblMgr.copyForWrite(tableExt);
-                copyForWrite.setCreateTime(this.getCreateTime());
-                localTblMgr.saveTableExt(copyForWrite);
             }
+            MergerInfo mergerInfo = new MergerInfo(project, ExecutableHandler.HandlerType.SAMPLING);
+            mergerInfo.addTaskMergeInfo(this);
+            MetadataInvoker.getInstance().mergeMetadataForSamplingOrSnapshot(project, mergerInfo);
+            return result;
         }
 
         @Override
@@ -199,4 +192,15 @@ public class NTableSamplingJob extends DefaultExecutableOnTable {
         }
     }
 
+
+    public static class TableSamplingJobFactory extends JobFactory {
+
+        protected TableSamplingJobFactory() {
+        }
+
+        @Override
+        protected NTableSamplingJob create(JobBuildParams jobBuildParams) {
+            return NTableSamplingJob.create((TableSamplingJobHandler.TableSamplingJobBuildParam) jobBuildParams);
+        }
+    }
 }

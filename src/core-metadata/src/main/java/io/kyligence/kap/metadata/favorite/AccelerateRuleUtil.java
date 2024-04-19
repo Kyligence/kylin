@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
 
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.annotation.Clarification;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.metadata.query.QueryHistory;
@@ -100,13 +99,13 @@ public class AccelerateRuleUtil {
     }
 
     public boolean matchCustomerRule(QueryHistory queryHistory, String project, Map<String, Set<String>> submitterToGroups) {
-        var submitterRule = FavoriteRuleManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
+        var submitterRule = FavoriteRuleManager.getInstance(project)
                 .getOrDefaultByName(FavoriteRule.SUBMITTER_RULE_NAME);
         boolean submitterMatch = matchRule(queryHistory, submitterRule,
                 (queryHistory1, conditions) -> conditions.stream().anyMatch(cond -> queryHistory1.getQuerySubmitter()
                         .equals(((FavoriteRule.Condition) cond).getRightThreshold())));
 
-        var groupRule = FavoriteRuleManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
+        var groupRule = FavoriteRuleManager.getInstance(project)
                 .getOrDefaultByName(FavoriteRule.SUBMITTER_GROUP_RULE_NAME);
 
         boolean userGroupMatch = matchRule(queryHistory, groupRule,
@@ -115,7 +114,7 @@ public class AccelerateRuleUtil {
                                 .computeIfAbsent(queryHistory1.getQuerySubmitter(), key -> new HashSet<>())
                                 .contains(((FavoriteRule.Condition) cond).getRightThreshold())));
 
-        var durationRule = FavoriteRuleManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
+        var durationRule = FavoriteRuleManager.getInstance(project)
                 .getOrDefaultByName(FavoriteRule.DURATION_RULE_NAME);
 
         boolean durationMatch = matchRule(queryHistory, durationRule,

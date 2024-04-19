@@ -18,8 +18,9 @@
 
 package org.apache.kylin.engine.spark.application;
 
-import static org.apache.kylin.engine.spark.job.StageType.WAITE_FOR_RESOURCE;
 import static org.apache.kylin.engine.spark.utils.SparkConfHelper.COUNT_DISTICT;
+import static org.apache.kylin.job.execution.NSparkExecutable.JOB_LAST_RUNNING_START_TIME;
+import static org.apache.kylin.job.execution.stage.StageType.WAITE_FOR_RESOURCE;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -76,7 +77,9 @@ import org.apache.kylin.engine.spark.utils.HDFSUtils;
 import org.apache.kylin.engine.spark.utils.JobMetricsUtils;
 import org.apache.kylin.engine.spark.utils.SparkConfHelper;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -103,6 +106,7 @@ import org.apache.spark.sql.execution.datasource.AlignmentTableStats;
 import org.apache.spark.sql.hive.HiveStorageRule;
 import org.apache.spark.sql.hive.utils.ResourceDetectUtils;
 import org.apache.spark.util.Utils;
+import org.apache.spark.utils.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,6 +129,7 @@ public abstract class SparkApplication implements Application {
     protected String project;
     protected int layoutSize = -1;
     protected BuildJobInfos infos;
+
     protected ConcurrentHashMap<String, Boolean> skipFollowingStagesMap = new ConcurrentHashMap<>();
     /**
      * path for spark app args on HDFS
@@ -252,6 +257,10 @@ public abstract class SparkApplication implements Application {
         String applicationId = sparkSession.sparkContext().applicationId();
         Map<String, String> extraInfo = new HashMap<>();
         extraInfo.put("yarn_app_id", applicationId);
+        val conf = sparkSession.sparkContext().conf();
+        extraInfo.put(ExecutableConstants.QUEUE_NAME, ResourceUtils.getQueueName(conf));
+        extraInfo.put(ExecutableConstants.CORES, "" + ResourceUtils.getAllCores(conf, config));
+        extraInfo.put(ExecutableConstants.MEMORY, "" + ResourceUtils.getAllMemory(conf, config));
         try {
             String trackingUrl = getTrackingUrl(clusterManager, sparkSession);
             if (StringUtils.isBlank(trackingUrl)) {
@@ -315,11 +324,10 @@ public abstract class SparkApplication implements Application {
                         .newInstance(config.getBuildJobEnviromentAdaptor());
                 adaptor.prepareEnviroment(ss, params);
             }
-
-            if (config.useDynamicS3RoleCredentialInTable()) {
+            if (KylinConfig.getInstanceFromEnv().useDynamicRoleCredentialInTable()) {
                 val tableMetadataManager = NTableMetadataManager.getInstance(config, project);
-                tableMetadataManager.listAllTables().forEach(tableDesc -> SparderEnv.addS3Credential(
-                        tableMetadataManager.getOrCreateTableExt(tableDesc).getS3RoleCredentialInfo(), ss));
+                tableMetadataManager.listAllTables().forEach(tableDesc -> SparderEnv.addCredential(
+                        tableMetadataManager.getOrCreateTableExt(tableDesc).getRoleCredentialInfo(), ss));
             }
 
             if (!config.isUTEnv()) {
@@ -533,6 +541,7 @@ public abstract class SparkApplication implements Application {
             Map<String, String> extraInfo = new HashMap<>();
             extraInfo.put("yarn_job_wait_time", ((Long) KylinBuildEnv.get().buildJobInfos().waitTime()).toString());
             extraInfo.put("yarn_job_run_time", ((Long) KylinBuildEnv.get().buildJobInfos().buildTime()).toString());
+            extraInfo.put("job_last_running_start_time", getParam(JOB_LAST_RUNNING_START_TIME));
 
             getReport().updateSparkJobExtraInfo(getReportParams(), "/kylin/api/jobs/wait_and_run_time", project, jobId,
                     extraInfo);
@@ -559,6 +568,7 @@ public abstract class SparkApplication implements Application {
         payload.put("failed_segment_id", failedSegmentId);
         payload.put("failed_stack", failedStack);
         payload.put("failed_reason", failedReason);
+        payload.put("job_last_running_start_time", getParam(NSparkExecutable.JOB_LAST_RUNNING_START_TIME));
         val json = JsonUtil.writeValueAsString(payload);
         val paramsMap = new HashMap<String, String>();
         paramsMap.put(ParamsConstants.TIME_OUT, String.valueOf(config.getUpdateJobInfoTimeout()));
@@ -663,9 +673,10 @@ public abstract class SparkApplication implements Application {
         }
 
         sparkSession = createSpark(sparkConf);
-        if (!config.isUTEnv() && !sparkConf.get("spark.master").startsWith("k8s")) {
-            getReport().updateSparkJobExtraInfo(getReportParams(), "/kylin/api/jobs/spark", project, jobId,
-                    getTrackingInfo(sparkSession, config.isTrackingUrlIpAddressEnabled()));
+        if (!config.isUTEnv()) {
+            Map<String, String> extraInfo = getTrackingInfo(sparkSession, config.isTrackingUrlIpAddressEnabled());
+            extraInfo.put("job_last_running_start_time", getParam(JOB_LAST_RUNNING_START_TIME));
+            getReport().updateSparkJobExtraInfo(getReportParams(), "/kylin/api/jobs/spark", project, jobId, extraInfo);
         }
 
         // for spark metrics

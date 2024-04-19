@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.engine.spark.job.BuildJobInfos;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
 import org.apache.kylin.engine.spark.job.MockJobProgressReport;
@@ -62,7 +62,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.val;
 
-public class SparkApplicationTest extends NLocalWithSparkSessionTest {
+public class SparkApplicationTest extends NLocalWithSparkSessionTestBase {
+
 
     File tempDir = new File("./temp/");
     File file1 = new File(tempDir, "temp1_" + ResourceDetectUtils.fileName());
@@ -284,8 +285,8 @@ public class SparkApplicationTest extends NLocalWithSparkSessionTest {
         paramsMap.put(ParamsConstants.TIME_OUT, String.valueOf(config.getUpdateJobInfoTimeout()));
         paramsMap.put(ParamsConstants.JOB_TMP_DIR, config.getJobTmpDir(project, true));
 
-        val json = "{\"project\":\"test_project\",\"failed_segment_id\":\"segment_id\",\"failed_stack\":\"test stack "
-                + "trace\",\"job_id\":\"job_id\",\"failed_reason\":\"test job failed\",\"failed_step_id\":\"stage_id\"}";
+        val json = "{\"job_last_running_start_time\":null,\"job_id\":\"job_id\",\"project\":\"test_project\",\"failed_segment_id\":\"segment_id\",\"failed_stack\":\"test stack "
+                + "trace\",\"failed_reason\":\"test job failed\",\"failed_step_id\":\"stage_id\"}";
 
         Mockito.verify(application.getReport(), Mockito.times(1)).updateSparkJobInfo(paramsMap, "/kylin/api/jobs/error",
                 json);

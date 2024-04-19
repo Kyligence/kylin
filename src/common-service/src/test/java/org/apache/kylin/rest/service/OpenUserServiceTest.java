@@ -56,6 +56,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -69,6 +70,8 @@ import lombok.val;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = ServiceTestBase.SpringConfig.class)
 @WebAppConfiguration(value = "src/main/resources")
+@TestPropertySource(properties = {"spring.cloud.nacos.discovery.enabled = false"})
+@TestPropertySource(properties = {"spring.session.store-type = NONE"})
 @ActiveProfiles({ "custom", "test" })
 public class OpenUserServiceTest extends NLocalFileMetadataTestCase {
 

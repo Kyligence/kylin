@@ -35,8 +35,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
@@ -44,6 +44,10 @@ import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.StringHelper;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.ISourceAware;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
@@ -76,10 +80,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import lombok.experimental.Delegate;
 
 @Component("tableExtService")
 public class TableExtService extends BasicService {
@@ -96,6 +97,21 @@ public class TableExtService extends BasicService {
     @Autowired
     private AclEvaluate aclEvaluate;
 
+    @Delegate
+    private final TableMetadataBaseService tableMetadataBaseServer = new TableMetadataBaseService();
+
+    @Autowired
+    private ProjectService projectService;
+
+    /**
+     * Load a group of  tables
+     *
+     * @return an array of table name sets:
+     * [0] : tables that loaded successfully
+     * [1] : tables that didn't load due to running sample job todo
+     * [2] : tables that didn't load due to other error
+     * @throws Exception if reading hive metadata error
+     */
     public LoadTableResponse loadTablesWithShortCircuit(TableLoadRequest request) throws Exception {
         String project = request.getProject();
         aclEvaluate.checkProjectWritePermission(project);
@@ -319,7 +335,7 @@ public class TableExtService extends BasicService {
         return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             NTableMetadataManager innerTableMetadataManager = getManager(NTableMetadataManager.class,
                     request.getProject());
-            Set<TableExtDesc.S3RoleCredentialInfo> broadcasttedS3Conf = new HashSet<>();
+            Set<TableExtDesc.RoleCredentialInfo> broadcasttedConf = new HashSet<>();
             for (String identity : identityList) {
                 TableDesc tableDesc = innerTableMetadataManager.getTableDesc(identity);
                 TableExtDesc extDesc = innerTableMetadataManager.getTableExtIfExists(tableDesc);
@@ -331,9 +347,9 @@ public class TableExtService extends BasicService {
                     copyExt.addDataSourceProp(TableExtDesc.S3_ROLE_PROPERTY_KEY, s3TableExtInfo.getRoleArn());
                     copyExt.addDataSourceProp(TableExtDesc.S3_ENDPOINT_KEY, s3TableExtInfo.getEndpoint());
                     innerTableMetadataManager.saveTableExt(copyExt);
-                    if (!broadcasttedS3Conf.contains(copyExt.getS3RoleCredentialInfo())) {
-                        tableService.addAndBroadcastSparkSession(copyExt.getS3RoleCredentialInfo());
-                        broadcasttedS3Conf.add(copyExt.getS3RoleCredentialInfo());
+                    if (!broadcasttedConf.contains(copyExt.getRoleCredentialInfo())) {
+                        tableService.addAndBroadcastSparkSession(copyExt.getRoleCredentialInfo());
+                        broadcasttedConf.add(copyExt.getRoleCredentialInfo());
 
                     }
                     response.getSucceed().add(identity);
@@ -462,6 +478,33 @@ public class TableExtService extends BasicService {
             throw new KylinException(INVALID_TABLE_NAME,
                     String.format(Locale.ROOT, MsgPicker.getMsg().getSameTableNameExist(), tableDesc.getIdentity()));
         }
+    }
+
+    public List<String> getTableNamesByFuzzyKey(String project, String fuzzyKey, boolean exact) {
+        if (StringUtils.isNotEmpty(project)) {
+            NTableMetadataManager nTableMetadataManager = getManager(NTableMetadataManager.class, project);
+            return matchTableNames(nTableMetadataManager, fuzzyKey, exact);
+        }
+        List<String> tableNames = new ArrayList<>();
+        // query from all projects
+        List<ProjectInstance> projectInstances = projectService.getReadableProjects(null, false);
+        for (ProjectInstance projectInstance : projectInstances) {
+            NTableMetadataManager nTableMetadataManager = getManager(NTableMetadataManager.class, projectInstance.getName());
+            tableNames.addAll(matchTableNames(nTableMetadataManager, fuzzyKey, exact));
+        }
+        return tableNames;
+    }
+
+    private List<String> matchTableNames(NTableMetadataManager nTableMetadataManager, String fuzzyKey, boolean exact) {
+        if (!exact) {
+            return nTableMetadataManager.getTableNamesByFuzzyKey(fuzzyKey);
+        }
+        List<String> tableIdentities = Lists.newArrayList();
+        TableDesc tableDesc = nTableMetadataManager.getTableDesc(fuzzyKey);
+        if (null != tableDesc) {
+            tableIdentities.add(tableDesc.getIdentity());
+        }
+        return tableIdentities;
     }
 
     public List<ExcludedTableResponse> getExcludedTables(String project, boolean viewPartialCols, String tablePattern) {

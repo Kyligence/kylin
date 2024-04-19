@@ -20,6 +20,7 @@ package org.apache.kylin.job.execution;
 
 import static org.awaitility.Awaitility.await;
 
+import org.apache.kylin.job.JobContext;
 import org.awaitility.Duration;
 
 public class FailedDagTestExecutable extends AbstractExecutable {
@@ -34,7 +35,7 @@ public class FailedDagTestExecutable extends AbstractExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) {
+    public ExecuteResult doWork(JobContext context) {
         await().pollDelay(Duration.ONE_SECOND).until(() -> true);
         return ExecuteResult.createError(new MockJobException());
     }

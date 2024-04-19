@@ -149,10 +149,11 @@ public class ModelBrokenListener {
                 } else if (model.getManagementType() == ManagementType.TABLE_ORIENTED) {
                     dataflowManager.fillDf(dataflow);
                 }
-                val jobManager = JobManager.getInstance(config, project);
+                final JobParam jobParam = new JobParam(model.getId(), "ADMIN");
+                jobParam.setProject(project);
                 val sourceUsageManager = SourceUsageManager.getInstance(config);
                 sourceUsageManager.licenseCheckWrap(project,
-                        () -> jobManager.addIndexJob(new JobParam(model.getId(), "ADMIN")));
+                        () -> JobManager.getInstance(config, project).addIndexJob(jobParam));
             }
             model.setHandledAfterBroken(false);
             modelManager.updateDataBrokenModelDesc(model);

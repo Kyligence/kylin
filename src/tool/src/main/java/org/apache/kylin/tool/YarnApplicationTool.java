@@ -18,24 +18,32 @@
 
 package org.apache.kylin.tool;
 
+import static org.apache.kylin.job.constant.ExecutableConstants.YARN_APP_IDS;
+import static org.apache.kylin.job.constant.ExecutableConstants.YARN_APP_IDS_DELIMITER;
+
 import java.io.File;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.ExecutableApplication;
+import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.ShellException;
+import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ChainedExecutable;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.common.util.OptionBuilder;
-import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,14 +98,22 @@ public class YarnApplicationTool extends ExecutableApplication {
         final String dir = optionsHelper.getOptionValue(OPTION_DIR);
         val jobId = optionsHelper.getOptionValue(OPTION_JOB);
         val project = optionsHelper.getOptionValue(OPTION_PROJECT);
-        AbstractExecutable job = NExecutableManager.getInstance(kylinConfig, project).getJob(jobId);
+        AbstractExecutable job = ExecutableManager.getInstance(kylinConfig, project).getJob(jobId);
         if (job instanceof ChainedExecutable) {
             FileUtils.writeLines(new File(dir), extract(project, jobId));
         }
     }
 
-    private Set<String> extract(String project, String jobId) {
-        return NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getYarnApplicationJobs(jobId);
+    public Set<String> extract(String project, String jobId) {
+        ExecutablePO executablePO = JobContextUtil.getJobInfoDao(kylinConfig).getExecutablePOByUuid(jobId);
+        if (null != executablePO) {
+            String appIds = executablePO.getOutput().getInfo().getOrDefault(YARN_APP_IDS, "");
+            return StringUtils.isEmpty(appIds) ? new TreeSet<>()
+                    : new TreeSet<>(Arrays.asList(appIds.split(YARN_APP_IDS_DELIMITER)));
+        } else {
+            throw new IllegalArgumentException(
+                    String.format("Job id {%s} found executable list size not equals 1.", jobId));
+        }
     }
 
     public void extractYarnLogs(File exportDir, String project, String jobId) {
@@ -105,7 +121,7 @@ public class YarnApplicationTool extends ExecutableApplication {
             File yarnLogsDir = new File(exportDir, "yarn_application_log");
             FileUtils.forceMkdir(yarnLogsDir);
 
-            AbstractExecutable job = NExecutableManager.getInstance(kylinConfig, project).getJob(jobId);
+            AbstractExecutable job = ExecutableManager.getInstance(kylinConfig, project).getJob(jobId);
             if (!(job instanceof ChainedExecutable)) {
                 logger.warn("job type is not ChainedExecutable!");
                 return;

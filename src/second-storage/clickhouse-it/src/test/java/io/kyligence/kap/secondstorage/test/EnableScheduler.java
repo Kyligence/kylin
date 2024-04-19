@@ -17,10 +17,8 @@
  */
 package io.kyligence.kap.secondstorage.test;
 
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 
 public class EnableScheduler extends EnableLocalMeta {
 
@@ -31,19 +29,17 @@ public class EnableScheduler extends EnableLocalMeta {
     @Override
     protected void before() throws Throwable {
         super.before();
+
         SparkJobFactoryUtils.initJobFactory();
-        overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     @Override
     protected void after() {
-        NDefaultScheduler.destroyInstance();
         super.after();
+        JobContextUtil.cleanUp();
     }
 
 }

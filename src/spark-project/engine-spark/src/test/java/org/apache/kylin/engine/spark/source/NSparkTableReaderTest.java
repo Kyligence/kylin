@@ -19,11 +19,11 @@ package org.apache.kylin.engine.spark.source;
 
 import java.util.Arrays;
 
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class NSparkTableReaderTest extends NLocalWithSparkSessionTest {
+public class NSparkTableReaderTest extends NLocalWithSparkSessionTestBase {
 
     @Test
     public void testReadData() throws Exception {

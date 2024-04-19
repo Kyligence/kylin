@@ -25,10 +25,9 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.engine.spark.merger.AfterMergeOrRefreshResourceMerger;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -38,6 +37,7 @@ import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
+import org.apache.kylin.rest.service.merger.AfterMergeOrRefreshResourceMerger;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparderEnv;
@@ -72,14 +72,14 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
 
     private KylinConfig config;
     private NDataflowManager dsMgr;
-    private NExecutableManager execMgr;
+    private ExecutableManager execMgr;
 
     @Before
     public void init() throws Exception {
         super.init();
         config = KylinConfig.getInstanceFromEnv();
         dsMgr = NDataflowManager.getInstance(config, getProject());
-        execMgr = NExecutableManager.getInstance(config, getProject());
+        execMgr = ExecutableManager.getInstance(config, getProject());
         NIndexPlanManager ipMgr = NIndexPlanManager.getInstance(config, getProject());
         String cubeId = dsMgr.getDataflow(DF_NAME1).getIndexPlan().getUuid();
         IndexPlan cube = ipMgr.getIndexPlan(cubeId);
@@ -93,9 +93,9 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
     }
 
     @After
-    public void cleanup() {
-        NDefaultScheduler.destroyInstance();
+    public void cleanup() throws Exception {
         super.cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test

@@ -48,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -196,6 +197,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     protected IUserGroupService userGroupService = Mockito.spy(NUserGroupService.class);
 
     @Mock
+
     protected UserAclService userAclService = Mockito.spy(UserAclService.class);
 
     @Mock
@@ -291,7 +293,6 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
                 .thenThrow(new RuntimeException("shouldn't execute executeQuery"));
         Mockito.doThrow(new RuntimeException("shouldn't execute searchCache")).when(queryService)
                 .searchCache(Mockito.any(), Mockito.any());
-
         Mockito.doAnswer(x -> queryExec).when(queryService).newQueryExec(project);
         Mockito.when(queryService.newQueryExec(project)).thenReturn(queryExec);
         Mockito.doAnswer(x -> queryExec).when(queryService).newQueryExec(project, null);
@@ -916,7 +917,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             nDataflowUpdate.setStatus(RealizationStatusEnum.OFFLINE);
             dataflowManager.updateDataflow(nDataflowUpdate);
 
-            Thread.sleep(1000);
+            await().atLeast(1000, TimeUnit.MILLISECONDS);
 
             final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", null);
 
@@ -943,7 +944,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             nDataflowUpdate.setStatus(RealizationStatusEnum.ONLINE);
             dataflowManager.updateDataflow(nDataflowUpdate);
 
-            Thread.sleep(1000);
+            await().atLeast(1000, TimeUnit.MILLISECONDS);
 
             //check the default project
             final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", null);
@@ -1006,7 +1007,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             nDataflowUpdate.setStatus(RealizationStatusEnum.OFFLINE);
             dataflowManager.updateDataflow(nDataflowUpdate);
 
-            Thread.sleep(1000);
+            await().atLeast(1000, TimeUnit.MILLISECONDS);
 
             final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", "nmodel_basic_inner");
 
@@ -1032,7 +1033,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             nDataflowUpdate.setStatus(RealizationStatusEnum.ONLINE);
             dataflowManager.updateDataflow(nDataflowUpdate);
 
-            Thread.sleep(1000);
+            await().atLeast(1000, TimeUnit.MILLISECONDS);
 
             //check the default project
             final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", "nmodel_basic_inner");
@@ -1227,8 +1228,9 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         try {
             queryService.saveQuery("admin", "default", query);
         } catch (Exception ex) {
-            Assert.assertEquals(KylinException.class, ex.getClass());
-            Assert.assertEquals("Query named \"test\" already exists. Please check and try again.", ex.getMessage());
+            Assert.assertEquals(KylinException.class, ex.getCause().getClass());
+            Assert.assertEquals("Query named \"test\" already exists. Please check and try again.",
+                    ex.getCause().getMessage());
         }
 
         queryRecord = queryService.getSavedQueries("admin", "default");
@@ -1683,7 +1685,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
                 .filter(t -> t.getTABLE_NAME().equalsIgnoreCase("TEST_ACCOUNT")).findFirst().get();
         ColumnMeta columnToCheck = tableToCheck.getColumns().stream()
                 .filter(c -> c.getCOLUMN_NAME().equalsIgnoreCase("ACCOUNT_ID")).findFirst().get();
-        Assert.assertEquals(columnToCheck.getCOLUMN_NAME(), "account_id");
+        Assert.assertEquals("account_id", columnToCheck.getCOLUMN_NAME());
     }
 
     @Test
@@ -1693,7 +1695,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
                 .filter(t -> t.getTABLE_NAME().equalsIgnoreCase("TEST_ACCOUNT")).findFirst().get();
         ColumnMeta columnToCheck = tableToCheck.getColumns().stream()
                 .filter(c -> c.getCOLUMN_NAME().equalsIgnoreCase("ACCOUNT_ID")).findFirst().get();
-        Assert.assertEquals(columnToCheck.getCOLUMN_NAME(), "ACCOUNT_ID");
+        Assert.assertEquals("ACCOUNT_ID", columnToCheck.getCOLUMN_NAME());
     }
 
     @Test
@@ -1705,7 +1707,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
                 .filter(t -> t.getTABLE_NAME().equalsIgnoreCase("TEST_ACCOUNT")).findFirst().get();
         ColumnMeta columnToCheck = tableToCheck.getColumns().stream()
                 .filter(c -> c.getCOLUMN_NAME().equalsIgnoreCase("ACCOUNT_ID")).findFirst().get();
-        Assert.assertEquals(columnToCheck.getCOLUMN_NAME(), "account_id");
+        Assert.assertEquals("account_id", columnToCheck.getCOLUMN_NAME());
     }
 
     @Test
@@ -1715,7 +1717,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
                 .filter(t -> t.getTABLE_NAME().equalsIgnoreCase("TEST_ACCOUNT")).findFirst().get();
         ColumnMeta columnToCheck = tableToCheck.getColumns().stream()
                 .filter(c -> c.getCOLUMN_NAME().equalsIgnoreCase("ACCOUNT_ID")).findFirst().get();
-        Assert.assertEquals(columnToCheck.getCOLUMN_NAME(), "ACCOUNT_ID");
+        Assert.assertEquals("ACCOUNT_ID", columnToCheck.getCOLUMN_NAME());
     }
 
     @Test
@@ -2303,7 +2305,6 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         sqlBlacklistItem.setId("1");
         sqlBlacklistItem.setSql("select count(*) from test_kylin_fact");
         sqlBlacklistManager.addSqlBlacklistItem(project, sqlBlacklistItem);
-
         sqlResponse = spiedQueryService.doQueryWithCache(request);
         Assert.assertTrue(sqlResponse.isException());
         Assert.assertEquals("Query is rejected by blacklist, blacklist item id: 1.", sqlResponse.getExceptionMessage());
@@ -3000,25 +3001,6 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             boolean isQueryCacheEnabled = (boolean) method.invoke(queryService, kylinConfig);
 
             Assert.assertFalse(isQueryCacheEnabled);
-        }
-    }
-
-    @Test
-    public void testNotHitCacheWhenIsAsyncQuery() {
-        try (QueryContext queryContext = QueryContext.current()) {
-            queryContext.getQueryTagInfo().setAsyncQuery(true);
-            String project = "default";
-            String sql = "select * from table";
-            SQLRequest sqlRequest = new SQLRequest();
-            sqlRequest.setProject(project);
-            sqlRequest.setSql(sql);
-
-            queryService.doQueryWithCache(sqlRequest);
-
-            // async query API can not search cache
-            Assert.assertFalse(queryContext.getQueryTagInfo().isStorageCacheUsed());
-            Assert.assertFalse(queryContext.getQueryTagInfo().isHitExceptionCache());
-            Assert.assertTrue(queryContext.getQueryTagInfo().isAsyncQuery());
         }
     }
 }

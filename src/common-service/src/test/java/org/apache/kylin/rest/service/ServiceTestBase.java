@@ -45,6 +45,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 
@@ -53,7 +54,9 @@ import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = ServiceTestBase.SpringConfig.class)
-@WebAppConfiguration(value = "../common-service/src/main/resources")
+@WebAppConfiguration(value = "../common-service/src/test/resources")
+@TestPropertySource(properties = {"spring.cloud.nacos.discovery.enabled = false"})
+@TestPropertySource(properties = {"spring.session.store-type = NONE"})
 @ActiveProfiles({ "testing", "test" })
 @PowerMockIgnore({ "org.w3c.*", "javax.xml.*", "org.xml.*", "org.apache.*", "org.w3c.dom.*", "org.apache.cxf.*" })
 public class ServiceTestBase extends NLocalFileMetadataTestCase {

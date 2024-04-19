@@ -20,14 +20,18 @@ package io.kyligence.kap.metadata.favorite;
 
 import java.util.Map;
 
+import org.apache.kylin.metadata.asynctask.AbstractAsyncTask;
 import org.apache.kylin.common.annotation.Clarification;
+import org.apache.kylin.common.util.JsonUtil;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.Delegate;
 
 @Getter
 @Setter
@@ -35,20 +39,44 @@ import lombok.Setter;
 @EqualsAndHashCode
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Enterprise")
 public class AsyncAccelerationTask extends AbstractAsyncTask {
-    @JsonProperty("already_running")
-    private boolean alreadyRunning;
 
-    @JsonProperty("user_refreshed_Tag")
-    private Map<String, Boolean> userRefreshedTagMap;
-
-    //record last task time in RecommendationTopNUpdateScheduler
-    @JsonProperty("last_update_topn_time")
-    private long lastUpdateTonNTime;
+    @Delegate
+    private AccelerationTaskAttributes taskAttributesDelegate;
 
     public AsyncAccelerationTask(boolean alreadyRunning, Map<String, Boolean> userRefreshedTagMap, String taskType) {
         super(taskType);
-        this.alreadyRunning = alreadyRunning;
-        this.userRefreshedTagMap = userRefreshedTagMap;
-        this.setTaskType(taskType);
+        this.setTaskAttributes(new AccelerationTaskAttributes(alreadyRunning, userRefreshedTagMap));
+    }
+
+    public static AsyncAccelerationTask copyFromAbstractTask(AbstractAsyncTask task) {
+        return JsonUtil.convert(task, AsyncAccelerationTask.class);
+    }
+
+    @Override
+    public void setTaskAttributes(TaskAttributes taskAttributes) {
+        this.taskAttributes = taskAttributes;
+        this.taskAttributesDelegate = (AccelerationTaskAttributes) taskAttributes;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AccelerationTaskAttributes extends TaskAttributes {
+
+        public AccelerationTaskAttributes(boolean alreadyRunning, Map<String, Boolean> userRefreshedTagMap) {
+            this.alreadyRunning = alreadyRunning;
+            this.userRefreshedTagMap = userRefreshedTagMap;
+        }
+
+        @JsonProperty("already_running")
+        private boolean alreadyRunning;
+
+        @JsonProperty("user_refreshed_Tag")
+        private Map<String, Boolean> userRefreshedTagMap;
+
+        //record last task time in RecommendationTopNUpdateScheduler
+        @JsonProperty("last_update_topn_time")
+        private long lastUpdateTonNTime;
     }
 }

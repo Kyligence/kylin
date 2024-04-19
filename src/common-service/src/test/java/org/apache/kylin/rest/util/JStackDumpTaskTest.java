@@ -22,6 +22,11 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.kylin.common.util.AddressUtil;
+import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.junit.After;
 import org.junit.Assert;
@@ -46,11 +51,26 @@ public class JStackDumpTaskTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testExecute() throws IOException {
+        getTestConfig().setProperty("kylin.task.upload-jstack-dump-enabled", "true");
+        getTestConfig().setProperty("kylin.task.jstack-dump-log-files-max-count", "1");
+
         File mainDir = new File(temporaryFolder.getRoot(), "JStackDumpTask");
         FileUtils.forceMkdir(mainDir);
 
         JStackDumpTask task = new JStackDumpTask(mainDir);
         task.run();
         Assert.assertTrue(Arrays.stream(mainDir.listFiles()).anyMatch(x -> x.getName().contains("jstack.timed.log")));
+
+        Path logsOnWorkingDir = new Path(getTestConfig().getHdfsWorkingDirectory(),
+                "_logs/" + AddressUtil.getHostName());
+        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        FileStatus[] fileStatuses = fs.listStatus(logsOnWorkingDir);
+        Assert.assertEquals(1, fileStatuses.length);
+        Assert.assertTrue(fileStatuses[0].getPath().getName().contains("jstack.timed.log"));
+        task.run();
+        FileStatus[] fileStatuses2 = fs.listStatus(logsOnWorkingDir);
+        Assert.assertEquals(1, fileStatuses2.length);
+        Assert.assertTrue(fileStatuses2[0].getPath().getName().contains("jstack.timed.log"));
+        Assert.assertNotEquals(fileStatuses[0].getPath().getName(), fileStatuses2[0].getPath().getName());
     }
 }

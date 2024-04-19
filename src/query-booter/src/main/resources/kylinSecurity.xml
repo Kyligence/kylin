@@ -708,6 +708,7 @@
     </beans>
 
     <beans profile="custom">
+
         <scr:authentication-manager alias="customAuthManager" erase-credentials="false">
             <scr:authentication-provider ref="customAuthProvider"/>
         </scr:authentication-manager>

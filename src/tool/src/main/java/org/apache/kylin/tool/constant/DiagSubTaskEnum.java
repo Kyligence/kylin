@@ -21,6 +21,10 @@ package org.apache.kylin.tool.constant;
 public enum DiagSubTaskEnum {
     METADATA, //
     REC_CANDIDATE, //
+    JOB_INFO, //
+    FAVORITE_RULE, //
+    ASYNC_TASK, //
+    QUERY_HISTORY_OFFSET, //
     AUDIT_LOG, //
     CLIENT, //
     JSTACK, //
@@ -35,6 +39,7 @@ public enum DiagSubTaskEnum {
     SPARDER_HISTORY, //
     KG_LOGS, //
     LOG, //
+    LOG_ON_WORKING_DIR, //
     JOB_TMP, //
     JOB_EVENTLOGS, //
     YARN, //

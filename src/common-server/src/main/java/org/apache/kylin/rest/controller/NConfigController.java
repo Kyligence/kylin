@@ -20,7 +20,10 @@ package org.apache.kylin.rest.controller;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 
+import java.util.Properties;
+
 import org.apache.kylin.common.KapConfig;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.springframework.stereotype.Controller;
@@ -43,4 +46,11 @@ public class NConfigController extends NBasicController {
                 "");
     }
 
+    @ApiOperation(value = "fetch all", tags = { "MID" })
+    @GetMapping(value = "/all")
+    @ResponseBody
+    public EnvelopeResponse<Properties> fetchAll() {
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
+                KylinConfig.getInstanceFromEnv().exportToProperties(), "");
+    }
 }

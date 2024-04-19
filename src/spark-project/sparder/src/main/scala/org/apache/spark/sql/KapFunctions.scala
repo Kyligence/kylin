@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.expressions.ExpressionUtils.expression
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateFunction
 import org.apache.spark.sql.catalyst.expressions.codegen.Block.BlockHelper
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode}
-import org.apache.spark.sql.catalyst.expressions.{ApproxCountDistinctDecode, CeilDateTime, DictEncode, DictEncodeV3, EmptyRow, Expression, ExpressionInfo, ExpressionUtils, FloorDateTime, ImplicitCastInputTypes, In, KapAddMonths, KapSubtractMonths, Like, Literal, PercentileDecode, PreciseCountDistinctDecode, RLike, RoundBase, SplitPart, Sum0, SumLCDecode, TimestampAdd, TimestampDiff, Truncate}
+import org.apache.spark.sql.catalyst.expressions.{ApproxCountDistinctDecode, CeilDateTime, DictEncode, DictEncodeV3, EmptyRow, Expression, ExpressionInfo, ExpressionUtils, FloorDateTime, ImplicitCastInputTypes, In, KapAddMonths, KapSubtractMonths, KylinTimestampAdd, KylinTimestampDiff, Like, Literal, PercentileDecode, PreciseCountDistinctDecode, RLike, RoundBase, KylinSplitPart, Sum0, Truncate, SumLCDecode}
 import org.apache.spark.sql.types.{ArrayType, BinaryType, ByteType, DataType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType}
 import org.apache.spark.sql.udaf.{ApproxCountDistinct, IntersectCount, Percentile, PreciseBitmapBuildBase64Decode, PreciseBitmapBuildBase64WithIndex, PreciseBitmapBuildPushDown, PreciseCardinality, PreciseCountDistinct, PreciseCountDistinctAndArray, PreciseCountDistinctAndValue, ReusePreciseCountDistinct, ReuseSumLC}
 
@@ -155,7 +155,8 @@ object KapFunctions {
     def this(child: Expression) = this(child, Literal(0))
 
     private lazy val scaleV: Any = scale.eval(EmptyRow)
-    private lazy val _scale: Int = scaleV.asInstanceOf[Int]
+
+    override protected lazy val _scale: Int = scaleV.asInstanceOf[Int]
 
     override lazy val dataType: DataType = child.dataType match {
       // if the new scale is bigger which means we are scaling up,
@@ -256,11 +257,11 @@ object KapFunctions {
   }
 
   val builtin: Seq[FunctionEntity] = Seq(
-    FunctionEntity(expression[TimestampAdd]("TIMESTAMPADD")),
-    FunctionEntity(expression[TimestampDiff]("TIMESTAMPDIFF")),
+    FunctionEntity(expression[KylinTimestampAdd]("TIMESTAMPADD")),
+    FunctionEntity(expression[KylinTimestampDiff]("TIMESTAMPDIFF")),
     FunctionEntity(expression[Truncate]("TRUNCATE")),
     FunctionEntity(expression[DictEncode]("DICTENCODE")),
-    FunctionEntity(expression[SplitPart]("split_part")),
+    FunctionEntity(expression[KylinSplitPart]("split_part")),
     FunctionEntity(expression[FloorDateTime]("floor_datetime")),
     FunctionEntity(expression[CeilDateTime]("ceil_datetime")),
     FunctionEntity(expression[ReusePreciseCountDistinct]("bitmap_or")),

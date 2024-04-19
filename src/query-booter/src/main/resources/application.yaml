@@ -48,7 +48,7 @@ spring:
       max-file-size: "5MB"
       max-request-size: "5MB"
   application:
-    name: yinglong-query-booter
+    name: query
   resources:
     chain:
       gzipped: true
@@ -71,16 +71,19 @@ spring:
   session:
     store-type: JDBC
     jdbc:
-      table-name: ${kylin.metadata.url.identifier}_session
+      table-name: ${kylin.metadata.url.identifier}_session_v2
   config:
     import: optional:file://${KYLIN_HOME}/conf/config.yaml
-  saas:
-    nacos:
+saas:
+  nacos:
+    discovery:
+      group: ${TENANT_ID:default}
       server-addr: ${NACOS_DISCOVERY_SERVER_ADDR:localhost:8848}
-      discovery:
-        group: ${TENANT_ID:default}
-        public-group: ${DISCOVERY_PUBLIC_GROUP:default}
-        application-name: ${spring.application.name}
+      public-group: ${DISCOVERY_PUBLIC_GROUP:default}
+      application:
+        name: ${spring.application.name}
+    config:
+      server-addr: ${NACOS_CONFIG_SERVER_ADDR:localhost:8848}
 
 logging:
   level:

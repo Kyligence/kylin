@@ -87,6 +87,7 @@ public class NKapQueryTest extends KylinTestBase {
     @After
     public void tearDown() throws Exception {
         logger.info("tearDown in NKapQueryTest");
+        SparkSession.builder().config(sparkConf).getOrCreate().stop();
         cleanupTestMetadata();
     }
 

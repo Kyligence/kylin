@@ -39,15 +39,21 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.constant.Constant;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.execution.MergerInfo;
+import org.apache.kylin.metadata.cube.model.IndexPlan;
+import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.exception.LookupTableException;
+import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.rest.constant.ModelAttributeEnum;
 import org.apache.kylin.rest.constant.ModelStatusToDisplayEnum;
 import org.apache.kylin.rest.request.AggShardByColumnsRequest;
 import org.apache.kylin.rest.request.ComputedColumnCheckRequest;
+import org.apache.kylin.rest.request.DataFlowUpdateRequest;
 import org.apache.kylin.rest.request.ModelCheckRequest;
 import org.apache.kylin.rest.request.ModelCloneRequest;
 import org.apache.kylin.rest.request.ModelConfigRequest;
@@ -86,6 +92,8 @@ import org.apache.kylin.tool.bisync.model.SyncModel;
 import org.apache.kylin.util.DataRangeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -105,6 +113,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Controller
+@EnableDiscoveryClient
+@EnableFeignClients
 @RequestMapping(value = "/api/models", produces = { HTTP_VND_APACHE_KYLIN_JSON })
 public class NModelController extends NBasicController {
     public static final String MODEL_ID = "modelId";
@@ -364,7 +374,7 @@ public class NModelController extends NBasicController {
             String json = modelService.getModelJson(modelId, project);
             return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, json, "");
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("can not get model json " + e);
+            throw new KylinRuntimeException("can not get model json " + e);
         }
     }
 
@@ -380,7 +390,7 @@ public class NModelController extends NBasicController {
             String sql = modelService.getModelSql(modelId, project);
             return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, sql, "");
         } catch (Exception e) {
-            throw new RuntimeException("can not get model sql, " + e);
+            throw new KylinRuntimeException("can not get model sql, " + e);
         }
     }
 
@@ -721,4 +731,68 @@ public class NModelController extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
 
+    // feign API for smart module
+
+    @PostMapping(value = "/feign/update_recommendations_count")
+    @ResponseBody
+    public void updateRecommendationsCount(@RequestParam("project") String project,
+                                           @RequestParam("modelId") String modelId, @RequestParam("size") int size) {
+        modelService.updateRecommendationsCount(project, modelId, size);
+    }
+
+    @PostMapping(value = "/feign/update_dataflow")
+    @ResponseBody
+    public void updateDataflow(@RequestBody DataFlowUpdateRequest dataFlowUpdateRequest) {
+        modelService.updateDataflow(dataFlowUpdateRequest);
+    }
+
+    @PostMapping(value = "/feign/update_dataflow_maxBucketId")
+    @ResponseBody
+    public void updateDataflow(@RequestParam("project") String project, @RequestParam("dfId") String dfId,
+            @RequestParam("segmentId") String segmentId, @RequestParam("maxBucketId") long maxBucketIt) {
+        modelService.updateDataflow(project, dfId, segmentId, maxBucketIt);
+    }
+
+    @PostMapping(value = "/feign/update_index_plan")
+    @ResponseBody
+    public void updateIndexPlan(@RequestParam("project") String project, @RequestParam("uuid") String uuid,
+                                @RequestBody IndexPlan indexplan, @RequestParam("action") String action) {
+        modelService.updateIndexPlan(project, uuid, indexplan, action);
+    }
+
+    @PostMapping(value = "/feign/update_dataflow_status")
+    @ResponseBody
+    public void updateDataflowStatus(@RequestParam("project") String project, @RequestParam("uuid") String uuid,
+                                     @RequestParam("status") RealizationStatusEnum status) {
+        modelService.updateDataflowStatus(project, uuid, status);
+    }
+
+    @PostMapping(value = "/feign/merge_metadata")
+    @ResponseBody
+    public List<NDataLayout[]> mergeMetadata(@RequestParam("project") String project,
+            @RequestBody MergerInfo mergerInfo) {
+        return modelService.mergeMetadata(project, mergerInfo);
+    }
+
+    @PostMapping(value = "/feign/make_segment_ready")
+    @ResponseBody
+    public void makeSegmentReady(@RequestParam("project") String project, @RequestParam("modelId") String modelId,
+            @RequestParam("segmentId") String segmentId,
+            @RequestParam("errorOrPausedJobCount") int errorOrPausedJobCount) {
+        modelService.makeSegmentReady(project, modelId, segmentId, errorOrPausedJobCount);
+    }
+
+    @PostMapping(value = "/feign/merge_metadata_for_sampling_or_snapshot")
+    @ResponseBody
+    public void mergeMetadataForSamplingOrSnapshot(@RequestParam("project") String project,
+            @RequestBody MergerInfo mergerInfo) {
+        modelService.mergeMetadataForSamplingOrSnapshot(project, mergerInfo);
+    }
+
+    @PostMapping(value = "/feign/check_and_auto_merge_segments")
+    @ResponseBody
+    public void checkAndAutoMergeSegments(@RequestParam("project") String project, @RequestParam("modelId") String modelId,
+                                          @RequestParam("owner") String owner) {
+        modelService.checkAndAutoMergeSegments(project, modelId, owner);
+    }
 }

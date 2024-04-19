@@ -55,13 +55,16 @@ import org.apache.kylin.common.SegmentOnlineMode;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.NamedThreadFactory;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.exception.JobStoppedException;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.apache.kylin.job.execution.JobSchedulerModeEnum;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
@@ -75,9 +78,6 @@ import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.spark.sql.execution.datasources.jdbc.ShardOptions;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import io.kyligence.kap.secondstorage.NameUtil;
 import io.kyligence.kap.secondstorage.SecondStorage;
@@ -299,7 +299,7 @@ public class ClickHouseLoad extends AbstractExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    public ExecuteResult doWork(JobContext context) throws ExecuteException {
         if (!SecondStorageUtil.isModelEnable(getProject(), getParam(NBatchConstants.P_DATAFLOW_ID))) {
             return ExecuteResult.createSkip();
         }
@@ -549,7 +549,7 @@ public class ClickHouseLoad extends AbstractExecutable {
 
             updateDFSSegmentIfNeeded(mc);
             return null;
-        }, project, 1, getEpochId());
+        }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
     }
 
     protected void updateDFSSegmentIfNeeded(MethodContext mc) {
@@ -595,11 +595,11 @@ public class ClickHouseLoad extends AbstractExecutable {
         Map<String, String> info = new HashMap<>();
         // if save empty，will clean the
         info.put(LoadContext.CLICKHOUSE_LOAD_CONTEXT, saveEmpty ? LoadContext.emptyState() : loadContext.serializeToString());
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            val manager = this.getManager();
+        val manager = this.getManager();
+        JobContextUtil.withTxAndRetry(() -> {
             manager.updateJobOutput(getParentId(), null, info, null, null);
-            return null;
-        }, project, UnitOfWork.DEFAULT_MAX_RETRY, getEpochId(), getTempLockName());
+            return true;
+        });
     }
 
 

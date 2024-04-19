@@ -20,6 +20,7 @@ package io.kyligence.kap.metadata.recommendation.ref;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -74,6 +75,7 @@ public class OptRecV2 {
     private final String project;
 
     private final Map<String, RawRecItem> uniqueFlagToRecItemMap;
+    private final Map<String, RawRecItem> uuidToRecItemMap = new HashMap<>();
     private final BiMap<String, Integer> uniqueFlagToId = HashBiMap.create();
     private final List<Integer> rawIds = Lists.newArrayList();
 
@@ -104,7 +106,11 @@ public class OptRecV2 {
         this.project = project;
 
         uniqueFlagToRecItemMap = RawRecManager.getInstance(project).queryNonLayoutRecItems(Sets.newHashSet(uuid));
-        uniqueFlagToRecItemMap.forEach((k, recItem) -> uniqueFlagToId.put(k, recItem.getId()));
+        uniqueFlagToRecItemMap.forEach((k, recItem) -> {
+                    uniqueFlagToId.put(k, recItem.getId());
+                    uuidToRecItemMap.put(recItem.getRecEntity().getUuid(), recItem);
+                }
+        );
         antiFlatChecker = new AntiFlatChecker(getModel().getJoinTables(), getModel());
         excludedChecker = new ColExcludedChecker(config, project, getModel());
         if (!getModel().isBroken()) {
@@ -250,7 +256,7 @@ public class OptRecV2 {
     }
 
     private List<RawRecItem> queryBestLayoutRecItems() {
-        FavoriteRule favoriteRule = FavoriteRuleManager.getInstance(config, project)
+        FavoriteRule favoriteRule = FavoriteRuleManager.getInstance(project)
                 .getOrDefaultByName(FavoriteRule.REC_SELECT_RULE_NAME);
         int topN = Integer.parseInt(((FavoriteRule.Condition) favoriteRule.getConds().get(0)).getRightThreshold());
         return RawRecSelection.getInstance().selectBestLayout(topN, uuid, project);
@@ -533,7 +539,7 @@ public class OptRecV2 {
             measureRefs.put(negRecItemId, BrokenRefProxy.getProxy(MeasureRef.class, negRecItemId));
             return;
         }
-        int[] newDependIds = recEntity.genDependIds(uniqueFlagToRecItemMap, recEntity.getUniqueContent(), dataModel);
+        int[] newDependIds = recEntity.genDependIds(uuidToRecItemMap, recEntity.getUniqueContent(), dataModel);
         if (!Arrays.equals(newDependIds, rawRecItem.getDependIDs())) {
             logIllegalRawRecItem(rawRecItem, rawRecItem.getDependIDs(), newDependIds);
             measureRefs.put(negRecItemId, BrokenRefProxy.getProxy(MeasureRef.class, negRecItemId));
@@ -607,7 +613,7 @@ public class OptRecV2 {
             measureRefs.put(negRecItemId, BrokenRefProxy.getProxy(MeasureRef.class, negRecItemId));
             return;
         }
-        int[] newDependIds = recEntity.genDependIds(uniqueFlagToRecItemMap, recEntity.getUniqueContent(), dataModel);
+        int[] newDependIds = recEntity.genDependIds(uuidToRecItemMap, recEntity.getUniqueContent(), dataModel);
         if (!Arrays.equals(newDependIds, rawRecItem.getDependIDs())) {
             logIllegalRawRecItem(rawRecItem, rawRecItem.getDependIDs(), newDependIds);
             measureRefs.put(negRecItemId, BrokenRefProxy.getProxy(MeasureRef.class, negRecItemId));

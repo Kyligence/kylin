@@ -51,6 +51,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -83,8 +87,8 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.guava30.shaded.common.primitives.Ints;
 import org.apache.kylin.job.constant.JobStatusEnum;
-import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.cube.storage.ProjectStorageInfoCollector;
 import org.apache.kylin.metadata.cube.storage.StorageInfoEnum;
@@ -96,6 +100,7 @@ import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.rest.aspect.Transaction;
+import org.apache.kylin.rest.cluster.ClusterManager;
 import org.apache.kylin.rest.config.initialize.ProjectDropListener;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.ComputedColumnConfigRequest;
@@ -121,6 +126,7 @@ import org.apache.kylin.rest.response.UserProjectPermissionResponse;
 import org.apache.kylin.rest.security.AclManager;
 import org.apache.kylin.rest.security.AclPermissionEnum;
 import org.apache.kylin.rest.security.KerberosLoginManager;
+import org.apache.kylin.rest.service.task.QueryHistoryMetaUpdateScheduler;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.streaming.manager.StreamingJobManager;
 import org.apache.kylin.tool.garbage.MetadataCleaner;
@@ -128,6 +134,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -175,12 +182,16 @@ public class ProjectService extends BasicService {
     @Autowired(required = false)
     private ProjectSmartServiceSupporter projectSmartService;
 
+    @Autowired(required = false)
+    private ProjectSmartSupporter projectSmartSupporter;
+
     @Autowired
     UserService userService;
 
-    private static final String DEFAULT_VAL = "default";
+    @Autowired
+    private ClusterManager clusterManager;
 
-    private static final String SPARK_YARN_QUEUE = "kylin.engine.spark-conf.spark.yarn.queue";
+    private static final String DEFAULT_VAL = "default";
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN)
     @Transaction(project = -1)
@@ -355,7 +366,7 @@ public class ProjectService extends BasicService {
                     continue;
                 logger.info("Start to cleanup garbage for project<{}>", project.getName());
                 try {
-                    projectSmartService.cleanupGarbage(project.getName(), remainingTime);
+                    updateStatMetaImmediately(project.getName(), remainingTime);
                     boolean needAggressiveOpt = Arrays.stream(config.getProjectsAggressiveOptimizationIndex())
                             .map(StringUtils::lowerCase).collect(Collectors.toList())
                             .contains(StringUtils.toRootLowerCase(project.getName()));
@@ -409,7 +420,7 @@ public class ProjectService extends BasicService {
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")
     public void cleanupGarbage(String project, boolean needAggressiveOpt) throws Exception {
-        projectSmartService.cleanupGarbage(project, 0);
+        updateStatMetaImmediately(project);
         MetadataCleaner.clean(project, needAggressiveOpt);
         asyncTaskService.cleanupStorage();
     }
@@ -480,7 +491,7 @@ public class ProjectService extends BasicService {
     @Transaction(project = 0)
     public void updateYarnQueue(String project, String queueName) {
         Map<String, String> overrideKylinProps = Maps.newHashMap();
-        overrideKylinProps.put(SPARK_YARN_QUEUE, queueName);
+        overrideKylinProps.put(KylinConfig.getInstanceFromEnv().getQueueKey(), queueName);
         updateProjectOverrideKylinProps(project, overrideKylinProps);
     }
 
@@ -607,7 +618,7 @@ public class ProjectService extends BasicService {
 
         response.setLowFrequencyThreshold(config.getLowFrequencyThreshold());
 
-        response.setYarnQueue(config.getOptional(SPARK_YARN_QUEUE, DEFAULT_VAL));
+        response.setYarnQueue(config.getOptional(config.getQueueKey(), DEFAULT_VAL));
 
         response.setExposeComputedColumn(config.exposeComputedColumn());
 
@@ -635,6 +646,8 @@ public class ProjectService extends BasicService {
         response.setJdbcSourceConnectionUrl(config.getJdbcConnectionUrl());
         response.setJdbcSourceEnable(config.getJdbcEnable());
         response.setJdbcSourceDriver(config.getJdbcDriver());
+
+        response.setOverrideKylinProps(projectInstance.getOverrideKylinProps());
 
         if (SecondStorageUtil.isGlobalEnable()) {
             response.setSecondStorageEnabled(SecondStorageUtil.isProjectEnable(project));
@@ -914,22 +927,26 @@ public class ProjectService extends BasicService {
         backupAndDeleteKeytab(projectKerberosInfoRequest.getPrincipal());
     }
 
+    // for UT only
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN)
     @Transaction(project = 0)
     public void dropProject(String project) {
+        dropProject(project, null);
+    }
+
+    @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN)
+    @Transaction(project = 0)
+    public void dropProject(String project, HttpHeaders headers) {
         if (SecondStorageUtil.isProjectEnable(project)) {
             throw new KylinException(PROJECT_DROP_FAILED,
                     String.format(Locale.ROOT, MsgPicker.getMsg().getProjectDropFailedSecondStorageEnabled(), project));
         }
 
-        val kylinConfig = KylinConfig.getInstanceFromEnv();
-        NExecutableManager nExecutableManager = NExecutableManager.getInstance(kylinConfig, project);
-        List<String> jobIds = nExecutableManager.getJobs().stream().map(nExecutableManager::getJob)
-                .filter(Objects::nonNull)
-                .filter(abstractExecutable -> (abstractExecutable.getStatus().toJobStatus() == JobStatusEnum.RUNNING)
-                        || (abstractExecutable.getStatus().toJobStatus() == JobStatusEnum.PENDING)
-                        || (abstractExecutable.getStatus().toJobStatus() == JobStatusEnum.STOPPED))
-                .map(AbstractExecutable::getId).collect(Collectors.toList());
+        ExecutableManager executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        List<String> jobIds = executableManager
+                .getExecutablePOsByStatus(Lists.newArrayList(ExecutableState.RUNNING, ExecutableState.PENDING,
+                        ExecutableState.READY, ExecutableState.PAUSED))
+                .stream().map(executablePO -> executablePO.getId()).collect(Collectors.toList());
         val streamingJobStatusList = Arrays.asList(JobStatusEnum.STARTING, JobStatusEnum.RUNNING,
                 JobStatusEnum.STOPPING);
         val streamingJobList = getManager(StreamingJobManager.class, project).listAllStreamingJobMeta().stream()
@@ -944,7 +961,7 @@ public class ProjectService extends BasicService {
 
         NProjectManager prjManager = getManager(NProjectManager.class);
         prjManager.forceDropProject(project);
-        UnitOfWork.get().doAfterUnit(() -> new ProjectDropListener().onDelete(project));
+        UnitOfWork.get().doAfterUnit(() -> new ProjectDropListener().onDelete(project, clusterManager, headers));
         EventBusFactory.getInstance().postAsync(new SourceUsageUpdateNotifier());
     }
 
@@ -1090,7 +1107,7 @@ public class ProjectService extends BasicService {
     }
 
     private void resetProjectRecommendationConfig(String project) {
-        getManager(FavoriteRuleManager.class, project).resetRule();
+        FavoriteRuleManager.getInstance(project).resetRule();
         NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project).listAllModels()
                 .forEach(model -> projectModelSupporter.onModelUpdate(project, model.getUuid()));
     }
@@ -1215,6 +1232,45 @@ public class ProjectService extends BasicService {
         // Use JDBC Source
         overrideKylinProps.put("kylin.source.default", String.valueOf(ISourceAware.ID_JDBC));
         updateProjectOverrideKylinProps(project, overrideKylinProps);
+    }
+
+    public void updateStatMetaImmediately(String project) {
+        QueryHistoryMetaUpdateScheduler scheduler = QueryHistoryMetaUpdateScheduler.getInstance(project);
+        Future<?> future = scheduler.scheduleImmediately(scheduler.new QueryHistoryMetaUpdateRunner());
+        try {
+            future.get();
+        } catch (InterruptedException e) {
+            logger.error("updateStatMeta failed with interruption", e);
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            logger.error("updateStatMeta failed", e);
+        }
+    }
+
+    public void updateStatMetaImmediately(String project, long remainingTime) {
+        QueryHistoryMetaUpdateScheduler scheduler = QueryHistoryMetaUpdateScheduler.getInstance(project);
+        if (scheduler.hasStarted()) {
+            Future<?> future = scheduler.scheduleImmediately(scheduler.new QueryHistoryMetaUpdateRunner());
+            waitFuture(future, remainingTime, "updateStatMeta");
+        }
+    }
+
+    public void waitFuture(Future<?> future, long remainingTime, String msg) {
+        try {
+            if (remainingTime == 0) {
+                future.get();
+            } else {
+                future.get(remainingTime, TimeUnit.MILLISECONDS);
+            }
+        } catch (InterruptedException e) {
+            logger.error("{} failed with interruption", msg, e);
+            Thread.currentThread().interrupt();
+        } catch (TimeoutException | ExecutionException e) {
+            logger.error("{} failed with exception", msg, e);
+            future.cancel(true);
+        } catch (Exception e) {
+            logger.error("{} failed", msg, e);
+        }
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")

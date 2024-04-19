@@ -85,13 +85,20 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.SecondStorageCleanJobBuildParams;
 import org.apache.kylin.job.SecondStorageJobParamUtil;
+import org.apache.kylin.job.dao.ExecutablePO;
+import org.apache.kylin.job.dao.JobInfoDao;
+import org.apache.kylin.job.domain.JobInfo;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.handler.AbstractJobHandler;
 import org.apache.kylin.job.handler.SecondStorageIndexCleanJobHandler;
 import org.apache.kylin.job.handler.SecondStorageSegmentLoadJobHandler;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.rest.JobMapperFilter;
+import org.apache.kylin.job.service.JobInfoService;
+import org.apache.kylin.job.util.JobContextUtil;
+import org.apache.kylin.job.util.JobInfoUtil;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -152,6 +159,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.awaitility.Duration;
 import org.eclipse.jetty.toolchain.test.SimpleRequest;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -317,6 +325,9 @@ public class SecondStorageLockTest implements JobWaiter {
     @Mock
     private final NAdminController nAdminController = Mockito.spy(new NAdminController());
 
+    @InjectMocks
+    private final JobInfoService jobInfoService = Mockito.spy(new JobInfoService());
+
     @Mock
     private final OpenSecondStorageEndpoint openSecondStorageEndpoint = Mockito.spy(new OpenSecondStorageEndpoint());
 
@@ -374,7 +385,14 @@ public class SecondStorageLockTest implements JobWaiter {
         _httpServer = EmbeddedHttpServer.startServer(getLocalWorkingDirectory());
 
         indexDataConstructor = new IndexDataConstructor(getProject());
+
+        JobInfoDao jobInfoDao = JobContextUtil.getJobInfoDao(KylinConfig.getInstanceFromEnv());
+
+        ReflectionTestUtils.setField(jobInfoService, "jobInfoDao", jobInfoDao);
+        ReflectionTestUtils.setField(jobInfoService, "aclEvaluate", aclEvaluate);
     }
+
+
 
     @Test
     public void testIsAzure() throws URISyntaxException, StorageException {
@@ -472,7 +490,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 await().pollDelay(Duration.FIVE_SECONDS).until(() -> true);
 
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
                             getProject());
                     executableManager.pauseJob(jobId2);
                     return null;
@@ -543,7 +561,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 waitAllJobFinish();
 
                 long layout = updateIndex("LSTG_SITE_ID");
-                val jobs = getNExecutableManager().getAllExecutables().stream().map(AbstractExecutable::getId)
+                val jobs = getExecutableManager().getAllExecutables().stream().map(AbstractExecutable::getId)
                         .collect(Collectors.toSet());
                 modelBuildService.addIndexesToSegments(getProject(), modelId,
                         Collections.singletonList(getDataFlow().getSegments().getFirstSegment().getId()), null, false,
@@ -555,10 +573,10 @@ public class SecondStorageLockTest implements JobWaiter {
                 assertEquals(1, existLayouts.size());
                 assertEquals(layout, existLayouts.get(0).longValue());
 
-                val job = getNExecutableManager().getAllExecutables().stream().filter(e -> !jobs.contains(e.getId()))
+                val job = getExecutableManager().getAllExecutables().stream().filter(e -> !jobs.contains(e.getId()))
                         .findFirst();
                 assertTrue(job.isPresent());
-                assertTrue(NExecutableManager.toPO(job.get(), getProject()).getTasks().stream()
+                assertTrue(ExecutableManager.toPO(job.get(), getProject()).getTasks().stream()
                         .anyMatch(e0 -> SecondStorageConstants.STEP_SECOND_STORAGE_INDEX_CLEAN.equals(e0.getName())));
                 return true;
             });
@@ -587,14 +605,14 @@ public class SecondStorageLockTest implements JobWaiter {
                 String jobId = triggerClickHouseLoadJob(getProject(), modelId, userName,
                         new ArrayList<>(getAllSegmentIds()));
                 waitJobEnd(getProject(), jobId);
-                assertEquals(ExecutableState.ERROR, NExecutableManager
+                assertEquals(ExecutableState.ERROR, ExecutableManager
                         .getInstance(KylinConfig.getInstanceFromEnv(), getProject()).getJob(jobId).getStatus());
                 Optional<JobInfoResponse.JobInfo> jobInfo = secondStorageService
                         .changeModelSecondStorageState(getProject(), modelId, false);
                 jobInfo.ifPresent(job -> waitJobEnd(getProject(), job.getJobId()));
-                NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject()).resumeJob(jobId);
+                ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject()).resumeJob(jobId);
                 waitJobEnd(getProject(), jobId);
-                assertEquals(ExecutableState.SUCCEED, NExecutableManager
+                assertEquals(ExecutableState.SUCCEED, ExecutableManager
                         .getInstance(KylinConfig.getInstanceFromEnv(), getProject()).getJob(jobId).getStatus());
                 return true;
             });
@@ -631,14 +649,14 @@ public class SecondStorageLockTest implements JobWaiter {
                 await().pollDelay(Duration.FIVE_SECONDS).until(() -> true);
 
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
                             getProject());
                     executableManager.pauseJob(jobId1);
                     return null;
                 }, getProject(), 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId1);
                 waitJobEnd(getProject(), jobId1);
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
                             getProject());
                     executableManager.discardJob(jobId1);
                     return null;
@@ -666,6 +684,11 @@ public class SecondStorageLockTest implements JobWaiter {
         }
     }
 
+    @After
+    public void after() {
+        await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
+    }
+
     @Test
     public void testOneNodeIsDownBeforeCommit() throws Exception {
         try (JdbcDatabaseContainer<?> clickhouse1 = ClickHouseUtils.startClickHouse()) {
@@ -683,11 +706,11 @@ public class SecondStorageLockTest implements JobWaiter {
                 secondStorageService.changeModelSecondStorageState(getProject(), modelId, true);
                 setQuerySession(catalog, clickhouse[0].getJdbcUrl(), clickhouse[0].getDriverClassName());
 
-                val jobs = getNExecutableManager().getAllExecutables().stream().map(AbstractExecutable::getId)
+                val jobs = getExecutableManager().getAllExecutables().stream().map(AbstractExecutable::getId)
                         .collect(Collectors.toSet());
                 buildIncrementalLoadQuery("2012-01-01", "2012-01-02");
                 waitAllJobFinish();
-                val buildJob = getNExecutableManager().getAllExecutables().stream()
+                val buildJob = getExecutableManager().getAllExecutables().stream()
                         .filter(j -> !jobs.contains(j.getId())).findAny().get();
                 try {
                     SecondStorageUtil.checkJobResume(getProject(), buildJob.getId());
@@ -702,7 +725,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 await().pollDelay(Duration.FIVE_SECONDS).until(() -> true);
                 clickhouse1.stop();
                 waitJobEnd(getProject(), jobId);
-                assertTrue(getNExecutableManager().getAllExecutables().stream()
+                assertTrue(getExecutableManager().getAllExecutables().stream()
                         .anyMatch(job -> job.getStatus() == ExecutableState.ERROR));
                 return true;
             });
@@ -777,14 +800,14 @@ public class SecondStorageLockTest implements JobWaiter {
                 secondStorageService.changeModelSecondStorageState(getProject(), modelId, true);
                 setQuerySession(catalog, clickhouse1.getJdbcUrl(), clickhouse1.getDriverClassName());
 
-                long jobCnt = getNExecutableManager().getAllExecutables().stream()
+                long jobCnt = getExecutableManager().getAllExecutables().stream()
                         .filter(ClickHouseModelCleanJob.class::isInstance).count();
 
                 ModelRequest request = getChangedModelRequest("TRANS_ID");
                 EnvelopeResponse<BuildBaseIndexResponse> res1 = nModelController.updateSemantic(request);
                 assertEquals("000", res1.getCode());
                 jobCnt++;
-                assertEquals(jobCnt, getNExecutableManager().getAllExecutables().stream()
+                assertEquals(jobCnt, getExecutableManager().getAllExecutables().stream()
                         .filter(ClickHouseModelCleanJob.class::isInstance).count());
 
                 request = getChangedModelRequest("LEAF_CATEG_ID");
@@ -792,7 +815,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 EnvelopeResponse<BuildBaseIndexResponse> res2 = nModelController.updateSemantic(request);
                 assertEquals("000", res2.getCode());
                 jobCnt++;
-                assertEquals(jobCnt, getNExecutableManager().getAllExecutables().stream()
+                assertEquals(jobCnt, getExecutableManager().getAllExecutables().stream()
                         .filter(ClickHouseModelCleanJob.class::isInstance).count());
 
                 return null;
@@ -818,7 +841,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 val partitionDesc = getNDataModel().getPartitionDesc();
                 partitionDesc.setPartitionDateFormat("yyyy-MM-dd");
 
-                long jobCnt = getNExecutableManager().getAllExecutables().stream()
+                long jobCnt = getExecutableManager().getAllExecutables().stream()
                         .filter(ClickHouseModelCleanJob.class::isInstance).count();
 
                 getNDataModelManager().updateDataModel(modelId,
@@ -828,14 +851,14 @@ public class SecondStorageLockTest implements JobWaiter {
                 EnvelopeResponse<BuildBaseIndexResponse> res1 = nModelController.updateSemantic(request);
                 assertEquals("000", res1.getCode());
                 jobCnt++;
-                assertEquals(jobCnt, getNExecutableManager().getAllExecutables().stream()
+                assertEquals(jobCnt, getExecutableManager().getAllExecutables().stream()
                         .filter(ClickHouseModelCleanJob.class::isInstance).count());
 
                 request = getChangedModelRequestWithPartition("LEAF_CATEG_ID", partitionDesc);
                 EnvelopeResponse<BuildBaseIndexResponse> res2 = nModelController.updateSemantic(request);
                 assertEquals("000", res2.getCode());
                 jobCnt++;
-                assertEquals(jobCnt, getNExecutableManager().getAllExecutables().stream()
+                assertEquals(jobCnt, getExecutableManager().getAllExecutables().stream()
                         .filter(ClickHouseModelCleanJob.class::isInstance).count());
 
                 request = getChangedModelRequestWithNoPartition("TEST_COUNT_DISTINCT_BITMAP");
@@ -843,7 +866,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 EnvelopeResponse<BuildBaseIndexResponse> res3 = nModelController.updateSemantic(request);
                 assertEquals("000", res3.getCode());
                 jobCnt++;
-                assertEquals(jobCnt, getNExecutableManager().getAllExecutables().stream()
+                assertEquals(jobCnt, getExecutableManager().getAllExecutables().stream()
                         .filter(ClickHouseModelCleanJob.class::isInstance).count());
 
                 return null;
@@ -1353,7 +1376,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 assertTrue(getTableFlow().getTableDataList().isEmpty());
 
                 assertEquals(1,
-                        getNExecutableManager().getAllExecutables().stream()
+                        getExecutableManager().getAllExecutables().stream()
                                 .filter(ClickHouseProjectCleanJob.class::isInstance)
                                 .filter(s -> s.getId().equals(res2.getData().get(0))).count());
 
@@ -1388,6 +1411,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 buildIncrementalLoadQuery("2012-01-08", "2012-01-09");
                 buildIncrementalLoadQuery("2012-01-09", "2012-01-10");
 
+                await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitAllJobFinish();
                 String sql = "select CAL_DT from TEST_KYLIN_FACT where CAL_DT between '2012-01-01' and '2012-01-08'";
                 OLAPContext.clearThreadLocalContexts();
@@ -1408,37 +1432,40 @@ public class SecondStorageLockTest implements JobWaiter {
                         5000);
                 clickhouse1.stop();
 
+                await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitJobEnd(getProject(), jobId);
                 assertEquals(ExecutableState.ERROR,
-                        NExecutableManager.getInstance(getConfig(), getProject()).getJob(jobId).getStatus());
+                        ExecutableManager.getInstance(getConfig(), getProject()).getJob(jobId).getStatus());
                 clickhouse1.start();
                 ClickHouseUtils.internalConfigClickHouse(new JdbcDatabaseContainer[] { clickhouse1 }, 1);
 
                 SecondStorageConcurrentTestUtil.registerWaitPoint(SecondStorageConcurrentTestUtil.WAIT_PAUSED, 5000);
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
                             getProject());
                     executableManager.resumeJob(jobId);
                     return null;
                 }, getProject(), 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
 
                 await().atMost(30, TimeUnit.SECONDS)
-                        .until(() -> NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
+                        .until(() -> ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
                                 .getJob(jobId).getStatus() == ExecutableState.RUNNING);
                 await().pollDelay(5, TimeUnit.SECONDS).until(() -> true);
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
                             getProject());
                     executableManager.pauseJob(jobId);
                     return null;
                 }, getProject(), 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
+                await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitJobEnd(getProject(), jobId);
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(),
                             getProject());
                     executableManager.resumeJob(jobId);
                     return null;
                 }, getProject(), 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
+                await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
                 waitAllJobFinish();
 
                 OLAPContext.clearThreadLocalContexts();
@@ -1531,7 +1558,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 assertFalse(
                         LockTypeEnum.locked(LockTypeEnum.LOAD.name(), SecondStorageUtil.getProjectLocks(getProject())));
                 assertEquals(1,
-                        getNExecutableManager().getAllExecutables().stream()
+                        getExecutableManager().getAllExecutables().stream()
                                 .filter(ClickHouseProjectCleanJob.class::isInstance)
                                 .filter(s -> s.getId().equals(res2.getData().get(0))).count());
                 return true;
@@ -1767,7 +1794,7 @@ public class SecondStorageLockTest implements JobWaiter {
             // removed old index
             indexPlanService.removeIndexes(getProject(), modelId, ImmutableSet.of(layout01));
             waitAllJobFinish();
-            assertEquals(indexDeleteJobCnt.incrementAndGet(), getNExecutableManager().getAllExecutables().stream()
+            assertEquals(indexDeleteJobCnt.incrementAndGet(), getExecutableManager().getAllExecutables().stream()
                     .filter(ClickHouseIndexCleanJob.class::isInstance).count());
 
             existTablePlanLayoutIds.remove(layout01);
@@ -1792,7 +1819,7 @@ public class SecondStorageLockTest implements JobWaiter {
 
             NDataSegment segmentTmp01 = getDataFlow().getSegments().getFirstSegment();
             removeIndexesFromSegments(segmentTmp01.getId(), layout02);
-            assertEquals(indexDeleteJobCnt.incrementAndGet(), getNExecutableManager().getAllExecutables().stream()
+            assertEquals(indexDeleteJobCnt.incrementAndGet(), getExecutableManager().getAllExecutables().stream()
                     .filter(ClickHouseIndexCleanJob.class::isInstance).count());
 
             checkSecondStorageMetadata(existTablePlanLayoutIds, existTableDataLayoutIds);
@@ -1806,7 +1833,7 @@ public class SecondStorageLockTest implements JobWaiter {
             removeIndexesFromSegments(
                     getDataFlow().getSegments().stream().map(NDataSegment::getId).collect(Collectors.toList()),
                     layout02);
-            assertEquals(indexDeleteJobCnt.incrementAndGet(), getNExecutableManager().getAllExecutables().stream()
+            assertEquals(indexDeleteJobCnt.incrementAndGet(), getExecutableManager().getAllExecutables().stream()
                     .filter(ClickHouseIndexCleanJob.class::isInstance).count());
             existTablePlanLayoutIds.remove(layout02);
             existTableDataLayoutIds.remove(layout02);
@@ -1815,11 +1842,11 @@ public class SecondStorageLockTest implements JobWaiter {
 
             // Step4: change model and test refresh segment
             long layout04 = testRefreshSegment(existTablePlanLayoutIds, existTableDataLayoutIds, layout03);
-            assertEquals(indexDeleteJobCnt.incrementAndGet(), getNExecutableManager().getAllExecutables().stream()
+            assertEquals(indexDeleteJobCnt.incrementAndGet(), getExecutableManager().getAllExecutables().stream()
                     .filter(ClickHouseIndexCleanJob.class::isInstance).count());
 
             long layout05 = testCleanSegment(existTablePlanLayoutIds, existTableDataLayoutIds, layout04);
-            assertEquals(indexDeleteJobCnt.incrementAndGet(), getNExecutableManager().getAllExecutables().stream()
+            assertEquals(indexDeleteJobCnt.incrementAndGet(), getExecutableManager().getAllExecutables().stream()
                     .filter(ClickHouseIndexCleanJob.class::isInstance).count());
 
             // test merge
@@ -2069,7 +2096,7 @@ public class SecondStorageLockTest implements JobWaiter {
                 new MergeSegmentParams(getProject(), modelId, segmentIds.toArray(new String[] {})));
 
         waitJobFinish(getProject(), jobInfo.getJobId());
-        assertTrue(SecondStorageUtil.checkMergeFlatTableIsSuccess(getNExecutableManager().getJob(jobInfo.getJobId())));
+        assertTrue(SecondStorageUtil.checkMergeFlatTableIsSuccess(getExecutableManager().getJob(jobInfo.getJobId())));
 
         try {
             SecondStorageUtil.checkJobRestart(getProject(), jobInfo.getJobId());
@@ -2160,8 +2187,8 @@ public class SecondStorageLockTest implements JobWaiter {
         return getNDataModelManager().getDataModelDesc(modelId);
     }
 
-    private NExecutableManager getNExecutableManager() {
-        return NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
+    private ExecutableManager getExecutableManager() {
+        return ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
     }
 
     private List<NodeGroup> getNodeGroups() {
@@ -2288,7 +2315,7 @@ public class SecondStorageLockTest implements JobWaiter {
         val layoutId = JsonUtil.readValue(JsonUtil.writeValueAsString(indexResponse),
                 BuildBaseIndexUT.class).tableIndex.layoutId;
 
-        getNExecutableManager().getAllExecutables().forEach(exec -> waitJobFinish(getProject(), exec.getId()));
+        getExecutableManager().getAllExecutables().forEach(exec -> waitJobFinish(getProject(), exec.getId()));
         return layoutId;
     }
 
@@ -2336,7 +2363,8 @@ public class SecondStorageLockTest implements JobWaiter {
     }
 
     private void waitAllJobFinish() {
-        NExecutableManager.getInstance(getConfig(), getProject()).getAllExecutables()
+        await().until(() -> JobContextUtil.getJobContext(getConfig()).getJobScheduler().getRunningJob().isEmpty());
+        ExecutableManager.getInstance(getConfig(), getProject()).getAllExecutables()
                 .forEach(exec -> waitJobFinish(getProject(), exec.getId()));
     }
 
@@ -2368,7 +2396,7 @@ public class SecondStorageLockTest implements JobWaiter {
         request.setModel(modelId);
         request.setSegmentIds(segments);
         secondStorageEndpoint.cleanStorage(request, segments);
-        val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
+        val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         val job = manager.getAllExecutables().stream().filter(ClickHouseSegmentCleanJob.class::isInstance).findFirst();
         Assert.assertTrue(job.isPresent());
         waitJobEnd(getProject(), job.get().getId());
@@ -3019,12 +3047,18 @@ public class SecondStorageLockTest implements JobWaiter {
     }
 
     private void testWait() {
-        val executableManager = NExecutableManager.getInstance(getConfig(), getProject());
+
+        val executableManager = ExecutableManager.getInstance(getConfig(), getProject());
+
         val job = executableManager.getAllExecutables().stream().filter(j -> j instanceof NSparkCubingJob).findFirst();
         Map<String, String> waiteTimeMap = new HashMap<>();
         job.ifPresent(j -> ((NSparkCubingJob) j).getTasks().forEach(task -> {
-            final ExecutableStepResponse executableStepResponse = jobService.parseToExecutableStep(task,
-                    executableManager.getOutput(task.getId()), waiteTimeMap, j.getOutput().getState());
+            JobMapperFilter jobMapperFilter = new JobMapperFilter();
+            jobMapperFilter.setJobId(j.getJobId());
+            List<JobInfo> jobInfoList = executableManager.fetchJobsByFilter(jobMapperFilter);
+            ExecutablePO executablePO = JobInfoUtil.deserializeExecutablePO(jobInfoList.get(0));
+            final ExecutableStepResponse executableStepResponse = jobInfoService.parseToExecutableStep(task,
+                    executablePO, waiteTimeMap, j.getOutput().getState());
             assertTrue(executableStepResponse.getWaitTime() >= 0L);
         }));
     }

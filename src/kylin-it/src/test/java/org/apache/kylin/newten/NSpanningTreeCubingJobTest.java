@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.metadata.cube.cuboid.NSpanningTree;
 import org.apache.kylin.metadata.cube.cuboid.NSpanningTreeFactory;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
@@ -47,18 +45,10 @@ public class NSpanningTreeCubingJobTest extends NLocalWithSparkSessionTest {
         ss.sparkContext().setLogLevel("ERROR");
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         overwriteSystemProp("kylin.engine.spark.cache-threshold", "2");
-
-        NDefaultScheduler.destroyInstance();
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(getTestConfig()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
     }
 
     @After
     public void after() {
-        NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
     }
 

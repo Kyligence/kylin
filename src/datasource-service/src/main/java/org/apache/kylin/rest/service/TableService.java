@@ -72,7 +72,7 @@ import org.apache.kylin.common.KylinConfigBase;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.code.ErrorCodeServer;
 import org.apache.kylin.common.msg.MsgPicker;
-import org.apache.kylin.common.persistence.transaction.AddS3CredentialToSparkBroadcastEventNotifier;
+import org.apache.kylin.common.persistence.transaction.AddCredentialToSparkBroadcastEventNotifier;
 import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
 import org.apache.kylin.common.scheduler.EventBusFactory;
@@ -100,15 +100,17 @@ import org.apache.kylin.guava30.shaded.common.graph.Graph;
 import org.apache.kylin.guava30.shaded.common.graph.Graphs;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.service.TableSampleService;
+import org.apache.kylin.job.util.JobContextUtil;
+import org.apache.kylin.job.util.JobInfoUtil;
 import org.apache.kylin.metadata.acl.AclTCR;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRangeManager;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -191,7 +193,9 @@ import lombok.var;
 public class TableService extends BasicService {
 
     private static final Logger logger = LoggerFactory.getLogger(TableService.class);
-    private static final String REFRESH_SINGLE_CATALOG_PATH = "/kylin/api/tables/single_catalog_cache";
+
+    private static final String REFRESH_SINGLE_CATALOG_PATH = "/kylin/api/query/single_catalog_cache";
+
     private static final String SSB_ERROR_MSG = "import ssb data error.";
 
     @Autowired
@@ -200,16 +204,11 @@ public class TableService extends BasicService {
     @Autowired
     private TableFusionModelSupporter fusionModelService;
 
-    @Autowired(required = false)
-    @Qualifier("tableSamplingService")
-    private TableSamplingSupporter tableSamplingService;
-
     @Autowired
     private TableIndexPlanSupporter indexPlanService;
 
-    @Autowired(required = false)
-    @Qualifier("jobService")
-    private JobSupporter jobService;
+    @Autowired
+    private TableSampleService tableSampleService;
 
     @Autowired
     private AclEvaluate aclEvaluate;
@@ -224,6 +223,10 @@ public class TableService extends BasicService {
     @Autowired(required = false)
     @Qualifier("aclTCRService")
     private AclTCRServiceSupporter aclTCRService;
+
+    @Autowired(required = false)
+    @Qualifier("jobInfoService")
+    private JobSupporter jobInfoService;
 
     @Autowired
     private ClusterManager clusterManager;
@@ -293,7 +296,7 @@ public class TableService extends BasicService {
         final NTableMetadataManager tableMetaMgr = getManager(NTableMetadataManager.class, project);
         // save table meta
         List<String> saved = Lists.newArrayList();
-        Set<TableExtDesc.S3RoleCredentialInfo> broadcastS3Conf = new HashSet<>();
+        Set<TableExtDesc.RoleCredentialInfo> broadcastConf = new HashSet<>();
         for (Pair<TableDesc, TableExtDesc> pair : allMeta) {
             TableDesc tableDesc = pair.getFirst();
             TableExtDesc extDesc = pair.getSecond();
@@ -323,6 +326,7 @@ public class TableService extends BasicService {
                                 return Integer.MAX_VALUE;
                             }
                         }));
+
                 TableExtDesc origExt = tableMetaMgr.getTableExtIfExists(tableDesc);
                 TableExtDesc nTableExtDesc = new TableExtDesc(extDesc);
                 if (origExt == null || origExt.getProject() == null) {
@@ -345,9 +349,9 @@ public class TableService extends BasicService {
                         copyForWrite.init(project);
                     });
                 }
-                if (!broadcastS3Conf.contains(extDesc.getS3RoleCredentialInfo())) {
-                    addAndBroadcastSparkSession(extDesc.getS3RoleCredentialInfo());
-                    broadcastS3Conf.add(extDesc.getS3RoleCredentialInfo());
+                if (!broadcastConf.contains(extDesc.getRoleCredentialInfo())) {
+                    addAndBroadcastSparkSession(extDesc.getRoleCredentialInfo());
+                    broadcastConf.add(extDesc.getRoleCredentialInfo());
                 }
             }
 
@@ -715,7 +719,6 @@ public class TableService extends BasicService {
     }
 
     private void buildFullSegment(String model, String project) {
-        val jobManager = getManager(JobManager.class, project);
         val dataflowManager = getManager(NDataflowManager.class, project);
         val indexPlanManager = getManager(NIndexPlanManager.class, project);
         val indexPlan = indexPlanManager.getIndexPlan(model);
@@ -723,8 +726,10 @@ public class TableService extends BasicService {
         val newSegment = dataflowManager.appendSegment(dataflow,
                 new SegmentRange.TimePartitionedSegmentRange(0L, Long.MAX_VALUE));
 
+        final JobParam jobParam = new JobParam(newSegment, model, getUsername());
+        jobParam.setProject(project);
         getManager(SourceUsageManager.class).licenseCheckWrap(project,
-                () -> jobManager.addSegmentJob(new JobParam(newSegment, model, getUsername())));
+                () -> JobManager.getInstance(getConfig(), project).addSegmentJob(jobParam));
     }
 
     public String getPartitionColumnFormat(String project, String table, String partitionColumn,
@@ -813,16 +818,18 @@ public class TableService extends BasicService {
     }
 
     private List<AbstractExecutable> stopAndGetSnapshotJobs(String project, String table) {
-        val execManager = getManager(NExecutableManager.class, project);
-        val executables = execManager.listExecByJobTypeAndStatus(ExecutableState::isRunning, SNAPSHOT_BUILD,
-                SNAPSHOT_REFRESH);
+        val execManager = getManager(ExecutableManager.class, project);
 
-        List<AbstractExecutable> conflictJobs = executables.stream()
-                .filter(exec -> table.equalsIgnoreCase(exec.getParam(NBatchConstants.P_TABLE_NAME)))
+        val jobInfoList = execManager.fetchJobsByTypesAndStates(project,
+                Lists.newArrayList(SNAPSHOT_BUILD.name(), SNAPSHOT_REFRESH.name()), Lists.newArrayList(table),
+                ExecutableState.getNotFinalStates());
+
+        List<String> conflictJobIds = jobInfoList.stream().map(jobInfo -> jobInfo.getJobId())
                 .collect(Collectors.toList());
+        JobContextUtil.remoteDiscardJob(project, conflictJobIds);
 
-        conflictJobs.forEach(job -> execManager.discardJob(job.getId()));
-        return conflictJobs;
+        return jobInfoList.stream().map(jobInfo -> execManager.fromPO(JobInfoUtil.deserializeExecutablePO(jobInfo)))
+                .collect(Collectors.toList());
     }
 
     @Transaction(project = 0)
@@ -845,7 +852,7 @@ public class TableService extends BasicService {
             unloadKafkaTableUsingTable(project, tableDesc);
         } else {
             stopStreamingJobByTable(project, tableDesc);
-            jobService.stopBatchJob(project, tableDesc);
+            jobInfoService.stopBatchJob(project, tableDesc);
         }
 
         unloadTable(project, table);
@@ -905,7 +912,7 @@ public class TableService extends BasicService {
         val response = new PreUnloadTableResponse();
         val dataflowManager = getManager(NDataflowManager.class, project);
         val tableMetadataManager = getManager(NTableMetadataManager.class, project);
-        val execManager = getManager(NExecutableManager.class, project);
+        val executableManager = getManager(ExecutableManager.class, project);
 
         val tableDesc = tableMetadataManager.getTableDesc(tableIdentity);
         if (Objects.isNull(tableDesc)) {
@@ -929,7 +936,8 @@ public class TableService extends BasicService {
         response.setStorageSize(storageSize);
 
         response.setHasJob(
-                execManager.countByModelAndStatus(tableIdentity, state -> state == ExecutableState.RUNNING) > 0);
+                executableManager.countByModelAndStatus(tableIdentity, state -> state == ExecutableState.RUNNING) > 0);
+
         response.setHasSnapshot(tableDesc.getLastSnapshotPath() != null);
 
         return response;
@@ -1245,7 +1253,7 @@ public class TableService extends BasicService {
                     List<String> buildingJobs = innerReloadTable(projectName, tableIdentity, needBuild, null);
                     pair.setSecond(buildingJobs);
                     if (needSample && maxRows > 0) {
-                        List<String> jobIds = tableSamplingService.sampling(Sets.newHashSet(tableIdentity), projectName,
+                        List<String> jobIds = tableSampleService.sampling(Sets.newHashSet(tableIdentity), projectName,
                                 maxRows, priority, yarnQueue, null);
                         if (CollectionUtils.isNotEmpty(jobIds)) {
                             pair.setFirst(jobIds.get(0));
@@ -1265,8 +1273,8 @@ public class TableService extends BasicService {
             List<String> buildingJobs = innerReloadTable(projectName, tableExtInfo.getName(), needBuild, tableExtInfo);
             pair.setSecond(buildingJobs);
             if (needSample && maxRows > 0) {
-                List<String> jobIds = tableSamplingService.sampling(Sets.newHashSet(tableExtInfo.getName()),
-                        projectName, maxRows, priority, yarnQueue, null);
+                List<String> jobIds = tableSampleService.sampling(Sets.newHashSet(tableExtInfo.getName()), projectName,
+                        maxRows, priority, yarnQueue, null);
                 if (CollectionUtils.isNotEmpty(jobIds)) {
                     pair.setFirst(jobIds.get(0));
                 }
@@ -1300,7 +1308,7 @@ public class TableService extends BasicService {
                 TableExtDesc copyExt = tableManager.copyForWrite(tableExtDesc);
                 tableManager.saveTableExt(copyExt);
                 // refresh spark session and broadcast
-                addAndBroadcastSparkSession(copyExt.getS3RoleCredentialInfo());
+                addAndBroadcastSparkSession(copyExt.getRoleCredentialInfo());
             }
             return jobs;
         }
@@ -1333,19 +1341,19 @@ public class TableService extends BasicService {
         return jobs;
     }
 
-    public void addAndBroadcastSparkSession(TableExtDesc.S3RoleCredentialInfo s3RoleCredentialInfo) {
-        if (s3RoleCredentialInfo == null) {
+    public void addAndBroadcastSparkSession(TableExtDesc.RoleCredentialInfo roleCredentialInfo) {
+        if (roleCredentialInfo == null) {
             return;
         }
-        if (Strings.isNullOrEmpty(s3RoleCredentialInfo.getEndpoint())
-                && Strings.isNullOrEmpty(s3RoleCredentialInfo.getRole())) {
+        if (Strings.isNullOrEmpty(roleCredentialInfo.getEndpoint())
+                && Strings.isNullOrEmpty(roleCredentialInfo.getRole())) {
             return;
         }
-        if (KylinConfig.getInstanceFromEnv().useDynamicS3RoleCredentialInTable()) {
-            SparderEnv.addS3Credential(s3RoleCredentialInfo, SparderEnv.getSparkSession());
+        if (KylinConfig.getInstanceFromEnv().useDynamicRoleCredentialInTable()) {
+            SparderEnv.addCredential(roleCredentialInfo, SparderEnv.getSparkSession());
             EventBusFactory.getInstance()
-                    .postAsync(new AddS3CredentialToSparkBroadcastEventNotifier(s3RoleCredentialInfo.getBucket(),
-                            s3RoleCredentialInfo.getRole(), s3RoleCredentialInfo.getEndpoint()));
+                    .postAsync(new AddCredentialToSparkBroadcastEventNotifier(roleCredentialInfo.getType(), roleCredentialInfo.getBucket(),
+                            roleCredentialInfo.getRole(), roleCredentialInfo.getEndpoint(), roleCredentialInfo.getRegion()));
         }
     }
 
@@ -1371,11 +1379,12 @@ public class TableService extends BasicService {
         OptRecManagerV2.getInstance(projectName).discardAll(model.getId());
         modelService.onUpdateBrokenModel(model, removeAffectedModel, changeTypeAffectedModel, projectName);
 
-        val jobManager = getManager(JobManager.class, projectName);
         val updatedModel = getManager(NDataModelManager.class, projectName).getDataModelDesc(model.getId());
         if (needBuild && !updatedModel.isBroken()) {
+            final JobParam jobParam = new JobParam(model.getId(), getUsername());
+            jobParam.setProject(projectName);
             return getManager(SourceUsageManager.class).licenseCheckWrap(projectName,
-                    () -> jobManager.addIndexJob(new JobParam(model.getId(), getUsername())));
+                    () -> getManager(JobManager.class, projectName).addIndexJob(jobParam));
         }
         return null;
     }
@@ -1420,10 +1429,11 @@ public class TableService extends BasicService {
         indexPlanService.onUpdateBaseIndex(baseIndexUpdater);
         if (CollectionUtils.isNotEmpty(removeAffected.getUpdatedLayouts())
                 || CollectionUtils.isNotEmpty(changeTypeAffected.getUpdatedLayouts())) {
-            val jobManager = getManager(JobManager.class, projectName);
             if (needBuild) {
+                final JobParam jobParam = new JobParam(model.getId(), getUsername());
+                jobParam.setProject(projectName);
                 return getManager(SourceUsageManager.class).licenseCheckWrap(projectName,
-                        () -> jobManager.addIndexJob(new JobParam(model.getId(), getUsername())));
+                        () -> getManager(JobManager.class, projectName).addIndexJob(jobParam));
             }
         }
         return null;
@@ -1517,7 +1527,17 @@ public class TableService extends BasicService {
         if (context.isChanged(originTable)) {
             val tableIdentity = targetTable.getIdentity();
             List<AbstractExecutable> stopJobs = stopAndGetSnapshotJobs(projectName, tableIdentity);
-            if (!stopJobs.isEmpty() || targetTable.getLastSnapshotPath() != null) {
+
+            var snapshotBuilt = false;
+            if (stopJobs.isEmpty()) {
+                val execManager = getManager(ExecutableManager.class, projectName);
+                val jobInfoList = execManager.fetchJobsByTypesAndStates(projectName,
+                        Lists.newArrayList(SNAPSHOT_BUILD.name(), SNAPSHOT_REFRESH.name()), Lists.newArrayList(tableIdentity),
+                        Lists.newArrayList(ExecutableState.getFinalStates()));
+                snapshotBuilt = !jobInfoList.isEmpty();
+            }
+
+            if (!stopJobs.isEmpty() || snapshotBuilt || targetTable.getLastSnapshotPath() != null) {
                 targetTable.deleteSnapshot(true);
             } else {
                 targetTable.copySnapshotFrom(originTable);
@@ -1566,12 +1586,10 @@ public class TableService extends BasicService {
     }
 
     private List<String> getEffectedJobs(TableDesc newTableDesc, JobInfoEnum jobInfoType) {
-        val notFinalStateJobs = NExecutableManager
-                .getInstance(KylinConfig.readSystemKylinConfig(), newTableDesc.getProject())
-                .getAllJobs(0, Long.MAX_VALUE).stream()
-                .filter(job -> !ExecutableState.valueOf(job.getOutput().getStatus()).isFinalState())
-                .map(job -> getManager(NExecutableManager.class, job.getProject()).fromPO(job))
-                .collect(Collectors.toList());
+        val executableManager = ExecutableManager.getInstance(KylinConfig.readSystemKylinConfig(),
+                newTableDesc.getProject());
+        val notFinalStateJobs = executableManager.getExecutablePOsByStatus(ExecutableState.getNotFinalStates()).stream()
+                .map(job -> executableManager.fromPO(job)).collect(Collectors.toList());
 
         List<String> effectedJobs = Lists.newArrayList();
         notFinalStateJobs.forEach(job -> {

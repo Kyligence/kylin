@@ -49,4 +49,15 @@ public class DiagnosticFilesChecker {
             throw new RuntimeException(e);
         }
     }
+
+    public static synchronized void writeMsgToFile(String msg, File file) {
+        String charsetName = Charset.defaultCharset().name();
+        try (OutputStream fos = new FileOutputStream(file, true);
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fos, charsetName))) {
+            writer.write(msg);
+            writer.newLine();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

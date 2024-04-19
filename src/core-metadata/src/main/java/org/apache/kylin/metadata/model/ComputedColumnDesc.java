@@ -214,6 +214,10 @@ public class ComputedColumnDesc implements Serializable {
         return innerExpression;
     }
 
+    public String getUniqueContent() {
+        return String.format("%s_%s", innerExpression, tableIdentity);
+    }
+
     public boolean isAutoCC() {
         return getColumnName().startsWith(ComputedColumnUtil.CC_NAME_PREFIX);
     }

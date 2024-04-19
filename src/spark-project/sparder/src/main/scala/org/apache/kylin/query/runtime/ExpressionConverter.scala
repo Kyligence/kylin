@@ -27,7 +27,7 @@ import org.apache.kylin.query.util.UnsupportedSparkFunctionException
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.KapFunctions._
 import org.apache.spark.sql.catalyst.expressions
-import org.apache.spark.sql.catalyst.expressions.{Cast, If, IfNull, IntersectCountByCol, Literal, StringLocate, StringRepeat, StringReplace, SubtractBitmapUUID, SubtractBitmapValue}
+import org.apache.spark.sql.catalyst.expressions.{Cast, If, IntersectCountByCol, Literal, Nvl, StringLocate, StringRepeat, StringReplace, SubtractBitmapUUID, SubtractBitmapValue}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.util.SparderTypeUtil
 
@@ -130,6 +130,7 @@ object ExpressionConverter {
         val values = children.drop(1).map(c => k_lit(c).expr)
         not(in(k_lit(children.head).expr, values))
       case DIVIDE =>
+        
         assert(children.size == 2)
         k_lit(children.head).divide(k_lit(children.last))
       case CASE =>
@@ -218,9 +219,9 @@ object ExpressionConverter {
           case "isnull" =>
             isnull(k_lit(children.head))
           case "ifnull" =>
-            new Column(new IfNull(k_lit(children.head).expr, k_lit(children.apply(1)).expr))
+            new Column(new Nvl(k_lit(children.head).expr, k_lit(children.apply(1)).expr))
           case "nvl" =>
-            new Column(new IfNull(k_lit(children.head).expr, k_lit(children.apply(1)).expr))
+            new Column(new Nvl(k_lit(children.head).expr, k_lit(children.apply(1)).expr))
           // string_funcs
           case "lower" => lower(k_lit(children.head))
           case "upper" => upper(k_lit(children.head))

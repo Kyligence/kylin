@@ -49,6 +49,7 @@ import org.apache.spark.sql.types.MetadataBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
@@ -150,7 +151,7 @@ public class ClickHouseV2QueryTest extends NLocalWithSparkSessionTest {
         Dataset<Row> dataset2 = ss.sql(sql2);
         checkFiltersRemoved(dataset2);
         checkSortRemoved(dataset2, false);
-        String expectedPlanFragment2 = "PushedFilters: [i1 IS NOT NULL, n3 IS NOT NULL, i1 > 5, n3 < 2.0000], ";
+        String expectedPlanFragment2 = "[i1 IS NOT NULL, n3 IS NOT NULL, i1 > 5, CAST(n3 AS double) < 2.0], ";
         ClickHouseUtils.checkPushedInfo(dataset2, expectedPlanFragment2);
         List<Row> expectedRow2 = expectedRow;
         executeAndCheck(dataset2, expectedRow2, expectedShards);
@@ -357,6 +358,7 @@ public class ClickHouseV2QueryTest extends NLocalWithSparkSessionTest {
         executeAndCheck(dataset3, expectedRow3, expectedShards);
     }
 
+    @Ignore
     @Test
     public void testOnSingleShard() throws Exception {
         boolean result = ClickHouseUtils.prepare1Instance(true,

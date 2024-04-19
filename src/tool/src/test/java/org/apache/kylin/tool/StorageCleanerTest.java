@@ -45,8 +45,10 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.common.ShellExecutable;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
@@ -73,12 +75,17 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() throws IOException {
         createTestMetadata();
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobInfoDao(getTestConfig());
+
         prepare();
     }
 
     @After
     public void teardown() {
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -210,9 +217,10 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testCleanup_WithRunningJobs() throws Exception {
-        val jobMgr = NExecutableManager.getInstance(getTestConfig(), "default");
+        val jobMgr = ExecutableManager.getInstance(getTestConfig(), "default");
         val job1 = new DefaultExecutable();
         job1.setProject("default");
+        job1.setJobType(JobTypeEnum.INC_BUILD);
         val task1 = new ShellExecutable();
         job1.addTask(task1);
         jobMgr.addJob(job1);
@@ -223,6 +231,7 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
                 "/default/dict/global_dict/DEFAULT.TEST_KYLIN_FACT/invalid/keep" };
 
         extra.put(AbstractExecutable.DEPENDENT_FILES, StringUtils.join(dependFiles, ","));
+        jobMgr.updateJobOutput(job1.getId(), ExecutableState.PENDING, extra, null, null);
         jobMgr.updateJobOutput(job1.getId(), ExecutableState.RUNNING, extra, null, null);
 
         val cleaner = new StorageCleaner();
@@ -329,22 +338,6 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testCollectDropTemporaryTransactionTable() throws Exception {
-        KylinConfig config = getTestConfig();
-        String dir = config.getJobTmpTransactionalTableDir("default", "invalid");
-        Path path = new Path(dir);
-        FileSystem fileSystem = HadoopUtil.getWorkingFileSystem();
-        if (!fileSystem.exists(path)) {
-            fileSystem.mkdirs(path);
-            fileSystem.setPermission(path, new FsPermission((short) 00777));
-            path = new Path(dir + "/SSB.CUSTOMER_HIVE_TX_INTERMEDIATE5c5851ef8544");
-            fileSystem.createNewFile(path);
-        }
-        new StorageCleaner(true, Collections.singletonList("default")).execute();
-        new StorageCleaner(true, Collections.singletonList("default")).execute();
-    }
-
-    @Test
     public void testCleanupAllFileSystemsWithWritingCluster() throws Exception {
         val cleaner = new StorageCleaner();
         KylinConfig testConfig = getTestConfig();
@@ -382,11 +375,13 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
 
         val dfMgr = NDataflowManager.getInstance(config, "default");
         val df = dfMgr.getDataflowByModelAlias("nmodel_basic_inner");
-        val execMgr = NExecutableManager.getInstance(config, "default");
+        val execMgr = ExecutableManager.getInstance(config, "default");
         val job1 = new DefaultExecutable();
         job1.setId("job1");
+        job1.setJobType(JobTypeEnum.INC_BUILD);
         execMgr.addJob(job1);
         val job2 = new DefaultExecutable();
+        job2.setJobType(JobTypeEnum.INC_BUILD);
         job2.setId("job2");
         execMgr.addJob(job2);
     }
@@ -456,5 +451,21 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
     private Set<String> normalizeGarbages(Set<StorageCleaner.StorageItem> items) {
         return items.stream().map(i -> i.getPath().replaceAll("file:", "").replaceAll("/keep", ""))
                 .collect(Collectors.toSet());
+    }
+
+    @Test
+    public void testCollectDropTemporaryTransactionTable() throws Exception {
+        KylinConfig config = getTestConfig();
+        String dir = config.getJobTmpTransactionalTableDir("default", "invalid");
+        Path path = new Path(dir);
+        FileSystem fileSystem = HadoopUtil.getWorkingFileSystem();
+        if (!fileSystem.exists(path)) {
+            fileSystem.mkdirs(path);
+            fileSystem.setPermission(path, new FsPermission((short) 00777));
+            path = new Path(dir + "/SSB.CUSTOMER_HIVE_TX_INTERMEDIATE5c5851ef8544");
+            fileSystem.createNewFile(path);
+        }
+        new StorageCleaner(true, Collections.singletonList("default")).execute();
+        new StorageCleaner(true, Collections.singletonList("default")).execute();
     }
 }

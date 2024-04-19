@@ -18,21 +18,24 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
-import org.apache.kylin.metadata.cube.model.NDataSegment;
-import org.apache.kylin.metadata.cube.model.NDataflowManager;
-import lombok.val;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.job.SecondStorageCleanJobBuildParams;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.factory.JobFactory;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
+import lombok.val;
 
 public class ClickHouseSegmentCleanJob extends DefaultExecutable {
 
@@ -62,6 +65,9 @@ public class ClickHouseSegmentCleanJob extends DefaultExecutable {
         setParam(NBatchConstants.P_PROJECT_NAME, builder.project);
         setParam(NBatchConstants.P_TARGET_MODEL, getTargetSubject());
         setParam(NBatchConstants.P_DATAFLOW_ID, builder.df.getId());
+        NDataModel dataModelDesc = NDataModelManager.getInstance(getConfig(), project)
+                .getDataModelDesc(builder.getModelId());
+        setParam(NBatchConstants.P_MODEL_NAME, dataModelDesc.getAlias());
 
         ClickHousePartitionClean step = new ClickHousePartitionClean();
         step.setProject(getProject());

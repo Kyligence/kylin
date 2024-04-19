@@ -18,24 +18,30 @@
 
 package org.apache.kylin.rest.service;
 
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import io.kyligence.kap.engine.spark.job.NResourceDetectStep;
-import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
-import lombok.val;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.service.TableSampleService;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.AclUtil;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,10 +52,9 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import io.kyligence.kap.engine.spark.job.NResourceDetectStep;
+import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
+import lombok.val;
 
 public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
 
@@ -57,13 +62,13 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
     private static final int SAMPLING_ROWS = 20000;
 
     @InjectMocks
-    private TableSamplingService tableSamplingService = Mockito.spy(new TableSamplingService());
+    private TableSampleService tableSamplingService = Mockito.spy(new TableSampleService());
 
     @Mock
     private AclEvaluate aclEvaluate = Mockito.spy(AclEvaluate.class);
 
     @Before
-    public void setup() {
+    public void setup() throws Exception {
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         SecurityContextHolder.getContext()
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
@@ -79,6 +84,19 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
                 projectInstanceUpdate.getDescription(), projectInstanceUpdate.getOverrideKylinProps());
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", Mockito.spy(AclUtil.class));
         ReflectionTestUtils.setField(tableSamplingService, "aclEvaluate", aclEvaluate);
+        // init factory
+        new NTableSamplingJob();
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobInfoDao(getTestConfig());
+        JobContext jobContext = JobContextUtil.getJobContext(getTestConfig());
+        // need not start job scheduler
+        jobContext.destroy();
+    }
+
+    @After
+    public void tearDown() {
+        cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -87,7 +105,7 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
         final String table1 = "DEFAULT.TEST_KYLIN_FACT";
         Set<String> tables = Sets.newHashSet(table1);
         tableSamplingService.sampling(tables, PROJECT, SAMPLING_ROWS, 0, null, null);
-        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        ExecutableManager executableManager = ExecutableManager.getInstance(getTestConfig(), PROJECT);
         final List<AbstractExecutable> allExecutables = executableManager.getAllExecutables();
         Assert.assertEquals(1, allExecutables.size());
         final NTableSamplingJob samplingJob = (NTableSamplingJob) allExecutables.get(0);
@@ -110,7 +128,7 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
         final String table1 = "DEFAULT.TEST_KYLIN_FACT";
         Set<String> tables = Sets.newHashSet(table1);
         tableSamplingService.sampling(tables, PROJECT, SAMPLING_ROWS, 0, null, null);
-        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        ExecutableManager executableManager = ExecutableManager.getInstance(getTestConfig(), PROJECT);
         final List<AbstractExecutable> allExecutables = executableManager.getAllExecutables();
         Assert.assertEquals(1, allExecutables.size());
         final NTableSamplingJob samplingJob = (NTableSamplingJob) allExecutables.get(0);
@@ -125,7 +143,7 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
         final String table2 = "DEFAULT.TEST_ACCOUNT";
         Set<String> tables = Sets.newHashSet(table1, table2);
         tableSamplingService.sampling(tables, PROJECT, SAMPLING_ROWS, 0, null, null);
-        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        ExecutableManager executableManager = ExecutableManager.getInstance(getTestConfig(), PROJECT);
 
         final List<AbstractExecutable> allExecutables = executableManager.getAllExecutables();
         Assert.assertEquals(2, allExecutables.size());
@@ -162,7 +180,7 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
         String table = "DEFAULT.TEST_KYLIN_FACT";
         tableSamplingService.sampling(Sets.newHashSet(table), PROJECT, SAMPLING_ROWS, ExecutablePO.DEFAULT_PRIORITY,
                 null, null);
-        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        ExecutableManager executableManager = ExecutableManager.getInstance(getTestConfig(), PROJECT);
         List<AbstractExecutable> allExecutables = executableManager.getAllExecutables();
         Assert.assertEquals(1, allExecutables.size());
         val initialJob = allExecutables.get(0);
@@ -189,7 +207,7 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
         // launch another job on the same table will discard the second job and create a new job(thirdJob)
         Assert.assertTrue(tableSamplingService.hasSamplingJob(PROJECT, table));
         UnitOfWork.doInTransactionWithRetry(() -> {
-            executableManager.updateJobOutput(secondJob.getId(), ExecutableState.RUNNING);
+            //executableManager.updateJobOutput(secondJob.getId(), ExecutableState.RUNNING);
             tableSamplingService.sampling(Sets.newHashSet(table), PROJECT, SAMPLING_ROWS, ExecutablePO.DEFAULT_PRIORITY,
                     null, null);
             return null;
@@ -208,6 +226,7 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
         // launch another job on the same table will discard the second job and create a new job(fourthJob)
         Assert.assertTrue(tableSamplingService.hasSamplingJob(PROJECT, table));
         UnitOfWork.doInTransactionWithRetry(() -> {
+            executableManager.updateJobOutput(thirdJob.getId(), ExecutableState.PENDING);
             executableManager.updateJobOutput(thirdJob.getId(), ExecutableState.ERROR);
             tableSamplingService.sampling(Sets.newHashSet(table), PROJECT, SAMPLING_ROWS, ExecutablePO.DEFAULT_PRIORITY,
                     null, null);

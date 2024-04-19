@@ -18,6 +18,7 @@
 
 package org.apache.kylin.cluster
 
+import org.apache.kylin.common.KylinConfig
 import org.apache.spark.sql.SparkSession
 
 import java.util
@@ -40,6 +41,8 @@ trait IClusterManager {
   def fetchQueueStatistics(queueName: String): ResourceInfo
 
   def applicationExisted(jobId: String): Boolean
+
+  def withConfig(config: KylinConfig): Unit = {}
 
   def getApplicationNameById(yarnAppId: Int): String
 }

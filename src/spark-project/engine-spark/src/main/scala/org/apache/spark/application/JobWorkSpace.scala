@@ -18,15 +18,15 @@
 
 package org.apache.spark.application
 
-import java.util
-import java.util.concurrent.CountDownLatch
-
 import org.apache.kylin.common.util.Unsafe
 import org.apache.kylin.engine.spark.application.SparkApplication
 import org.apache.kylin.engine.spark.job.KylinBuildEnv
 import org.apache.kylin.engine.spark.scheduler._
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler.KylinJobEventLoop
+
+import java.util
+import java.util.concurrent.CountDownLatch
 
 /**
  * Spark driver part, construct the real spark job [SparkApplication]
@@ -104,6 +104,7 @@ class JobWorkSpace(eventLoop: KylinJobEventLoop, monitor: JobMonitor, worker: Jo
       worker.getApplication.updateJobErrorInfo(jf)
       stop()
     } finally {
+      stop()
       statusCode = 1
       latch.countDown()
     }

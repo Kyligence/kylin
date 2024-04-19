@@ -37,7 +37,7 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -219,8 +219,8 @@ public class RouteServiceTest {
         val projectInstance = Mockito.mock(ProjectInstance.class);
         Mockito.when(projectInstance.getName()).thenReturn("default");
         Mockito.when(projectManger.listAllProjects()).thenReturn(Lists.newArrayList(projectInstance));
-        val executableManager1 = Mockito.mock(NExecutableManager.class);
-        Mockito.when(kylinConfig.getManager(projectInstance.getName(), NExecutableManager.class))
+        val executableManager1 = Mockito.mock(ExecutableManager.class);
+        Mockito.when(kylinConfig.getManager(projectInstance.getName(), ExecutableManager.class))
                 .thenReturn(executableManager1);
         val job1 = RandomUtil.randomUUIDStr();
         Mockito.when(executableManager1.getJob(job1)).thenReturn(null);

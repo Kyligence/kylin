@@ -321,7 +321,7 @@ public class DataSourceState implements Runnable {
     }
 
     private void checkIsAllNode() {
-        if (!KylinConfig.getInstanceFromEnv().isJobNode()) {
+        if (!KylinConfig.getInstanceFromEnv().isJobNode() && !KylinConfig.getInstanceFromEnv().isMetadataNode()) {
             throw new KylinException(QUERY_NODE_API_INVALID);
         }
         if (!KylinConfig.getInstanceFromEnv().getLoadHiveTablenameEnabled()) {

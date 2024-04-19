@@ -32,7 +32,7 @@ import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.manager.SegmentAutoMergeUtil;
 import org.apache.kylin.junit.TimeZoneTestRunner;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
@@ -947,10 +947,10 @@ public class AutoMergeTest extends NLocalFileMetadataTestCase {
     }
 
     private List<AbstractExecutable> getRunningExecutables(String project, String model) {
-        return NExecutableManager.getInstance(getTestConfig(), project).getRunningExecutables(project, model);
+        return ExecutableManager.getInstance(getTestConfig(), project).getRunningExecutables(project, model);
     }
 
     private void deleteAllJobs(String project) {
-        NExecutableManager.getInstance(getTestConfig(), project).deleteAllJob();
+        ExecutableManager.getInstance(getTestConfig(), project).deleteAllJob();
     }
 }

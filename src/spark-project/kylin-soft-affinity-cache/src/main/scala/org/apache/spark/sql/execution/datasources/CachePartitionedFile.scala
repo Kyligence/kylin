@@ -19,9 +19,12 @@
 package org.apache.spark.sql.execution.datasources
 
 import io.kyligence.kap.cache.fs.CacheFileSystemConstants
-import org.apache.spark.{SparkEnv, TaskContext, Partition => RDDPartition}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.AttributeReference
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.{SparkEnv, TaskContext, Partition => RDDPartition}
+
 
 case class CachePartitionedFile(
                                  partitionValues: InternalRow,
@@ -38,8 +41,10 @@ case class CachePartitionedFile(
 class CacheFileScanRDD(
                         @transient private val sparkSession: SparkSession,
                         readFunction: PartitionedFile => Iterator[InternalRow],
-                        @transient val cacheFilePartitions: Seq[CacheFilePartition])
-  extends FileScanRDD(sparkSession, readFunction, Nil) {
+                        @transient val cacheFilePartitions: Seq[CacheFilePartition],
+                        override val readDataSchema: StructType,
+                        override val metadataColumns: Seq[AttributeReference] = Seq.empty)
+  extends FileScanRDD(sparkSession, readFunction, Nil, readDataSchema, metadataColumns) {
 
   def checkCached(cacheLocations: Array[String]): Boolean = {
     val underscoreExecId = "_" + SparkEnv.get.executorId;

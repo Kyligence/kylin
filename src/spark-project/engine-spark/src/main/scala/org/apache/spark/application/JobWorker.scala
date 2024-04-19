@@ -22,6 +22,7 @@ package org.apache.spark.application
 import java.util.concurrent.Executors
 
 import org.apache.kylin.engine.spark.application.SparkApplication
+import org.apache.kylin.engine.spark.job.RestfulJobProgressReport.JOB_HAS_STOPPED
 import org.apache.kylin.engine.spark.scheduler._
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler.KylinJobEventLoop
@@ -63,6 +64,8 @@ class JobWorker(application: SparkApplication, args: Array[String], eventLoop: K
               case throwable: Throwable => eventLoop.post(ResourceLack(throwable))
             }
           case exception: NoRetryException => eventLoop.post(UnknownThrowable(exception))
+          case exception: IllegalStateException if exception.getMessage.equals(JOB_HAS_STOPPED) =>
+            eventLoop.post(JobFailed(exception.getMessage, exception))
           case throwable: Throwable => eventLoop.post(ResourceLack(throwable))
         }
       }

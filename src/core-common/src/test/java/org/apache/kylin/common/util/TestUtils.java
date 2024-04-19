@@ -17,12 +17,26 @@
  */
 package org.apache.kylin.common.util;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 import org.apache.kylin.common.KylinConfig;
 
 public class TestUtils {
 
     public static KylinConfig getTestConfig() {
         return KylinConfig.getInstanceFromEnv();
+    }
+
+    public static void writeToFile(File file) {
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            String info = System.currentTimeMillis() + RandomUtil.randomUUIDStr();
+            fos.write(info.getBytes());
+            fos.flush();
+        } catch (IOException e) {
+            throw new IllegalStateException("Write file failed: ", e);
+        }
     }
 
     public static boolean isSkipBuild() {

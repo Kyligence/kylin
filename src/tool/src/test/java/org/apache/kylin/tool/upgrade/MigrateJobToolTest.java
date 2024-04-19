@@ -22,12 +22,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutableOnModel;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.job.util.JobContextUtil;
+import org.apache.kylin.tool.util.JobMetadataWriter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,17 +42,19 @@ public class MigrateJobToolTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() {
         createTestMetadata("src/test/resources/ut_upgrade_tool");
+        JobMetadataWriter.writeJobMetaData(getTestConfig());
     }
 
     @After
     public void teardown() {
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
     public void test() {
         // execute before
-        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), "version40");
+        ExecutableManager executableManager = ExecutableManager.getInstance(getTestConfig(), "version40");
 
         List<AbstractExecutable> executeJobs = executableManager.getAllExecutables().stream()
                 .filter(executable -> JobTypeEnum.INC_BUILD == executable.getJobType()
@@ -72,7 +76,8 @@ public class MigrateJobToolTest extends NLocalFileMetadataTestCase {
         getTestConfig().clearManagers();
         ResourceStore.clearCache();
 
-        executableManager = NExecutableManager.getInstance(getTestConfig(), "version40");
+        JobMetadataWriter.writeJobMetaData(getTestConfig());
+        executableManager = ExecutableManager.getInstance(getTestConfig(), "version40");
 
         executeJobs = executableManager.getAllExecutables().stream()
                 .filter(executable -> JobTypeEnum.INC_BUILD == executable.getJobType()

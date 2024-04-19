@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.engine.spark.utils.SparkConfHelper;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
@@ -39,7 +39,7 @@ import io.kyligence.kap.engine.spark.stats.analyzer.TableAnalyzerJob;
 import lombok.val;
 import lombok.var;
 
-public class TableAnalyzerTest extends NLocalWithSparkSessionTest {
+public class TableAnalyzerTest extends NLocalWithSparkSessionTestBase {
 
     private NTableMetadataManager tableMgr;
 

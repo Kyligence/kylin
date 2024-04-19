@@ -22,6 +22,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.kylin.job.JobContext;
 import org.awaitility.Duration;
 
 /**
@@ -45,7 +46,7 @@ public class FiveSecondSucceedDagTestExecutable extends BaseTestExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) {
+    public ExecuteResult doWork(JobContext context) {
         await().pollDelay(new Duration(seconds, TimeUnit.SECONDS)).until(() -> true);
 
         return ExecuteResult.createSucceed();

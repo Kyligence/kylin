@@ -151,6 +151,9 @@ public class QueryNodeFilter extends BaseFilter {
         routeMultiTenantModeFilterApiSet.add("/kylin/api/jobs/{jobId}/resume");
         routeMultiTenantModeFilterApiSet.add("/kylin/api/cubes/{cubeName}/rebuild");
         routeMultiTenantModeFilterApiSet.add("/kylin/api/cubes/{cubeName}/segments");
+
+        // spark report job stage status
+        notRoutePutApiSet.add("/kylin/api/jobs/stage/status");
     }
 
     @Autowired

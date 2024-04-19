@@ -17,20 +17,20 @@
  */
 package org.apache.kylin.rest.controller.open;
 
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.REQUEST_PARAMETER_EMPTY_OR_VALUE_EMPTY;
 
 import java.util.List;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.rest.response.DataResult;
-import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.metadata.streaming.StreamingJobRecord;
 import org.apache.kylin.rest.controller.NBasicController;
 import org.apache.kylin.rest.request.StreamingJobExecuteRequest;
 import org.apache.kylin.rest.request.StreamingJobFilter;
+import org.apache.kylin.rest.response.DataResult;
+import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.StreamingJobDataStatsResponse;
 import org.apache.kylin.rest.response.StreamingJobResponse;
 import org.apache.kylin.rest.service.StreamingJobService;

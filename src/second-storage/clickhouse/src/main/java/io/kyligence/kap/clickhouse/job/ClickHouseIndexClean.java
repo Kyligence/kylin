@@ -32,8 +32,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.SegmentRange;
@@ -91,7 +91,7 @@ public class ClickHouseIndexClean extends AbstractClickHouseClean {
             SecondStorageUtil.tablePlanManager(getConfig(), getProject()).ifPresent(
                     manage -> manage.update(getTargetSubject(), updater -> updater.cleanTable(deleteLayoutIds)));
             return null;
-        }, project, 1, getEpochId());
+        }, project, 1);
 
         return deleteLayoutIds;
     }
@@ -110,7 +110,7 @@ public class ClickHouseIndexClean extends AbstractClickHouseClean {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    public ExecuteResult doWork(JobContext context) throws ExecuteException {
         return wrapWithExecuteException(() -> {
             if (INDEX_CLEAN_READY.equals(this.getParam(CLICKHOUSE_NODE_COUNT_PARAM))) {
                 loadState();

@@ -42,8 +42,6 @@ public class QueryHistorySchedulerTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() throws Exception {
         createTestMetadata();
-        getTestConfig().setMetadataUrl(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
         getTestConfig().setProperty("kylin.query.security.acl-tcr-enabled", "false");
         queryHistoryScheduler = QueryHistoryScheduler.getInstance();
         queryHistoryScheduler.queryMetricsQueue.clear();

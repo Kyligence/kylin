@@ -18,17 +18,29 @@
 
 package org.apache.kylin.rest.broadcaster;
 
+import static org.apache.kylin.common.persistence.transaction.BroadcastEventReadyNotifier.BroadcastScopeEnum.WHOLE_NODES;
+import static org.apache.kylin.common.util.ClusterConstant.ALL_MICRO_TYPE;
+import static org.apache.kylin.common.util.ClusterConstant.COMMON;
+import static org.apache.kylin.common.util.ClusterConstant.DATA_LOADING;
+import static org.apache.kylin.common.util.ClusterConstant.OPS;
+import static org.apache.kylin.common.util.ClusterConstant.QUERY;
+import static org.apache.kylin.common.util.ClusterConstant.RESOURCE;
+import static org.apache.kylin.common.util.ClusterConstant.SMART;
+
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Set;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.persistence.transaction.AddS3CredentialToSparkBroadcastEventNotifier;
+import org.apache.kylin.common.constant.ObsConfig;
+import org.apache.kylin.common.persistence.transaction.AddCredentialToSparkBroadcastEventNotifier;
 import org.apache.kylin.common.persistence.transaction.AuditLogBroadcastEventNotifier;
 import org.apache.kylin.common.persistence.transaction.BroadcastEventReadyNotifier;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.rest.cluster.ClusterManager;
 import org.apache.kylin.rest.cluster.DefaultClusterManager;
 import org.apache.kylin.rest.config.initialize.BroadcastListener;
+import org.apache.kylin.rest.response.ServerInfoResponse;
 import org.apache.kylin.rest.security.AclPermission;
 import org.apache.kylin.rest.security.AdminUserSyncEventNotifier;
 import org.apache.kylin.rest.security.UserAclManager;
@@ -53,8 +65,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
-
-import static org.apache.kylin.common.persistence.transaction.BroadcastEventReadyNotifier.BroadcastScopeEnum.WHOLE_NODES;
 
 @Slf4j
 @MetadataInfo(onlyProps = true)
@@ -114,8 +124,11 @@ class BroadcasterTest {
     @Test
     void testBroadcastAddS3Conf() throws Exception {
         BroadcastListener broadcastListener = new BroadcastListener();
-        broadcastListener.handle(new AddS3CredentialToSparkBroadcastEventNotifier("aa", "bb", "cc"));
-        Assert.assertTrue(SparderEnv.getSparkSession().conf().contains(String.format("fs.s3a.bucket.%s.assumed.role.arn", "aa")));
+        AddCredentialToSparkBroadcastEventNotifier notifier = new AddCredentialToSparkBroadcastEventNotifier(
+                ObsConfig.S3.getType(), "aa", "bb", "cc", "");
+        assert !notifier.needBroadcastSelf();
+        broadcastListener.handle(notifier);
+        Assert.assertTrue(SparderEnv.getSparkSession().conf().contains(String.format(ObsConfig.S3.getRoleArnKey(), "aa")));
     }
 
     @Test
@@ -130,6 +143,27 @@ class BroadcasterTest {
             errorMsg = e.getMessage();
         }
         Assertions.assertTrue(errorMsg.isEmpty());
+    }
+
+    @Test
+    void testBroadcasterDefaultNodeContainsAll() {
+        try (ConfigurableApplicationContext context = this.application.run("--kylin.server.mode=all")) {
+            SpringContext springContext = context.getBean(SpringContext.class);
+            ReflectionTestUtils.setField(springContext, "applicationContext", context);
+            Broadcaster broadcaster = context.getBean(Broadcaster.class);
+            DefaultClusterManager clusterManager = Mockito.spy(new DefaultClusterManager(7070));
+            Mockito.doReturn(Arrays.asList(new ServerInfoResponse("localhost:7071", COMMON),
+                    new ServerInfoResponse("localhost:7072", QUERY),
+                    new ServerInfoResponse("localhost:7073", DATA_LOADING),
+                    new ServerInfoResponse("localhost:7074", SMART), new ServerInfoResponse("localhost:7075", OPS),
+                    new ServerInfoResponse("localhost:7076", RESOURCE))).when(clusterManager).getServersFromCache();
+            ReflectionTestUtils.setField(broadcaster, "clusterManager", clusterManager);
+            Set<String> nodes = ReflectionTestUtils.invokeMethod(broadcaster, "getBroadcastNodes",
+                    new AuditLogBroadcastEventNotifier());
+            Assertions.assertNotNull(nodes);
+            // don't broadcast to resource node
+            Assertions.assertEquals(ALL_MICRO_TYPE.size() - 1, nodes.size());
+        }
     }
 
     @Configuration

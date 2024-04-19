@@ -23,6 +23,9 @@ import java.util.Arrays;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.job.dao.JobInfoDao;
+import org.apache.kylin.job.service.JobInfoService;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.ManagementType;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -102,17 +105,25 @@ public class FusionModelServiceBuildTest extends SourceTestCase {
         ReflectionTestUtils.setField(fusionModelService, "modelBuildService", modelBuildService);
         ReflectionTestUtils.setField(fusionModelService, "userGroupService", userGroupService);
         ReflectionTestUtils.setField(modelService, "userGroupService", userGroupService);
+        ReflectionTestUtils.setField(modelBuildService, "modelService", modelService);
         ReflectionTestUtils.setField(semanticService, "userGroupService", userGroupService);
         ReflectionTestUtils.setField(indexPlanService, "aclEvaluate", aclEvaluate);
         modelService.setSemanticUpdater(semanticService);
         modelService.setIndexPlanService(indexPlanService);
         TestingAuthenticationToken auth = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
         SecurityContextHolder.getContext().setAuthentication(auth);
+
+        JobInfoService jobInfoService = new JobInfoService();
+        JobContextUtil.cleanUp();
+        JobInfoDao jobInfoDao = JobContextUtil.getJobInfoDao(getTestConfig());
+        ReflectionTestUtils.setField(jobInfoService, "jobInfoDao", jobInfoDao);
+        ReflectionTestUtils.setField(jobInfoService, "modelService", modelService);
     }
 
     @After
     public void tearDown() {
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test

@@ -59,7 +59,7 @@ public class EnhancedUnitOfWorkTest extends NLocalFileMetadataTestCase {
         this.createTestMetadata();
         overwriteSystemProp("kylin.env", "dev");
         getTestConfig().setMetadataUrl("test" + System.currentTimeMillis()
-                + "@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                + "@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=");
         UnitOfWork.doInTransactionWithRetry(() -> {
             val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
             resourceStore.createMetaStoreUuidIfNotExist();

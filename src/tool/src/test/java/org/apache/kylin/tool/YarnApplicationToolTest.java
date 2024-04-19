@@ -30,10 +30,12 @@ import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.job.util.JobContextUtil;
+import org.apache.kylin.tool.util.JobMetadataWriter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -61,13 +63,14 @@ public class YarnApplicationToolTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() throws Exception {
         createTestMetadata();
+        JobContextUtil.cleanUp();
         prepareData();
-
     }
 
     @After
     public void teardown() {
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -111,5 +114,7 @@ public class YarnApplicationToolTest extends NLocalFileMetadataTestCase {
                     metadata.forEach(x -> resourceStore.checkAndPutResource(x.getResPath(), x.getByteSource(), -1));
                     return 0;
                 }).maxRetry(1).build());
+
+        JobMetadataWriter.writeJobMetaData(getTestConfig(), metadata);
     }
 }

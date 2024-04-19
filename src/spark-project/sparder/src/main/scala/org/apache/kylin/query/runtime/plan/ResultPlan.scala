@@ -424,7 +424,7 @@ object ResultPlan extends LogEx {
 
   def uploadAsyncQueryResult(file: File, path: String, queryId: String, format: String): Unit = {
     AsyncQueryUtil.getFileSystem
-      .copyFromLocalFile(true, true, new Path(file.getPath), new Path(path + "/" + queryId + "." + format))
+      .copyFromLocalFile(true, true, new Path(file.getAbsolutePath), new Path(path + "/" + queryId + "." + format))
     if (file.exists()) file.delete()
   }
 

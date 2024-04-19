@@ -19,6 +19,7 @@
 package org.apache.kylin.engine.spark.job;
 
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
+import static org.apache.kylin.common.exception.KylinException.CODE_SUCCESS;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 public class RestfulJobProgressReport implements IJobProgressReport {
 
     private static final Logger logger = LoggerFactory.getLogger(RestfulJobProgressReport.class);
+    public static final String JOB_HAS_STOPPED = "Job has stopped";
 
     /**
      * http request the spark job controller
@@ -66,16 +68,23 @@ public class RestfulJobProgressReport implements IJobProgressReport {
 
             HttpResponse response = httpClient.execute(httpPut);
             int code = response.getStatusLine().getStatusCode();
-            if (code == HttpStatus.SC_OK) {
+            InputStream inputStream = response.getEntity().getContent();
+            String responseContent = IOUtils.toString(inputStream, Charset.defaultCharset());
+            Map<String, String> kylinResponse = JsonUtil.readValueAsMap(responseContent);
+            if (code == HttpStatus.SC_OK && kylinResponse.get("code").equals(CODE_SUCCESS)) {
                 return true;
             } else {
-                InputStream inputStream = response.getEntity().getContent();
-                String responseContent = IOUtils.toString(inputStream, Charset.defaultCharset());
                 logger.warn("update spark job failed, info: {}", responseContent);
+                if (kylinResponse.get("msg").startsWith(JOB_HAS_STOPPED)) {
+                    throw new IllegalStateException(JOB_HAS_STOPPED);
+                }
             }
         } catch (Exception e) {
             if(!KylinConfig.getInstanceFromEnv().isUTEnv()) {
                 logger.error("http request {} failed!", requestApi, e);
+            }
+            if (e instanceof IllegalStateException && e.getMessage().equals(JOB_HAS_STOPPED)) {
+                throw (IllegalStateException) e;
             }
         }
         return false;
@@ -109,6 +118,9 @@ public class RestfulJobProgressReport implements IJobProgressReport {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
             logger.error("update spark job extra info failed!", e);
+            if (e instanceof IllegalStateException && e.getMessage().equals(JOB_HAS_STOPPED)) {
+                throw (IllegalStateException) e;
+            }
         }
 
         return Boolean.FALSE;

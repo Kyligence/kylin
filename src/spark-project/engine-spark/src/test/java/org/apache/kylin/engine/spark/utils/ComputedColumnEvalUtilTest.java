@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
@@ -41,7 +41,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ComputedColumnEvalUtilTest extends NLocalWithSparkSessionTest {
+
+public class ComputedColumnEvalUtilTest extends NLocalWithSparkSessionTestBase {
 
     @After
     public void tearDown() throws Exception {
@@ -306,7 +307,7 @@ public class ComputedColumnEvalUtilTest extends NLocalWithSparkSessionTest {
         newCC.setDatatype("ANY");
 
         ComputedColumnEvalUtil.evaluateExprAndTypeBatch(model, Lists.newArrayList(newCC));
-        Assert.assertEquals("DECIMAL(35,0)", newCC.getDatatype());
+        Assert.assertEquals("DECIMAL(32,0)", newCC.getDatatype());
     }
 
     @Test

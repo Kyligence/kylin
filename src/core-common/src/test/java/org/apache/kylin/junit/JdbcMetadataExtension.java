@@ -39,7 +39,7 @@ public class JdbcMetadataExtension implements BeforeEachCallback, AfterEachCallb
     @Override
     public void beforeEach(ExtensionContext context) throws Exception {
         getTestConfig().setMetadataUrl(getTableName(context)
-                + "@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                + "@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MySQL,username=sa,password=");
     }
 
     @Override

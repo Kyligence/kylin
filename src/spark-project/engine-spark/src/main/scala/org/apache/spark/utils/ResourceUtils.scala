@@ -25,11 +25,14 @@ package org.apache.spark.utils
 import java.util.{Map => JMap}
 
 import org.apache.kylin.cluster.{AvailableResource, IClusterManager, ResourceInfo}
+import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.engine.spark.job.{KylinBuildEnv, SparkJobConstants}
 import org.apache.kylin.engine.spark.utils.SparkConfHelper._
 import org.apache.spark.SparkConf
 import org.apache.spark.application.NoRetryException
 import org.apache.spark.internal.Logging
+import org.apache.spark.internal.config.{DRIVER_MEMORY_OVERHEAD, DRIVER_MEMORY_OVERHEAD_FACTOR, SUBMIT_DEPLOY_MODE, DRIVER_CORES => SPARK_DRIVER_CORES, DRIVER_MEMORY => SPARK_DRIVER_MEMORY, EXECUTOR_CORES => SPARK_EXECUTOR_CORES, EXECUTOR_INSTANCES => SPARK_EXECUTOR_INSTANCES, EXECUTOR_MEMORY => SPARK_EXECUTOR_MEMORY, EXECUTOR_MEMORY_OVERHEAD => SPARK_EXECUTOR_MEMORY_OVERHEAD, EXECUTOR_MEMORY_OVERHEAD_FACTOR => SPARK_EXECUTOR_MEMORY_OVERHEAD_FACTOR}
+import org.apache.spark.resource.ResourceProfile
 import org.apache.spark.util.Utils
 
 import scala.util.{Failure, Success, Try}
@@ -124,4 +127,58 @@ object ResourceUtils extends Logging {
       }
     }
   }
+
+  def getAllCores(conf: SparkConf, config: KylinConfig): Int = {
+    if (isCluster(conf)) {
+      getExecutorCores(conf, config) + getDriverCores(conf, config)
+    } else {
+      getExecutorCores(conf, config)
+    }
+  }
+
+  def getQueueName(conf: SparkConf): String = {
+    var queue = conf.get("spark.kubernetes.scheduler.volcano.podGroup.spec.queue", null)
+    if (queue == null) {
+      queue = conf.get(DEFAULT_QUEUE, "default")
+    }
+    queue
+  }
+
+  def getAllMemory(conf: SparkConf, config: KylinConfig): Long = {
+    if (isCluster(conf)) {
+      getExecutorMemory(conf, config) + getDriverMemory(conf, config)
+    } else {
+      getExecutorMemory(conf, config)
+    }
+  }
+
+  private def isCluster(conf: SparkConf) = conf.get(SUBMIT_DEPLOY_MODE).equals("cluster")
+
+  private def getDriverCores(conf: SparkConf, config: KylinConfig): Int = {
+    math.max(conf.get(SPARK_DRIVER_CORES), config.getContainerMinCore)
+  }
+
+  private def getDriverMemory(conf: SparkConf, config: KylinConfig): Long = {
+    val driverMemory = conf.get(SPARK_DRIVER_MEMORY)
+    val driverMemoryOverhead = conf.get(DRIVER_MEMORY_OVERHEAD).getOrElse(
+      math.max((conf.get(DRIVER_MEMORY_OVERHEAD_FACTOR) * driverMemory).toLong,
+        ResourceProfile.MEMORY_OVERHEAD_MIN_MIB)).toInt
+    math.max(driverMemory + driverMemoryOverhead, config.getContainerMinMB)
+  }
+
+  private def getExecutorCores(conf: SparkConf, config: KylinConfig): Int = {
+    val executorCores = conf.get(SPARK_EXECUTOR_CORES)
+    math.max(executorCores, config.getContainerMinCore) * getExecutors(conf)
+  }
+
+  private def getExecutorMemory(conf: SparkConf, config: KylinConfig): Long = {
+    val executorMemory = conf.get(SPARK_EXECUTOR_MEMORY)
+    val executorOffHeapMemory = Utils.executorOffHeapMemorySizeAsMb(conf)
+    val executorMemoryOverhead = conf.get(SPARK_EXECUTOR_MEMORY_OVERHEAD).getOrElse(
+      math.max((conf.get(SPARK_EXECUTOR_MEMORY_OVERHEAD_FACTOR) * executorMemory).toLong,
+        ResourceProfile.MEMORY_OVERHEAD_MIN_MIB)).toInt
+    math.max(executorMemory + executorMemoryOverhead + executorOffHeapMemory, config.getContainerMinMB) * getExecutors(conf)
+  }
+
+  private def getExecutors(conf: SparkConf): Int = conf.get(SPARK_EXECUTOR_INSTANCES).getOrElse(0)
 }

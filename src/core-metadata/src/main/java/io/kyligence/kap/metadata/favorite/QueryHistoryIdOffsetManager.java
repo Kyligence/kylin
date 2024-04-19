@@ -18,82 +18,90 @@
 
 package io.kyligence.kap.metadata.favorite;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.persistence.JsonSerializer;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.Serializer;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.metadata.MetadataConstants;
-import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
+import org.apache.kylin.common.Singletons;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffsetStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+
+import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset.OffsetType;
 
 public class QueryHistoryIdOffsetManager {
 
     private static final Logger logger = LoggerFactory.getLogger(QueryHistoryIdOffsetManager.class);
+    public static List<OffsetType> ALL_OFFSET_TYPE = Arrays.asList(OffsetType.META, OffsetType.ACCELERATE);
 
-    public static final Serializer<QueryHistoryIdOffset> QUERY_HISTORY_ID_OFFSET_SERIALIZER = new JsonSerializer<>(
-            QueryHistoryIdOffset.class);
+    private final QueryHistoryIdOffsetStore jdbcIdOffsetStore;
+    private final String project;
 
-    private final KylinConfig kylinConfig;
-    private ResourceStore resourceStore;
-    private String resourceRoot;
-    private String project;
-
-    private QueryHistoryIdOffsetManager(KylinConfig kylinConfig, String project) {
-        if (!UnitOfWork.isAlreadyInTransaction())
-            logger.info("Initializing QueryHistoryIdOffsetManager with KylinConfig Id: {} for project {}",
-                    System.identityHashCode(kylinConfig), project);
-        this.kylinConfig = kylinConfig;
+    private QueryHistoryIdOffsetManager(String project) throws Exception {
         this.project = project;
-        resourceStore = ResourceStore.getKylinMetaStore(this.kylinConfig);
-        this.resourceRoot = "/" + project + ResourceStore.QUERY_HISTORY_ID_OFFSET;
+        this.jdbcIdOffsetStore = new QueryHistoryIdOffsetStore(KylinConfig.getInstanceFromEnv());
     }
 
-    // called by reflection
-    static QueryHistoryIdOffsetManager newInstance(KylinConfig config, String project) {
-        return new QueryHistoryIdOffsetManager(config, project);
+    public static QueryHistoryIdOffsetManager getInstance(String project) {
+        return Singletons.getInstance(project, QueryHistoryIdOffsetManager.class);
     }
 
-    public static QueryHistoryIdOffsetManager getInstance(KylinConfig kylinConfig, String project) {
-        return kylinConfig.getManager(project, QueryHistoryIdOffsetManager.class);
+    public DataSourceTransactionManager getTransactionManager() {
+        return jdbcIdOffsetStore.getTransactionManager();
     }
 
-    private String path(String uuid) {
-        return this.resourceRoot + "/" + uuid + MetadataConstants.FILE_SURFIX;
+    public void saveOrUpdate(QueryHistoryIdOffset idOffset) {
+        if (idOffset.getId() == 0) {
+            idOffset.setProject(project);
+            idOffset.setCreateTime(System.currentTimeMillis());
+            idOffset.setUpdateTime(idOffset.getCreateTime());
+            jdbcIdOffsetStore.save(idOffset);
+        } else {
+            idOffset.setUpdateTime(System.currentTimeMillis());
+            jdbcIdOffsetStore.update(idOffset);
+        }
+    }
+
+    public void updateWithoutMvccCheck(QueryHistoryIdOffset idOffset) {
+        QueryHistoryIdOffset offset = jdbcIdOffsetStore.queryByProject(this.project, idOffset.getType());
+        if (offset == null) {
+            idOffset.setProject(project);
+            idOffset.setCreateTime(System.currentTimeMillis());
+            idOffset.setUpdateTime(idOffset.getCreateTime());
+            jdbcIdOffsetStore.save(idOffset);
+        } else if (idOffset.getOffset() != offset.getOffset()){
+            idOffset.setUpdateTime(System.currentTimeMillis());
+            jdbcIdOffsetStore.updateWithoutCheckMvcc(idOffset);
+        }
     }
 
     public QueryHistoryIdOffset copyForWrite(QueryHistoryIdOffset idOffset) {
-        if (idOffset.getProject() == null) {
-            idOffset.setProject(project);
-        }
-        return CachedCrudAssist.copyForWrite(idOffset, QUERY_HISTORY_ID_OFFSET_SERIALIZER, null, resourceStore);
+        // No need to copy, just return the origin object
+        // This will be rewrite after metadata is refactored
+        return idOffset;
     }
     
-    private void save(QueryHistoryIdOffset idOffset) {
-        resourceStore.checkAndPutResource(path(idOffset.getUuid()), idOffset, QUERY_HISTORY_ID_OFFSET_SERIALIZER);
-    }
-    
-    public void updateOffset(QueryHistoryIdOffsetUpdater updater) {
-        QueryHistoryIdOffset cached = get();
+    public void updateOffset(QueryHistoryIdOffset.OffsetType type, QueryHistoryIdOffsetUpdater updater) {
+        QueryHistoryIdOffset cached = get(type);
         QueryHistoryIdOffset copy = copyForWrite(cached);
         updater.modify(copy);
-        save(copy);
+        saveOrUpdate(copy);
     }
     
     public interface QueryHistoryIdOffsetUpdater {
         void modify(QueryHistoryIdOffset offset);
     }
 
-    public QueryHistoryIdOffset get() {
-        List<QueryHistoryIdOffset> queryHistoryIdOffsetList = resourceStore.getAllResources(resourceRoot,
-                QUERY_HISTORY_ID_OFFSET_SERIALIZER);
-        if (queryHistoryIdOffsetList.isEmpty()) {
-            return new QueryHistoryIdOffset(0);
+    public QueryHistoryIdOffset get(QueryHistoryIdOffset.OffsetType type) {
+        QueryHistoryIdOffset offset = jdbcIdOffsetStore.queryByProject(this.project, type.getName());
+        if (offset == null) {
+            return new QueryHistoryIdOffset(0, type);
         }
+        return offset;
+    }
 
-        return queryHistoryIdOffsetList.get(0);
+    public void delete() {
+        jdbcIdOffsetStore.deleteByProject(project);
     }
 }

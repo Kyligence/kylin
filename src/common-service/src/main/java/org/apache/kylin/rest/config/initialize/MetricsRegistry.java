@@ -42,12 +42,13 @@ import org.apache.kylin.common.metrics.MetricsTag;
 import org.apache.kylin.common.metrics.prometheus.PrometheusMetrics;
 import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
 import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.storage.ProjectStorageInfoCollector;
 import org.apache.kylin.metadata.cube.storage.StorageInfoEnum;
@@ -108,7 +109,7 @@ public class MetricsRegistry {
         Map<String, Map<Integer, Long>> tempProjectPendingJobMap = Maps.newHashMap();
         Map<String, Map<Double, Long>> tempProjectRunningJobMap = Maps.newHashMap();
         for (String project : projects) {
-            final NExecutableManager executableManager = NExecutableManager.getInstance(kylinConfig, project);
+            final ExecutableManager executableManager = ExecutableManager.getInstance(kylinConfig, project);
             tempProjectPendingJobMap.put(project, collectTimeoutToPendingJobsMap(executableManager));
             tempProjectRunningJobMap.put(project, collectTimeoutToRunningJobsMap(executableManager));
         }
@@ -116,7 +117,7 @@ public class MetricsRegistry {
         projectRunningJobMap = tempProjectRunningJobMap;
     }
     
-    private static Map<Integer, Long> collectTimeoutToPendingJobsMap(NExecutableManager executableManager) {
+    private static Map<Integer, Long> collectTimeoutToPendingJobsMap(ExecutableManager executableManager) {
         Map<Integer, Long> timeoutToPendingJobsMap = Maps.newHashMap();
         List<AbstractExecutable> pendingJobs = executableManager.getAllJobs().stream()
                 .filter(e -> ExecutableState.READY.name().equals(e.getOutput().getStatus()))
@@ -128,7 +129,7 @@ public class MetricsRegistry {
         return timeoutToPendingJobsMap;
     }
 
-    private static Map<Double, Long> collectTimeoutToRunningJobsMap(NExecutableManager executableManager) {
+    private static Map<Double, Long> collectTimeoutToRunningJobsMap(ExecutableManager executableManager) {
         Map<Double, Long> timeoutToRunningJobsMap = Maps.newHashMap();
         List<AbstractExecutable> runningJobs = executableManager.getAllJobs().stream()
                 .filter(e -> ExecutableState.RUNNING.name().equals(e.getOutput().getStatus()))
@@ -224,13 +225,14 @@ public class MetricsRegistry {
         }
         MeterRegistry meterRegistry = SpringContext.getBean(MeterRegistry.class);
         Tags projectTag = Tags.of(MetricsTag.PROJECT.getVal(), project);
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        Gauge.builder(PrometheusMetrics.JOB_COUNTS.getValue(),
-                () -> Objects.isNull(scheduler.getContext()) ? 0
-                        : scheduler.getContext().getRunningJobs().values().stream()
-                                .filter(job -> ExecutableState.RUNNING.equals(job.getOutput().getState())).count())
-                .tags(projectTag).tags(MetricsTag.STATE.getVal(), MetricsTag.RUNNING.getVal()).register(meterRegistry);
-
+        if (kylinConfig.isJobNode() || kylinConfig.isDataLoadingNode()) {
+            Gauge.builder(PrometheusMetrics.JOB_COUNTS.getValue(), () -> {
+                JobContext jobContext = JobContextUtil.getJobContext(kylinConfig);
+                return Objects.isNull(jobContext) ? 0
+                        : jobContext.getJobScheduler().getRunningJob().values().stream().map(pair -> pair.getFirst())
+                        .filter(jobExecutable -> project.equals(jobExecutable.getProject())).count();
+            }).tags(projectTag).tags(MetricsTag.STATE.getVal(), MetricsTag.RUNNING.getVal()).register(meterRegistry);
+        }
         for (double runningTimeoutHour : RUNNING_JOB_TIMEOUT_HOUR) {
             Gauge.builder(PrometheusMetrics.JOB_LONG_RUNNING.getValue(),
                     () -> MetricsRegistry.projectRunningJobMap.getOrDefault(project, Maps.newHashMap())
@@ -282,7 +284,7 @@ public class MetricsRegistry {
     }
 
     static void registerJobMetrics(KylinConfig config, String project) {
-        final NExecutableManager executableManager = NExecutableManager.getInstance(config, project);
+        final ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
         MetricsGroup.newGauge(MetricsName.JOB_ERROR_GAUGE, MetricsCategory.PROJECT, project, () -> {
             List<ExecutablePO> list = executableManager.getAllJobs();
             return list == null ? 0
@@ -292,13 +294,15 @@ public class MetricsRegistry {
             List<ExecutablePO> list = executableManager.getAllJobs();
             return list == null ? 0 : list.stream().filter(e -> {
                 String status = e.getOutput().getStatus();
-                return ExecutableState.RUNNING.name().equals(status) || ExecutableState.READY.name().equals(status);
+                return ExecutableState.RUNNING.name().equals(status) || ExecutableState.READY.name().equals(status)
+                        || ExecutableState.PENDING.name().equals(status);
             }).count();
         });
         MetricsGroup.newGauge(MetricsName.JOB_PENDING_GAUGE, MetricsCategory.PROJECT, project, () -> {
             List<ExecutablePO> list = executableManager.getAllJobs();
             return list == null ? 0
-                    : list.stream().filter(e -> ExecutableState.READY.name().equals(e.getOutput().getStatus())).count();
+                    : list.stream().filter(e -> ExecutableState.READY.name().equals(e.getOutput().getStatus())
+                            || ExecutableState.PENDING.name().equals(e.getOutput().getStatus())).count();
         });
     }
 

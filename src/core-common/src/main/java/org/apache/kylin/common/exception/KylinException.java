@@ -17,6 +17,7 @@
  */
 package org.apache.kylin.common.exception;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Locale;
 
@@ -25,7 +26,7 @@ import org.apache.kylin.common.exception.code.ErrorCodeProducer;
 import lombok.Getter;
 
 @Getter
-public class KylinException extends RuntimeException {
+public class KylinException extends RuntimeException implements Serializable {
 
     public final static String CODE_SUCCESS = "000";
     public final static String CODE_UNAUTHORIZED = "401";

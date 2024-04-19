@@ -18,15 +18,6 @@
 
 package io.kyligence.kap.secondstorage.management;
 
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import org.apache.kylin.common.util.Unsafe;
-import org.apache.kylin.metadata.project.NProjectManager;
-import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
-import io.kyligence.kap.secondstorage.config.ClusterInfo;
-import io.kyligence.kap.secondstorage.config.Node;
-import io.kyligence.kap.secondstorage.management.request.ProjectEnableRequest;
-import lombok.val;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,14 +25,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.constant.Constant;
 import org.junit.After;
 import org.junit.Assert;
@@ -50,18 +45,27 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
+import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import io.kyligence.kap.secondstorage.config.ClusterInfo;
+import io.kyligence.kap.secondstorage.config.Node;
+import io.kyligence.kap.secondstorage.management.request.ProjectEnableRequest;
+import lombok.val;
+
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ NProjectManager.class, SecondStorageUtil.class, NExecutableManager.class, UserGroupInformation.class,
+@PrepareForTest({ NProjectManager.class, SecondStorageUtil.class, ExecutableManager.class, UserGroupInformation.class,
         AbstractExecutable.class })
+@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*", "com.sun.security.*" })
 public class SecondStorageServiceTest extends NLocalFileMetadataTestCase {
     private final Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
-    private NExecutableManager executableManager = Mockito.mock(NExecutableManager.class);
+    private ExecutableManager executableManager = Mockito.mock(ExecutableManager.class);
     private SecondStorageService secondStorageService = new SecondStorageService();
 
     @Before
@@ -107,7 +111,7 @@ public class SecondStorageServiceTest extends NLocalFileMetadataTestCase {
         PowerMockito.stub(PowerMockito.method(SecondStorageUtil.class, "isProjectEnable", String.class)).toReturn(true);
         PowerMockito.stub(PowerMockito.method(SecondStorageUtil.class, "isModelEnable", String.class, String.class))
                 .toReturn(true);
-        PowerMockito.stub(PowerMockito.method(NExecutableManager.class, "getInstance", KylinConfig.class, String.class))
+        PowerMockito.stub(PowerMockito.method(ExecutableManager.class, "getInstance", KylinConfig.class, String.class))
                 .toReturn(executableManager);
     }
 
@@ -120,8 +124,8 @@ public class SecondStorageServiceTest extends NLocalFileMetadataTestCase {
         List<String> jobs = Arrays.asList("job1", "job2");
         AbstractExecutable job1 = PowerMockito.mock(AbstractExecutable.class);
         AbstractExecutable job2 = PowerMockito.mock(AbstractExecutable.class);
-        PowerMockito.when(job1.getStatus()).thenReturn(ExecutableState.RUNNING);
-        PowerMockito.when(job2.getStatus()).thenReturn(ExecutableState.SUCCEED);
+        PowerMockito.when(job1.getStatusInMem()).thenReturn(ExecutableState.RUNNING);
+        PowerMockito.when(job2.getStatusInMem()).thenReturn(ExecutableState.SUCCEED);
         PowerMockito.when(job1.getJobType()).thenReturn(JobTypeEnum.INDEX_BUILD);
         PowerMockito.when(job2.getJobType()).thenReturn(JobTypeEnum.EXPORT_TO_SECOND_STORAGE);
 

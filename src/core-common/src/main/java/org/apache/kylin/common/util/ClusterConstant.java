@@ -18,6 +18,8 @@
 package org.apache.kylin.common.util;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
 
 import lombok.Getter;
 
@@ -28,12 +30,19 @@ public class ClusterConstant implements Serializable {
     public static final String QUERY = ServerModeEnum.QUERY.name;
     public static final String ALL = ServerModeEnum.ALL.name;
     public static final String JOB = ServerModeEnum.JOB.name;
+    public static final String DATA_LOADING = ServerModeEnum.DATA_LOADING.name;
+    public static final String SMART = ServerModeEnum.SMART.name;
+    public static final String COMMON = ServerModeEnum.COMMON.name;
+    public static final String RESOURCE = ServerModeEnum.RESOURCE.name;
+    public static final String OPS = ServerModeEnum.OPS.name;
+    public static final List<String> ALL_MICRO_TYPE = Arrays.asList(COMMON, QUERY, SMART, DATA_LOADING, OPS, RESOURCE);
 
     @Getter
     public enum ServerModeEnum {
-        QUERY("query"), ALL("all"), JOB("job");
+        QUERY("query"), ALL("all"), JOB("job"), DATA_LOADING("data-loading"), SMART("smart"), COMMON(
+                "common"), RESOURCE("resource"), OPS("ops");
 
-        private String name;
+        private final String name;
 
         ServerModeEnum(String name) {
             this.name = name;

@@ -1074,11 +1074,13 @@ public class AccessService extends BasicService {
             return;
         }
         List<String> allGroups = userGroupService.getAllUserGroups();
-        if (CollectionUtils.isEmpty(allGroups)) {
-            throw new KylinException(EMPTY_USERGROUP_NAME, MsgPicker.getMsg().getEmptySid());
-        }
         Set<String> groupSet = Sets.newHashSet(allGroups);
         for (AccessRequest r : requests) {
+            if (!r.isPrincipal()) {
+                if (CollectionUtils.isEmpty(allGroups)) {
+                    throw new KylinException(EMPTY_USERGROUP_NAME, MsgPicker.getMsg().getEmptySid());
+                }
+            }
             batchCheckSid(r.getSid(), r.isPrincipal(), groupSet);
         }
     }

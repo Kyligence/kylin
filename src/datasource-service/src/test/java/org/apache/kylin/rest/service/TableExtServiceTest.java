@@ -135,7 +135,7 @@ public class TableExtServiceTest extends NLocalFileMetadataTestCase {
                 "default");
         Assert.assertEquals(2, response.getLoaded().size());
 
-        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.use-dynamic-S3-role-credential-in-table", "true");
+        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.use-dynamic-role-credential-in-table", "true");
         LoadTableResponse response2 = tableExtService.loadAWSTablesCompatibleCrossAccount(crossAccountTableReq,
                 "default");
         Assert.assertEquals(2, response2.getLoaded().size());
@@ -173,7 +173,7 @@ public class TableExtServiceTest extends NLocalFileMetadataTestCase {
         UpdateAWSTableExtDescResponse response = tableExtService.updateAWSLoadedTableExtProp(request);
         Assert.assertEquals(1, response.getSucceed().size());
 
-        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.use-dynamic-S3-role-credential-in-table", "true");
+        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.use-dynamic-role-credential-in-table", "true");
         UpdateAWSTableExtDescResponse response2 = tableExtService.updateAWSLoadedTableExtProp(request);
         Assert.assertEquals(1, response2.getSucceed().size());
     }

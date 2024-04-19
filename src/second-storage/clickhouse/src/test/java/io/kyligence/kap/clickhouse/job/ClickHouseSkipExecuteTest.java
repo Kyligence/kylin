@@ -29,8 +29,8 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.junit.After;
 import org.junit.Assert;
@@ -67,7 +67,7 @@ public class ClickHouseSkipExecuteTest extends NLocalFileMetadataTestCase {
             val factory = Mockito.mock(KylinInfoExtension.Factory.class);
             Mockito.when(factory.checkKylinInfo()).thenReturn(true);
             mockStatic.when(KylinInfoExtension::getFactory).thenReturn(factory);
-            val context = Mockito.mock(ExecutableContext.class);
+            val context = Mockito.mock(JobContext.class);
             var executeResult = clickhouseStep.doWork(context);
             Assert.assertTrue(executeResult.succeed());
 
@@ -93,7 +93,7 @@ public class ClickHouseSkipExecuteTest extends NLocalFileMetadataTestCase {
             val factory = Mockito.mock(KylinInfoExtension.Factory.class);
             Mockito.when(factory.checkKylinInfo()).thenReturn(true);
             mockStatic.when(KylinInfoExtension::getFactory).thenReturn(factory);
-            val context = Mockito.mock(ExecutableContext.class);
+            val context = Mockito.mock(JobContext.class);
             var executeResult = clickhouseStep.doWork(context);
             Assert.assertTrue(executeResult.succeed());
 

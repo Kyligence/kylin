@@ -23,16 +23,20 @@ import static org.apache.kylin.common.util.TestUtils.getTestConfig;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig.SetAndUnsetThreadLocalConfig;
+import org.apache.kylin.common.util.ClusterConstant;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
@@ -240,5 +244,129 @@ public class KylinConfigTest {
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
+    }
+
+    @Test
+    public void testServerMode() {
+        KylinConfig config = Mockito.spy(KylinConfig.class);
+
+        mockMode(config, ClusterConstant.ALL, null);
+        Assert.assertArrayEquals(new boolean[] { true, true, false, true, false, false, false, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.JOB, null);
+        Assert.assertArrayEquals(new boolean[] { false, true, true, false, false, false, false, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.QUERY, null);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, true, true, false, false, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.ALL, ClusterConstant.DATA_LOADING);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, false, true, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.JOB, ClusterConstant.DATA_LOADING);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, false, true, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.QUERY, ClusterConstant.DATA_LOADING);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, false, true, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.ALL, ClusterConstant.COMMON);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, true, false, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.JOB, ClusterConstant.COMMON);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, true, false, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.QUERY, ClusterConstant.COMMON);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, true, false, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.ALL, ClusterConstant.SMART);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, false, false, true },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.JOB, ClusterConstant.SMART);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, false, false, true },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.QUERY, ClusterConstant.SMART);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, false, false, false, false, true },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.ALL, ClusterConstant.QUERY);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, true, true, false, false, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.JOB, ClusterConstant.QUERY);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, true, true, false, false, false },
+                getServerModeStatus(config));
+        mockMode(config, ClusterConstant.QUERY, ClusterConstant.QUERY);
+        Assert.assertArrayEquals(new boolean[] { false, false, false, true, true, false, false, false },
+                getServerModeStatus(config));
+    }
+
+    boolean[] getServerModeStatus(KylinConfig config) {
+        return new boolean[] { config.isAllNode(), config.isJobNode(), config.isJobNodeOnly(), config.isQueryNode(),
+                config.isQueryNodeOnly(), config.isMetadataNode(), config.isDataLoadingNode(), config.isSmartNode() };
+    }
+
+    void mockMode(KylinConfig config, String serverMode, String microServiceMode) {
+        Mockito.when(config.getServerMode()).thenReturn(serverMode);
+        Mockito.when(config.getMicroServiceMode()).thenReturn(microServiceMode);
+    }
+
+    @Test
+    public void testLoadMicroServiceMode() throws IOException {
+        ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();
+        try {
+            ClassLoader cl = Mockito.mock(ClassLoader.class);
+            Thread.currentThread().setContextClassLoader(cl);
+
+            String fileName = "application.yaml";
+            File file = new File(fileName);
+            Mockito.when(cl.getResource(fileName)).thenReturn(file.toURI().toURL());
+
+            final KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+
+            createYamlFile("common", file);
+            Assert.assertEquals(ClusterConstant.COMMON, kylinConfig.getMicroServiceMode());
+            Assert.assertEquals(ClusterConstant.COMMON, kylinConfig.getMicroServiceMode());
+            kylinConfig.properties.clear();
+
+            createYamlFile("data-loading", file);
+            Assert.assertEquals(ClusterConstant.DATA_LOADING, kylinConfig.getMicroServiceMode());
+            kylinConfig.properties.clear();
+
+            createYamlFile("query", file);
+            Assert.assertEquals(ClusterConstant.QUERY, kylinConfig.getMicroServiceMode());
+            kylinConfig.properties.clear();
+
+            createYamlFile("smart", file);
+            Assert.assertEquals(ClusterConstant.SMART, kylinConfig.getMicroServiceMode());
+            kylinConfig.properties.clear();
+
+            createYamlFile("ops", file);
+            Assert.assertEquals(ClusterConstant.OPS, kylinConfig.getMicroServiceMode());
+            kylinConfig.properties.clear();
+
+            createYamlFile("resource", file);
+            Assert.assertEquals(ClusterConstant.RESOURCE, kylinConfig.getMicroServiceMode());
+            kylinConfig.properties.clear();
+
+            createYamlFile("illegal", file);
+            Assert.assertNull(kylinConfig.getMicroServiceMode());
+            kylinConfig.properties.clear();
+
+            Mockito.when(cl.getResource(fileName)).thenReturn(null);
+            Assert.assertNull(kylinConfig.getMicroServiceMode());
+
+            Assert.assertTrue(file.delete());
+        } catch (Exception e) {
+            Assert.fail(e.getMessage());
+        } finally {
+            Thread.currentThread().setContextClassLoader(threadClassLoader);
+        }
+    }
+
+    void createYamlFile(String applicationName, File file) throws IOException {
+        String context = String.format(
+                "spring:\n  web: 123\n---\nspring:\n  application:\n    host: localhost\n---\nspring:\n  application:\n    name: %s",
+                applicationName);
+        FileWriter fs = new FileWriter(file);
+        fs.write(context);
+        fs.flush();
+        fs.close();
     }
 }

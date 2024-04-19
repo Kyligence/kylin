@@ -38,13 +38,15 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
-import org.apache.kylin.job.engine.JobEngineConfig;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableParams;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -60,15 +62,13 @@ import org.apache.kylin.metadata.job.JobBucket;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.val;
 
@@ -81,14 +81,29 @@ public class JobManagerTest extends NLocalFileMetadataTestCase {
 
     private static JobManager jobManager;
 
+    private KylinConfig config;
+
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
     @Before
     public void setup() throws Exception {
+
         this.createTestMetadata();
+        config = getTestConfig();
+
+        config.setProperty("kylin.job.check-quota-storage-enabled", "false");
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(config);
+
         jobManager = JobManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT);
         SparkJobFactoryUtils.initJobFactory();
+    }
+
+    @After
+    public void after() throws Exception {
+        JobContextUtil.cleanUp();
+        cleanupTestMetadata();
     }
 
     private void assertExeption(Functions f, String msg) {
@@ -352,19 +367,17 @@ public class JobManagerTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testQuotaLimitReached() {
-        NDefaultScheduler defaultScheduler = NDefaultScheduler.getInstance(PROJECT);
-        defaultScheduler.init(new JobEngineConfig(getTestConfig()));
-        defaultScheduler.getContext().setReachQuotaLimit(true);
-        Assert.assertThrows(KylinException.class, () -> {
-            try {
-                JobManager.checkStorageQuota(PROJECT);
-            } finally {
-                defaultScheduler.forceShutdown();
-                defaultScheduler.getContext().setReachQuotaLimit(false);
-            }
-        });
-
+    public void testQuotaLimitReached() throws Exception {
+        thrown.expect(KylinException.class);
+        JobContext jobContext = JobContextUtil.getJobContext(getTestConfig());
+        jobContext.setProjectReachQuotaLimit(PROJECT, true);
+        JobParam param = new JobParam(Sets.newHashSet(), null, null, "ADMIn", Sets.newHashSet(), null);
+        try {
+            JobManager.checkStorageQuota(PROJECT);
+        } finally {
+            JobContextUtil.cleanUp();
+            jobContext.setProjectReachQuotaLimit(PROJECT, true);
+        }
     }
 
     @Test
@@ -389,7 +402,7 @@ public class JobManagerTest extends NLocalFileMetadataTestCase {
     }
 
     private List<AbstractExecutable> getRunningExecutables(String project, String model) {
-        List<AbstractExecutable> runningExecutables = NExecutableManager
+        List<AbstractExecutable> runningExecutables = ExecutableManager
                 .getInstance(KylinConfig.getInstanceFromEnv(), project).getRunningExecutables(project, model);
         runningExecutables.sort(Comparator.comparing(AbstractExecutable::getCreateTime));
         return runningExecutables;

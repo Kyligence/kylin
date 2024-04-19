@@ -1495,7 +1495,7 @@
       "columnName": "NEST3",
       "expression": "round(TEST_KYLIN_FACT.NEST2, 0)",
       "innerExpression": "round((TEST_KYLIN_FACT.PRICE + 11) * 12, 0)",
-      "datatype": "decimal(23,0)",
+      "datatype": "decimal(20,0)",
       "comment": "test nest3"
     },
     {
@@ -1504,7 +1504,7 @@
       "columnName": "NEST4",
       "expression": "TEST_KYLIN_FACT.NEST3 * TEST_KYLIN_FACT.ITEM_COUNT",
       "innerExpression": "round((TEST_KYLIN_FACT.PRICE + 11) * 12, 0) * TEST_KYLIN_FACT.ITEM_COUNT",
-      "datatype": "decimal(34,0)",
+      "datatype": "decimal(31,0)",
       "comment": "test nest4"
     },
     {
@@ -1513,7 +1513,7 @@
       "columnName": "NEST5",
       "expression": "TEST_KYLIN_FACT.NEST3 * (TEST_KYLIN_FACT.ITEM_COUNT+100)",
       "innerExpression": "round((TEST_KYLIN_FACT.PRICE + 11) * 12, 0) * (TEST_KYLIN_FACT.ITEM_COUNT+100)",
-      "datatype": "decimal(34,0)",
+      "datatype": "decimal(31,0)",
       "comment": "test nest4"
     }
   ],

@@ -29,10 +29,15 @@ public final class ExecutableConstants {
     public static final String YARN_APP_IDS = "yarn_application_ids";
     public static final String YARN_APP_IDS_DELIMITER = ",";
     public static final String YARN_APP_URL = "yarn_application_tracking_url";
+    public static final String PROXY_APP_URL = "proxy_application_tracking_url";
     public static final String SPARK_HISTORY_APP_URL = "spark_history_application_tracking_url";
     public static final String YARN_JOB_WAIT_TIME = "yarn_job_wait_time";
     public static final String YARN_JOB_RUN_TIME = "yarn_job_run_time";
     public static final String MR_JOB_ID = "mr_job_id";
+    public static final String QUEUE_NAME = "queue_name";
+    public static final String CORES = "cores";
+    public static final String MEMORY = "memory";
+
     public static final String HDFS_BYTES_WRITTEN = "hdfs_bytes_written";
     public static final String SOURCE_RECORDS_COUNT = "source_records_count";
     public static final String SOURCE_RECORDS_SIZE = "source_records_size";

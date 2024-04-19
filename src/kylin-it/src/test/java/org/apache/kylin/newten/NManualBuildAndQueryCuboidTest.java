@@ -28,7 +28,7 @@ import org.apache.kylin.engine.spark.NSparkCubingEngine;
 import org.apache.kylin.engine.spark.builder.CreateFlatTable;
 import org.apache.kylin.engine.spark.job.CuboidAggregator;
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.measure.bitmap.BitmapCounter;
 import org.apache.kylin.measure.bitmap.BitmapSerializer;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
@@ -80,9 +80,9 @@ public class NManualBuildAndQueryCuboidTest extends NManualBuildAndQueryTest {
     }
 
     @After
-    public void after() {
-        NDefaultScheduler.destroyInstance();
+    public void after() throws Exception {
         super.cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Override

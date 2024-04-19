@@ -23,21 +23,25 @@ import static io.kyligence.kap.metadata.favorite.FavoriteRule.MIN_HIT_COUNT;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import io.kyligence.kap.metadata.recommendation.ref.LayoutRef;
-import io.kyligence.kap.metadata.recommendation.ref.OptRecV2;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.Singletons;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem.CostMethod;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
+import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import io.kyligence.kap.metadata.recommendation.ref.LayoutRef;
+import io.kyligence.kap.metadata.recommendation.ref.OptRecV2;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
@@ -55,6 +59,10 @@ public class RawRecManager {
     RawRecManager(String project) throws Exception {
         this.project = project;
         this.jdbcRawRecStore = new JdbcRawRecStore(KylinConfig.getInstanceFromEnv());
+    }
+
+    public DataSourceTransactionManager getTransactionManager() {
+        return jdbcRawRecStore.getTransactionManager();
     }
 
     /**
@@ -104,22 +112,40 @@ public class RawRecManager {
         return map;
     }
 
+    public Pair<String, RawRecItem> queryRecItemByMd5(String md5, String content) {
+        return jdbcRawRecStore.queryRecItemByMd5(md5, content);
+    }
+
+    public List<RawRecItem> queryAll() {
+        return jdbcRawRecStore.queryAll();
+    }
+
     public int clearExistingCandidates(String project, String model) {
-        int updateCount = 0;
+        AtomicInteger updateCount = new AtomicInteger();
         long start = System.currentTimeMillis();
         List<RawRecItem> existingCandidates = jdbcRawRecStore.queryAdditionalLayoutRecItems(project, model);
         long updateTime = System.currentTimeMillis();
         for (val rawRecItem : existingCandidates) {
-            rawRecItem.setUpdateTime(updateTime);
-            if (!RawRecItem.IMPORTED.equalsIgnoreCase(rawRecItem.getRecSource())) {
-                rawRecItem.setState(RawRecItem.RawRecState.INITIAL);
-                updateCount++;
-            }
+            AtomicBoolean retry = new AtomicBoolean(false);
+            JdbcUtil.withTxAndRetry(jdbcRawRecStore.getTransactionManager(), () -> {
+                RawRecItem tmpRawRecItem = rawRecItem;
+                if (retry.get()) {
+                    tmpRawRecItem = jdbcRawRecStore.queryById(tmpRawRecItem.getId());
+                } else {
+                    retry.set(true);
+                }
+                tmpRawRecItem.setUpdateTime(updateTime);
+                if (!RawRecItem.IMPORTED.equalsIgnoreCase(tmpRawRecItem.getRecSource())) {
+                    tmpRawRecItem.setState(RawRecItem.RawRecState.INITIAL);
+                    updateCount.getAndIncrement();
+                }
+                jdbcRawRecStore.update(tmpRawRecItem);
+                return null;
+            });
         }
-        jdbcRawRecStore.update(existingCandidates);
         log.info("clear all existing candidate recommendations of model({}/{}) takes {} ms.", //
                 project, model, System.currentTimeMillis() - start);
-        return updateCount;
+        return updateCount.get();
     }
 
     public List<RawRecItem> displayTopNRecItems(String project, String model, int limit) {
@@ -137,9 +163,9 @@ public class RawRecManager {
         OptRecV2 optRecV2 = new OptRecV2(project, model, false);
         List<RawRecItem> topNCandidates = Lists.newArrayList();
         int minCost = Integer.parseInt(
-                FavoriteRuleManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getValue(MIN_HIT_COUNT));
-        CostMethod costMethod = CostMethod.getCostMethod(project);
-        minCost = costMethod == CostMethod.HIT_COUNT ? minCost : -1;
+                FavoriteRuleManager.getInstance(project).getValue(MIN_HIT_COUNT));
+        RawRecItem.CostMethod costMethod = RawRecItem.CostMethod.getCostMethod(project);
+        minCost = costMethod == RawRecItem.CostMethod.HIT_COUNT ? minCost : -1;
         int offset = 0;
         while (topNCandidates.size() < topN) {
             List<RawRecItem> rawRecItems = jdbcRawRecStore.chooseTopNCandidates(project, model, minCost, topN, offset,
@@ -158,11 +184,21 @@ public class RawRecManager {
             offset++;
         }
         topNCandidates.forEach(rawRecItem -> {
-            rawRecItem.setUpdateTime(current);
-            rawRecItem.setRecSource(RawRecItem.QUERY_HISTORY);
-            rawRecItem.setState(RawRecItem.RawRecState.RECOMMENDED);
+            AtomicBoolean retry = new AtomicBoolean(false);
+            JdbcUtil.withTxAndRetry(jdbcRawRecStore.getTransactionManager(), () -> {
+                RawRecItem tmpRawRecItem = rawRecItem;
+                if (retry.get()) {
+                    tmpRawRecItem = jdbcRawRecStore.queryById(tmpRawRecItem.getId());
+                } else {
+                    retry.set(true);
+                }
+                tmpRawRecItem.setUpdateTime(current);
+                tmpRawRecItem.setRecSource(RawRecItem.QUERY_HISTORY);
+                tmpRawRecItem.setState(RawRecItem.RawRecState.RECOMMENDED);
+                rawRecManager.saveOrUpdate(tmpRawRecItem);
+                return null;
+            });
         });
-        rawRecManager.saveOrUpdate(topNCandidates);
         return topNCandidates.size() != existCandidateCount;
     }
 
@@ -181,8 +217,8 @@ public class RawRecManager {
         throw new NotImplementedException("get candidate raw recommendations by project not implement!");
     }
 
-    public void saveOrUpdate(List<RawRecItem> recItems) {
-        jdbcRawRecStore.batchAddOrUpdate(recItems);
+    public void saveOrUpdate(RawRecItem recItem) {
+        jdbcRawRecStore.addOrUpdate(recItem);
     }
 
     public void discardRecItemsOfBrokenModel(String model) {
@@ -222,7 +258,7 @@ public class RawRecManager {
     }
 
     public RawRecItem getRawRecItemByUniqueFlag(String project, String modelId, String uniqueFlag,
-            Integer semanticVersion) {
+                                                Integer semanticVersion) {
         return jdbcRawRecStore.queryByUniqueFlag(project, modelId, uniqueFlag, semanticVersion);
     }
 

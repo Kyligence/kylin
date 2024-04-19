@@ -49,6 +49,7 @@ import org.apache.kylin.common.persistence.event.Event;
 import org.apache.kylin.common.persistence.event.ResourceCreateOrUpdateEvent;
 import org.apache.kylin.common.persistence.event.ResourceDeleteEvent;
 import org.apache.kylin.common.util.ExecutableApplication;
+import org.apache.kylin.common.util.FileSystemUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.MetadataChecker;
@@ -56,7 +57,7 @@ import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.helper.MetadataToolHelper;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegDetails;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -321,8 +322,8 @@ public class RollbackTool extends ExecutableApplication {
 
         for (String project : updateProjects) {
 
-            val currentExecutableManager = NExecutableManager.getInstance(currentConfig, project);
-            val restoreExecutableManager = NExecutableManager.getInstance(restoreConfig, project);
+            val currentExecutableManager = ExecutableManager.getInstance(currentConfig, project);
+            val restoreExecutableManager = ExecutableManager.getInstance(restoreConfig, project);
 
             restoreExecutableManager.getAllExecutables().stream().forEach(e -> {
                 if (currentExecutableManager.getJob(e.getId()) != null) {
@@ -471,7 +472,7 @@ public class RollbackTool extends ExecutableApplication {
 
         // Select last folder less than user specified time
         val formatter = DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm-ss");
-        val candidateFolder = Arrays.stream(fs.listStatus(new Path(path))).filter(fileStatus -> {
+        val candidateFolder = Arrays.stream(FileSystemUtil.listStatus(fs, new Path(path))).filter(fileStatus -> {
             return Pattern.matches("\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}-\\d{2}_backup", fileStatus.getPath().getName());
         }).filter(fileStatus -> {
             val filePrefix = fileStatus.getPath().getName().substring(0, "yyyy-MM-dd-HH-mm-ss".length());

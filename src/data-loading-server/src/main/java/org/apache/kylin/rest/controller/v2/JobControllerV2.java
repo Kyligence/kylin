@@ -28,11 +28,12 @@ import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinVersion;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.constant.JobActionEnum;
 import org.apache.kylin.job.constant.JobStatusEnum;
+import org.apache.kylin.job.rest.JobFilter;
+import org.apache.kylin.job.service.JobInfoService;
 import org.apache.kylin.rest.controller.BaseController;
-import org.apache.kylin.rest.request.JobFilter;
-import org.apache.kylin.rest.response.DataResult;
 import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.ExecutableResponse;
 import org.apache.kylin.rest.service.JobService;
@@ -47,8 +48,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
 import io.swagger.annotations.ApiOperation;
 
 @Controller
@@ -57,6 +56,9 @@ public class JobControllerV2 extends BaseController {
 
     private static final String JOB_ID_ARG_NAME = "jobId";
     private static final String STEP_ID_ARG_NAME = "stepId";
+
+    @Autowired
+    private JobInfoService jobInfoService;
 
     @Autowired
     @Qualifier("jobService")
@@ -70,10 +72,10 @@ public class JobControllerV2 extends BaseController {
     @ResponseBody
     public EnvelopeResponse<ExecutableResponse> resume(@PathVariable(value = "jobId") String jobId) throws IOException {
         checkRequiredArg(JOB_ID_ARG_NAME, jobId);
-        final ExecutableResponse jobInstance = jobService.getJobInstance(jobId);
+        final ExecutableResponse jobInstance = jobInfoService.getJobInstance(jobId);
         aclEvaluate.checkProjectOperationPermission(jobInstance.getProject());
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS,
-                jobService.manageJob(jobInstance.getProject(), jobInstance, JobActionEnum.RESUME.toString()), "");
+                jobInfoService.manageJob(jobInstance.getProject(), jobInstance, JobActionEnum.RESUME.toString()), "");
     }
 
     @ApiOperation(value = "getJobList", tags = { "DW" })
@@ -96,33 +98,25 @@ public class JobControllerV2 extends BaseController {
         }
         checkNonNegativeIntegerArg("pageOffset", pageOffset);
         checkNonNegativeIntegerArg("pageSize", pageSize);
-        List<String> statuses = Lists.newArrayList();
+        List<JobStatusEnum> statuses = Lists.newArrayList();
         for (Integer code : status) {
             JobStatusEnum jobStatus = JobStatusEnum.getByCode(code);
             if (Objects.isNull(jobStatus)) {
-                jobService.checkJobStatus(String.valueOf(code));
+                jobInfoService.checkJobStatus(String.valueOf(code));
                 continue;
             }
-            statuses.add(jobStatus.toString());
+            statuses.add(jobStatus);
         }
 
         JobFilter jobFilter = new JobFilter(statuses,
                 Objects.isNull(jobName) ? Lists.newArrayList() : Lists.newArrayList(jobName), timeFilter, null, key,
                 false, project, sortBy, reverse);
-        List<ExecutableResponse> executables = null;
-        if (!StringUtils.isEmpty(project)) {
-            executables = jobService.listJobs(jobFilter);
-        } else {
-            DataResult<List<ExecutableResponse>> dataResult = jobService.listGlobalJobs(jobFilter, 0,
-                    Integer.MAX_VALUE);
-            if (dataResult != null) {
-                executables = dataResult.getValue();
-            }
-        }
-        executables = jobService.addOldParams(executables);
+        List<ExecutableResponse> executables = jobInfoService.listJobs(jobFilter);
+        executables = jobInfoService.addOldParams(executables);
+        long count = jobInfoService.countJobs(jobFilter);
         executables.forEach(
                 executableResponse -> executableResponse.setVersion(KylinVersion.getCurrentVersion().toString()));
-        Map<String, Object> result = getDataResponse("jobs", executables, pageOffset, pageSize);
+        Map<String, Object> result = getDataResponse("jobs", executables, (int)count, pageOffset, pageSize);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, result, "");
     }
     
@@ -131,9 +125,9 @@ public class JobControllerV2 extends BaseController {
     @ResponseBody
     public EnvelopeResponse<ExecutableResponse> getJob(@PathVariable(value = "jobId") String jobId) {
         checkRequiredArg(JOB_ID_ARG_NAME, jobId);
-        ExecutableResponse jobInstance = jobService.getJobInstance(jobId);
+        ExecutableResponse jobInstance = jobInfoService.getJobInstance(jobId);
         List<ExecutableResponse> executables = Lists.newArrayList(jobInstance);
-        executables = jobService.addOldParams(executables);
+        executables = jobInfoService.addOldParams(executables);
         if (executables != null && executables.size() != 0) {
             jobInstance = executables.get(0);
         }
@@ -148,7 +142,7 @@ public class JobControllerV2 extends BaseController {
     @ResponseBody
     public EnvelopeResponse<Map<String, Object>> getJobOutput(@PathVariable("job_id") String jobId,
             @PathVariable("step_id") String stepId) {
-        String project = jobService.getProjectByJobId(jobId);
+        String project = jobInfoService.getProjectByJobId(jobId);
         checkProjectName(project);
         Map<String, Object> result = jobService.getStepOutput(project, jobId, stepId);
         result.put(JOB_ID_ARG_NAME, jobId);

@@ -417,7 +417,7 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
 
     private StreamingJobStatsManager mockStreamingJobDataStats(String jobId) {
         getTestConfig().setMetadataUrl(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=");
         val streamingJobsStatsManager = StreamingJobStatsManager.getInstance();
         val now = System.currentTimeMillis();
         streamingJobsStatsManager
@@ -764,7 +764,7 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
     private StreamingJobStatsManager createStatData(String jobId) {
         val config = getTestConfig();
         config.setMetadataUrl(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=");
 
         val streamingJobsStatsManager = StreamingJobStatsManager.getInstance();
         val now = System.currentTimeMillis();
@@ -778,7 +778,7 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
     private void createRecordData(String jobId) {
         val config = getTestConfig();
         config.setMetadataUrl(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=");
         val record = new StreamingJobRecord();
         record.setId(100L);
         record.setJobId(jobId);

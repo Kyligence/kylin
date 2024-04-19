@@ -23,20 +23,20 @@ import java.util.Locale;
 import java.util.Set;
 
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.metadata.model.ColumnDesc;
-import org.apache.kylin.metadata.model.SegmentRange;
-import org.apache.kylin.metadata.model.TableDesc;
-import org.apache.kylin.metadata.model.TableExtDesc;
-import org.apache.kylin.source.IReadableTable;
-import org.apache.kylin.source.ISourceMetadataExplorer;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.engine.spark.NSparkCubingEngine.NSparkCubingSource;
 import org.apache.kylin.engine.spark.builder.CreateFlatTable;
 import org.apache.kylin.metadata.cube.model.NCubeJoinedFlatTableDesc;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.SegmentRange;
+import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.metadata.model.TableExtDesc;
+import org.apache.kylin.source.IReadableTable;
+import org.apache.kylin.source.ISourceMetadataExplorer;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -49,7 +49,7 @@ import org.junit.Test;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 @SuppressWarnings("serial")
-public class CsvSourceTest extends NLocalWithSparkSessionTest {
+public class CsvSourceTest extends NLocalWithSparkSessionTestBase {
 
     private static final String DEFAULT_TABLE = "DEFAULT.TEST_KYLIN_FACT";
 

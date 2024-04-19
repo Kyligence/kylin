@@ -42,9 +42,10 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.kylin.common.Singletons;
 import org.apache.kylin.common.logging.LogOutputStream;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItemMapper;
-import org.apache.kylin.metadata.transaction.SpringManagedTransactionFactory;
+import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 
+import io.kyligence.kap.metadata.recommendation.candidate.RawRecItemMapper;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -53,6 +54,8 @@ public class RawRecStoreUtil {
     private static final Charset DEFAULT_CHARSET = Charset.defaultCharset();
     public static final String CREATE_REC_TABLE = "create.rawrecommendation.store.table";
     public static final String CREATE_INDEX = "create.rawrecommendation.store.index";
+
+    private static final String ADD_MVCC_COLUMN_SQL = "alter table %s add mvcc bigint";
 
     private RawRecStoreUtil() {
     }
@@ -75,6 +78,10 @@ public class RawRecStoreUtil {
             throws IOException, SQLException {
         if (JdbcUtil.isTableExists(dataSource.getConnection(), tableName)) {
             log.info("{} already existed in database", tableName);
+            if (!hasMvccColumn(dataSource, tableName)) {
+                log.info("Table {} does not have 'mvcc' column, try to add.", tableName);
+                addMvccColumn(dataSource, tableName);
+            }
             return;
         }
 
@@ -97,6 +104,21 @@ public class RawRecStoreUtil {
             throw new IllegalStateException(String.format(Locale.ROOT, "create table(%s) failed", tableName));
         } else {
             log.debug("table({}) already exists.", tableName);
+        }
+    }
+
+    private static boolean hasMvccColumn(BasicDataSource dataSource, String tableName) throws SQLException {
+        return JdbcUtil.isColumnExists(dataSource.getConnection(), tableName, "mvcc");
+    }
+
+    private static void addMvccColumn(BasicDataSource dataSource, String tableName) {
+        String addColumnSql = String.format(Locale.ROOT, ADD_MVCC_COLUMN_SQL, tableName);
+        try {
+            JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+            jdbcTemplate.execute(addColumnSql);
+            log.debug("Add 'mvcc' column to table {} succeed.", tableName);
+        } catch (Throwable t) {
+            log.error("Add 'mvcc' column to table " + tableName + " failed. The column might already exist?", t);
         }
     }
 }

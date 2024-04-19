@@ -21,9 +21,9 @@ import java.util.Locale;
 
 import org.apache.kylin.common.KylinConfig;
 
-import lombok.val;
 import oshi.SystemInfo;
 import oshi.hardware.HardwareAbstractionLayer;
+import oshi.util.FileUtil;
 
 public final class SystemInfoCollector {
 
@@ -33,6 +33,8 @@ public final class SystemInfoCollector {
     private static final long TEBI = 1L << 40;
     private static final long PEBI = 1L << 50;
     private static final long EXBI = 1L << 60;
+    public static final String CONTAINER_MEMORY_USAGE_IN_BYTES = "/sys/fs/cgroup/memory/memory.usage_in_bytes";
+    public static final String CONTAINER_MEMORY_LIMIT_IN_BYTES = "/sys/fs/cgroup/memory/memory.limit_in_bytes";
 
     private static HardwareAbstractionLayer hal = null;
 
@@ -49,9 +51,21 @@ public final class SystemInfoCollector {
         if (KylinConfig.getInstanceFromEnv().isDevOrUT()) {
             return 6192;
         }
-        val mem = hal.getMemory();
-        return mem.getAvailable() % MEBI == 0
-                ? Integer.parseInt(String.format(Locale.ROOT, "%d", mem.getAvailable() / MEBI))
-                : Integer.parseInt(String.format(Locale.ROOT, "%.0f", (double) mem.getAvailable() / MEBI));
+        long memAvailable = 0L;
+        if (KylinConfig.getInstanceFromEnv().getMicroServiceMode() == null) {
+            memAvailable = hal.getMemory().getAvailable();
+        } else {
+            long containerMemoryLimit = FileUtil.getLongFromFile(CONTAINER_MEMORY_LIMIT_IN_BYTES);
+            long containerMemoryUsage = FileUtil.getLongFromFile(CONTAINER_MEMORY_USAGE_IN_BYTES);
+            if (containerMemoryLimit == 0 || containerMemoryUsage == 0) {
+                memAvailable = hal.getMemory().getAvailable();
+            } else {
+                memAvailable = containerMemoryLimit - containerMemoryUsage;
+            }
+        }
+
+        return memAvailable % MEBI == 0
+                ? Integer.parseInt(String.format(Locale.ROOT, "%d", memAvailable / MEBI))
+                : Integer.parseInt(String.format(Locale.ROOT, "%.0f", (double) memAvailable / MEBI));
     }
 }

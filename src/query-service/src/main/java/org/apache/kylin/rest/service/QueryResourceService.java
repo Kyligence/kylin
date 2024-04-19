@@ -17,9 +17,7 @@
  */
 package org.apache.kylin.rest.service;
 
-import java.util.ArrayList;
-
-import org.apache.spark.ExecutorAllocationClient;
+import org.apache.spark.scheduler.ContainerSchedulerManager;
 import org.apache.spark.sql.SparderEnv;
 import org.springframework.stereotype.Component;
 
@@ -28,54 +26,49 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
-import scala.collection.JavaConverters;
 
 @Slf4j
 @Component
 public class QueryResourceService {
 
+    public String getQueueName() {
+        String queue = getContainerSchedulerManager().getQueueName();
+        log.info("queueName={}", queue);
+        return queue;
+    }
+
     public QueryResource adjustQueryResource(QueryResource resource) {
-        int adjustNum;
-        if (resource.instance > 0) {
-            adjustNum = requestExecutor(resource.instance);
-        } else {
-            adjustNum = releaseExecutor(resource.instance * -1, resource.force);
+        val manager = getContainerSchedulerManager();
+        int cores = resource.getCores();
+        long memory = resource.getMemory();
+        val core = cores / manager.getExecutorCores();
+        val mem = memory / manager.getExecutorMemory();
+        int adjustNum = (int) Math.min(core, mem);
+        if (adjustNum == 0) {
+            return new QueryResource();
         }
-        return new QueryResource(adjustNum, resource.force);
+        adjustNum = updateExecutorNum(adjustNum, resource.force);
+        return new QueryResource(resource.queueName, manager.getExecutorCores() * adjustNum,
+                manager.getExecutorMemory() * adjustNum, resource.force);
     }
 
-    public int getExecutorSize() {
-        return getExecutorAllocationClient().getExecutorIds().size();
-    }
-
-    private int requestExecutor(int instance) {
-        val client = getExecutorAllocationClient();
-        return client.requestExecutors(instance) ? instance : 0;
-    }
-
-    private int releaseExecutor(int instance, boolean force) {
-        val client = getExecutorAllocationClient();
-        val ids = client.getExecutorIds().iterator();
-        val idsToRemoved = new ArrayList<String>();
-        while (ids.hasNext()) {
-            if (idsToRemoved.size() == instance)
-                break;
-            val id = ids.next();
-            idsToRemoved.add(id);
+    private int updateExecutorNum(int num, boolean force) {
+        val manager = getContainerSchedulerManager();
+        if (num < 0) {
+            num *= -1;
+            val available = manager.getExecutorCount() - 1;
+            num = Math.min(num, available);
+            return num == 0 ? 0 : manager.releaseExecutor(num, force).size() * -1;
         }
-
-        if (idsToRemoved.isEmpty()) {
-            return 0;
-        }
-        return client.killExecutors(JavaConverters.asScalaBuffer(idsToRemoved).toSeq(), true, false, force).size();
+        return manager.requestExecutor(num) ? num : 0;
     }
 
-    private ExecutorAllocationClient getExecutorAllocationClient() {
-        return SparderEnv.executorAllocationClient().get();
+    private ContainerSchedulerManager getContainerSchedulerManager() {
+        return SparderEnv.containerSchedulerManager().get();
     }
 
     public boolean isAvailable() {
-        boolean available = SparderEnv.executorAllocationClient().isDefined() && SparderEnv.isSparkAvailable();
+        boolean available = SparderEnv.containerSchedulerManager().isDefined() && SparderEnv.isSparkAvailable();
         log.info("node is available={}", available);
         return available;
     }
@@ -84,7 +77,11 @@ public class QueryResourceService {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class QueryResource {
-        private int instance;
+
+        private String queueName;
+        private int cores;
+        private long memory;
         private boolean force;
     }
+
 }

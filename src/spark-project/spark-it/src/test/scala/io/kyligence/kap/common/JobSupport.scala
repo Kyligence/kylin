@@ -25,6 +25,10 @@ package io.kyligence.kap.common
 import java.io.File
 import java.util.Objects
 
+import java.util.stream.Collectors
+import java.util.{Objects, UUID}
+import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps, Sets}
+import io.kyligence.kap.engine.spark.job.{NSparkCubingJob, NSparkCubingStep, NSparkMergingJob, NSparkMergingStep}
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -33,16 +37,16 @@ import org.apache.kylin.common.persistence.metadata.MetadataStore
 import org.apache.kylin.common.util.{RandomUtil, Unsafe}
 import org.apache.kylin.common.{KapConfig, KylinConfig, StorageURL}
 import org.apache.kylin.engine.spark.ExecutableUtils
-import org.apache.kylin.engine.spark.merger.{AfterBuildResourceMerger, AfterMergeOrRefreshResourceMerger}
 import org.apache.kylin.engine.spark.utils.{FileNames, HDFSUtils}
+import org.apache.kylin.job.execution._
+import org.apache.kylin.job.util.JobContextUtil
 import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps, Sets}
 import org.apache.kylin.job.engine.JobEngineConfig
-import org.apache.kylin.job.execution.{AbstractExecutable, ExecutableState, NExecutableManager}
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler
 import org.apache.kylin.metadata.cube.model._
 import org.apache.kylin.metadata.model.SegmentRange
 import org.apache.kylin.metadata.realization.RealizationStatusEnum
 import org.apache.kylin.query.runtime.plan.TableScanPlan
+import org.apache.kylin.rest.service.merger.{AfterBuildResourceMerger, AfterMergeOrRefreshResourceMerger}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.common.SparderQueryTest
@@ -61,17 +65,14 @@ trait JobSupport
   self: Suite =>
   val DEFAULT_PROJECT = "default"
   val schedulerInterval = "1"
-  var scheduler: NDefaultScheduler = _
+  // var scheduler: NDefaultScheduler = _
   val systemProp = Maps.newHashMap[String, String]()
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     Unsafe.setProperty("kylin.job.scheduler.poll-interval-second", schedulerInterval)
-    scheduler = NDefaultScheduler.getInstance(DEFAULT_PROJECT)
-    scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv))
-    if (!scheduler.hasStarted) {
-      throw new RuntimeException("scheduler has not been started")
-    }
+    JobContextUtil.cleanUp()
+    JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv)
   }
 
   private def restoreSparderEnv(): Unit = {
@@ -91,10 +92,10 @@ trait JobSupport
   }
 
   override def afterAll(): Unit = {
-    scheduler.shutdown()
+    // scheduler.shutdown()
     restoreSparderEnv()
     super.afterAll()
-
+    JobContextUtil.cleanUp()
   }
 
   @throws[Exception]
@@ -147,7 +148,7 @@ trait JobSupport
       table =>
         val parent = FileNames.snapshotFileWithWorkingDir(table.getTableDesc, workingDirectory)
         Assert.assertTrue(s"$parent should ony one file, please check " +
-          s"org.apache.kylin.engine.spark.merger.AfterBuildResourceMerger.updateSnapshotTableIfNeed ",
+          s"org.apache.kylin.rest.service.merger.AfterBuildResourceMerger.updateSnapshotTableIfNeed ",
           HDFSUtils.listSortedFileFrom(parent).size == 1)
     })
   }
@@ -159,8 +160,7 @@ trait JobSupport
                            prj: String): NDataSegment = {
     val config: KylinConfig = KylinConfig.getInstanceFromEnv
     val dsMgr: NDataflowManager = NDataflowManager.getInstance(config, prj)
-    val execMgr: NExecutableManager =
-      NExecutableManager.getInstance(config, prj)
+    val execMgr: ExecutableManager = ExecutableManager.getInstance(config, prj)
     val df: NDataflow = dsMgr.getDataflow(cubeName)
     // ready dataflow, segment, cuboid layout
     val oneSeg: NDataSegment = dsMgr.appendSegment(df, segmentRange)
@@ -207,7 +207,7 @@ trait JobSupport
                                 prj: String = DEFAULT_PROJECT): Unit = {
     val config = KylinConfig.getInstanceFromEnv
     val dsMgr = NDataflowManager.getInstance(config, DEFAULT_PROJECT)
-    val execMgr = NExecutableManager.getInstance(config, DEFAULT_PROJECT)
+    val execMgr = ExecutableManager.getInstance(config, DEFAULT_PROJECT)
     var df = dsMgr.getDataflow(dfName)
     Assert.assertTrue(config.getHdfsWorkingDirectory.startsWith("file:"))
     // cleanup all segments first
@@ -311,7 +311,7 @@ trait JobSupport
                                prj: String = DEFAULT_PROJECT): Unit = {
     val config = KylinConfig.getInstanceFromEnv
     val dsMgr = NDataflowManager.getInstance(config, DEFAULT_PROJECT)
-    val execMgr = NExecutableManager.getInstance(config, DEFAULT_PROJECT)
+    val execMgr = ExecutableManager.getInstance(config, DEFAULT_PROJECT)
     var df = dsMgr.getDataflow(dfName)
     Assert.assertTrue(config.getHdfsWorkingDirectory.startsWith("file:"))
     // cleanup all segments first

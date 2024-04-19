@@ -64,9 +64,11 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.guava30.shaded.common.util.concurrent.RateLimiter;
-import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.dao.ExecutablePO;
+import org.apache.kylin.job.dao.JobInfoDao;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.LayoutPartition;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegDetails;
@@ -328,186 +330,6 @@ public class StorageCleaner implements GarbageCleaner {
     private String getDfFlatTableDir(String project, String dataFlowId) {
         return project + FLAT_TABLE_STORAGE_ROOT + "/" + dataFlowId;
     }
-
-    class ProjectStorageCleaner {
-
-        private final String project;
-
-        private final Set<String> dependentFiles = Sets.newTreeSet();
-
-        ProjectStorageCleaner(String project) {
-            this.project = project;
-        }
-
-        public void execute() {
-            collectJobTmp(project);
-            collectDataflow(project);
-            collectTable(project);
-
-            for (StorageItem item : allFileSystems) {
-                for (List<FileTreeNode> nodes : item.getProject(project).getAllCandidates()) {
-                    for (FileTreeNode node : nodes) {
-                        log.debug("find candidate /{}", node.getRelativePath());
-                    }
-                }
-            }
-            for (String dependentFile : dependentFiles) {
-                log.debug("remove candidate {}", dependentFile);
-            }
-            removeDependentFiles();
-        }
-
-        private void removeDependentFiles() {
-            for (StorageItem item : allFileSystems) {
-                for (List<FileTreeNode> nodes : item.getProject(project).getAllCandidates()) {
-                    // protect parent folder and
-                    nodes.removeIf(
-                            node -> dependentFiles.stream().anyMatch(df -> ("/" + node.getRelativePath()).startsWith(df)
-                                    || df.startsWith("/" + node.getRelativePath())));
-                }
-            }
-        }
-
-        private void collectJobTmp(String project) {
-            val config = KylinConfig.getInstanceFromEnv();
-            val executableManager = NExecutableManager.getInstance(config, project);
-            Set<String> activeJobs = executableManager.getAllExecutables().stream()
-                    .map(e -> project + JOB_TMP_ROOT + "/" + e.getId()).collect(Collectors.toSet());
-            for (StorageItem item : allFileSystems) {
-                item.getProject(project).getJobTmps().removeIf(node -> activeJobs.contains(node.getRelativePath()));
-            }
-        }
-
-        private void collectDataflow(String project) {
-            val config = KylinConfig.getInstanceFromEnv();
-            val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-            val activeIndexDataPath = Sets.<String> newHashSet();
-            val activeBucketDataPath = Sets.<String> newHashSet();
-            val activeFastBitmapIndexDataPath = Sets.<String> newHashSet();
-            val activeSegmentFlatTableDataPath = Sets.<String> newHashSet();
-            val dataflows = NDataflowManager.getInstance(config, project).listAllDataflows().stream()
-                    .map(RootPersistentEntity::getId).collect(Collectors.toSet());
-            // set activeSegmentFlatTableDataPath, by iterating segments
-            dataflowManager.listAllDataflows().forEach(df -> df.getSegments().stream() //
-                    .map(segment -> getSegmentFlatTableDir(project, segment))
-                    .forEach(activeSegmentFlatTableDataPath::add));
-            //set activeIndexDataPath
-            dataflowManager.listAllDataflows().forEach(dataflow -> dataflow.getSegments().stream() //
-                    .flatMap(segment -> segment.getLayoutsMap().values().stream()) //
-                    .forEach(layout -> {
-                        activeIndexDataPath.add(getDataLayoutDir(layout));
-                        layout.getMultiPartition().forEach(partition -> //
-                        activeBucketDataPath.add(getDataPartitionDir(layout, partition)));
-                    }));
-            activeIndexDataPath
-                    .forEach(path -> activeFastBitmapIndexDataPath.add(path + HadoopUtil.FAST_BITMAP_SUFFIX));
-            val activeSegmentPath = activeIndexDataPath.stream().map(s -> new File(s).getParent())
-                    .collect(Collectors.toSet());
-            for (StorageCleaner.StorageItem item : allFileSystems) {
-                item.getProject(project).getDataflows().removeIf(node -> dataflows.contains(node.getName()));
-                item.getProject(project).getSegments()
-                        .removeIf(node -> activeSegmentPath.contains(node.getRelativePath()));
-                item.getProject(project).getLayouts()
-                        .removeIf(node -> activeIndexDataPath.contains(node.getRelativePath())
-                                || activeFastBitmapIndexDataPath.contains(node.getRelativePath()));
-                item.getProject(project).getBuckets()
-                        .removeIf(node -> activeBucketDataPath.contains(node.getRelativePath()));
-                item.getProject(project).getDfFlatTables().removeIf(node -> dataflows.contains(node.getName()));
-                item.getProject(project).getSegmentFlatTables()
-                        .removeIf(node -> activeSegmentFlatTableDataPath.contains(node.getRelativePath()));
-            }
-        }
-
-        private void collectTable(String project) {
-            val config = KylinConfig.getInstanceFromEnv();
-            val tableManager = NTableMetadataManager.getInstance(config, project);
-            val activeDictDir = Sets.<String> newHashSet();
-            val activeTableExdDir = Sets.<String> newHashSet();
-            val activeDictTableDir = Sets.<String> newHashSet();
-            val activeSnapshotTableDir = Sets.<String> newHashSet();
-            val activeSnapshotDir = Sets.<String> newHashSet();
-            tableManager.listAllTables().forEach(table -> {
-                Arrays.stream(table.getColumns())
-                        .map(column -> getDictDir(project) + "/" + table.getIdentity() + "/" + column.getName())
-                        .forEach(activeDictDir::add);
-                activeTableExdDir.add(project + ResourceStore.TABLE_EXD_RESOURCE_ROOT + "/" + table.getIdentity());
-                activeSnapshotTableDir.add(project + SNAPSHOT_STORAGE_ROOT + "/" + table.getIdentity());
-                if (table.getLastSnapshotPath() != null) {
-                    activeSnapshotDir.add(table.getLastSnapshotPath());
-                }
-                activeDictTableDir.add(getDictDir(project) + "/" + table.getIdentity());
-            });
-
-            for (StorageCleaner.StorageItem item : allFileSystems) {
-                item.getProject(project).getGlobalDictTables()
-                        .removeIf(node -> activeDictTableDir.contains(node.getRelativePath()));
-                item.getProject(project).getGlobalDictColumns()
-                        .removeIf(node -> activeDictDir.contains(node.getRelativePath()));
-                item.getProject(project).getSnapshots()
-                        .removeIf(node -> activeSnapshotDir.contains(node.getRelativePath()));
-                item.getProject(project).getSnapshotTables()
-                        .removeIf(node -> activeSnapshotTableDir.contains(node.getRelativePath()));
-                item.getProject(project).getTableExds()
-                        .removeIf(node -> activeTableExdDir.contains(node.getRelativePath()));
-            }
-        }
-    }
-
-    class ProjectTemporaryTableCleaner {
-        private final String project;
-        private CliCommandExecutor cliCommandExecutor;
-        private ProjectTemporaryTableCleanerHelper tableCleanerHelper;
-
-        ProjectTemporaryTableCleaner(String project) {
-            this.project = project;
-            this.cliCommandExecutor = new CliCommandExecutor();
-            this.tableCleanerHelper = new ProjectTemporaryTableCleanerHelper();
-        }
-
-        public void execute() {
-            List<FileTreeNode> jobTemps = allFileSystems.iterator().next().getProject(project).getJobTmps();
-            doExecuteCmd(collectDropTemporaryTransactionTable(jobTemps));
-        }
-
-        private void doExecuteCmd(String cmd) {
-            try {
-                CliCmdExecResult executeResult = cliCommandExecutor.execute(cmd, null);
-                if (executeResult.getCode() != 0) {
-                    log.error("execute drop intermediate table return fail, cmd : " + cmd);
-                } else {
-                    log.info("execute drop intermediate table succeeded, cmd: " + cmd);
-                }
-            } catch (ShellException e) {
-                log.error("execute drop intermediate table error, cmd : " + cmd, e);
-            }
-        }
-
-        public String collectDropTemporaryTransactionTable(List<FileTreeNode> jobTemps) {
-            String result = "";
-            try {
-                KylinConfig config = KylinConfig.getInstanceFromEnv();
-                FileSystem fs = HadoopUtil.getWorkingFileSystem();
-                Set<String> jobTempTables = jobTemps.stream().filter(node -> !node.getName().endsWith(".zip"))
-                        .map(node -> tableCleanerHelper.getJobTransactionalTable(project, node.getName(), fs))
-                        .flatMap(Collection::stream).collect(Collectors.toSet());
-
-                Set<String> discardTempTables = NExecutableManager.getInstance(config, project)
-                        .getExecutablesByStatus(ExecutableState.DISCARDED).stream()
-                        .map(e -> tableCleanerHelper.getJobTransactionalTable(project, e.getId(), fs))
-                        .flatMap(Collection::stream).collect(Collectors.toSet());
-                jobTempTables.addAll(discardTempTables);
-
-                if (CollectionUtils.isNotEmpty(jobTempTables) && config.isReadTransactionalTableEnabled()) {
-                    result = tableCleanerHelper.getDropTmpTableCmd(project, jobTempTables);
-                }
-            } catch (Exception exception) {
-                log.error("Failed to delete temporary tables.", exception);
-            }
-            log.info("collectDropTemporaryTransactionTable end.");
-            return result;
-        }
-    }
-
     private void addItem(FileSystemDecorator fs, Path itemPath, long protectionTime) throws IOException {
         val status = fs.getFileStatus(itemPath);
         if (status.getPath().getName().startsWith(".")) {
@@ -849,6 +671,188 @@ public class StorageCleaner implements GarbageCleaner {
         }
     }
 
+    class ProjectStorageCleaner {
+
+        private final String project;
+
+        private final Set<String> dependentFiles = Sets.newTreeSet();
+
+        ProjectStorageCleaner(String project) {
+            this.project = project;
+        }
+
+        public void execute() {
+            collectJobTmp(project);
+            collectDataflow(project);
+            collectTable(project);
+
+            for (StorageItem item : allFileSystems) {
+                for (List<FileTreeNode> nodes : item.getProject(project).getAllCandidates()) {
+                    for (FileTreeNode node : nodes) {
+                        log.debug("find candidate /{}", node.getRelativePath());
+                    }
+                }
+            }
+            for (String dependentFile : dependentFiles) {
+                log.debug("remove candidate {}", dependentFile);
+            }
+            removeDependentFiles();
+        }
+
+        private void removeDependentFiles() {
+            for (StorageItem item : allFileSystems) {
+                for (List<FileTreeNode> nodes : item.getProject(project).getAllCandidates()) {
+                    // protect parent folder and
+                    nodes.removeIf(
+                            node -> dependentFiles.stream().anyMatch(df -> ("/" + node.getRelativePath()).startsWith(df)
+                                    || df.startsWith("/" + node.getRelativePath())));
+                }
+            }
+        }
+
+        private void collectJobTmp(String project) {
+            val config = KylinConfig.getInstanceFromEnv();
+            val executableManager = ExecutableManager.getInstance(config, project);
+            List<ExecutablePO> executablePOList = executableManager.getAllJobs();
+            Set<String> activeJobs = executablePOList.stream()
+                    .map(e -> project + JOB_TMP_ROOT + "/" + e.getId()).collect(Collectors.toSet());
+            for (StorageItem item : allFileSystems) {
+                item.getProject(project).getJobTmps().removeIf(node -> activeJobs.contains(node.getRelativePath()));
+            }
+        }
+
+        private void collectDataflow(String project) {
+            val config = KylinConfig.getInstanceFromEnv();
+            val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val activeIndexDataPath = Sets.<String> newHashSet();
+            val activeBucketDataPath = Sets.<String> newHashSet();
+            val activeFastBitmapIndexDataPath = Sets.<String> newHashSet();
+            val activeSegmentFlatTableDataPath = Sets.<String> newHashSet();
+            val dataflows = NDataflowManager.getInstance(config, project).listAllDataflows().stream()
+                    .map(RootPersistentEntity::getId).collect(Collectors.toSet());
+            // set activeSegmentFlatTableDataPath, by iterating segments
+            dataflowManager.listAllDataflows().forEach(df -> df.getSegments().stream() //
+                    .map(segment -> getSegmentFlatTableDir(project, segment))
+                    .forEach(activeSegmentFlatTableDataPath::add));
+            //set activeIndexDataPath
+            dataflowManager.listAllDataflows().forEach(dataflow -> dataflow.getSegments().stream() //
+                    .flatMap(segment -> segment.getLayoutsMap().values().stream()) //
+                    .forEach(layout -> {
+                        activeIndexDataPath.add(getDataLayoutDir(layout));
+                        layout.getMultiPartition().forEach(partition -> //
+                        activeBucketDataPath.add(getDataPartitionDir(layout, partition)));
+                    }));
+            activeIndexDataPath
+                    .forEach(path -> activeFastBitmapIndexDataPath.add(path + HadoopUtil.FAST_BITMAP_SUFFIX));
+            val activeSegmentPath = activeIndexDataPath.stream().map(s -> new File(s).getParent())
+                    .collect(Collectors.toSet());
+            for (StorageCleaner.StorageItem item : allFileSystems) {
+                item.getProject(project).getDataflows().removeIf(node -> dataflows.contains(node.getName()));
+                item.getProject(project).getSegments()
+                        .removeIf(node -> activeSegmentPath.contains(node.getRelativePath()));
+                item.getProject(project).getLayouts()
+                        .removeIf(node -> activeIndexDataPath.contains(node.getRelativePath())
+                                || activeFastBitmapIndexDataPath.contains(node.getRelativePath()));
+                item.getProject(project).getBuckets()
+                        .removeIf(node -> activeBucketDataPath.contains(node.getRelativePath()));
+                item.getProject(project).getDfFlatTables().removeIf(node -> dataflows.contains(node.getName()));
+                item.getProject(project).getSegmentFlatTables()
+                        .removeIf(node -> activeSegmentFlatTableDataPath.contains(node.getRelativePath()));
+            }
+        }
+
+        private void collectTable(String project) {
+            val config = KylinConfig.getInstanceFromEnv();
+            val tableManager = NTableMetadataManager.getInstance(config, project);
+            val activeDictDir = Sets.<String> newHashSet();
+            val activeTableExdDir = Sets.<String> newHashSet();
+            val activeDictTableDir = Sets.<String> newHashSet();
+            val activeSnapshotTableDir = Sets.<String> newHashSet();
+            val activeSnapshotDir = Sets.<String> newHashSet();
+            tableManager.listAllTables().forEach(table -> {
+                Arrays.stream(table.getColumns())
+                        .map(column -> getDictDir(project) + "/" + table.getIdentity() + "/" + column.getName())
+                        .forEach(activeDictDir::add);
+                activeTableExdDir.add(project + ResourceStore.TABLE_EXD_RESOURCE_ROOT + "/" + table.getIdentity());
+                activeSnapshotTableDir.add(project + SNAPSHOT_STORAGE_ROOT + "/" + table.getIdentity());
+                if (table.getLastSnapshotPath() != null) {
+                    activeSnapshotDir.add(table.getLastSnapshotPath());
+                }
+                activeDictTableDir.add(getDictDir(project) + "/" + table.getIdentity());
+            });
+
+            for (StorageCleaner.StorageItem item : allFileSystems) {
+                item.getProject(project).getGlobalDictTables()
+                        .removeIf(node -> activeDictTableDir.contains(node.getRelativePath()));
+                item.getProject(project).getGlobalDictColumns()
+                        .removeIf(node -> activeDictDir.contains(node.getRelativePath()));
+                item.getProject(project).getSnapshots()
+                        .removeIf(node -> activeSnapshotDir.contains(node.getRelativePath()));
+                item.getProject(project).getSnapshotTables()
+                        .removeIf(node -> activeSnapshotTableDir.contains(node.getRelativePath()));
+                item.getProject(project).getTableExds()
+                        .removeIf(node -> activeTableExdDir.contains(node.getRelativePath()));
+            }
+        }
+    }
+
+    class ProjectTemporaryTableCleaner {
+        private final String project;
+        private CliCommandExecutor cliCommandExecutor;
+        private ProjectTemporaryTableCleanerHelper tableCleanerHelper;
+
+        ProjectTemporaryTableCleaner(String project) {
+            this.project = project;
+            this.cliCommandExecutor = new CliCommandExecutor();
+            this.tableCleanerHelper = new ProjectTemporaryTableCleanerHelper();
+        }
+
+        public void execute() {
+            List<FileTreeNode> jobTemps = allFileSystems.iterator().next().getProject(project).getJobTmps();
+            doExecuteCmd(collectDropTemporaryTransactionTable(jobTemps));
+        }
+
+
+        private void doExecuteCmd(String cmd) {
+            try {
+                CliCmdExecResult executeResult = cliCommandExecutor.execute(cmd, null);
+                if (executeResult.getCode() != 0) {
+                    log.error("execute drop intermediate table return fail, cmd : " + cmd);
+                } else {
+                    log.info("execute drop intermediate table succeeded, cmd: " + cmd);
+                }
+            } catch (ShellException e) {
+                log.error("execute drop intermediate table error, cmd : " + cmd, e);
+            }
+        }
+
+        public String collectDropTemporaryTransactionTable(List<FileTreeNode> jobTemps) {
+            String result = "";
+            try {
+                KylinConfig config = KylinConfig.getInstanceFromEnv();
+                FileSystem fs = HadoopUtil.getWorkingFileSystem();
+                Set<String> jobTempTables = jobTemps.stream().filter(node -> !node.getName().endsWith(".zip"))
+                        .map(node -> tableCleanerHelper.getJobTransactionalTable(project, node.getName(), fs))
+                        .flatMap(Collection::stream).collect(Collectors.toSet());
+                List<ExecutablePO> discardedExecutablePOs = ExecutableManager.getInstance(config, project)
+                        .getExecutablePOsByStatus(Lists.newArrayList(ExecutableState.DISCARDED));
+                ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
+                Set<String> discardTempTables = discardedExecutablePOs.stream()
+                        .map(executablePO -> executableManager.fromPO(executablePO))
+                        .map(e -> tableCleanerHelper.getJobTransactionalTable(project, e.getId(), fs))
+                        .flatMap(Collection::stream).collect(Collectors.toSet());
+                jobTempTables.addAll(discardTempTables);
+
+                if (CollectionUtils.isNotEmpty(jobTempTables) && config.isReadTransactionalTableEnabled()) {
+                    result = tableCleanerHelper.getDropTmpTableCmd(project, jobTempTables);
+                }
+            } catch (Exception exception) {
+                log.error("Failed to delete temporary tables.", exception);
+            }
+            log.info("collectDropTemporaryTransactionTable end.");
+            return result;
+        }
+    }
     /**
      * Sparder history dir hierarchy is
      *
@@ -878,15 +882,10 @@ public class StorageCleaner implements GarbageCleaner {
                     eventLogCleanStartTime, KYLIN_CONFIG.getQueryHistorySurvivalThreshold(), minQueryHistoryTime,
                     queryExpirationTime);
 
-            long earliest = Long.MAX_VALUE;
-            NProjectManager projectManager = NProjectManager.getInstance(KYLIN_CONFIG);
-            for (ProjectInstance prj : projectManager.listAllProjects()) {
-                NExecutableManager executableManager = NExecutableManager.getInstance(KYLIN_CONFIG, prj.getName());
-                for (AbstractExecutable executable : executableManager.getAllExecutables()) {
-                    if (executable.getCreateTime() < earliest) {
-                        earliest = executable.getCreateTime();
-                    }
-                }
+            JobInfoDao jobInfoDao = JobContextUtil.getJobInfoDao(KYLIN_CONFIG);
+            Long earliest = jobInfoDao.getEarliestJobCreateTime();
+            if (null == earliest) {
+                earliest = Long.MAX_VALUE;
             }
 
             buildExpirationTime = Math.min(eventLogCleanStartTime - KYLIN_CONFIG.getExecutableSurvivalTimeThreshold(),

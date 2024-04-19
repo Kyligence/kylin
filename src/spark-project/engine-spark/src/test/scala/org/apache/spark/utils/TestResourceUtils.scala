@@ -23,6 +23,7 @@ import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.engine.spark.job.KylinBuildEnv
 import org.apache.kylin.engine.spark.utils.SparkConfHelper._
 import org.apache.spark.SparkConf
+import org.apache.spark.internal.config.SUBMIT_DEPLOY_MODE
 import org.apache.spark.sql.common.SparderBaseFunSuite
 import org.mockito.Mockito
 import org.scalatest.BeforeAndAfterEach
@@ -227,6 +228,29 @@ class TestResourceUtils extends SparderBaseFunSuite with BeforeAndAfterEach {
     } catch {
       case e: Exception => assert(e.getMessage.contains("more than the maximum allocation memory capability"))
     }
+  }
+
+  test("test resource") {
+    val kylinConfig: KylinConfig = Mockito.mock(classOf[KylinConfig])
+    val conf = new SparkConf()
+    conf.set(EXECUTOR_INSTANCES, "1")
+    conf.set(EXECUTOR_MEMORY, "1024MB")
+    conf.set(EXECUTOR_OVERHEAD, "1024MB")
+    conf.set(EXECUTOR_CORES, "4")
+    conf.set(DRIVER_MEMORY, "1MB")
+    conf.set(DRIVER_OVERHEAD, "0MB")
+    conf.set(DRIVER_CORES, "1")
+
+    conf.set(SUBMIT_DEPLOY_MODE, "client")
+    assertResult(4)(ResourceUtils.getAllCores(conf, kylinConfig))
+    assertResult(2048)(ResourceUtils.getAllMemory(conf, kylinConfig))
+    assertResult("default")(ResourceUtils.getQueueName(conf))
+
+    conf.set(SUBMIT_DEPLOY_MODE, "cluster")
+    conf.set("spark.kubernetes.scheduler.volcano.podGroup.spec.queue", "test_build_queue")
+    assertResult(5)(ResourceUtils.getAllCores(conf, kylinConfig))
+    assertResult(2049)(ResourceUtils.getAllMemory(conf, kylinConfig))
+    assertResult("test_build_queue")(ResourceUtils.getQueueName(conf))
   }
 
   test("checkResource return true when skipCheckResource=true") {

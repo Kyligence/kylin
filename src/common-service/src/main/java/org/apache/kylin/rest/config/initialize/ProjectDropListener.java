@@ -18,38 +18,45 @@
 package org.apache.kylin.rest.config.initialize;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.util.HadoopUtil;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.common.metrics.MetricsGroup;
-import io.kyligence.kap.metadata.epoch.EpochManager;
+import org.apache.kylin.common.util.HadoopUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
-import org.apache.kylin.rest.service.task.QueryHistoryTaskScheduler;
+import org.apache.kylin.rest.cluster.ClusterManager;
+import org.apache.kylin.rest.response.ServerInfoResponse;
 import org.apache.kylin.streaming.manager.StreamingJobManager;
+import org.apache.kylin.tool.restclient.RestClient;
+import org.springframework.http.HttpHeaders;
 
+import io.kyligence.kap.metadata.epoch.EpochManager;
+import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
+import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ProjectDropListener {
 
-    public void onDelete(String project) {
+    public void onDelete(String project, ClusterManager clusterManager, HttpHeaders headers) {
         log.debug("delete project {}", project);
 
         val kylinConfig = KylinConfig.getInstanceFromEnv();
 
         try {
-            NExecutableManager.getInstance(kylinConfig, project).destoryAllProcess();
+            destroyAllProcess(project, clusterManager, headers);
+            ExecutableManager.getInstance(kylinConfig, project).deleteAllJobsOfProject();
             StreamingJobManager.getInstance(kylinConfig, project).destroyAllProcess();
             RDBMSQueryHistoryDAO.getInstance().dropProjectMeasurement(project);
+            QueryHistoryIdOffsetManager.getInstance(project).delete();
             RawRecManager.getInstance(project).deleteByProject(project);
-            QueryHistoryTaskScheduler.shutdownByProject(project);
-            NDefaultScheduler.shutdownByProject(project);
 
             MetricsGroup.removeProjectMetrics(project);
             if (KylinConfig.getInstanceFromEnv().isPrometheusMetricsEnabled()) {
@@ -60,6 +67,22 @@ public class ProjectDropListener {
             deleteStorage(kylinConfig, project.split("\\.")[0]);
         } catch (Exception e) {
             log.warn("error when delete " + project + " storage", e);
+        }
+    }
+
+    private void destroyAllProcess(String project, ClusterManager clusterManager, HttpHeaders headers)
+            throws IOException {
+        if (null == clusterManager || null == headers) {
+            return;
+        }
+        List<ServerInfoResponse> serverInfoResponses = clusterManager.getJobServers();
+        List<String> jobNodeHosts = serverInfoResponses.stream().map(serverInfoResponse -> serverInfoResponse.getHost())
+                .collect(Collectors.toList());
+        for (String host : jobNodeHosts) {
+            RestClient client = new RestClient(host);
+            Map<String, String> form = Maps.newHashMap();
+            form.put("project", project);
+            client.forwardPostWithUrlEncodedForm("/jobs/destroy_job_process", headers, form);
         }
     }
 

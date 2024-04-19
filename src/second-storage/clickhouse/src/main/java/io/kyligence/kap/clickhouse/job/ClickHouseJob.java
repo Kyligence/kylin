@@ -17,21 +17,21 @@
  */
 package io.kyligence.kap.clickhouse.job;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.metadata.cube.model.LayoutEntity;
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
-import org.apache.kylin.metadata.cube.model.NDataSegment;
-import org.apache.kylin.metadata.cube.model.NDataflow;
-import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.DefaultExecutable;
-import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.factory.JobFactory;
+import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.job.factory.JobFactory;
+import org.apache.kylin.metadata.cube.model.LayoutEntity;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.cube.model.NDataflow;
 
 public class ClickHouseJob extends DefaultExecutable {
 
@@ -44,7 +44,7 @@ public class ClickHouseJob extends DefaultExecutable {
     }
 
     /** This constructor is needed by reflection, since a private constructor is already defined for Builder,
-     *  we have to manually define it. Please check {@link org.apache.kylin.job.execution.NExecutableManager#fromPO}
+     *  we have to manually define it. Please check {@link org.apache.kylin.job.execution.ExecutableManager#fromPO}
      */
     public ClickHouseJob() {
     }

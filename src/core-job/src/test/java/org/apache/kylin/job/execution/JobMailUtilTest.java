@@ -26,6 +26,7 @@ import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.mail.JobMailUtil;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,11 +44,14 @@ public class JobMailUtilTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() throws Exception {
         createTestMetadata();
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobInfoDao(getTestConfig());
     }
 
     @After
     public void after() throws Exception {
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -87,12 +91,13 @@ public class JobMailUtilTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testCreateMailForJobError() {
-        val manager = NExecutableManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
+        val manager = ExecutableManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
         DefaultExecutableOnModel job = new DefaultExecutableOnModel();
         job.setName("test_job2");
         job.setSubmitter("test_submitter2");
         job.setProject(DEFAULT_PROJECT);
         job.setTargetSubject("model_test2");
+        job.setJobType(JobTypeEnum.INDEX_BUILD);
 
         // test no tasks
         Pair<String, String> mail = JobMailUtil.createMail(MailNotificationType.JOB_ERROR, job);
@@ -107,6 +112,8 @@ public class JobMailUtilTest extends NLocalFileMetadataTestCase {
         mail = JobMailUtil.createMail(MailNotificationType.JOB_ERROR, job);
         Assert.assertNull(mail);
 
+        manager.updateJobOutput(job.getJobId(), ExecutableState.PENDING);
+        manager.updateJobOutput(step2.getId(), ExecutableState.PENDING);
         manager.updateJobOutput(step2.getId(), ExecutableState.ERROR);
         DefaultExecutableOnModel job2 = (DefaultExecutableOnModel) manager.getJob(job.getId());
         mail = JobMailUtil.createMail(MailNotificationType.JOB_ERROR, job2);

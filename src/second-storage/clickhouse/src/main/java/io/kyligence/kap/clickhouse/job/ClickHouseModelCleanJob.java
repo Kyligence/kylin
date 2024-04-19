@@ -18,26 +18,29 @@
 
 package io.kyligence.kap.clickhouse.job;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
-import org.apache.kylin.metadata.cube.model.NDataSegment;
-import org.apache.kylin.metadata.cube.model.NDataflowManager;
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
-import io.kyligence.kap.secondstorage.metadata.Manager;
-import io.kyligence.kap.secondstorage.metadata.TableFlow;
-import io.kyligence.kap.secondstorage.metadata.TablePartition;
-import lombok.val;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.job.SecondStorageCleanJobBuildParams;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.factory.JobFactory;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.NDataModelManager;
 
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import io.kyligence.kap.secondstorage.metadata.Manager;
+import io.kyligence.kap.secondstorage.metadata.TableFlow;
+import io.kyligence.kap.secondstorage.metadata.TablePartition;
+import lombok.val;
 
 public class ClickHouseModelCleanJob extends DefaultExecutable {
 
@@ -81,6 +84,9 @@ public class ClickHouseModelCleanJob extends DefaultExecutable {
         setParam(NBatchConstants.P_PROJECT_NAME, builder.project);
         setParam(NBatchConstants.P_TARGET_MODEL, getTargetSubject());
         setParam(NBatchConstants.P_DATAFLOW_ID, builder.df.getId());
+        NDataModel dataModelDesc = NDataModelManager.getInstance(getConfig(), project)
+                .getDataModelDesc(builder.getModelId());
+        setParam(NBatchConstants.P_MODEL_NAME, dataModelDesc.getAlias());
 
         AbstractClickHouseClean step = new ClickHouseTableClean();
         step.setProject(getProject());

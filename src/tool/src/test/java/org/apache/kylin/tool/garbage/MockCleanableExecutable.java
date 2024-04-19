@@ -18,22 +18,22 @@
 
 package org.apache.kylin.tool.garbage;
 
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
 
 public class MockCleanableExecutable extends AbstractExecutable {
+    @Override
+    protected ExecuteResult doWork(JobContext context) throws ExecuteException {
+        return ExecuteResult.createSucceed();
+    }
+
     public MockCleanableExecutable() {
         super();
     }
 
     public MockCleanableExecutable(Object notSetId) {
         super(notSetId);
-    }
-
-    @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
-        return ExecuteResult.createSucceed();
     }
 }

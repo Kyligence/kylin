@@ -19,7 +19,10 @@ package org.apache.kylin.rest.util;
 
 import java.io.File;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.util.AddressUtil;
+import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.tool.util.ToolUtil;
 
 import lombok.extern.slf4j.Slf4j;
@@ -43,11 +46,16 @@ public class JStackDumpTask implements Runnable {
         TimestampedRollingFileOutputDir rollingFileOutputDir = new TimestampedRollingFileOutputDir(outputDir,
                 "jstack.timed.log", kylinConfig.getJStackDumpTaskLogsMaxNum());
         try {
-            ToolUtil.dumpKylinJStack(rollingFileOutputDir.newOutputFile());
+            File outputFile = rollingFileOutputDir.newOutputFile();
+            ToolUtil.dumpKylinJStack(outputFile);
+            if (kylinConfig.isUploadJstackDumpToWorkingDirEnabled()) {
+                Path path = new Path(kylinConfig.getHdfsWorkingDirectory(), "_logs/" + AddressUtil.getHostName());
+                HadoopUtil.removeOldFiles(path, kylinConfig.getJStackDumpTaskLogsMaxNum());
+                HadoopUtil.uploadFileToHdfs(outputFile, path);
+            }
             log.trace("dump jstack successful");
         } catch (Exception e) {
             log.error("Error dump jstack info", e);
         }
-
     }
 }

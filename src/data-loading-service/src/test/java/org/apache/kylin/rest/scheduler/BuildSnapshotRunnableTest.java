@@ -37,8 +37,8 @@ import org.apache.kylin.common.response.RestResponse;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.junit.jupiter.api.Test;
@@ -162,9 +162,9 @@ class BuildSnapshotRunnableTest {
         thread.saveSnapshotJobFile(false, "error_message", jobId);
         assertTrue(thread.checkSnapshotJobFile());
 
-        try (val executableManagerMockedStatic = Mockito.mockStatic(NExecutableManager.class)) {
-            val executableManager = Mockito.mock(NExecutableManager.class);
-            executableManagerMockedStatic.when(() -> NExecutableManager.getInstance(Mockito.any(), Mockito.any()))
+        try (val executableManagerMockedStatic = Mockito.mockStatic(ExecutableManager.class)) {
+            val executableManager = Mockito.mock(ExecutableManager.class);
+            executableManagerMockedStatic.when(() -> ExecutableManager.getInstance(Mockito.any(), Mockito.any()))
                     .thenReturn(executableManager);
             assertTrue(thread.checkSnapshotJobFile());
 
@@ -186,9 +186,9 @@ class BuildSnapshotRunnableTest {
         thread.setConfig(KylinConfig.getInstanceFromEnv());
         assertFalse(thread.checkAutoRefreshJobSuccessOrRunning(jobId));
 
-        try (val executableManagerMockedStatic = Mockito.mockStatic(NExecutableManager.class)) {
-            val executableManager = Mockito.mock(NExecutableManager.class);
-            executableManagerMockedStatic.when(() -> NExecutableManager.getInstance(Mockito.any(), Mockito.any()))
+        try (val executableManagerMockedStatic = Mockito.mockStatic(ExecutableManager.class)) {
+            val executableManager = Mockito.mock(ExecutableManager.class);
+            executableManagerMockedStatic.when(() -> ExecutableManager.getInstance(Mockito.any(), Mockito.any()))
                     .thenReturn(executableManager);
             assertFalse(thread.checkAutoRefreshJobSuccessOrRunning(jobId));
 
@@ -266,9 +266,9 @@ class BuildSnapshotRunnableTest {
 
     @Test
     void createRequestAndCheckRunningJob() throws JsonProcessingException {
-        try (val mockStatic = Mockito.mockStatic(NExecutableManager.class)) {
-            val executableManager = Mockito.mock(NExecutableManager.class);
-            mockStatic.when(() -> NExecutableManager.getInstance(any(), anyString())).thenReturn(executableManager);
+        try (val mockStatic = Mockito.mockStatic(ExecutableManager.class)) {
+            val executableManager = Mockito.mock(ExecutableManager.class);
+            mockStatic.when(() -> ExecutableManager.getInstance(any(), anyString())).thenReturn(executableManager);
             val runningJobs = Lists.<AbstractExecutable> newArrayList();
             val job1 = new NSparkSnapshotJob();
             job1.setParam(NBatchConstants.P_SELECTED_PARTITION_VALUE,
@@ -276,8 +276,9 @@ class BuildSnapshotRunnableTest {
             val job2 = new NSparkSnapshotJob();
             job2.setParam(NBatchConstants.P_SELECTED_PARTITION_VALUE,
                     JsonUtil.writeValueAsString(Sets.newHashSet("3", "4")));
-            Mockito.when(executableManager.listExecByJobTypeAndStatus(ExecutableState::isRunning, SNAPSHOT_BUILD,
-                    SNAPSHOT_REFRESH)).thenReturn(runningJobs);
+            Mockito.when(executableManager.jobInfoToExecutable(executableManager.fetchJobsByTypesAndStates(
+                    null, Lists.newArrayList(SNAPSHOT_BUILD.name(), SNAPSHOT_REFRESH.name()), null,
+                    ExecutableState.getNotFinalStates()))).thenReturn(runningJobs);
 
             val thread = new BuildSnapshotRunnable();
             thread.setTableIdentity("default.table");

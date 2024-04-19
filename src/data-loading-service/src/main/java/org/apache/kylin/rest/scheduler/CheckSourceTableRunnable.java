@@ -62,8 +62,20 @@ public class CheckSourceTableRunnable extends AbstractSchedulerRunnable {
                     config.getServerAddress());
             val req = Maps.newHashMap();
             req.put("project", project);
-            req.put("database", split[0]);
-            req.put("table", split[1]);
+            val length=split.length;
+            int databaseStartIndex = 0;
+            if (length > 2) {
+                //Include catalog name
+                req.put("catalog", split[0]);
+                databaseStartIndex = 1;
+
+            }
+            val databaseBuffer = new StringBuilder();
+            for (int i = databaseStartIndex; i < length - 1; i++) {
+                databaseBuffer.append(".").append(split[i]);
+            }
+            req.put("database", databaseBuffer.substring(1));
+            req.put("table", split[length - 1]);
             req.put("snapshot_partition_col", partitionColumn);
             log.debug("checkTableNeedRefresh request: {}", req);
             val httpHeaders = new HttpHeaders();

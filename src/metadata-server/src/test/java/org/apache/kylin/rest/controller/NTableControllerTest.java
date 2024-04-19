@@ -25,16 +25,15 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_SAMPLIN
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.exception.KylinException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.StringHelper;
+import org.apache.kylin.job.service.TableSampleService;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.AWSTableLoadRequest;
@@ -51,12 +50,10 @@ import org.apache.kylin.rest.request.UpdateAWSTableExtDescRequest;
 import org.apache.kylin.rest.response.ExcludedTableDetailResponse;
 import org.apache.kylin.rest.response.LoadTableResponse;
 import org.apache.kylin.rest.response.TableNameResponse;
-import org.apache.kylin.rest.response.TableRefresh;
 import org.apache.kylin.rest.response.TablesAndColumnsResponse;
 import org.apache.kylin.rest.response.UpdateAWSTableExtDescResponse;
 import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.TableExtService;
-import org.apache.kylin.rest.service.TableSamplingService;
 import org.apache.kylin.rest.service.TableService;
 import org.junit.After;
 import org.junit.Assert;
@@ -84,6 +81,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.val;
 
+
 public class NTableControllerTest extends NLocalFileMetadataTestCase {
 
     private static final String APPLICATION_JSON = HTTP_VND_APACHE_KYLIN_JSON;
@@ -102,7 +100,7 @@ public class NTableControllerTest extends NLocalFileMetadataTestCase {
     private TableExtService tableExtService;
 
     @Mock
-    private TableSamplingService tableSamplingService;
+    private TableSampleService tableSampleService;
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -637,7 +635,6 @@ public class NTableControllerTest extends NLocalFileMetadataTestCase {
         tableLoadRequest.setNeedSampling(true);
         tableLoadRequest.setSamplingRows(20000);
         initMockito(loadTableResponse, tableLoadRequest);
-        Assert.assertNotNull(tableSamplingService);
         mockMvc.perform(MockMvcRequestBuilders.post("/api/tables") //
                 .contentType(MediaType.APPLICATION_JSON) //
                 .content(JsonUtil.writeValueAsString(tableLoadRequest)) //
@@ -727,36 +724,6 @@ public class NTableControllerTest extends NLocalFileMetadataTestCase {
                 .accept(MediaType.parseMediaType(APPLICATION_JSON))) //
                 .andExpect(MockMvcResultMatchers.status().isOk());
         Mockito.verify(nTableController).reloadHiveTablename("", false);
-    }
-
-    @Test
-    public void testRefreshSingleCatalogCache() throws Exception {
-        List<String> tables = Lists.newArrayList();
-        tables.add("DEFAULT.TEST_KYLIN_FACT");
-        HashMap request = new HashMap();
-        request.put("tables", tables);
-        TableRefresh tableRefresh = new TableRefresh();
-        tableRefresh.setCode(KylinException.CODE_SUCCESS);
-        Mockito.doReturn(tableRefresh).when(tableService).refreshSingleCatalogCache(Mockito.any());
-
-        mockMvc.perform(MockMvcRequestBuilders.put("/api/tables/single_catalog_cache")
-                .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
-                .accept(MediaType.parseMediaType(APPLICATION_PUBLIC_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-    }
-
-    @Test
-    public void testRefreshSingleCatalogCacheError() throws Exception {
-        HashMap request = new HashMap();
-        request.put("tables", "DEFAULT.TEST_KYLIN_FACT");
-        String errorMsg = "The “table“ parameter is invalid. Please check and try again.";
-        MvcResult mvcResult = mockMvc
-                .perform(MockMvcRequestBuilders.put("/api/tables/single_catalog_cache")
-                        .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
-                        .accept(MediaType.parseMediaType(APPLICATION_PUBLIC_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isInternalServerError()).andReturn();
-        JsonNode jsonNode = JsonUtil.readValueAsTree(mvcResult.getResponse().getContentAsString());
-        Assert.assertTrue(StringUtils.contains(jsonNode.get("exception").textValue(), errorMsg));
     }
 
     @Test

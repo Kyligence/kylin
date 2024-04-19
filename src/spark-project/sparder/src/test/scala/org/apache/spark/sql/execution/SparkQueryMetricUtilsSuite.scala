@@ -35,13 +35,14 @@
 package org.apache.spark.sql.execution
 
 import org.apache.hadoop.fs.Path
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.catalog.BucketSpec
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.datasource.storage.UnsafelyInsertIntoHadoopFsRelationCommand
 import org.apache.spark.sql.execution.adaptive.{AdaptiveExecutionContext, AdaptiveSparkPlanExec, ShuffleQueryStageExec}
 import org.apache.spark.sql.execution.aggregate.HashAggregateExec
-import org.apache.spark.sql.execution.command.{DataWritingCommandExec}
+import org.apache.spark.sql.execution.command.DataWritingCommandExec
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, InMemoryFileIndex, PartitionSpec}
 import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
@@ -50,7 +51,36 @@ import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.util.Utils
 
+import java.io.File
+
 class SparkQueryMetricUtilsSuite extends QueryTest with SharedSparkSession {
+
+  protected val ut_meta = "../examples/test_case_data/localmeta"
+
+  lazy val metaStore: NLocalFileMetadataTestCase = new NLocalFileMetadataTestCase
+
+  protected def metadata : Seq[String] = {
+    Seq(fitPathForUT(ut_meta))
+  }
+
+  override def beforeAll(): Unit = {
+    metaStore.createTestMetadata(metadata: _*)
+    super.beforeAll()
+  }
+
+  private def fitPathForUT(path: String) = {
+    if (new File(path).exists()) {
+      path
+    } else {
+      s"../$path"
+    }
+  }
+
+  override def afterAll(): Unit = {
+    super.afterAll()
+    metaStore.restoreSystemProps()
+    metaStore.cleanupTestMetadata()
+  }
 
   test("sparkPlan metrics for scanBytes and ScanRows") {
     val tempPath = Utils.createTempDir().getAbsolutePath
@@ -186,7 +216,7 @@ class SparkQueryMetricUtilsSuite extends QueryTest with SharedSparkSession {
       0, 0)
     assert(5000 == collectScanMetrics18._1)
     assert(22982 == collectScanMetrics18._2)
-    val hashAggregateExec = new HashAggregateExec(Option(Seq.empty[Expression]), Nil, Nil, Nil,
+    val hashAggregateExec = new HashAggregateExec(Option(Seq.empty[Expression]), false, None, Nil, Nil, Nil,
       1, Nil, null)
     val collectScanMetrics19 = QueryMetricUtils.collectAdaptiveSparkPlanExecMetrics(hashAggregateExec,
       2, 3)

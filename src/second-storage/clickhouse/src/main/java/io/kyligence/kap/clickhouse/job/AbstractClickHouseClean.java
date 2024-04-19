@@ -30,9 +30,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NamedThreadFactory;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -108,7 +108,7 @@ public abstract class AbstractClickHouseClean extends AbstractExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    protected ExecuteResult doWork(JobContext context) throws ExecuteException {
         return wrapWithExecuteException(() -> {
             loadState();
             workImpl();

@@ -47,15 +47,15 @@ import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
 import org.apache.kylin.job.SecondStorageJobParamUtil;
 import org.apache.kylin.job.common.ExecutableUtil;
-import org.apache.kylin.job.engine.JobEngineConfig;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.handler.AbstractJobHandler;
 import org.apache.kylin.job.handler.SecondStorageSegmentLoadJobHandler;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.service.JobInfoService;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -134,6 +134,8 @@ public class ClickHouseSimpleITTest extends NLocalWithSparkSessionTest implement
     @Mock
     private final JobService jobService = Mockito.spy(JobService.class);
     @Mock
+    private final JobInfoService jobInfoService = Mockito.spy(JobInfoService.class);
+    @Mock
     private final AclUtil aclUtil = Mockito.spy(AclUtil.class);
 
     private OpenSecondStorageEndpoint openSecondStorageEndpoint = new OpenSecondStorageEndpoint();
@@ -196,7 +198,7 @@ public class ClickHouseSimpleITTest extends NLocalWithSparkSessionTest implement
         ReflectionTestUtils.setField(jobService, "aclEvaluate", aclEvaluate);
 
         secondStorageService.setAclEvaluate(aclEvaluate);
-        secondStorageService.setJobService(jobService);
+        secondStorageService.setJobInfoService(jobInfoService);
         secondStorageService.setModelService(modelService);
         secondStorageEndpoint.setSecondStorageService(secondStorageService);
         secondStorageEndpoint.setModelService(modelService);
@@ -211,13 +213,11 @@ public class ClickHouseSimpleITTest extends NLocalWithSparkSessionTest implement
         }
 
         overwriteSystemProp("kylin.second-storage.query-pushdown-limit", "0");
-        overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         overwriteSystemProp("kylin.second-storage.class", ClickHouseStorage.class.getCanonicalName());
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
+
         SecurityContextHolder.getContext().setAuthentication(authentication);
         populateSSWithCSVData(getTestConfig(), getProject(), ss);
         indexDataConstructor = new IndexDataConstructor(getProject());
@@ -231,7 +231,7 @@ public class ClickHouseSimpleITTest extends NLocalWithSparkSessionTest implement
         }
         QueryContext.reset();
         ClickHouseConfigLoader.clean();
-        NDefaultScheduler.destroyInstance();
+        JobContextUtil.cleanUp();
         ResourceStore.clearCache();
         FileUtils.deleteDirectory(new File("../clickhouse-it/metastore_db"));
         super.tearDown();
@@ -258,7 +258,7 @@ public class ClickHouseSimpleITTest extends NLocalWithSparkSessionTest implement
             TableFlow flow = SecondStorage.tableFlowManager(getTestConfig(), getProject()).get(cubeName).orElse(null);
             Assert.assertNotNull(flow);
             checkLoadTempTableName(
-                    NExecutableManager.getInstance(getTestConfig(), getProject()).getAllExecutables().get(0).getId(),
+                    ExecutableManager.getInstance(getTestConfig(), getProject()).getAllExecutables().get(0).getId(),
                     NDataflowManager.getInstance(getTestConfig(), getProject()).getDataflow(cubeName).getFirstSegment()
                             .getId(),
                     flow.getTableDataList().get(0).getLayoutID());
@@ -371,29 +371,29 @@ public class ClickHouseSimpleITTest extends NLocalWithSparkSessionTest implement
                 val jobId = triggerClickHouseLoadJob(project, modelId, userName, segs);
 
                 await().atMost(30, TimeUnit.SECONDS).until(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
                     return executableManager.getJob(jobId).getStatus() == ExecutableState.RUNNING;
                 });
 
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
                     executableManager.pauseJob(jobId);
                     return null;
                 }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
 
                 waitJobEnd(project, jobId);
-
-                NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
+                await().until(() -> JobContextUtil.getJobContext(getTestConfig()).getJobScheduler().getRunningJob().isEmpty());
                 await().atMost(30, TimeUnit.SECONDS)
-                        .until(() -> scheduler.getContext().getRunningJobs().values().size() == 0);
+                        .until(() -> ExecutableManager.getInstance(getTestConfig(), project)
+                                .fetchNotFinalJobsByTypes(null, null, null).isEmpty());
 
                 EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
                     executableManager.resumeJob(jobId);
                     return null;
                 }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
                 await().atMost(30, TimeUnit.SECONDS).until(() -> {
-                    val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+                    val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
                     return executableManager.getJob(jobId).getStatus() == ExecutableState.RUNNING;
                 });
                 waitJobFinish(project, jobId);
@@ -452,7 +452,7 @@ public class ClickHouseSimpleITTest extends NLocalWithSparkSessionTest implement
 
     private void waitJobFinish(String jobId, boolean isAllowFailed) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        NExecutableManager executableManager = NExecutableManager.getInstance(config, getProject());
+        ExecutableManager executableManager = ExecutableManager.getInstance(config, getProject());
         DefaultExecutable job = (DefaultExecutable) executableManager.getJob(jobId);
         await().atMost(300, TimeUnit.SECONDS).until(() -> !job.getStatus().isProgressing());
         Assert.assertFalse(job.getStatus().isProgressing());

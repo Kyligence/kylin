@@ -28,11 +28,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
-import org.apache.kylin.engine.spark.job.NSparkExecutable;
-import org.apache.kylin.engine.spark.merger.MetadataMerger;
 import org.apache.kylin.job.constant.ExecutableConstants;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.job.execution.StageBase;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -68,9 +67,10 @@ public class NSparkCubingStep extends NSparkExecutable {
         return dumpList;
     }
 
-    @Override
-    public void mergerMetadata(MetadataMerger merger) {
-        merger.merge(this);
+    public static class Mockup {
+        public static void main(String[] args) {
+            logger.info(Mockup.class + ".main() invoked, args: " + Arrays.toString(args));
+        }
     }
 
     @Override
@@ -91,8 +91,8 @@ public class NSparkCubingStep extends NSparkExecutable {
         for (String segId : segmentIds) {
             val seg = dfMgr.getDataflow(dataflowId).getSegment(segId);
             for (LayoutEntity layout : indexPlan.getAllLayouts()) {
-                String path = "/"
-                        + NSparkCubingUtil.getStoragePathWithoutPrefix(project, dataflowId, segId, layout.getId());
+                String path = "/" + NSparkCubingUtil.getStoragePathWithoutPrefix(project,
+                        dataflowId, segId, layout.getId());
                 result.add(new Path(path).getParent().toString());
             }
         }
@@ -119,7 +119,7 @@ public class NSparkCubingStep extends NSparkExecutable {
     }
 
     protected boolean hasWarningStage() {
-        NExecutableManager executableManager = getManager();
+        ExecutableManager executableManager = getManager();
         Map<String, List<StageBase>> stagesMap = getStagesMap();
         for (Map.Entry<String, List<StageBase>> entry : stagesMap.entrySet()) {
             String segmentId = entry.getKey();
@@ -131,11 +131,5 @@ public class NSparkCubingStep extends NSparkExecutable {
             }
         }
         return false;
-    }
-
-    public static class Mockup {
-        public static void main(String[] args) {
-            logger.info(Mockup.class + ".main() invoked, args: " + Arrays.toString(args));
-        }
     }
 }

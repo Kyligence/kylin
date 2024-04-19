@@ -33,4 +33,6 @@ public class SnapshotSourceTableStatsRequest {
     private String database;
     @JsonProperty("snapshot_partition_col")
     private String snapshotPartitionCol;
+
+    private String catalog;
 }

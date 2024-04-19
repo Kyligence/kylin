@@ -29,8 +29,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.job.SecondStorageJobParamUtil;
 import org.apache.kylin.job.common.ExecutableUtil;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.handler.AbstractJobHandler;
 import org.apache.kylin.job.handler.SecondStorageModelCleanJobHandler;
 import org.apache.kylin.job.handler.SecondStorageSegmentLoadJobHandler;
@@ -40,7 +40,7 @@ import org.junit.Assert;
 public interface JobWaiter {
     default void waitJobFinish(String project, String jobId) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        NExecutableManager executableManager = NExecutableManager.getInstance(config, project);
+        ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
         DefaultExecutable job = (DefaultExecutable) executableManager.getJob(jobId);
         await().atMost(300, TimeUnit.SECONDS).until(() -> !job.getStatus().isProgressing());
         Assert.assertFalse(job.getStatus().isProgressing());
@@ -51,7 +51,7 @@ public interface JobWaiter {
 
     default void waitJobEnd(String project, String jobId) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        NExecutableManager executableManager = NExecutableManager.getInstance(config, project);
+        ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
         DefaultExecutable job = (DefaultExecutable) executableManager.getJob(jobId);
         await().atMost(300, TimeUnit.SECONDS).until(() -> !job.getStatus().isProgressing());
         Assert.assertFalse(job.getStatus().isProgressing());
@@ -75,7 +75,7 @@ public interface JobWaiter {
 
     default void waitAllJobFinish(String project) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        NExecutableManager.getInstance(config, project).getAllExecutables()
+        ExecutableManager.getInstance(config, project).getAllExecutables()
                 .forEach(exec -> waitJobFinish(project, exec.getId()));
     }
 }

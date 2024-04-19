@@ -1621,4 +1621,16 @@ class EnvironmentUpdateUtils {
             throw new IllegalStateException("Failed to update Environment variables", e);
         }
     }
+
+    @Test
+    void testGetRoutineOpsTaskTimeOut() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        Assert.assertEquals(4 * 60 * 60 * 1000, config.getRoutineOpsTaskTimeOut());
+        config.setProperty("kylin.metadata.ops-cron-timeout", "30m");
+        Assert.assertEquals(30 * 60 * 1000, config.getRoutineOpsTaskTimeOut());
+        config.setProperty("kylin.metadata.ops-cron-timeout", "1d");
+        Assert.assertEquals(24 * 60 * 60 * 1000, config.getRoutineOpsTaskTimeOut());
+        config.setProperty("kylin.metadata.ops-cron-timeout", "4h");
+        Assert.assertEquals(4 * 60 * 60 * 1000, config.getRoutineOpsTaskTimeOut());
+    }
 }

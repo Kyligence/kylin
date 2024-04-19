@@ -46,8 +46,9 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
@@ -157,11 +158,15 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         } catch (Exception e) {
             //
         }
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobInfoDao(getTestConfig());
     }
 
     @After
     public void tearDown() {
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -1812,11 +1817,11 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
     }
 
     protected List<AbstractExecutable> getRunningExecutables(String project, String model) {
-        return NExecutableManager.getInstance(getTestConfig(), project).getRunningExecutables(project, model);
+        return ExecutableManager.getInstance(getTestConfig(), project).getRunningExecutables(project, model);
     }
 
     protected void deleteJobByForce(AbstractExecutable executable) {
-        val exManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+        val exManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
         exManager.updateJobOutput(executable.getId(), ExecutableState.DISCARDED);
         exManager.deleteJob(executable.getId());
     }

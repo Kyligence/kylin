@@ -27,8 +27,8 @@ import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -59,7 +59,7 @@ public class PartitionBuildJobUtil extends ExecutableUtil {
 
         // segment is first built or other partition jobs (first built in this segment) are running
         if (segment.getMultiPartitions().isEmpty() || segment.getLayoutsMap().isEmpty()) {
-            val execManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), jobParam.getProject());
+            val execManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), jobParam.getProject());
             val executables = execManager.listMultiPartitionModelExec(jobParam.getModel(), ExecutableState::isRunning,
                     null, null, jobParam.getTargetSegments());
             if (executables.size() > 0) {

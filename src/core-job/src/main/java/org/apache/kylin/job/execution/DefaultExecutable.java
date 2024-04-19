@@ -33,15 +33,15 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.mail.MailNotificationType;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.scheduler.JobFinishedNotifier;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
+import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.exception.ExecuteRuntimeException;
 import org.apache.kylin.job.exception.JobStoppedException;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 
 import lombok.val;
 
@@ -67,7 +67,7 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    public ExecuteResult doWork(JobContext context) throws ExecuteException {
         List<Executable> executables = getTasks().stream().map(Executable.class::cast).collect(Collectors.toList());
         switch (getJobSchedulerMode()) {
         case DAG:
@@ -85,14 +85,14 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
     }
 
     @Override
-    public void chainedSchedule(List<Executable> executables, ExecutableContext context) throws ExecuteException {
+    public void chainedSchedule(List<Executable> executables, JobContext context) throws ExecuteException {
         for (Executable subTask : executables) {
             executeStep(subTask, context);
         }
     }
 
     @Override
-    public void dagSchedule(List<Executable> executables, ExecutableContext context) throws ExecuteException {
+    public void dagSchedule(List<Executable> executables, JobContext context) throws ExecuteException {
         // top step
         final List<Executable> dagTopExecutables = executables.stream()
                 .filter(executable -> StringUtils.isBlank(executable.getPreviousStep())).collect(Collectors.toList());
@@ -105,14 +105,11 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
     }
 
     private void resetJobErrorMessage() {
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            getManager().updateJobError(getId(), null, null, null, null);
-            return null;
-        }, project, UnitOfWork.DEFAULT_MAX_RETRY, getEpochId(), getTempLockName());
+        getManager().updateJobError(getId(), null, null, null, null);
     }
 
     public void dagExecute(List<Executable> dagExecutables, Map<String, Executable> dagExecutablesMap,
-            ExecutableContext context) throws ExecuteException {
+            JobContext context) throws ExecuteException {
         try {
             if (dagExecutables.size() == 1) {
                 logger.info("dagExecute execute single : {}", dagExecutables.get(0).getDisplayName());
@@ -127,7 +124,7 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
     }
 
     public void executeDagExecutable(Map<String, Executable> dagExecutablesMap, Executable executable,
-            ExecutableContext context) {
+            JobContext context) {
         try {
             logger.info("execute dag executable : {}-{} -> {}", Thread.currentThread().getName(),
                     Thread.currentThread().getId(), executable.getDisplayName());
@@ -145,7 +142,7 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
     }
 
     private void executeNextSteps(Map<String, Executable> dagExecutablesMap, Executable executable,
-            ExecutableContext context) throws ExecuteException {
+            JobContext context) throws ExecuteException {
         final Set<String> nextSteps = executable.getNextSteps();
         if (CollectionUtils.isNotEmpty(nextSteps)) {
             List<Executable> nextExecutables = nextSteps.stream().map(dagExecutablesMap::get)
@@ -159,6 +156,7 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
             try {
                 val runningCount = dagExecutables.stream()
                         .filter(executable -> executable.getStatus().equals(ExecutableState.RUNNING)
+                                || executable.getStatus().equals(ExecutableState.PENDING)
                                 || executable.getStatus().equals(ExecutableState.READY))
                         .count();
                 if (runningCount == 0) {
@@ -181,7 +179,7 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
         }
     }
 
-    private void executeStep(Executable executable, ExecutableContext context) throws ExecuteException {
+    private void executeStep(Executable executable, JobContext context) throws ExecuteException {
         if (executable.isRunnable()) {
             executable.execute(context);
         } else if (executable.getStatus().isNotBad()) {
@@ -210,14 +208,9 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
 
     @Override
     protected void onExecuteStart() throws JobStoppedException {
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-
-            if (isStoppedNonVoluntarily() && ExecutableState.READY != getOutput().getState()) //onExecuteStart will turn READY to RUNNING
-                return null;
-
-            updateJobOutput(project, getId(), ExecutableState.RUNNING, null, null, null);
-            return null;
-        }, project, UnitOfWork.DEFAULT_MAX_RETRY, getEpochId(), getTempLockName());
+        if (isStoppedNonVoluntarily() && ExecutableState.PENDING != getOutput().getState()) //onExecuteStart will turn PENDING to RUNNING
+            return;
+        updateJobOutput(project, getId(), ExecutableState.RUNNING, null, null, null);
     }
 
     @Override
@@ -225,49 +218,45 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
         ExecutableState state = checkState();
         logger.info("Job finished {}, state:{}", this.getDisplayName(), state);
 
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            switch (state) {
-            case SUCCEED:
-                updateToFinalState(ExecutableState.SUCCEED, this::afterUpdateOutput, result.getShortErrMsg());
-                onStatusChange(MailNotificationType.JOB_FINISHED);
+        switch (state) {
+        case SUCCEED:
+            updateToFinalState(ExecutableState.SUCCEED, this::afterUpdateOutput, result.getShortErrMsg());
+            onStatusChange(MailNotificationType.JOB_FINISHED);
+            break;
+        case DISCARDED:
+            updateToFinalState(ExecutableState.DISCARDED, this::onExecuteDiscardHook, result.getShortErrMsg());
+            break;
+        case SUICIDAL:
+            updateToFinalState(ExecutableState.SUICIDAL, this::onExecuteSuicidalHook, result.getShortErrMsg());
+            onStatusChange(MailNotificationType.JOB_ERROR);
+            break;
+        case ERROR:
+        case PAUSED:
+        case READY:
+            if (isStoppedNonVoluntarily()) {
+                logger.info("Execute finished  {} which is stopped nonvoluntarily, state: {}",
+                        this.getDisplayName(), getOutput().getState());
                 break;
-            case DISCARDED:
-                updateToFinalState(ExecutableState.DISCARDED, this::onExecuteDiscardHook, result.getShortErrMsg());
-                break;
-            case SUICIDAL:
-                updateToFinalState(ExecutableState.SUICIDAL, this::onExecuteSuicidalHook, result.getShortErrMsg());
-                onStatusChange(MailNotificationType.JOB_ERROR);
-                break;
-            case ERROR:
-            case PAUSED:
-            case READY:
-                if (isStoppedNonVoluntarily()) {
-                    logger.info("Execute finished  {} which is stopped nonvoluntarily, state: {}",
-                            this.getDisplayName(), getOutput().getState());
-                    return null;
-                }
-                Consumer<String> hook = null;
-                Map<String, String> info = null;
-                String output = null;
-                String shortErrMsg = null;
-                if (state == ExecutableState.ERROR) {
-                    logger.warn("[UNEXPECTED_THINGS_HAPPENED] Unexpected ERROR state discovered here!!!");
-                    info = result.getExtraInfo();
-                    output = result.getErrorMsg();
-                    hook = this::onExecuteErrorHook;
-                    shortErrMsg = result.getShortErrMsg();
-                }
-                updateJobOutput(getProject(), getId(), state, info, output, shortErrMsg, hook);
-                if (state == ExecutableState.ERROR) {
-                    onStatusChange(MailNotificationType.JOB_ERROR);
-                }
-                break;
-            default:
-                throw new IllegalArgumentException("Illegal state when job finished: " + state);
             }
-            return null;
-
-        }, project, UnitOfWork.DEFAULT_MAX_RETRY, getEpochId(), getTempLockName());
+            Consumer<String> hook = null;
+            Map<String, String> info = null;
+            String output = null;
+            String shortErrMsg = null;
+            if (state == ExecutableState.ERROR) {
+                logger.warn("[UNEXPECTED_THINGS_HAPPENED] Unexpected ERROR state discovered here!!!");
+                info = result.getExtraInfo();
+                output = result.getErrorMsg();
+                hook = this::onExecuteErrorHook;
+                shortErrMsg = result.getShortErrMsg();
+            }
+            updateJobOutput(getProject(), getId(), state, info, output, shortErrMsg, hook);
+            if (state == ExecutableState.ERROR) {
+                onStatusChange(MailNotificationType.JOB_ERROR);
+            }
+            break;
+        default:
+            throw new IllegalArgumentException("Illegal state when job finished: " + state);
+        }
 
         // dispatch job-finished message out
         EventBusFactory.getInstance()
@@ -324,9 +313,8 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
         } else if (hasPaused) {
             state = ExecutableState.PAUSED;
         } else {
-            state = ExecutableState.READY;
+            state = ExecutableState.PENDING;
         }
-
         return state;
     }
 
@@ -338,6 +326,11 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
     private long getJobEndTime() {
         return subTasks.stream().map(AbstractExecutable::getEndTime).filter(t -> t != 0)
                 .max(Comparator.comparingLong(t -> t)).orElse(System.currentTimeMillis());
+    }
+
+    @Override
+    public long getWaitTime(ExecutablePO po) {
+        return subTasks.stream().map(task -> task.getWaitTime(po)).mapToLong(Long::longValue).sum();
     }
 
     @Override

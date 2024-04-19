@@ -52,6 +52,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.util.FileSystemUtil;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.query.exception.NAsyncQueryIllegalParamException;
@@ -282,7 +283,7 @@ public class AsyncQueryService extends BasicService {
         if (!fileSystem.exists(asyncQueryResultBaseDir)) {
             return true;
         }
-        FileStatus[] fileStatuses = fileSystem.listStatus(asyncQueryResultBaseDir);
+        FileStatus[] fileStatuses = FileSystemUtil.listStatus(fileSystem, asyncQueryResultBaseDir);
         for (FileStatus fileStatus : fileStatuses) {
             if (fileStatus.getModificationTime() < time) {
                 try {

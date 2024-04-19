@@ -86,6 +86,7 @@ public class ClickHouseSimpleITTestWithBlob extends ClickHouseSimpleITTest {
             azuriteContainer = null;
         }
         super.tearDown();
+        System.clearProperty("kylin.env.hdfs-working-dir");
     }
 
     @Test
@@ -106,7 +107,7 @@ public class ClickHouseSimpleITTestWithBlob extends ClickHouseSimpleITTest {
     @Test
     public void testIncrementalTwoShard() throws Exception {
         try (JdbcDatabaseContainer<?> clickhouse1 = ClickHouseUtils.startClickHouse();
-                JdbcDatabaseContainer<?> clickhouse2 = ClickHouseUtils.startClickHouse()) {
+             JdbcDatabaseContainer<?> clickhouse2 = ClickHouseUtils.startClickHouse()) {
             build_load_query("testIncrementalTwoShardBlob", true, clickhouse1, clickhouse2);
         }
     }

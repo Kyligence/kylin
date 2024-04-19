@@ -18,13 +18,16 @@
 
 package org.apache.kylin.tool.garbage;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,20 +53,27 @@ public class ExecutableCleaner extends MetadataCleaner {
 
         long expirationTime = config.getExecutableSurvivalTimeThreshold();
 
-        NExecutableManager executableManager = NExecutableManager.getInstance(config, project);
+        ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
+        List<ExecutablePO> finalExecutablePOs = executableManager
+                .getExecutablePOsByStatus(Lists.newArrayList(ExecutableState.getFinalStates()));
 
-        List<AbstractExecutable> executables = executableManager.getAllExecutables();
-        List<AbstractExecutable> filteredExecutables = executables.stream().filter(job -> {
-            if ((System.currentTimeMillis() - job.getCreateTime()) < expirationTime) {
+        List<AbstractExecutable> filteredExecutables = finalExecutablePOs.stream().filter(executablePO -> {
+            AbstractExecutable job = executableManager.fromPO(executablePO);
+            if ((System.currentTimeMillis() - job.getCreateTime(job.getOutput(executablePO))) < expirationTime) {
                 return false;
             }
-            ExecutableState state = job.getStatus();
+            ExecutableState state = job.getStatusInMem();
             return state.isFinalState();
-        }).collect(Collectors.toList());
-
+        }).map(executableManager::fromPO).collect(Collectors.toList());
+        List<String> jobsToBeDelete = new ArrayList<>();
         for (AbstractExecutable executable : filteredExecutables) {
-            executableManager.deleteJob(executable.getId());
+            jobsToBeDelete.add(executable.getJobId());
         }
+        if (jobsToBeDelete.isEmpty()) {
+            logger.info("No executables need to clean in project {}", project);
+            return;
+        }
+        executableManager.deleteJobByIdList(jobsToBeDelete);
         logger.info("Clean executable in project {} finished", project);
     }
 
@@ -71,5 +81,4 @@ public class ExecutableCleaner extends MetadataCleaner {
     public void afterExecute() {
         // do nothing
     }
-
 }

@@ -24,8 +24,7 @@ import java.util.List;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OLAPContext;
@@ -40,17 +39,15 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
     public void setup() throws Exception {
         overwriteSystemProp("kylin.query.enhanced-agg-pushdown-enabled", "true");
         this.createTestMetadata("src/test/resources/ut_meta/enhanced_agg_pushdown");
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     @After
     public void after() throws Exception {
-        NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test

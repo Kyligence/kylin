@@ -20,6 +20,7 @@ package org.apache.kylin.job.execution;
 
 import java.util.List;
 
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
 
 /**
@@ -32,5 +33,5 @@ public interface ChainedExecutable extends Executable {
 
     <T extends AbstractExecutable> T getTask(Class<T> clz);
 
-    void chainedSchedule(List<Executable> executables, ExecutableContext context) throws ExecuteException;
+    void chainedSchedule(List<Executable> executables, JobContext context) throws ExecuteException;
 }

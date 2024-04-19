@@ -18,34 +18,30 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import lombok.NoArgsConstructor;
-import lombok.val;
-import org.apache.hadoop.fs.Path;
-import org.apache.kylin.common.KapConfig;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Set;
+
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.scheduler.EventBusFactory;
-import org.apache.kylin.common.util.HadoopUtil;
-import org.apache.kylin.engine.spark.ExecutableUtils;
-import org.apache.kylin.engine.spark.job.NSparkExecutable;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.exception.ExecuteException;
-import org.apache.kylin.job.execution.ExecutableContext;
+import org.apache.kylin.job.execution.ExecutableHandler;
 import org.apache.kylin.job.execution.ExecuteResult;
-import org.apache.kylin.job.model.SnapshotBuildFinishedEvent;
+import org.apache.kylin.job.execution.MergerInfo;
+import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.rest.feign.MetadataInvoker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Set;
+import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class NSparkSnapshotBuildingStep extends NSparkExecutable {
@@ -80,73 +76,17 @@ public class NSparkSnapshotBuildingStep extends NSparkExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    public ExecuteResult doWork(JobContext context) throws ExecuteException {
         ExecuteResult result = super.doWork(context);
         if (!result.succeed()) {
             return result;
         }
 
-        try (val remoteStore = ExecutableUtils.getRemoteStore(KylinConfig.getInstanceFromEnv(), this)) {
-            String tableName = getParam(NBatchConstants.P_TABLE_NAME);
-            String selectPartCol = getParam(NBatchConstants.P_SELECTED_PARTITION_COL);
-            boolean incrementBuild = "true".equals(getParam(NBatchConstants.P_INCREMENTAL_BUILD));
-
-            val remoteTblMgr = NTableMetadataManager.getInstance(remoteStore.getConfig(), getProject());
-            val remoteTbDesc = remoteTblMgr.getTableDesc(tableName);
-            val remoteTblExtDesc = remoteTblMgr.getOrCreateTableExt(remoteTbDesc);
-
-            val fs = HadoopUtil.getWorkingFileSystem();
-            val baseDir = KapConfig.getInstanceFromEnv().getMetadataWorkingDirectory();
-
-            if (selectPartCol != null && !incrementBuild) {
-                remoteTbDesc.setLastSnapshotPath(remoteTbDesc.getTempSnapshotPath());
-            }
-            long snapshotSize = 0;
-            try {
-                snapshotSize = HadoopUtil.getContentSummary(fs, new Path(baseDir + remoteTbDesc.getLastSnapshotPath()))
-                        .getLength();
-            } catch (IOException e) {
-                logger.warn("Fetch snapshot size for {} from {} failed", remoteTbDesc.getIdentity(),
-                        baseDir + remoteTbDesc.getLastSnapshotPath());
-            }
-            remoteTbDesc.setLastSnapshotSize(snapshotSize);
-            EventBusFactory.getInstance()
-                    .postSync(new SnapshotBuildFinishedEvent(remoteTbDesc, selectPartCol, incrementBuild));
-            wrapWithCheckQuit(() -> mergeRemoteMetaAfterBuilding(remoteTbDesc, remoteTblExtDesc));
-        }
+        checkNeedQuit(true);
+        MergerInfo mergerInfo = new MergerInfo(project, ExecutableHandler.HandlerType.SNAPSHOT);
+        mergerInfo.addTaskMergeInfo(this);
+        MetadataInvoker.getInstance().mergeMetadataForSamplingOrSnapshot(project, mergerInfo);
         return result;
-    }
-
-    private void mergeRemoteMetaAfterBuilding(TableDesc remoteTbDesc, TableExtDesc remoteTblExtDesc) {
-        String tableName = getParam(NBatchConstants.P_TABLE_NAME);
-        String selectPartCol = getParam(NBatchConstants.P_SELECTED_PARTITION_COL);
-
-        val localTblMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
-        val localTbDesc = localTblMgr.getTableDesc(tableName);
-        val copy = localTblMgr.copyForWrite(localTbDesc);
-        val copyExt = localTblMgr.copyForWrite(localTblMgr.getOrCreateTableExt(localTbDesc));
-
-        copy.setLastSnapshotPath(remoteTbDesc.getLastSnapshotPath());
-        copy.setLastSnapshotSize(remoteTbDesc.getLastSnapshotSize());
-        copy.setSnapshotLastModified(System.currentTimeMillis());
-        copy.setSnapshotHasBroken(false);
-        if (selectPartCol == null) {
-            copyExt.setOriginalSize(remoteTblExtDesc.getOriginalSize());
-            copy.setSnapshotPartitionCol(null);
-            copy.resetSnapshotPartitions(Sets.newHashSet());
-            copy.setSnapshotTotalRows(remoteTbDesc.getSnapshotTotalRows());
-        } else {
-            copyExt.setOriginalSize(remoteTbDesc.getSnapshotPartitions().values().stream().mapToLong(i -> i).sum());
-            copy.setSnapshotPartitionCol(selectPartCol);
-            copy.setSnapshotPartitions(remoteTbDesc.getSnapshotPartitions());
-            copy.setSnapshotPartitionsInfo(remoteTbDesc.getSnapshotPartitionsInfo());
-            copy.setSnapshotTotalRows(remoteTbDesc.getSnapshotTotalRows());
-        }
-
-        copyExt.setTotalRows(remoteTblExtDesc.getTotalRows());
-        localTblMgr.saveTableExt(copyExt);
-        localTblMgr.updateTableDesc(copy);
-
     }
 
     public static class Mockup {

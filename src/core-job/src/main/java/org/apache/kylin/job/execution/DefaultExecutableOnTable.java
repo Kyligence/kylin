@@ -18,10 +18,9 @@
 
 package org.apache.kylin.job.execution;
 
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.TimeUtil;
-import org.apache.kylin.job.dao.JobStatisticsManager;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.rest.delegate.JobStatisticsInvoker;
 
 import lombok.val;
 
@@ -49,9 +48,7 @@ public class DefaultExecutableOnTable extends DefaultExecutable {
         val job = getExecutableManager(getProject()).getJob(jobId);
         long duration = job.getDuration();
         long endTime = job.getEndTime();
-        KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         long startOfDay = TimeUtil.getDayStart(endTime);
-        JobStatisticsManager jobStatisticsManager = JobStatisticsManager.getInstance(kylinConfig, getProject());
-        jobStatisticsManager.updateStatistics(startOfDay, duration, 0, 0);
+        JobStatisticsInvoker.getInstance().updateStatistics(project, startOfDay, null, duration, 0, 0);
     }
 }

@@ -18,38 +18,41 @@
 
 package io.kyligence.kap.metadata.favorite;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.RootPersistentEntity;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.apache.kylin.metadata.MetadataConstants;
+import lombok.ToString;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@EqualsAndHashCode
-public class QueryHistoryIdOffset extends RootPersistentEntity {
-    @JsonProperty("query_history_id_offset")
-    private long offset;
+@ToString
+public class QueryHistoryIdOffset {
 
-    @JsonProperty("query_history_stat_id_offset")
-    private long statMetaUpdateOffset;
-    
-    @JsonIgnore
+    private int id;
     private String project;
+    private String type;
+    private long offset;
+    private long updateTime;
+    private long createTime;
+    private long mvcc;
 
-    public QueryHistoryIdOffset(long offset) {
-        this.offset = offset;
+    public QueryHistoryIdOffset() {
     }
-    
-    @Override
-    public String getResourcePath() {
-        return "/" + getProject() + ResourceStore.QUERY_HISTORY_ID_OFFSET + "/" + uuid + MetadataConstants.FILE_SURFIX;
+
+    public QueryHistoryIdOffset(long offset, OffsetType type) {
+        this.offset = offset;
+        this.type = type.name;
+    }
+
+    public enum OffsetType {
+        META("meta"), ACCELERATE("accelerate");
+        private final String name;
+
+        OffsetType(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
     }
 }

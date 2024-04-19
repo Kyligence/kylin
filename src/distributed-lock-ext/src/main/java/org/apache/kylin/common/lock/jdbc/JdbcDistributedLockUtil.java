@@ -73,7 +73,7 @@ public class JdbcDistributedLockUtil {
 
     public static String getGlobalDictLockTablePrefix() {
         StorageURL url = KylinConfig.getInstanceFromEnv().getJDBCDistributedLockURL();
-        return StorageURL.replaceUrl(url);
+        return StorageURL.replaceUrl(url) + "_";
     }
 
     public static DataSource getDataSource() throws Exception {

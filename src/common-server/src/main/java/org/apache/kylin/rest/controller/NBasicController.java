@@ -21,6 +21,7 @@ package org.apache.kylin.rest.controller;
 import static org.apache.kylin.common.exception.ServerErrorCode.ACCESS_DENIED;
 import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_ID;
 import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_PROJECT_NAME;
+import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_SQL_EXPRESSION;
 import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_CONNECT_CATALOG;
 import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_DOWNLOAD_FILE;
 import static org.apache.kylin.common.exception.ServerErrorCode.INCORRECT_PROJECT_MODE;
@@ -78,6 +79,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigBase;
+import org.apache.kylin.common.exception.FeignErrorResponse;
+import org.apache.kylin.common.exception.FeignRpcException;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
 import org.apache.kylin.common.extension.KylinInfoExtension;
@@ -260,6 +263,16 @@ public class NBasicController {
         getLogger().error("", ex);
         KylinException cause = (KylinException) ex;
         return new ErrorResponse(req.getRequestURL().toString(), cause);
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(FeignRpcException.class)
+    @ResponseBody
+    FeignErrorResponse handleFeignRpcException(HttpServletRequest req, Throwable ex) {
+        getLogger().error("", ex);
+        FeignRpcException cause = (FeignRpcException) ex;
+        String msg = "Exception happened when using feign rpc: " + req.getRequestURL().toString();
+        return new FeignErrorResponse(msg, cause.getExceptionSerialized());
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -590,6 +603,25 @@ public class NBasicController {
         if (!KylinConfig.getInstanceFromEnv().streamingEnabled()) {
             throw new KylinException(ServerErrorCode.UNSUPPORTED_STREAMING_OPERATION,
                     MsgPicker.getMsg().getStreamingDisabled());
+        }
+    }
+
+    protected void checkSegmentParams(String[] ids, String[] names) {
+
+        //both not empty
+        if (ArrayUtils.isNotEmpty(ids) && ArrayUtils.isNotEmpty(names)) {
+            throw new KylinException(SEGMENT_CONFLICT_PARAMETER);
+        }
+
+        //both empty
+        if (ArrayUtils.isEmpty(ids) && ArrayUtils.isEmpty(names)) {
+            throw new KylinException(SEGMENT_EMPTY_PARAMETER);
+        }
+    }
+
+    public static void checkNotEmpty(List<String> sqls) {
+        if (CollectionUtils.isEmpty(sqls)) {
+            throw new KylinException(EMPTY_SQL_EXPRESSION, MsgPicker.getMsg().getNullEmptySql());
         }
     }
 

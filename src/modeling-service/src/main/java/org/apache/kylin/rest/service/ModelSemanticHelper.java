@@ -1064,10 +1064,10 @@ public class ModelSemanticHelper extends BasicService {
         if (readySegs.isEmpty()) {
             return new BuildIndexResponse(BuildIndexResponse.BuildIndexType.NO_SEGMENT);
         }
-        val jobManager = JobManager.getInstance(kylinConfig, project);
 
         // new cuboid
         if (hasRulebaseLayoutChange(oldRule, newRule) || forceFireEvent) {
+            val jobManager = JobManager.getInstance(kylinConfig, project);
             String jobId = jobManager.addIndexJob(new JobParam(model, BasicService.getUsername()));
 
             val buildIndexResponse = new BuildIndexResponse(BuildIndexResponse.BuildIndexType.NORM_BUILD, jobId);
@@ -1101,8 +1101,20 @@ public class ModelSemanticHelper extends BasicService {
         IndexPlan indexPlan = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
                 .getIndexPlan(modelId);
         if (CollectionUtils.isNotEmpty(indexPlan.getAllLayoutIds(false))) {
-            JobManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
-                    .addIndexJob(new JobParam(modelId, BasicService.getUsername()));
+            final JobParam jobParam = new JobParam(modelId, BasicService.getUsername());
+            jobParam.setProject(project);
+            getManager(JobManager.class, project).addIndexJob(jobParam);
+        }
+    }
+
+    public void buildForModelSegments(String project, String modelId, Set<String> targetSegments) {
+        IndexPlan indexPlan = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
+                .getIndexPlan(modelId);
+        if (CollectionUtils.isNotEmpty(indexPlan.getAllLayoutIds(false))) {
+            final JobParam jobParam = new JobParam(modelId, BasicService.getUsername());
+            jobParam.setProject(project);
+            jobParam.withTargetSegments(targetSegments);
+            getManager(JobManager.class, project).addRelatedIndexJob(jobParam);
         }
     }
 

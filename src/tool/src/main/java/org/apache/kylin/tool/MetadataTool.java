@@ -19,15 +19,20 @@
 package org.apache.kylin.tool;
 
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.PARAMETER_NOT_SPECIFY;
+import static org.apache.kylin.common.persistence.transaction.UnitOfWork.GLOBAL_UNIT;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
 import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.HadoopUtil;
@@ -35,6 +40,8 @@ import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.helper.MetadataToolHelper;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.tool.util.ScreenPrintUtil;
 import org.apache.kylin.tool.util.ToolMainWrapper;
 import org.slf4j.Logger;
@@ -78,6 +85,10 @@ public class MetadataTool extends ExecutableApplication {
     private final KylinConfig kylinConfig;
     private final MetadataToolHelper helper;
 
+    private JobInfoTool jobInfoTool = new JobInfoTool();
+    private QueryHistoryOffsetTool queryHistoryOffsetTool = new QueryHistoryOffsetTool();
+    private FavoriteRuleTool favoriteRuleTool = new FavoriteRuleTool();
+
     public MetadataTool() {
         this(KylinConfig.getInstanceFromEnv());
     }
@@ -99,18 +110,27 @@ public class MetadataTool extends ExecutableApplication {
         backupTool.execute(args);
     }
 
-    public static void backup(KylinConfig kylinConfig, String dir, String folder) throws IOException {
-        HDFSMetadataTool.cleanBeforeBackup(kylinConfig);
-        String[] args = new String[] { "-backup", "-compress", "-dir", dir, "-folder", folder };
-        val backupTool = new MetadataTool(kylinConfig);
-        backupTool.execute(args);
-    }
-
     public static void restore(KylinConfig kylinConfig, String folder) throws IOException {
-        val tool = new MetadataTool(kylinConfig);
-        tool.execute(new String[] { "-restore", "-dir", folder, "--after-truncate" });
+        restore(kylinConfig, folder, true);
     }
 
+    public static void restore(KylinConfig kylinConfig, String folder, boolean afterTruncate) throws IOException {
+        val tool = new MetadataTool(kylinConfig);
+        if (afterTruncate) {
+            tool.execute(new String[] { "-restore", "-dir", folder, "--after-truncate" });
+        } else {
+            tool.execute(new String[] { "-restore", "-dir", folder});
+        }
+    }
+
+    public static void restore(KylinConfig kylinConfig, String folder, boolean afterTruncate, String project) {
+        val tool = new MetadataTool(kylinConfig);
+        if (afterTruncate) {
+            tool.execute(new String[] { "-restore", "-dir", folder, "-project", project, "--after-truncate" });
+        } else {
+            tool.execute(new String[] { "-restore", "-dir", folder, "-project", project});
+        }
+    }
     public static void main(String[] args) {
         ToolMainWrapper.wrap(args, () -> {
             val config = KylinConfig.getInstanceFromEnv();
@@ -159,13 +179,55 @@ public class MetadataTool extends ExecutableApplication {
         boolean compress = optionsHelper.hasOption(OPERATE_COMPRESS);
         boolean excludeTableExd = optionsHelper.hasOption(OPTION_EXCLUDE_TABLE_EXD);
         if (optionsHelper.hasOption(OPERATE_BACKUP)) {
-            helper.backup(kylinConfig, project, path, folder, compress, excludeTableExd);
+            backupMetadata(project, path, folder, compress, excludeTableExd);
         } else if (optionsHelper.hasOption(OPERATE_RESTORE)) {
             boolean delete = optionsHelper.hasOption(OPTION_AFTER_TRUNCATE);
-            helper.restore(kylinConfig, project, path, delete);
+            UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().processor(() -> {
+                restoreMetadata(project, path, delete);
+                return null;
+            }).useProjectLock(true).unitName(GLOBAL_UNIT).all(true).build());
         } else {
             throw new KylinException(PARAMETER_NOT_SPECIFY, "-restore");
         }
     }
 
+    private void backupMetadata(String project, String path, String folder, boolean compress, boolean excludeTableExd)
+            throws Exception {
+
+        String backupPath = helper.backup(kylinConfig, project, path, folder, compress, excludeTableExd)
+                .getFirst();
+
+        if (StringUtils.isNotEmpty(project)) {
+            jobInfoTool.backupToLocal(backupPath, project);
+            favoriteRuleTool.backupToLocal(backupPath, project);
+            queryHistoryOffsetTool.backupToLocal(backupPath, project);
+            return;
+        }
+
+        List<ProjectInstance> projects = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
+                .listAllProjects();
+        for (ProjectInstance projectInstance : projects) {
+            jobInfoTool.backupToLocal(backupPath, projectInstance.getName());
+            favoriteRuleTool.backupToLocal(backupPath, projectInstance.getName());
+            queryHistoryOffsetTool.backupToLocal(backupPath, projectInstance.getName());
+        }
+    }
+
+    private void restoreMetadata(String project, String path, boolean delete) throws Exception {
+        if (StringUtils.isNotEmpty(project)) {
+            helper.restore(kylinConfig, project, StringUtils.appendIfMissing(path, "/") + "core_meta", delete, true);
+            UnitOfWork.get().doAfterUpdate(() -> {
+                queryHistoryOffsetTool.restoreProjectFromLocal(path, project, delete);
+                favoriteRuleTool.restoreProjectFromLocal(path, project, delete);
+                jobInfoTool.restoreProjectFromLocal(path, project, delete);
+            });
+        } else {
+            helper.restore(kylinConfig, project, StringUtils.appendIfMissing(path, "/") + "core_meta", delete, true);
+            UnitOfWork.get().doAfterUpdate(() -> {
+                queryHistoryOffsetTool.restoreFromLocal(path, delete);
+                favoriteRuleTool.restoreFromLocal(path, delete);
+                jobInfoTool.restoreFromLocal(path, delete);
+            });
+        }
+    }
 }

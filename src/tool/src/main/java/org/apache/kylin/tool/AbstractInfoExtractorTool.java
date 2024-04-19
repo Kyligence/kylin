@@ -17,17 +17,26 @@
  */
 package org.apache.kylin.tool;
 
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.ASYNC_TASK;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.AUDIT_LOG;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.BIN;
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.CANDIDATE_LOG;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.CATALOG_INFO;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.CLIENT;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.CONF;
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.FAVORITE_RULE;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.HADOOP_CONF;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.HADOOP_ENV;
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.JOB_EVENTLOGS;
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.JOB_INFO;
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.JOB_TMP;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.JSTACK;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.KG_LOGS;
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.LOG;
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.LOG_ON_WORKING_DIR;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.METADATA;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.MONITOR_METRICS;
+import static org.apache.kylin.tool.constant.DiagSubTaskEnum.QUERY_HISTORY_OFFSET;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.REC_CANDIDATE;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SPARDER_HISTORY;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SPARK_LOGS;
@@ -62,6 +71,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinTimeoutException;
+import org.apache.kylin.common.util.AddressUtil;
+import org.apache.kylin.common.util.ClassUtil;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.ExecutorServiceUtil;
@@ -70,8 +81,21 @@ import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.TimeZoneUtils;
 import org.apache.kylin.common.util.ZipFileUtils;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.job.dao.ExecutablePO;
+import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.metadata.cube.model.IndexPlan;
+import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.query.util.ExtractFactory;
 import org.apache.kylin.query.util.ILogExtractor;
+import org.apache.kylin.rest.cluster.ClusterManager;
+import org.apache.kylin.rest.response.ServerInfoResponse;
+import org.apache.kylin.rest.util.SpringContext;
 import org.apache.kylin.tool.constant.DiagSubTaskEnum;
 import org.apache.kylin.tool.constant.SensitiveConfigKeysConstant;
 import org.apache.kylin.tool.constant.StageEnum;
@@ -84,11 +108,14 @@ import org.apache.kylin.tool.util.DiagnosticFilesChecker;
 import org.apache.kylin.tool.util.HashFunction;
 import org.apache.kylin.tool.util.ServerInfoUtil;
 import org.apache.kylin.tool.util.ToolUtil;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.http.HttpHeaders;
 
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-
+import io.kyligence.zen.license.info.LicenseInfo;
+import io.kyligence.zen.license.service.ZenLicenseReadService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -155,7 +182,7 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
     @Setter
     private String packageType;
     @Getter
-    private File exportDir;
+    protected File exportDir;
     @Getter
     private KylinConfig kylinConfig;
     @Getter
@@ -292,9 +319,9 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
 
     private boolean isDiag() {
         return this instanceof DiagClientTool || this instanceof JobDiagInfoTool
-                || this instanceof StreamingJobDiagInfoTool || this instanceof QueryDiagInfoTool;
+                || this instanceof StreamingJobDiagInfoTool || this instanceof QueryDiagInfoTool
+                || this instanceof DiagK8sTool;
     }
-
     private boolean isDiagFromWeb(OptionsHelper optionsHelper) {
         return isDiag() && optionsHelper.hasOption(OPTION_DIAGID);
     }
@@ -320,6 +347,10 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
     }
 
     protected void exportSparkLog(File exportDir, long startTime, long endTime, File recordTime, String queryId) {
+        QueryHistory query = new QueryDiagInfoTool().getQueryByQueryId(queryId);
+        String hostName = query == null ? null : AddressUtil.getServerInfo(
+                query.getQueryHistoryInfo().getHostName(), query.getQueryHistoryInfo().getPort());
+
         // job spark log
         Future sparkLogTask = executorService.submit(() -> {
             recordTaskStartTime(SPARK_LOGS);
@@ -337,22 +368,41 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
         Future sparderHistoryTask = executorService.submit(() -> {
             recordTaskStartTime(SPARDER_HISTORY);
             ILogExtractor extractTool = ExtractFactory.create();
-            tryRollUpEventLog();
+            tryRollUpEventLog(query);
             KylinLogTool.extractSparderEventLog(exportDir, startTime, endTime, getKapConfig().getSparkConf(),
-                    extractTool);
+                    extractTool, hostName);
             recordTaskExecutorTimeToFile(SPARDER_HISTORY, recordTime);
         });
 
         scheduleTimeoutTask(sparderHistoryTask, SPARDER_HISTORY);
     }
 
-    public void tryRollUpEventLog() {
+    public void tryRollUpEventLog(QueryHistory queryHistory) {
         int retry = 3;
-        int serverPort = Integer.parseInt(getKylinConfig().getServerPort());
-        RestClient restClient = new RestClient("127.0.0.1", serverPort, null, null);
-        boolean eventLogSuccess = false;
-        while (retry-- > 0 && !eventLogSuccess) {
-            eventLogSuccess = restClient.rollUpEventLog();
+        List<RestClient> restClients = Lists.newArrayList();
+        if (KylinConfig.getInstanceFromEnv().getMicroServiceMode() != null && queryHistory == null) {
+            ClusterManager clusterManager = SpringContext.getApplicationContext().getBean(ClusterManager.class);
+            for (ServerInfoResponse queryServer : clusterManager.getQueryServers()) {
+                RestClient restClient = new RestClient(queryServer.getHost());
+                restClients.add(restClient);
+            }
+        } else if (queryHistory != null) {
+            RestClient restClient = new RestClient(queryHistory.getHostName());
+            restClients.add(restClient);
+        } else {
+            int serverPort = Integer.parseInt(getKylinConfig().getServerPort());
+            RestClient restClient = new RestClient("127.0.0.1", serverPort, null, null);
+            restClients.add(restClient);
+        }
+
+        while (retry-- > 0 && !restClients.isEmpty()) {
+            List<RestClient> successClient = Lists.newArrayList();
+            for (RestClient restClient : restClients) {
+                if (restClient.rollUpEventLog()) {
+                    successClient.add(restClient);
+                }
+            }
+            restClients.removeAll(successClient);
         }
     }
 
@@ -382,6 +432,36 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
             sb.append(key).append("=").append(systemProperties.getProperty(key)).append("\n");
         }
         FileUtils.writeStringToFile(new File(exportDir, "system_env"), sb.toString());
+    }
+
+    private void dumpZenLicenseInfo(File exportDir) throws Exception {
+        ZenLicenseReadService licenseHandler = SpringContext.getBean(ZenLicenseReadService.class);
+        LicenseInfo licenseInfo = licenseHandler.getLicenseInfo();
+        StringBuilder licenseSb = new StringBuilder();
+        licenseSb.append(licenseInfo.requestLicenseInfo()).append('\n');
+        licenseSb.append("PackageType: ").append(packageType.toUpperCase(Locale.ROOT)).append("\n");
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z",
+                Locale.getDefault(Locale.Category.FORMAT));
+        licenseSb.append("PackageTimestamp: ").append(format.format(new Date())).append("\n");
+        FileUtils.writeStringToFile(new File(exportDir, "info"), licenseSb.toString());
+    }
+
+    private boolean isZenLicense() {
+        try {
+            if(KylinConfig.getInstanceFromEnv().isUTEnv()) {
+                return false;
+            }
+            if (null == SpringContext.getApplicationContext()) {
+                return false;
+            }
+            ZenLicenseReadService licenseHandler = SpringContext.getBean(ZenLicenseReadService.class);
+            if (null != licenseHandler) {
+                return true;
+            }
+            return false;
+        } catch (NoSuchBeanDefinitionException e) {
+            return false;
+        }
     }
 
     public void dumpLicenseInfo(File exportDir) throws IOException {
@@ -428,7 +508,7 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
         FileUtils.writeStringToFile(new File(exportDir, "info"), basicSb.toString());
     }
 
-    private void dumpBasicDiagInfo() throws IOException {
+    private void dumpBasicDiagInfo() throws Exception {
         // dump commit file
         extractCommitFile(exportDir);
 
@@ -437,7 +517,11 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
         FileUtils.writeStringToFile(kylinEnv, ServerInfoUtil.getKylinClientInformation());
 
         // dump license info
-        dumpLicenseInfo(exportDir);
+        if (isZenLicense()) {
+            dumpZenLicenseInfo(exportDir);
+        } else {
+            dumpLicenseInfo(exportDir);
+        }
 
         // dump system env and properties
         if (includeSystemEnv) {
@@ -600,6 +684,99 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
 
         scheduleTimeoutTask(recTask, REC_CANDIDATE);
     }
+    
+    protected void exportJobInfo(String project, String jobId, File recordTime) {
+        exportJobInfo(project, jobId, -1, -1, recordTime);
+    }
+
+    protected void exportJobInfo(long startTime, long endTime, File recordTime) {
+        exportJobInfo(null, null, startTime, endTime, recordTime);
+    }
+
+    private void exportJobInfo(String project, String jobId, long startTime, long endTime, File recordTime) {
+        val jobTask = executorService.submit(() -> {
+            recordTaskStartTime(JOB_INFO);
+            try {
+                File jobDir = new File(exportDir, "job_info");
+                FileUtils.forceMkdir(jobDir);
+                JobInfoTool tool = new JobInfoTool();
+                if (jobId != null) {
+                    tool.extractJob(jobDir, project, jobId);
+                } else {
+                    tool.extractFull(jobDir, startTime, endTime);
+                }
+                tool.extractJobLock(jobDir);
+            } catch (Exception e) {
+                logger.error("Failed to extract job info.", e);
+            }
+            recordTaskExecutorTimeToFile(JOB_INFO, recordTime);
+        });
+
+        scheduleTimeoutTask(jobTask, JOB_INFO);
+    }
+    
+    protected void exportFavoriteRule(String project, File recordTime) {
+        val favoriteRuleTask = executorService.submit(() -> {
+            recordTaskStartTime(FAVORITE_RULE);
+            try {
+                File favoriteRuleDir = new File(exportDir, "favorite_rule");
+                FileUtils.forceMkdir(favoriteRuleDir);
+                FavoriteRuleTool tool = new FavoriteRuleTool();
+                if (project != null) {
+                    tool.extractProject(favoriteRuleDir, project);
+                } else {
+                    tool.extractFull(favoriteRuleDir);
+                }
+            } catch (Exception e) {
+                logger.error("Failed to extract favorite rules.", e);
+            }
+            recordTaskExecutorTimeToFile(FAVORITE_RULE, recordTime);
+        });
+
+        scheduleTimeoutTask(favoriteRuleTask, FAVORITE_RULE);
+    }
+
+    protected void exportAsyncTask(String project, File recordTime) {
+        val asyncTaskTask = executorService.submit(() -> {
+            recordTaskStartTime(ASYNC_TASK);
+            try {
+                File asyncTaskDir = new File(exportDir, "async_task");
+                FileUtils.forceMkdir(asyncTaskDir);
+                AsyncTaskTool tool = new AsyncTaskTool();
+                if (project != null) {
+                    tool.extractProject(asyncTaskDir, project);
+                } else {
+                    tool.extractFull(asyncTaskDir);
+                }
+            } catch (Exception e) {
+                logger.error("Failed to extract async task.", e);
+            }
+            recordTaskExecutorTimeToFile(ASYNC_TASK, recordTime);
+        });
+
+        scheduleTimeoutTask(asyncTaskTask, ASYNC_TASK);
+    }
+
+    public void exportQueryHistoryOffset(String project, File recordTime) {
+        val queryHistoryOffsetTask = executorService.submit(() -> {
+            recordTaskStartTime(QUERY_HISTORY_OFFSET);
+            try {
+                File queryHistoryOffsetDir = new File(exportDir, "query_history_offset");
+                FileUtils.forceMkdir(queryHistoryOffsetDir);
+                QueryHistoryOffsetTool tool = new QueryHistoryOffsetTool();
+                if (project != null) {
+                    tool.extractProject(queryHistoryOffsetDir, project);
+                } else {
+                    tool.extractFull(queryHistoryOffsetDir);
+                }
+            } catch (Exception e) {
+                logger.error("Failed to extract query history offset.", e);
+            }
+            recordTaskExecutorTimeToFile(QUERY_HISTORY_OFFSET, recordTime);
+        });
+
+        scheduleTimeoutTask(queryHistoryOffsetTask, QUERY_HISTORY_OFFSET);
+    }
 
     protected void exportTieredStorage(String project, File exportDir, long startTime, long endTime, File recordTime) {
         Future kgLogTask = executorService.submit(() -> {
@@ -663,7 +840,6 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
         });
 
         scheduleTimeoutTask(clientTask, CLIENT);
-
     }
 
     protected void exportJstack(File recordTime) {
@@ -685,6 +861,36 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
         });
 
         scheduleTimeoutTask(confTask, SYSTEM_USAGE);
+    }
+    
+    protected void exportLogFromLoki(File exportDir, Long startTime, Long endTime, List<String> instances, File recordTime) {
+        Future<?> logTask = executorService.submit(() -> {
+            recordTaskStartTime(LOG);
+            KylinLogTool.extractKylinLogFromLoki(exportDir, startTime, endTime, instances);
+            recordTaskExecutorTimeToFile(LOG, recordTime);
+        });
+
+        scheduleTimeoutTask(logTask, LOG);
+    }
+
+    protected void exportLogFromWorkingDir(File exportDir, List<String> instances, File recordTime) {
+        Future<?> logTask = executorService.submit(() -> {
+            recordTaskStartTime(LOG_ON_WORKING_DIR);
+            KylinLogTool.extractLogFromWorkingDir(exportDir, instances);
+            recordTaskExecutorTimeToFile(LOG_ON_WORKING_DIR, recordTime);
+        });
+
+        scheduleTimeoutTask(logTask, LOG_ON_WORKING_DIR);
+    }
+
+    protected void exportK8sConf(HttpHeaders headers, File exportDir, final File recordTime, String serverId) {
+        Future confTask = executorService.submit(() -> {
+            recordTaskStartTime(CONF);
+            ConfTool.extractK8sConf(headers, exportDir, serverId);
+            recordTaskExecutorTimeToFile(CONF, recordTime);
+        });
+
+        scheduleTimeoutTask(confTask, CONF);
     }
 
     protected void exportConf(File exportDir, final File recordTime, final boolean includeConf, final boolean includeBin) {
@@ -784,6 +990,80 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
     protected void recordTaskExecutorTimeToFile(DiagSubTaskEnum subTask, File file) {
         long startTime = taskStartTime.get(subTask);
         DiagnosticFilesChecker.writeMsgToFile(subTask.name(), System.currentTimeMillis() - startTime, file);
+    }
+
+    public long getDefaultStartTime() {
+        return DateTime.now().minusDays(getKapConfig().getExtractionStartTimeDays() - 1).withTimeAtStartOfDay()
+                .getMillis();
+    }
+
+    public long getDefaultEndTime() {
+        return DateTime.now().plusDays(1).minus(1).withTimeAtStartOfDay().getMillis();
+    }
+
+    public void exportJobSparkLog(File exportDir, final File recordTime, String project, String jobId,
+                                   ExecutablePO job) {
+        // job spark log
+        Future sparkLogTask = executorService.submit(() -> {
+            recordTaskStartTime(SPARK_LOGS);
+            KylinLogTool.extractSparkLog(exportDir, project, jobId);
+            recordTaskExecutorTimeToFile(SPARK_LOGS, recordTime);
+        });
+
+        scheduleTimeoutTask(sparkLogTask, SPARK_LOGS);
+
+        // extract job step eventLogs
+        Future eventLogTask = executorService.submit(() -> {
+            try {
+                if (ClassUtil.forName(job.getType(), AbstractExecutable.class)
+                        .newInstance() instanceof DefaultExecutable) {
+                    recordTaskStartTime(JOB_EVENTLOGS);
+                    YarnApplicationTool yarnApplicationTool = new YarnApplicationTool();
+                    val appIds = yarnApplicationTool.extract(project, jobId);
+                    KylinConfig config = getConfigForModelOrProjectLevel(job.getTargetModelId(), project);
+                    Map<String, String> sparkConf = config.getSparkConfigOverride();
+                    KylinLogTool.extractJobEventLogs(exportDir, appIds, sparkConf);
+                    recordTaskExecutorTimeToFile(JOB_EVENTLOGS, recordTime);
+                }
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                logger.error("Class <{}> not found or cannot be created.", job.getType(), e);
+            }
+        });
+
+        scheduleTimeoutTask(eventLogTask, JOB_EVENTLOGS);
+
+        // job tmp
+        Future jobTmpTask = executorService.submit(() -> {
+            recordTaskStartTime(JOB_TMP);
+            KylinLogTool.extractJobTmp(exportDir, project, jobId);
+            recordTaskExecutorTimeToFile(JOB_TMP, recordTime);
+        });
+
+        scheduleTimeoutTask(jobTmpTask, JOB_TMP);
+    }
+
+    protected KylinConfig getConfigForModelOrProjectLevel(String modelId, String project) {
+        KylinConfig config = null;
+        IndexPlan indexPlan = NIndexPlanManager.getInstance(getKylinConfig(), project).getIndexPlan(modelId);
+        if (indexPlan != null) {
+            config = indexPlan.getConfig();
+        }
+        if (config == null) {
+            config = NProjectManager.getProjectConfig(project);
+        }
+        return config;
+    }
+
+    protected void exportCandidateLog(File exportDir, File recordTime, long startTime, long endTime) {
+        // candidate log
+        val candidateLogTask = executorService.submit(() -> {
+            recordTaskStartTime(CANDIDATE_LOG);
+            List<ProjectInstance> projects = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
+                    .listAllProjects();
+            projects.forEach(x -> KylinLogTool.extractJobTmpCandidateLog(exportDir, x.getName(), startTime, endTime));
+            recordTaskExecutorTimeToFile(CANDIDATE_LOG, recordTime);
+        });
+        scheduleTimeoutTask(candidateLogTask, CANDIDATE_LOG);
     }
 }
 

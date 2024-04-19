@@ -30,9 +30,9 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.TempMetadataBuilder;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
@@ -70,8 +70,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;
@@ -80,7 +78,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ModelSemanticTest extends AbstractMVCIntegrationTestCase {
 
     public static final String MODEL_ID = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
-    protected NExecutableManager executableManager;
+    protected ExecutableManager executableManager;
     NIndexPlanManager indexPlanManager;
     NDataflowManager dataflowManager;
 
@@ -111,13 +109,11 @@ public class ModelSemanticTest extends AbstractMVCIntegrationTestCase {
 
     @Before
     public void setupHandlers() {
-        overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "3");
         overwriteSystemProp("kylin.job.event.poll-interval-second", "1");
         overwriteSystemProp("kylin.engine.spark.build-class-name",
                 "org.apache.kylin.engine.spark.job.MockedDFBuildJob");
-        NDefaultScheduler.destroyInstance();
-        val scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(getTestConfig()));
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
 
         val dfManager = NDataflowManager.getInstance(getTestConfig(), getProject());
         var df = dfManager.getDataflow(MODEL_ID);
@@ -154,7 +150,7 @@ public class ModelSemanticTest extends AbstractMVCIntegrationTestCase {
             copyForWrite.setManagementType(ManagementType.MODEL_BASED);
         });
 
-        NExecutableManager originExecutableManager = NExecutableManager.getInstance(getTestConfig(), getProject());
+        ExecutableManager originExecutableManager = ExecutableManager.getInstance(getTestConfig(), getProject());
         executableManager = Mockito.spy(originExecutableManager);
         indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
         dataflowManager = NDataflowManager.getInstance(getTestConfig(), getProject());
@@ -162,8 +158,8 @@ public class ModelSemanticTest extends AbstractMVCIntegrationTestCase {
 
     @After
     public void tearDown() throws IOException {
-        NDefaultScheduler.getInstance(getProject()).shutdown();
         super.tearDown();
+        JobContextUtil.cleanUp();
     }
 
     public String getProject() {

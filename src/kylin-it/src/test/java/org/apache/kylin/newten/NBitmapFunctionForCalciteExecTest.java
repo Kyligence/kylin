@@ -23,11 +23,8 @@ import java.io.File;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.query.engine.QueryRoutingEngine;
 import org.apache.kylin.query.engine.data.QueryResult;
 import org.apache.kylin.query.util.QueryParams;
@@ -50,18 +47,12 @@ public class NBitmapFunctionForCalciteExecTest extends NLocalWithSparkSessionTes
     @Before
     public void setup() {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
         populateSSWithCSVData(getTestConfig(), getProject(), ss);
         Unsafe.setProperty("kylin.query.engine.run-constant-query-locally", "true");
     }
 
     @After
     public void after() throws Exception {
-        NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
         FileUtils.deleteQuietly(new File("../kap-it/metastore_db"));
         Unsafe.clearProperty("kylin.query.engine.run-constant-query-locally");

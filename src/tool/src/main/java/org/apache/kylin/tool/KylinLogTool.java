@@ -30,6 +30,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
@@ -53,20 +55,27 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.util.FileSystemUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.query.util.ILogExtractor;
+import org.apache.kylin.rest.cluster.NacosClusterManager;
+import org.apache.kylin.tool.restclient.RestClient;
+import org.apache.kylin.tool.util.DiagnosticFilesChecker;
 import org.apache.kylin.tool.util.ToolUtil;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.springframework.http.HttpHeaders;
 
 import lombok.val;
 import scala.collection.JavaConversions;
@@ -667,6 +676,104 @@ public class KylinLogTool {
         }
     }
 
+    public static void extractLogFromWorkingDir(File exportDir, List<String> instances) {
+        File destLogDir = new File(exportDir, "logs");
+        try {
+            KylinConfig config = KylinConfig.getInstanceFromEnv();
+            FileUtils.forceMkdir(destLogDir);
+            Path remotePath = new Path(config.getHdfsWorkingDirectory(), "_logs");
+            FileSystem fs = HadoopUtil.getWorkingFileSystem();
+            long retentionTime = config.getInstanceLogRetentionTime();
+            if (instances.isEmpty()) {
+                FileStatus[] fileStatuses = FileSystemUtil.listStatus(fs, remotePath);
+                for (FileStatus fileStatus : fileStatuses) {
+                    if (System.currentTimeMillis() - fileStatus.getModificationTime() < retentionTime) {
+                        instances.add(fileStatus.getPath().getName());
+                    }
+                }
+            }
+            for (String instance : instances) {
+                File toFile = new File(destLogDir, instance);
+                FileUtils.forceMkdir(toFile);
+                HadoopUtil.downloadFileFromHdfsWithoutError(new Path(remotePath, instance), toFile);
+            }
+        } catch (IOException e) {
+            logger.error("Failed to extract JStack and GC log.", e);
+        }
+    }
+
+    public static void extractKylinLogFromLoki(File exportDir, Long startTime, Long endTime, List<String> instances) {
+        File destLogDir = new File(exportDir, "logs");
+        long startTimeInSec = startTime / 1000;
+        long endTImeInSec = endTime / 1000;
+
+        try {
+            FileUtils.forceMkdir(destLogDir);
+            String lokiApiServer = KylinConfig.getInstanceFromEnv().getLokiServer();
+            RestClient restClient = new RestClient(lokiApiServer).resetBaseUrlWithoutKylin();
+            Map<String, String> tags = new HashMap<>();
+            tags.put("namespace", System.getenv("NAME_SPACE"));
+            tags.put("app", System.getenv("RELEASE_NAME"));
+
+            if (instances.isEmpty()) {
+                extractKylinLogFromLokiByServerIds(tags, restClient, startTimeInSec, endTImeInSec, destLogDir);
+            } else {
+                extractKylinLogFromLokiByInstance(instances, tags, restClient, startTimeInSec, endTImeInSec, destLogDir);
+            }
+        } catch (Exception e) {
+            String msg = String.format(Locale.ROOT, "Error occurred when extracting kylin log from loki server:\n%s", Throwables.getStackTraceAsString(e));
+            DiagnosticFilesChecker.writeMsgToFile(msg, new File(destLogDir, "kylin.diag.error.log"));
+            logger.error("Failed to extract kylin.log from Loki server.", e);
+        }
+    }
+    
+    public static void extractKylinLogFromLokiByServerIds(Map<String, String> tags, RestClient restClient,
+                                                          long startTimeInSec, long endTImeInSec, File destLogDir) throws IOException {
+        for (String serverId : NacosClusterManager.SERVER_IDS) {
+            logger.info("Extract logs for {}", serverId);
+            tags.put("component", serverId);
+            String logUrl = String.format("/log/download?query=%s&start=%d&end=%d", mapsToUrlStr(tags), startTimeInSec,
+                    endTImeInSec);
+            HttpResponse response = restClient.forwardGet(new HttpHeaders(), logUrl, false);
+            saveResponseToFile(response, new File(destLogDir, serverId + ".kylin.log.zip"));
+        }
+    }
+
+    public static void extractKylinLogFromLokiByInstance(List<String> instances, Map<String, String> tags,
+                                                         RestClient restClient, long startTimeInSec, long endTImeInSec, File destLogDir) throws IOException {
+        for (String instance : instances) {
+            logger.info("Extract logs for {}", instance);
+            tags.put("instance", instance);
+            String logUrl = String.format("/log/download?query=%s&start=%d&end=%d", mapsToUrlStr(tags), startTimeInSec,
+                    endTImeInSec);
+            HttpResponse response = restClient.forwardGet(new HttpHeaders(), logUrl, false);
+            saveResponseToFile(response, new File(destLogDir, instance + ".kylin.log.zip"));
+        }
+    }
+
+    public static String mapsToUrlStr(Map<String, String> tags) throws UnsupportedEncodingException {
+        StringBuilder result = new StringBuilder();
+        result.append("{");
+        for (Map.Entry<String, String> tag : tags.entrySet()) {
+            result.append(tag.getKey()).append("=\"").append(tag.getValue()).append("\",");
+        }
+        result.deleteCharAt(result.length() - 1);
+        result.append("}");
+        return URLEncoder.encode(result.toString(), "UTF-8");
+    }
+
+    public static void saveResponseToFile(HttpResponse response, File file) throws IOException {
+        HttpEntity entity = response.getEntity();
+        try (InputStream is = entity.getContent(); FileOutputStream fileout = new FileOutputStream(file)) {
+            byte[] buffer = new byte[1024 * 1024 * 1024];
+            int ch;
+            while ((ch = is.read(buffer)) != -1) {
+                fileout.write(buffer, 0, ch);
+            }
+            fileout.flush();
+        }
+    }
+
     /**
      * extract kylin query log
      *
@@ -735,10 +842,10 @@ public class KylinLogTool {
      * otherwise it always increases.
      */
     public static void extractSparderEventLog(File exportDir, long startTime, long endTime,
-                                              Map<String, String> sparderConf, ILogExtractor extractTool) {
+                                              Map<String, String> sparderConf, ILogExtractor extractTool, String host) {
         val sparkLogsDir = new File(exportDir, "sparder_history");
         val fs = HadoopUtil.getFileSystem(extractTool.getSparderEvenLogDir());
-        val validApps = extractTool.getValidSparderApps(startTime, endTime);
+        val validApps = extractTool.getValidSparderApps(startTime, endTime, host);
         JavaConversions.asJavaCollection(validApps).forEach(app -> {
             try {
                 if (!sparkLogsDir.exists()) {

@@ -43,8 +43,8 @@ import org.apache.kylin.common.response.RestResponse;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -122,7 +122,7 @@ public class BuildSnapshotRunnable extends AbstractSchedulerRunnable {
 
     public Boolean checkAutoRefreshJobSuccessOrRunning(String jobId) {
         try {
-            val executableManager = NExecutableManager.getInstance(config, project);
+            val executableManager = ExecutableManager.getInstance(config, project);
             val autoRefreshJob = executableManager.getJob(jobId);
             if (null == autoRefreshJob) {
                 return false;
@@ -192,9 +192,12 @@ public class BuildSnapshotRunnable extends AbstractSchedulerRunnable {
     }
 
     private List<NSparkSnapshotJob> getRunningSnapshotJobs() {
-        val execManager = NExecutableManager.getInstance(config, project);
-        List<AbstractExecutable> executables = execManager.listExecByJobTypeAndStatus(ExecutableState::isRunning,
-                SNAPSHOT_BUILD, SNAPSHOT_REFRESH);
+        val execManager = ExecutableManager.getInstance(config, project);
+
+        List<AbstractExecutable> executables = execManager.jobInfoToExecutable(execManager.fetchJobsByTypesAndStates(
+                project, Lists.newArrayList(SNAPSHOT_BUILD.name(), SNAPSHOT_REFRESH.name()), null,
+                ExecutableState.getNotFinalStates()));
+
         return executables.stream()
                 .filter(executable -> StringUtils.equalsIgnoreCase(executable.getParam(NBatchConstants.P_TABLE_NAME),
                         tableIdentity))

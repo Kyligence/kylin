@@ -18,13 +18,13 @@
 
 package org.apache.kylin.engine.spark.source;
 
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
+import org.apache.kylin.engine.spark.NSparkCubingEngine;
 import org.apache.kylin.metadata.model.ColumnDesc;
+import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.source.SourceFactory;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.engine.spark.NSparkCubingEngine;
-import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructField;
@@ -36,7 +36,7 @@ import org.junit.Test;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
 @SuppressWarnings("serial")
-public class NSparkSourceTest extends NLocalWithSparkSessionTest {
+public class NSparkSourceTest extends NLocalWithSparkSessionTestBase {
     @Test
     public void testGetTable() {
         NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(getTestConfig(), "ssb");

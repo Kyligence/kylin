@@ -34,6 +34,7 @@ import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
+import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.TimeUtil;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
 import org.apache.kylin.metadata.realization.RoutingIndicatorException;
@@ -159,10 +160,11 @@ public class QueryMetricsContext extends QueryMetrics {
             }
             querySnapshots.add(qcReal.getSnapshots());
         }
-
         queryHistoryInfo.setQuerySnapshots(querySnapshots);
         queryHistoryInfo.setCacheType(this.cacheType);
         queryHistoryInfo.setQueryMsg(this.queryMsg);
+        queryHistoryInfo.setHostName(AddressUtil.getHostName());
+        queryHistoryInfo.setPort(KylinConfig.getInstanceFromEnv().getServerPort());
         this.queryHistoryInfo = queryHistoryInfo;
 
         this.queryHistoryInfo.setTraces(createTraces(context));

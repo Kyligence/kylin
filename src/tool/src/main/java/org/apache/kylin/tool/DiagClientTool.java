@@ -18,21 +18,16 @@
 package org.apache.kylin.tool;
 
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.PARAMETER_TIMESTAMP_COMPARE;
-import static org.apache.kylin.tool.constant.DiagSubTaskEnum.CANDIDATE_LOG;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.LOG;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SOURCE_TABLE_STATS;
 
 import java.io.File;
-import java.util.List;
 
 import org.apache.commons.cli.Option;
 import org.apache.commons.io.FileUtils;
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.OptionsHelper;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.common.util.OptionBuilder;
-import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.tool.snapshot.SnapshotSourceTableStatsTool;
 import org.apache.kylin.tool.util.DiagnosticFilesChecker;
 import org.joda.time.DateTime;
@@ -139,6 +134,10 @@ public class DiagClientTool extends AbstractInfoExtractorTool {
             String[] metaToolArgs = { "-backup", OPT_DIR, metaDir.getAbsolutePath(), OPT_COMPRESS, FALSE,
                     "-excludeTableExd" };
             dumpMetadata(metaToolArgs, recordTime);
+            exportJobInfo(startTime, endTime, recordTime);
+            exportFavoriteRule(null, recordTime);
+            exportAsyncTask(null, recordTime);
+            exportQueryHistoryOffset(null, recordTime);
         }
 
         if (includeAuditLog) {
@@ -175,9 +174,9 @@ public class DiagClientTool extends AbstractInfoExtractorTool {
         exportSystemUsageInfo(recordTime, DateTime.now().minusDays(useInfoBeforeDay).withTimeAtStartOfDay().getMillis(),
                 Long.MAX_VALUE);
 
-        executeTimeoutTask(taskQueue);
-
         extractSnapshotAutoUpdate(exportDir, recordTime);
+
+        executeTimeoutTask(taskQueue);
 
         executorService.shutdown();
         awaitDiagPackageTermination(getKapConfig().getDiagPackageTimeout());
@@ -200,26 +199,5 @@ public class DiagClientTool extends AbstractInfoExtractorTool {
             recordTaskExecutorTimeToFile(SOURCE_TABLE_STATS, recordTime);
         });
         scheduleTimeoutTask(sourceTableStatsTask, SOURCE_TABLE_STATS);
-    }
-
-    private void exportCandidateLog(File exportDir, File recordTime, long startTime, long endTime) {
-        // candidate log
-        val candidateLogTask = executorService.submit(() -> {
-            recordTaskStartTime(CANDIDATE_LOG);
-            List<ProjectInstance> projects = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv())
-                    .listAllProjects();
-            projects.forEach(x -> KylinLogTool.extractJobTmpCandidateLog(exportDir, x.getName(), startTime, endTime));
-            recordTaskExecutorTimeToFile(CANDIDATE_LOG, recordTime);
-        });
-        scheduleTimeoutTask(candidateLogTask, CANDIDATE_LOG);
-    }
-
-    public long getDefaultStartTime() {
-        return DateTime.now().minusDays(getKapConfig().getExtractionStartTimeDays() - 1).withTimeAtStartOfDay()
-                .getMillis();
-    }
-
-    public long getDefaultEndTime() {
-        return DateTime.now().plusDays(1).minus(1).withTimeAtStartOfDay().getMillis();
     }
 }

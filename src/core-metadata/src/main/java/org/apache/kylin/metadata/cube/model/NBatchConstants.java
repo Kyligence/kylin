@@ -33,6 +33,7 @@ public interface NBatchConstants {
     String P_TABLE_NAME = "table";
     String P_SAMPLING_ROWS = "samplingRows";
     String P_TARGET_MODEL = "targetModel";
+    String P_MODEL_NAME = "modelName";
     String P_DATA_RANGE_START = "dataRangeStart";
     String P_DATA_RANGE_END = "dataRangeEnd";
 

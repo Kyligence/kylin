@@ -18,6 +18,7 @@
 
 package org.apache.kylin.tool;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
@@ -51,7 +52,9 @@ public class SampleProjectToolTest extends NLocalFileMetadataTestCase {
     public void testImportProjectSuccess() throws IOException {
         val project = "broken_test";
         val junitFolder = temporaryFolder.getRoot();
-        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitFolder, "/");
+        val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
+        junitCoreMetaFolder.mkdir();
+        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitCoreMetaFolder, "/");
         val destResourceStore = ResourceStore.getKylinMetaStore(getTestConfig());
         destResourceStore.getMetadataStore().list("/").forEach(path -> {
             if (path.contains(project)) {

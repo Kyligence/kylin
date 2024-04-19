@@ -34,13 +34,32 @@ server:
 
 management:
   endpoint:
+    health:
+      enabled: true
+      show-details: always
     prometheus:
       enabled: true
   endpoints:
     web:
       base-path: "/api"
       exposure:
-        include: prometheus
+        include: prometheus,health
+
+  health:
+    defaults:
+      enabled: false
+    metaStore:
+      enabled: true
+    sparkSqlContext:
+      enabled: true
+    fileSystem:
+      enabled: true
+    sparkContext:
+      enabled: true
+    diskspace:
+      enabled: true
+    refresh:
+      enabled: true
 
 spring:
   http:
@@ -48,7 +67,7 @@ spring:
       max-file-size: "5MB"
       max-request-size: "5MB"
   application:
-    name: yinglong-data-loading-booter
+    name: data-loading
   resources:
     chain:
       gzipped: true
@@ -71,16 +90,23 @@ spring:
   session:
     store-type: JDBC
     jdbc:
-      table-name: ${kylin.metadata.url.identifier}_session
+      table-name: ${kylin.metadata.url.identifier}_session_v2
   config:
     import: optional:file://${KYLIN_HOME}/conf/config.yaml
-  saas:
-    nacos:
+
+mybatis:
+  mapper-locations: classpath:/mybatis-mapper/*Mapper.xml
+
+saas:
+  nacos:
+    discovery:
+      group: ${TENANT_ID:default}
       server-addr: ${NACOS_DISCOVERY_SERVER_ADDR:localhost:8848}
-      discovery:
-        group: ${TENANT_ID:default}
-        public-group: ${DISCOVERY_PUBLIC_GROUP:default}
-        application-name: ${spring.application.name}
+      public-group: ${DISCOVERY_PUBLIC_GROUP:default}
+      application:
+        name: ${spring.application.name}
+    config:
+      server-addr: ${NACOS_CONFIG_SERVER_ADDR:localhost:8848}
 logging:
   level:
     root: INFO

@@ -28,6 +28,7 @@ import org.apache.spark.sql.QueryTest
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 import org.apache.spark.sql.test.SharedSparkSession
+import org.apache.spark.sql.types.StructType
 
 class CacheFileScanRDDWithSoftAffinitySuite extends QueryTest
   with SharedSparkSession with PredicateHelper {
@@ -48,7 +49,9 @@ class CacheFileScanRDDWithSoftAffinitySuite extends QueryTest
     val fakeRDD = new CacheFileScanRDD(
       spark,
       (_: PartitionedFile) => Iterator.empty,
-      Seq(cachePartition)
+      Seq(cachePartition),
+      new StructType().add("a", "double").add("b", "int"),
+      Nil
     )
 
     assertResult(Set("host-1", "host-2", "host-3")) {
@@ -67,7 +70,9 @@ class CacheFileScanRDDWithSoftAffinitySuite extends QueryTest
     val fakeRDD = new CacheFileScanRDD(
       spark,
       (_: PartitionedFile) => Iterator.empty,
-      Seq(cachePartition)
+      Seq(cachePartition),
+      new StructType().add("a", "double").add("b", "int"),
+      Nil
     )
 
     assertResult(Set("host-1", "host-4", "host-5")) {
@@ -86,7 +91,9 @@ class CacheFileScanRDDWithSoftAffinitySuite extends QueryTest
     val fakeRDD = new CacheFileScanRDD(
       spark,
       (_: PartitionedFile) => Iterator.empty,
-      Seq(cachePartition)
+      Seq(cachePartition),
+      new StructType().add("a", "double").add("b", "int"),
+      Nil
     )
 
     assertResult(Set("executor_host-2_2", "executor_host-1_0")) {
@@ -105,7 +112,9 @@ class CacheFileScanRDDWithSoftAffinitySuite extends QueryTest
     val fakeRDD = new CacheFileScanRDD(
       spark,
       (_: PartitionedFile) => Iterator.empty,
-      Seq(cachePartition)
+      Seq(cachePartition),
+      new StructType().add("a", "double").add("b", "int"),
+      Nil
     )
 
     assertResult(Set("executor_host-1_0")) {
@@ -124,7 +133,9 @@ class CacheFileScanRDDWithSoftAffinitySuite extends QueryTest
     val fakeRDD = new CacheFileScanRDD(
       spark,
       (_: PartitionedFile) => Iterator.empty,
-      Seq(cachePartition)
+      Seq(cachePartition),
+      new StructType().add("a", "double").add("b", "int"),
+      Nil
     )
 
     assertResult(Set("host-1", "host-5", "host-6")) {

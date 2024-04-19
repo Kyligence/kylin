@@ -158,6 +158,11 @@ public class JsonUtil {
         writeValue(new FileOutputStream(out), value);
     }
 
+    public static <T> String writeValueAsStringForCollection(Object value, TypeReference<T> ref)
+            throws JsonProcessingException {
+        return mapper.writerFor(ref).writeValueAsString(value);
+    }
+
     public static String writeValueAsString(Object value) throws JsonProcessingException {
         return mapper.writeValueAsString(value);
     }

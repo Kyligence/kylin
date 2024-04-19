@@ -21,7 +21,7 @@ package org.apache.kylin.engine.spark.job;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -31,7 +31,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.sparkproject.guava.collect.Sets;
 
-public class NSparkCubingUtilTest extends NLocalWithSparkSessionTest {
+public class NSparkCubingUtilTest extends NLocalWithSparkSessionTestBase {
 
     @Test
     public void testToSegmentIds() {

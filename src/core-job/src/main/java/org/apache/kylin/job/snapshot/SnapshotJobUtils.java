@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
@@ -42,9 +42,9 @@ public final class SnapshotJobUtils {
 
     public static List<TableDesc> getSnapshotTables(KylinConfig kylinConfig, String project) {
         val tableMetadataManager = NTableMetadataManager.getInstance(kylinConfig, project);
-        val execManager = NExecutableManager.getInstance(kylinConfig, project);
-        List<AbstractExecutable> executables = execManager.listExecByJobTypeAndStatus(ExecutableState::isRunning,
-                SNAPSHOT_BUILD, SNAPSHOT_REFRESH);
+        val execManager = ExecutableManager.getInstance(kylinConfig, project);
+        List<AbstractExecutable> executables = execManager
+                .getNotFinalExecutablesByType(Lists.newArrayList(SNAPSHOT_BUILD, SNAPSHOT_REFRESH));
         return tableMetadataManager.listAllTables().stream()
                 .filter(tableDesc -> hasLoadedSnapshot(tableDesc, executables)).distinct().collect(Collectors.toList());
     }

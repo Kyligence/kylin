@@ -36,8 +36,7 @@ import org.apache.kylin.common.exception.KylinTimeoutException;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.TempMetadataBuilder;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -100,15 +99,13 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
     public void setup() throws Exception {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/multi_partition_date_type");
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     private List<NDataSegment> startRealizationPruner(NDataflowManager dataflowManager, String dataflowId, String sql,
-            String project, KylinConfig kylinConfig) throws Exception {
+                                                      String project, KylinConfig kylinConfig) throws Exception {
         NDataflow dataflow = dataflowManager.getDataflow(dataflowId);
         List<OLAPContext> olapContexts = OlapContextTestUtil.getOlapContexts(getProject(), sql);
         OLAPContext context = olapContexts.get(0);
@@ -123,7 +120,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
 
     @After
     public void after() throws Exception {
-        NDefaultScheduler.destroyInstance();
+        JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }
 

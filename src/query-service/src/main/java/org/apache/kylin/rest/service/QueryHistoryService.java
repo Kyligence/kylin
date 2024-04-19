@@ -325,7 +325,7 @@ public class QueryHistoryService extends BasicService implements AsyncTaskQueryH
         Preconditions.checkArgument(StringUtils.isNotEmpty(project));
         aclEvaluate.checkProjectReadPermission(project);
         QueryHistoryIdOffset queryHistoryIdOffset = QueryHistoryIdOffsetManager
-                .getInstance(KylinConfig.getInstanceFromEnv(), project).get();
+                .getInstance(project).get(QueryHistoryIdOffset.OffsetType.ACCELERATE);
         long idOffset = queryHistoryIdOffset.getOffset();
         QueryHistoryDAO queryHistoryDao = getQueryHistoryDao();
         return queryHistoryDao.getQueryHistoryCountBeyondOffset(idOffset, project);

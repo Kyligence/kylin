@@ -39,8 +39,9 @@ public class NSparkTableMetaBuilder {
     private List<NSparkTableMeta.SparkTableColumnMeta> partitionColumns = Lists.newArrayList();
     private boolean isTransactional = false;
     private boolean isRangePartition = false;
-    private String s3Role;
-    private String s3Endpoint;
+    private String roleArn;
+    private String endpoint;
+    private String region;
     private String tableComment;
 
     public NSparkTableMetaBuilder setTableComment(String tableComment) {
@@ -128,19 +129,24 @@ public class NSparkTableMetaBuilder {
         return this;
     }
 
-    public NSparkTableMetaBuilder setS3Role(String s3Role) {
-        this.s3Role = s3Role;
+    public NSparkTableMetaBuilder setRoleArn(String roleArn) {
+        this.roleArn = roleArn;
         return this;
     }
 
-    public NSparkTableMetaBuilder setS3Endpoint(String s3Endpoint) {
-        this.s3Endpoint = s3Endpoint;
+    public NSparkTableMetaBuilder setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+        return this;
+    }
+
+    public NSparkTableMetaBuilder setRegion(String region) {
+        this.region = region;
         return this;
     }
 
     public NSparkTableMeta createSparkTableMeta() {
         return new NSparkTableMeta(tableName, sdLocation, sdInputFormat, sdOutputFormat, owner, provider, tableType,
                 createTime, lastAccessTime, fileSize, fileNum, isNative, allColumns, partitionColumns, isTransactional,
-                isRangePartition, s3Role, s3Endpoint, tableComment);
+                isRangePartition, roleArn, endpoint, region, tableComment);
     }
 }

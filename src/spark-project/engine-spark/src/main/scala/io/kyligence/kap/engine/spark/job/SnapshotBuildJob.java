@@ -18,11 +18,15 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import lombok.val;
-import org.apache.commons.lang3.StringUtils;
+import static org.apache.kylin.job.execution.stage.StageType.SNAPSHOT_BUILD;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,6 +43,9 @@ import org.apache.kylin.engine.spark.builder.SnapshotPartitionBuilder;
 import org.apache.kylin.engine.spark.job.exec.SnapshotExec;
 import org.apache.kylin.engine.spark.utils.FileNames;
 import org.apache.kylin.engine.spark.utils.SparkConfHelper;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
@@ -48,13 +55,7 @@ import org.apache.kylin.source.SourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-
-import static org.apache.kylin.engine.spark.job.StageType.SNAPSHOT_BUILD;
+import lombok.val;
 
 public class SnapshotBuildJob extends SparkApplication {
     protected static final Logger logger = LoggerFactory.getLogger(SnapshotBuildJob.class);

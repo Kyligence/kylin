@@ -95,15 +95,15 @@ public class TableExtDescTest extends NLocalFileMetadataTestCase {
         TableExtDesc tableExtDesc = tableMetadataManager.getOrCreateTableExt(tableName);
         tableExtDesc.addDataSourceProp(TableExtDesc.LOCATION_PROPERTY_KEY, "");
         tableExtDesc.addDataSourceProp(TableExtDesc.S3_ENDPOINT_KEY, "testEndpoint");
-        assert tableExtDesc.getS3RoleCredentialInfo() == null;
+        assert tableExtDesc.getRoleCredentialInfo() == null;
         tableExtDesc.addDataSourceProp(TableExtDesc.LOCATION_PROPERTY_KEY, "::aaa/bbb");
-        assert tableExtDesc.getS3RoleCredentialInfo() == null;
+        assert tableExtDesc.getRoleCredentialInfo() == null;
         tableExtDesc.addDataSourceProp(TableExtDesc.LOCATION_PROPERTY_KEY, "s3://aaa/bbb");
-        assert tableExtDesc.getS3RoleCredentialInfo().getEndpoint().equals("testEndpoint");
+        assert tableExtDesc.getRoleCredentialInfo().getEndpoint().equals("testEndpoint");
         tableExtDesc.addDataSourceProp(TableExtDesc.S3_ROLE_PROPERTY_KEY, "test");
-        assert tableExtDesc.getS3RoleCredentialInfo().getBucket().equals("aaa");
-        assert tableExtDesc.getS3RoleCredentialInfo().getRole().equals("test");
-        assert tableExtDesc.getS3RoleCredentialInfo().getEndpoint().equals("testEndpoint");
+        assert tableExtDesc.getRoleCredentialInfo().getBucket().equals("aaa");
+        assert tableExtDesc.getRoleCredentialInfo().getRole().equals("test");
+        assert tableExtDesc.getRoleCredentialInfo().getEndpoint().equals("testEndpoint");
 
     }
 

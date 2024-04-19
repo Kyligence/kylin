@@ -49,6 +49,7 @@ public class RawRecItemTable extends SqlTable {
     public final SqlColumn<RecItemV2> recEntity = column("rec_entity", JDBCType.VARCHAR,
             RecItemV2Handler.class.getName());
     public final SqlColumn<int[]> dependIDs = column("depend_ids", JDBCType.VARCHAR, DependIdHandler.class.getName());
+    public final SqlColumn<Long> mvcc = column("mvcc", JDBCType.BIGINT);
     public final SqlColumn<LayoutMetric> layoutMetric = column("layout_metric", JDBCType.VARCHAR,
             LayoutMetricHandler.class.getName());
     public final SqlColumn<Double> cost = column("cost", JDBCType.DOUBLE);

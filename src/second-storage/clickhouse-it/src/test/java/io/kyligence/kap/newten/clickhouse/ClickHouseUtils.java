@@ -52,8 +52,8 @@ import org.apache.kylin.engine.spark.utils.RichOption;
 import org.apache.kylin.job.SecondStorageJobParamUtil;
 import org.apache.kylin.job.common.ExecutableUtil;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.handler.AbstractJobHandler;
 import org.apache.kylin.job.handler.SecondStorageSegmentLoadJobHandler;
 import org.apache.kylin.job.model.JobParam;
@@ -443,7 +443,7 @@ public class ClickHouseUtils {
 
     public static void waitJobFinish(String project, String jobId, boolean isAllowFailed) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        NExecutableManager executableManager = NExecutableManager.getInstance(config, project);
+        ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
         DefaultExecutable job = (DefaultExecutable) executableManager.getJob(jobId);
         await().atMost(300, TimeUnit.SECONDS).until(() -> !job.getStatus().isProgressing());
         Assert.assertFalse(job.getStatus().isProgressing());

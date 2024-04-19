@@ -21,6 +21,7 @@ package org.apache.kylin.job.execution;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
 
 /**
@@ -36,7 +37,7 @@ public class ErrorTestExecutable extends BaseTestExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    protected ExecuteResult doWork(JobContext context) throws ExecuteException {
         Map<String, String> info = new HashMap<String, String>() {
             {
                 put("runningStatus", "inRunning");

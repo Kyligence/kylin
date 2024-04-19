@@ -32,11 +32,11 @@ import org.apache.spark.sql.catalyst.trees.TreePattern.{JOIN, PROJECT}
 class ConvertInnerJoinToSemiJoin extends Rule[LogicalPlan] with PredicateHelper {
   override def apply(plan: LogicalPlan): LogicalPlan = plan.transformWithPruning(
     _.containsAllPatterns(PROJECT, JOIN)) {
-    case p @ Project(_, j @ ExtractEquiJoinKeys(_, _, _, nonEquiCond, _, agg: Aggregate, _))
-        if innerEqualJoin(j, nonEquiCond) & canTransform(agg, j, p) =>
+    case p@Project(_, j@ExtractEquiJoinKeys(_, _, _, nonEquiCond, _, _, agg: Aggregate, _))
+      if innerEqualJoin(j, nonEquiCond) & canTransform(agg, j, p) =>
       // eliminate the agg, replace it with a project with all its expressions
       p.copy(child = j.copy(joinType = LeftSemi, right = Project(agg.aggregateExpressions, agg.child)))
-    case p @ Project(_, j @ ExtractEquiJoinKeys(_, _, _, nonEquiCond, agg: Aggregate, _, _))
+    case p@Project(_, j@ExtractEquiJoinKeys(_, _, _, nonEquiCond, _, agg: Aggregate, _, _))
       if innerEqualJoin(j, nonEquiCond) & canTransform(agg, j, p) =>
       // eliminate the agg, replace it with a project with all its expressions
       // it will swap the join order from inner join(left, right) to semi join(right, left)

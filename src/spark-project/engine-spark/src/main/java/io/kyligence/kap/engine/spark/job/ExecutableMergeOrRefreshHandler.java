@@ -18,11 +18,18 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import lombok.val;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.engine.spark.job.NSparkExecutable;
-import org.apache.kylin.engine.spark.merger.AfterMergeOrRefreshResourceMerger;
+import java.util.List;
+
+import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableHandler;
+import org.apache.kylin.job.execution.MergerInfo;
+import org.apache.kylin.job.execution.handler.ExecutableHandleUtils;
+import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.rest.feign.MetadataInvoker;
+
+import lombok.val;
 
 public class ExecutableMergeOrRefreshHandler extends ExecutableHandler {
 
@@ -35,12 +42,24 @@ public class ExecutableMergeOrRefreshHandler extends ExecutableHandler {
     public void handleFinished() {
         String project = getProject();
         val executable = getExecutable();
-        val kylinConfig = KylinConfig.getInstanceFromEnv();
-        val merger = new AfterMergeOrRefreshResourceMerger(kylinConfig, project);
-        executable.getTasks().stream().filter(task -> task instanceof NSparkExecutable)
-                .filter(task -> ((NSparkExecutable) task).needMergeMetadata())
-                .forEach(task -> ((NSparkExecutable) task).mergerMetadata(merger));
-        markDFStatus();
+        val jobId = executable.getJobId();
+        val modelId = getModelId();
+
+        val errorOrPausedJobCount = getErrorOrPausedJobCount();
+        MergerInfo mergerInfo = new MergerInfo(project, modelId, jobId, errorOrPausedJobCount,
+                HandlerType.MERGE_OR_REFRESH);
+        ExecutableHandleUtils.getNeedMergeTasks(executable)
+                .forEach(task -> mergerInfo.addTaskMergeInfo(task, SparkJobFactoryUtils.needBuildSnapshots(task)));
+
+        List<NDataLayout[]> mergedLayout = MetadataInvoker.getInstance().mergeMetadata(project, mergerInfo);
+        List<AbstractExecutable> tasks = ExecutableHandleUtils.getNeedMergeTasks(executable);
+        Preconditions.checkArgument(mergedLayout.size() == tasks.size());
+        for (int idx = 0; idx < tasks.size(); idx++) {
+            AbstractExecutable task = tasks.get(idx);
+            NDataLayout[] layouts = mergedLayout.get(idx);
+            ExecutableHandleUtils.recordDownJobStats(task, layouts, project);
+            task.notifyUserIfNecessary(layouts);
+        }
     }
 
     @Override

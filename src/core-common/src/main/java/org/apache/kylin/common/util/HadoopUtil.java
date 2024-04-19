@@ -22,6 +22,9 @@ import static org.apache.kylin.common.exception.ServerErrorCode.FILE_NOT_EXIST;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -32,7 +35,9 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -303,7 +308,7 @@ public class HadoopUtil {
         try {
             FileSystem fs = HadoopUtil.getWorkingFileSystem();
             Path path = new Path(resPath);
-            FileStatus[] fileStatus = fs.listStatus(path);
+            FileStatus[] fileStatus = FileSystemUtil.listStatus(fs, path);
             if (isFile) {
                 return Stream.of(fileStatus).filter(FileStatus::isFile).collect(Collectors.toList());
             } else {
@@ -326,6 +331,90 @@ public class HadoopUtil {
             ExceptionUtils.rethrow(new IOException(String.format(Locale.ROOT, "mkdir %s error", resPath), e));
         }
 
+    }
+
+    public static void removeOldFiles(Path path, long maxCount) {
+        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        try {
+            if (!fs.exists(path)) {
+                return;
+            }
+            FileStatus[] fileStatuses = fs.listStatus(path);
+            Arrays.sort(fileStatuses, FileStatus::compareTo);
+            for (int i = fileStatuses.length - 1; i > maxCount - 2; i--) {
+                Path filePath = fileStatuses[i].getPath();
+                try {
+                    fs.delete(filePath, false);
+                    logger.debug("Removed outdated file {}", filePath);
+                } catch (IOException e) {
+                    logger.error("Error removing outdated file {}", filePath, e);
+                }
+            }
+
+        } catch (IOException e) {
+            logger.error("Error getting path {}", path, e);
+        }
+    }
+
+    public static void uploadFileToHdfs(File file, Path path) {
+        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        try {
+            if (fs.exists(path) && fs.isFile(path)) {
+                throw new IllegalArgumentException("The path must be a folder: " + path.getName());
+            }
+            File[] uploadFiles;
+            if (file.isDirectory()) {
+                uploadFiles = file.listFiles();
+            } else {
+                uploadFiles = new File[] { file };
+            }
+            for (File fromFile : uploadFiles) {
+                Path toPath = new Path(path, fromFile.getName());
+                if (fromFile.isDirectory()) {
+                    uploadFileToHdfs(fromFile, toPath);
+                } else {
+                    try (FileInputStream fis = new FileInputStream(fromFile);
+                            FSDataOutputStream fos = fs.create(toPath, true)) {
+                        IOUtils.copy(fis, fos);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("cannot upload file to hdfs ", e);
+        }
+    }
+
+    public static void downloadFileFromHdfsWithoutError(Path path, File file) {
+        try {
+            downloadFileFromHdfs(path, file);
+        } catch (IllegalArgumentException e) {
+            logger.error("Skip failed path: " + path.toUri().getPath(), e);
+        }
+    }
+
+    public static void downloadFileFromHdfs(Path path, File file) {
+        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        if (!file.exists() || file.isFile()) {
+            throw new IllegalArgumentException("The file must be an exist folder: " + file.getName());
+        }
+        try {
+            FileStatus[] downloadFiles = fs.listStatus(path);
+            for (FileStatus fromFile : downloadFiles) {
+                File toFile = new File(file, fromFile.getPath().getName());
+                if (fromFile.isDirectory()) {
+                    FileUtils.forceMkdir(toFile);
+                    downloadFileFromHdfs(fromFile.getPath(), toFile);
+                } else {
+                    try (FSDataInputStream fis = fs.open(fromFile.getPath());
+                            FileOutputStream fos = new FileOutputStream(toFile)) {
+                        IOUtils.copy(fis, fos);
+                        fos.flush();
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("cannot download file from hdfs ", e);
+        }
     }
 
     public static void writeStringToHdfs(String content, Path path) throws IOException {

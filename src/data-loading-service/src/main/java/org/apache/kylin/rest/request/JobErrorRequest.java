@@ -37,4 +37,7 @@ public class JobErrorRequest implements ProjectInsensitiveRequest {
     private String failedStack;
     @JsonProperty("failed_reason")
     private String failedReason;
+
+    @JsonProperty("job_last_running_start_time")
+    private String jobLastRunningStartTime;
 }

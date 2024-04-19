@@ -60,7 +60,7 @@ public class TestResultPlan extends NLocalFileMetadataTestCase {
     public void setUp() throws Exception {
         createTestMetadata();
         getTestConfig().setMetadataUrl(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=");
         getTestConfig().setProperty("kylin.query.share-state-switch-implement", "jdbc");
         getTestConfig().setProperty("kylin.query.big-query-source-scan-rows-threshold", "100000000");
         ss = SparkSession.builder().appName("local").master("local[1]").getOrCreate();

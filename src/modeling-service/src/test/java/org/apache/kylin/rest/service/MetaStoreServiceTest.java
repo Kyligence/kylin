@@ -277,7 +277,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
         }
 
         Assert.assertEquals(4, rawRecItems.size());
-        jdbcRawRecStore.save(rawRecItems, true);
+        jdbcRawRecStore.saveWithoutCheck(rawRecItems, true);
 
         List<RawRecItem> rawRecItems1 = jdbcRawRecStore.queryAll();
         Assert.assertEquals(4, rawRecItems1.size());

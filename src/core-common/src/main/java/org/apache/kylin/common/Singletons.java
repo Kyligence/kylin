@@ -27,8 +27,8 @@ import lombok.val;
 
 public class Singletons implements Serializable {
 
-    transient ConcurrentHashMap<Class<?>, Object> instances = null;
-    transient ConcurrentHashMap<Class<?>, ConcurrentHashMap<String, Object>> instancesByPrj = null;
+    transient ConcurrentHashMap<Class<?>, Object> instances = new ConcurrentHashMap<>();
+    transient ConcurrentHashMap<Class<?>, ConcurrentHashMap<String, Object>> instancesByPrj = new ConcurrentHashMap<>();
 
     public static <T> T getInstance(String project, Class<T> clz) {
         return instance.getInstance0(project, clz, defaultCreator(project));
@@ -76,9 +76,7 @@ public class Singletons implements Serializable {
         if (singleton != null)
             return (T) singleton;
 
-        synchronized (this) {
-            if (instances == null)
-                instances = new ConcurrentHashMap<>();
+        synchronized (clz) {
 
             singleton = instances.get(clz);
             if (singleton != null)
@@ -102,10 +100,7 @@ public class Singletons implements Serializable {
         if (singleton != null)
             return (T) singleton;
 
-        synchronized (this) {
-            if (null == instancesByPrj)
-                instancesByPrj = new ConcurrentHashMap<>();
-
+        synchronized (clz) {
             instanceMap = instancesByPrj.get(clz);
             if (instanceMap == null)
                 instanceMap = new ConcurrentHashMap<>();

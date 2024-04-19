@@ -17,11 +17,15 @@
  */
 package io.kyligence.kap.engine.spark.stats.analyzer;
 
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import lombok.val;
-import lombok.var;
-import org.apache.commons.lang3.StringUtils;
+import static org.apache.kylin.job.execution.stage.StageType.TABLE_SAMPLING;
+
+import java.io.Serializable;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.IntStream;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
@@ -29,6 +33,8 @@ import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.engine.spark.application.SparkApplication;
 import org.apache.kylin.engine.spark.job.TableAnalysisJob;
 import org.apache.kylin.engine.spark.job.exec.TableAnalyzerExec;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
@@ -41,13 +47,8 @@ import org.apache.spark.utils.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.IntStream;
-
-import static org.apache.kylin.engine.spark.job.StageType.TABLE_SAMPLING;
+import lombok.val;
+import lombok.var;
 
 public class TableAnalyzerJob extends SparkApplication implements Serializable {
     public static final ImmutableList<String> TABLE_STATS_METRICS = ImmutableList.<String> builder()
@@ -69,10 +70,10 @@ public class TableAnalyzerJob extends SparkApplication implements Serializable {
 
     public void analyzerTable() {
         String tableName = getParam(NBatchConstants.P_TABLE_NAME);
-        long rowCount = Long.parseLong(getParam(NBatchConstants.P_SAMPLING_ROWS));
+        int rowCount = Integer.parseInt(getParam(NBatchConstants.P_SAMPLING_ROWS));
         String prjName = getParam(NBatchConstants.P_PROJECT_NAME);
         TableDesc tableDesc = NTableMetadataManager.getInstance(config, project).getTableDesc(tableName);
-        analyzeTable(tableDesc, prjName, (int) rowCount, ss);
+        analyzeTable(tableDesc, prjName, rowCount, ss);
     }
 
     // Ensure metadata compatibility
@@ -158,7 +159,6 @@ public class TableAnalyzerJob extends SparkApplication implements Serializable {
     @Override
     protected String calculateRequiredCores() throws Exception {
         String tableName = getParam(NBatchConstants.P_TABLE_NAME);
-        long rowCount = Long.parseLong(getParam(NBatchConstants.P_SAMPLING_ROWS));
         Path shareDir = config.getJobTmpShareDir(project, jobId);
         val child = tableName + "_" + ResourceDetectUtils.samplingDetectItemFileSuffix();
         val detectItems = ResourceDetectUtils.readDetectItems(new Path(shareDir, child));

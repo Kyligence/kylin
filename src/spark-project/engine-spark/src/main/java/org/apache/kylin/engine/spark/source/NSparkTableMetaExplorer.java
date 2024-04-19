@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.jnet.Installer;
 import org.apache.hadoop.fs.FsUrlStreamHandlerFactory;
+import org.apache.kylin.common.constant.ObsConfig;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.spark.sql.SparderEnv;
@@ -73,8 +74,6 @@ public class NSparkTableMetaExplorer implements Serializable {
 
     private static final List<String> UNSUPOORT_TYPE = Lists.newArrayList("array", "map", "struct", "binary");
     private static final String CHAR_VARCHAR_TYPE_STRING_METADATA_KEY = "__CHAR_VARCHAR_TYPE_STRING";
-    public static final String S3_ROLE_PROPERTY_KEY = "role";
-    public static final String S3_ENDPOINT_PROPERTY_KEY = "s3_endpoint";
 
     public NSparkTableMeta getSparkTableMeta(String database, String tableName) {
         SessionCatalog catalog = SparderEnv.getSparkSession().sessionState().catalog();
@@ -133,8 +132,10 @@ public class NSparkTableMetaExplorer implements Serializable {
             builder.setSdOutputFormat(tableMetadata.storage().outputFormat().get());
         }
         Option<URI> uriOption = tableMetadata.storage().locationUri();
+        ObsConfig obsConfig = ObsConfig.S3;
         if (uriOption.isDefined()) {
             builder.setSdLocation(uriOption.get().toString());
+            obsConfig = ObsConfig.getByLocation(uriOption.get().toString()).orElse(ObsConfig.S3);
         }
         if (tableMetadata.provider().isDefined()) {
             builder.setProvider(tableMetadata.provider().get());
@@ -148,12 +149,14 @@ public class NSparkTableMetaExplorer implements Serializable {
         if (tableMetadata.properties().contains("transactional")) {
             builder.setIsTransactional(Boolean.parseBoolean(tableMetadata.properties().get("transactional").get()));
         }
-        if (tableMetadata.properties().contains(S3_ROLE_PROPERTY_KEY)) {
-            builder.setS3Role(tableMetadata.properties().get(S3_ROLE_PROPERTY_KEY).get());
+        if (tableMetadata.properties().contains(obsConfig.getRolePropertiesKey())) {
+            builder.setRoleArn(tableMetadata.properties().get(obsConfig.getRolePropertiesKey()).get());
         }
-
-        if (tableMetadata.properties().contains(S3_ENDPOINT_PROPERTY_KEY)) {
-            builder.setS3Endpoint(tableMetadata.properties().get(S3_ENDPOINT_PROPERTY_KEY).get());
+        if (tableMetadata.properties().contains(obsConfig.getEndpointPropertiesKey())) {
+            builder.setEndpoint(tableMetadata.properties().get(obsConfig.getEndpointPropertiesKey()).get());
+        }
+        if (tableMetadata.properties().contains(obsConfig.getRegionPropertiesKey())) {
+            builder.setRegion(tableMetadata.properties().get(obsConfig.getRegionPropertiesKey()).get());
         }
         return builder.createSparkTableMeta();
     }

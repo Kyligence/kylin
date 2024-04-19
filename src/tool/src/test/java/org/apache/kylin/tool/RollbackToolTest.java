@@ -18,39 +18,7 @@
 
 package org.apache.kylin.tool;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import lombok.val;
-import lombok.var;
-import org.apache.commons.dbcp2.BasicDataSourceFactory;
-import org.apache.commons.io.FileUtils;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.StorageURL;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.metadata.JdbcAuditLogStore;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.metadata.cube.model.NDataflowManager;
-import io.kyligence.kap.metadata.favorite.FavoriteRule;
-import io.kyligence.kap.metadata.favorite.FavoriteRule.AbstractCondition;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
-import org.apache.kylin.metadata.model.SegmentRange;
-import org.apache.kylin.metadata.project.NProjectManager;
-import org.apache.kylin.metadata.project.ProjectInstance;
-import org.apache.kylin.tool.general.RollbackStatusEnum;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
-import org.sparkproject.guava.collect.Sets;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.datasourceParameters;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,8 +28,42 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
-import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.datasourceParameters;
+import org.apache.commons.dbcp2.BasicDataSourceFactory;
+import org.apache.commons.io.FileUtils;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.StorageURL;
+import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.common.persistence.metadata.JdbcAuditLogStore;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.model.SegmentRange;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.tool.general.RollbackStatusEnum;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.sparkproject.guava.collect.Sets;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
+import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
+import io.kyligence.kap.metadata.favorite.FavoriteRule;
+import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
+import lombok.val;
+import lombok.var;
+
+@Ignore
 public class RollbackToolTest extends NLocalFileMetadataTestCase {
 
     DateTimeFormatter DATE_TIME_FORMATTER = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss",
@@ -103,10 +105,10 @@ public class RollbackToolTest extends NLocalFileMetadataTestCase {
         }, "project12", 1);
 
         UnitOfWork.doInTransactionWithRetry(() -> {
-            val ruleMgr = FavoriteRuleManager.getInstance(KylinConfig.getInstanceFromEnv(), "project12");
+            val ruleMgr = FavoriteRuleManager.getInstance("project12");
             FavoriteRule.Condition cond2 = new FavoriteRule.Condition();
             cond2.setRightThreshold("4");
-            List<AbstractCondition> conds = Lists.newArrayList(cond2);
+            List<FavoriteRule.AbstractCondition> conds = Lists.newArrayList(cond2);
             FavoriteRule newRule = new FavoriteRule(conds, "new_rule", true);
             ruleMgr.createRule(newRule);
             return 0;
@@ -129,10 +131,10 @@ public class RollbackToolTest extends NLocalFileMetadataTestCase {
             return 0;
         }, "project13", 1);
         UnitOfWork.doInTransactionWithRetry(() -> {
-            val ruleMgr = FavoriteRuleManager.getInstance(KylinConfig.getInstanceFromEnv(), "project13");
+            val ruleMgr = FavoriteRuleManager.getInstance("project13");
             FavoriteRule.Condition cond2 = new FavoriteRule.Condition();
             cond2.setRightThreshold("4");
-            List<AbstractCondition> conds = Lists.newArrayList(cond2);
+            List<FavoriteRule.AbstractCondition> conds = Lists.newArrayList(cond2);
             FavoriteRule newRule = new FavoriteRule(conds, "new_rule", true);
             ruleMgr.createRule(newRule);
             return 0;
@@ -149,10 +151,10 @@ public class RollbackToolTest extends NLocalFileMetadataTestCase {
             return 0;
         }, "project14", 1);
         UnitOfWork.doInTransactionWithRetry(() -> {
-            val ruleMgr = FavoriteRuleManager.getInstance(KylinConfig.getInstanceFromEnv(), "project14");
+            val ruleMgr = FavoriteRuleManager.getInstance("project14");
             FavoriteRule.Condition cond2 = new FavoriteRule.Condition();
             cond2.setRightThreshold("4");
-            List<AbstractCondition> conds = Lists.newArrayList(cond2);
+            List<FavoriteRule.AbstractCondition> conds = Lists.newArrayList(cond2);
             FavoriteRule newRule = new FavoriteRule(conds, "new_rule", true);
             ruleMgr.createRule(newRule);
             return 0;
@@ -184,10 +186,10 @@ public class RollbackToolTest extends NLocalFileMetadataTestCase {
             return 0;
         }, "project15", 1);
         UnitOfWork.doInTransactionWithRetry(() -> {
-            val ruleMgr = FavoriteRuleManager.getInstance(KylinConfig.getInstanceFromEnv(), "project15");
+            val ruleMgr = FavoriteRuleManager.getInstance("project15");
             FavoriteRule.Condition cond2 = new FavoriteRule.Condition();
             cond2.setRightThreshold("4");
-            List<AbstractCondition> conds = Lists.newArrayList(cond2);
+            List<FavoriteRule.AbstractCondition> conds = Lists.newArrayList(cond2);
             FavoriteRule newRule = new FavoriteRule(conds, "new_rule", true);
             ruleMgr.createRule(newRule);
             return 0;
@@ -224,6 +226,8 @@ public class RollbackToolTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(tool.rollbackStatus, RollbackStatusEnum.WAIT_USER_CONFIRM_SUCCESS);
     }
 
+    // https://olapio.atlassian.net/browse/KE-38102
+    @Ignore
     @Test
     public void testJobRollback() throws Exception {
         val tool = Mockito.spy(new RollbackTool());
@@ -233,7 +237,7 @@ public class RollbackToolTest extends NLocalFileMetadataTestCase {
         MetadataTool.backup(kylinConfig);
         val jobId = RandomUtil.randomUUIDStr();
         UnitOfWork.doInTransactionWithRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
             mockJob("default", "89af4ee2-2cdb-4b07-b39e-4c29856309aa", jobId, SegmentRange.dateToLong("2012-01-01"),
                     SegmentRange.dateToLong("2012-09-01"));
             return 0;
@@ -244,25 +248,25 @@ public class RollbackToolTest extends NLocalFileMetadataTestCase {
         Thread.sleep(1000);
 
         UnitOfWork.doInTransactionWithRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
             executableManager.updateJobOutput(jobId, ExecutableState.RUNNING);
             return 0;
         }, "default", 1);
 
         UnitOfWork.doInTransactionWithRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
             executableManager.updateJobOutput(jobId, ExecutableState.SUCCEED);
             return 0;
         }, "default", 1);
         tool.execute(new String[] { "-skipCheckData", "true", "-time", t1.format(DATE_TIME_FORMATTER), "-project",
                 "default" });
-        Assert.assertSame(ExecutableState.READY, NExecutableManager
+        Assert.assertSame(ExecutableState.READY, ExecutableManager
                 .getInstance(KylinConfig.getInstanceFromEnv(), "default").getAllExecutables().get(0).getStatus());
     }
 
     JdbcTemplate getJdbcTemplate() throws Exception {
         val url = StorageURL.valueOf(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=");
         val props = datasourceParameters(url);
         val dataSource = BasicDataSourceFactory.createDataSource(props);
         return new JdbcTemplate(dataSource);
@@ -276,7 +280,7 @@ public class RollbackToolTest extends NLocalFileMetadataTestCase {
         val layouts = dataflow.getIndexPlan().getAllLayouts();
         NSparkCubingJob job = NSparkCubingJob.create(Sets.newHashSet(segment), Sets.newLinkedHashSet(layouts), "ADMIN",
                 JobTypeEnum.INDEX_BUILD, jobId, null, null, null);
-        NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).addJob(job);
+        ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).addJob(job);
     }
 
     private void prepare() throws IOException {

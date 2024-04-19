@@ -26,7 +26,7 @@ import java.util.UUID;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.util.HadoopUtil;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
 import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -45,7 +45,7 @@ import org.junit.Test;
 
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
-public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTest {
+public class HiveTransactionTableHelperTest extends NLocalWithSparkSessionTestBase {
     private final ColumnDesc[] COLUMN_DESCS = new ColumnDesc[2];
     private final String ORIGIN_TABLE = "test1";
     private final String INTERMEDIATE_TABLE = "test1_hive_tx";

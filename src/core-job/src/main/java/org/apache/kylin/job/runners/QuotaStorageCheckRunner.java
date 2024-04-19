@@ -17,11 +17,15 @@
  */
 package org.apache.kylin.job.runners;
 
+import java.util.List;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.annotation.Clarification;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.metadata.cube.storage.ProjectStorageInfoCollector;
 import org.apache.kylin.metadata.cube.storage.StorageInfoEnum;
+import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,43 +35,51 @@ import lombok.val;
 import lombok.var;
 
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Enterprise")
-public class QuotaStorageCheckRunner extends AbstractDefaultSchedulerRunner {
+public class QuotaStorageCheckRunner implements Runnable {
+
     private static final Logger logger = LoggerFactory.getLogger(QuotaStorageCheckRunner.class);
 
     private final ProjectStorageInfoCollector collector;
 
-    public QuotaStorageCheckRunner(NDefaultScheduler nDefaultScheduler) {
-        super(nDefaultScheduler);
-        collector = new ProjectStorageInfoCollector(Lists.newArrayList(StorageInfoEnum.STORAGE_QUOTA, StorageInfoEnum.TOTAL_STORAGE));
+    private JobContext jobContext;
+
+    public QuotaStorageCheckRunner(JobContext jobContext) {
+        this.jobContext = jobContext;
+        collector = new ProjectStorageInfoCollector(
+                Lists.newArrayList(StorageInfoEnum.STORAGE_QUOTA, StorageInfoEnum.TOTAL_STORAGE));
     }
 
     @Override
-    protected void doRun() {
-        logger.info("start check project {} storage quota.", nDefaultScheduler.getProject());
-        context.setReachQuotaLimit(reachStorageQuota());
+    public void run() {
+        if (!KylinConfig.getInstanceFromEnv().isStorageQuotaEnabled()) {
+            return;
+        }
+        logger.info("Start check all project storage quota.");
+        NProjectManager nProjectManager = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
+        List<ProjectInstance> projectInstanceList = nProjectManager.listAllProjects();
+        for (ProjectInstance projectInstance : projectInstanceList) {
+            String project = projectInstance.getName();
+            jobContext.setProjectReachQuotaLimit(project, reachStorageQuota(project));
+        }
     }
 
-    private boolean reachStorageQuota() {
-        var storageVolumeInfo = collector.getStorageVolumeInfo(KylinConfig.getInstanceFromEnv(),
-                nDefaultScheduler.getProject());
+    private boolean reachStorageQuota(String project) {
+        var storageVolumeInfo = collector.getStorageVolumeInfo(KylinConfig.getInstanceFromEnv(), project);
         var totalSize = storageVolumeInfo.getTotalStorageSize();
         int retryCount = 3;
         while (retryCount-- > 0 && totalSize < 0) {
-            storageVolumeInfo = collector.getStorageVolumeInfo(KylinConfig.getInstanceFromEnv(),
-                    nDefaultScheduler.getProject());
+            storageVolumeInfo = collector.getStorageVolumeInfo(KylinConfig.getInstanceFromEnv(), project);
             totalSize = storageVolumeInfo.getTotalStorageSize();
         }
         val storageQuotaSize = storageVolumeInfo.getStorageQuotaSize();
         if (totalSize < 0) {
             logger.error(
                     "Project '{}' : an exception occurs when getting storage volume info, no job will be scheduled!!! The error info : {}",
-                    nDefaultScheduler.getProject(),
-                    storageVolumeInfo.getThrowableMap().get(StorageInfoEnum.TOTAL_STORAGE));
+                    project, storageVolumeInfo.getThrowableMap().get(StorageInfoEnum.TOTAL_STORAGE));
             return true;
         }
         if (totalSize >= storageQuotaSize) {
-            logger.info("Project '{}' reach storage quota, no job will be scheduled!!!",
-                    nDefaultScheduler.getProject());
+            logger.info("Project '{}' reach storage quota, no job will be scheduled!!!", project);
             return true;
         }
         return false;

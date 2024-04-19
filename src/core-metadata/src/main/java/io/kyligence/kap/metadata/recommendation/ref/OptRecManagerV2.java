@@ -20,13 +20,17 @@ package io.kyligence.kap.metadata.recommendation.ref;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.Singletons;
-import org.apache.kylin.common.annotation.Clarification;
+import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
+import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -37,19 +41,15 @@ import org.apache.kylin.metadata.cube.optimization.FrequencyMap;
 import org.apache.kylin.metadata.cube.optimization.GarbageLayoutType;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
+
 import io.kyligence.kap.metadata.recommendation.candidate.LayoutMetric;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
 import io.kyligence.kap.metadata.recommendation.entity.LayoutRecItemV2;
-
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
+import io.kyligence.kap.metadata.recommendation.util.RawRecUtil;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Clarification(priority = Clarification.Priority.MAJOR, msg = "Enterprise")
 public class OptRecManagerV2 {
 
     public static OptRecManagerV2 getInstance(String project) {
@@ -89,7 +89,7 @@ public class OptRecManagerV2 {
     }
 
     public boolean genRecItemsFromIndexOptimizer(String project, String modelId,
-            Map<Long, GarbageLayoutType> garbageLayouts) {
+                                                 Map<Long, GarbageLayoutType> garbageLayouts) {
         if (garbageLayouts.isEmpty()) {
             return false;
         }
@@ -108,59 +108,65 @@ public class OptRecManagerV2 {
 
         RawRecManager recManager = RawRecManager.getInstance(project);
         Map<String, RawRecItem> layoutRecommendations = recManager.queryNonAppliedLayoutRawRecItems(modelId, false);
-        Map<String, String> uniqueFlagToUuid = Maps.newHashMap();
-        layoutRecommendations.forEach((k, v) -> {
-            LayoutRecItemV2 recEntity = (LayoutRecItemV2) v.getRecEntity();
-            uniqueFlagToUuid.put(recEntity.getLayout().genUniqueContent(), k);
-        });
+        Map<String, List<String>> md5ToUuid = RawRecUtil.uniqueFlagsToMd5Map(layoutRecommendations.keySet());
         AtomicInteger newRecCount = new AtomicInteger(0);
-        List<RawRecItem> rawRecItems = Lists.newArrayList();
+        RawRecManager rawRecManager = RawRecManager.getInstance(project);
         garbageLayouts.forEach((layoutId, type) -> {
             LayoutEntity layout = allLayoutsMap.get(layoutId);
-            String uniqueString = layout.genUniqueContent();
-            String uuid = uniqueFlagToUuid.get(uniqueString);
-            FrequencyMap frequencyMap = hitFrequencyMap.getOrDefault(layoutId, new FrequencyMap());
-            RawRecItem recItem;
-            if (uniqueFlagToUuid.containsKey(uniqueString)) {
-                recItem = layoutRecommendations.get(uuid);
-                recItem.setUpdateTime(System.currentTimeMillis());
-                recItem.setRecSource(type.name());
-                if (recItem.getState() == RawRecItem.RawRecState.DISCARD) {
-                    recItem.setState(RawRecItem.RawRecState.INITIAL);
-                    LayoutMetric layoutMetric = recItem.getLayoutMetric();
-                    if (layoutMetric == null) {
-                        recItem.setLayoutMetric(new LayoutMetric(frequencyMap, new LayoutMetric.LatencyMap()));
-                    } else {
-                        layoutMetric.setFrequencyMap(frequencyMap);
-                    }
+            String content = RawRecUtil.getContent(project, modelId, layout.genUniqueContent(),
+                    RawRecItem.RawRecType.REMOVAL_LAYOUT);
+            String md5 = RawRecUtil.computeMD5(content);
+
+            AtomicBoolean retry = new AtomicBoolean(false);
+            JdbcUtil.withTxAndRetry(rawRecManager.getTransactionManager(), () -> {
+                Pair<String, RawRecItem> recItemPair = null;
+                if (retry.get()) {
+                    recItemPair = recManager.queryRecItemByMd5(md5, content);
+                } else {
+                    retry.set(true);
+                    recItemPair = RawRecUtil.getRawRecItemFromMap(md5, content, md5ToUuid, layoutRecommendations);
                 }
-            } else {
-                LayoutRecItemV2 item = new LayoutRecItemV2();
-                item.setLayout(layout);
-                item.setCreateTime(System.currentTimeMillis());
-                item.setAgg(layout.getId() < IndexEntity.TABLE_INDEX_START_ID);
-                item.setUuid(RandomUtil.randomUUIDStr());
+                FrequencyMap frequencyMap = hitFrequencyMap.getOrDefault(layoutId, new FrequencyMap());
+                RawRecItem recItem;
+                if (recItemPair.getSecond() != null) {
+                    recItem = recItemPair.getSecond();
+                    recItem.setUpdateTime(System.currentTimeMillis());
+                    recItem.setRecSource(type.name());
+                    if (recItem.getState() == RawRecItem.RawRecState.DISCARD) {
+                        recItem.setState(RawRecItem.RawRecState.INITIAL);
+                        LayoutMetric layoutMetric = recItem.getLayoutMetric();
+                        if (layoutMetric == null) {
+                            recItem.setLayoutMetric(new LayoutMetric(frequencyMap, new LayoutMetric.LatencyMap()));
+                        } else {
+                            layoutMetric.setFrequencyMap(frequencyMap);
+                        }
+                    }
+                } else {
+                    LayoutRecItemV2 item = new LayoutRecItemV2();
+                    item.setLayout(layout);
+                    item.setCreateTime(System.currentTimeMillis());
+                    item.setAgg(layout.getId() < IndexEntity.TABLE_INDEX_START_ID);
+                    item.setUuid(RandomUtil.randomUUIDStr());
 
-                recItem = new RawRecItem(project, modelId, model.getSemanticVersion(),
-                        RawRecItem.RawRecType.REMOVAL_LAYOUT);
-                recItem.setRecEntity(item);
-                recItem.setCreateTime(item.getCreateTime());
-                recItem.setUpdateTime(item.getCreateTime());
-                recItem.setState(RawRecItem.RawRecState.INITIAL);
-                recItem.setUniqueFlag(item.getUuid());
-                recItem.setDependIDs(item.genDependIds());
-                recItem.setLayoutMetric(new LayoutMetric(frequencyMap, new LayoutMetric.LatencyMap()));
-                recItem.setRecSource(type.name());
-                newRecCount.getAndIncrement();
-            }
-
-            if (recItem.getLayoutMetric() != null) {
-                rawRecItems.add(recItem);
-            }
+                    recItem = new RawRecItem(project, modelId, model.getSemanticVersion(),
+                            RawRecItem.RawRecType.REMOVAL_LAYOUT);
+                    recItem.setRecEntity(item);
+                    recItem.setCreateTime(item.getCreateTime());
+                    recItem.setUpdateTime(item.getCreateTime());
+                    recItem.setState(RawRecItem.RawRecState.INITIAL);
+                    recItem.setUniqueFlag(recItemPair.getFirst());
+                    recItem.setDependIDs(item.genDependIds());
+                    recItem.setLayoutMetric(new LayoutMetric(frequencyMap, new LayoutMetric.LatencyMap()));
+                    recItem.setRecSource(type.name());
+                    newRecCount.getAndIncrement();
+                }
+                if (recItem.getLayoutMetric() != null) {
+                    RawRecManager.getInstance(project).saveOrUpdate(recItem);
+                }
+                return null;
+            });
         });
-        RawRecManager.getInstance(project).saveOrUpdate(rawRecItems);
         log.info("Raw recommendations from index optimizer for model({}/{}) successfully generated.", project, modelId);
-
         return newRecCount.get() > 0;
     }
 }

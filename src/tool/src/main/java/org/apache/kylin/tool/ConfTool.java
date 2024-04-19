@@ -18,15 +18,29 @@
 package org.apache.kylin.tool;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.util.EntityUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.rest.cluster.ClusterManager;
+import org.apache.kylin.rest.cluster.NacosClusterManager;
+import org.apache.kylin.rest.response.EnvelopeResponse;
+import org.apache.kylin.rest.response.ServerInfoResponse;
+import org.apache.kylin.rest.util.SpringContext;
+import org.apache.kylin.tool.restclient.RestClient;
 import org.apache.kylin.tool.util.ToolUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
@@ -36,6 +50,42 @@ public class ConfTool {
     private static final Set<String> KYLIN_BIN_INCLUSION = Sets.newHashSet("kylin.sh");
 
     private ConfTool() {
+    }
+
+    public static void extractK8sConf(HttpHeaders headers, File exportDir, String targetServerId) {
+        try {
+            File confFolder = new File(exportDir, "conf");
+            FileUtils.forceMkdir(confFolder);
+            ClusterManager clusterManager = SpringContext.getApplicationContext().getBean(ClusterManager.class);
+            for (String serverId : NacosClusterManager.SERVER_IDS) {
+                if (targetServerId != null && !serverId.equals(targetServerId)) {
+                    continue;
+                }
+                ServerInfoResponse server = clusterManager.getServerById(serverId);
+                if (server != null) {
+                    Properties properties = fetchConf(headers, server.getHost());
+                    File propertiesFile = new File(confFolder, serverId + ".kylin.properties");
+                    if (propertiesFile.createNewFile()) {
+                        try (FileOutputStream conf = new FileOutputStream(propertiesFile)) {
+                            properties.store(conf, "");
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to copy /conf, ", e);
+        }
+    }
+
+    public static Properties fetchConf(HttpHeaders headers, String host) throws IOException {
+        RestClient client = new RestClient(host);
+        HttpResponse response = client.forwardGet(headers, "/config/all", false);
+        String content = EntityUtils.toString(response.getEntity());
+        Properties properties = new Properties();
+        if (content != null) {
+            properties.putAll((Map<?, ?>) JsonUtil.readValue(content, EnvelopeResponse.class).getData());
+        }
+        return properties;
     }
 
     public static void extractConf(File exportDir) {

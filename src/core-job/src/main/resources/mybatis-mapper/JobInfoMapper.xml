@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.apache.kylin.job.mapper.JobInfoMapper">
+  <resultMap id="BaseResultMap" type="org.apache.kylin.job.domain.JobInfo">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <id column="mvcc" jdbcType="BIGINT" property="mvcc" />
+    <result column="job_id" jdbcType="VARCHAR" property="jobId" />
+    <result column="job_type" jdbcType="VARCHAR" property="jobType" />
+    <result column="job_status" jdbcType="VARCHAR" property="jobStatus" />
+    <result column="project" jdbcType="VARCHAR" property="project" />
+    <result column="subject" jdbcType="VARCHAR" property="subject" />
+    <result column="model_id" jdbcType="VARCHAR" property="modelId" />
+    <result column="priority" javaType="INTEGER" property="priority" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="job_duration_millis" jdbcType="BIGINT" property="jobDurationMillis" />
+  </resultMap>
+  <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="org.apache.kylin.job.domain.JobInfo">
+    <result column="job_content" jdbcType="BINARY" property="jobContent" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, job_id, job_type, job_status, project, subject, model_id, priority, create_time, update_time,
+    job_duration_millis, mvcc
+  </sql>
+  <sql id="Blob_Column_List">
+    job_content
+  </sql>
+  <delete id="deleteAllJob">
+    delete from ${jobInfoTable}
+  </delete>
+  <insert id="insert" parameterType="org.apache.kylin.job.domain.JobInfo">
+    insert into ${jobInfoTable} (id, job_id, job_type, 
+      job_status, project, subject, 
+      model_id, priority, create_time, update_time,
+      job_duration_millis, mvcc, job_content)
+    values (#{id,jdbcType=BIGINT}, #{jobId,jdbcType=VARCHAR}, #{jobType,jdbcType=VARCHAR}, 
+      #{jobStatus,jdbcType=VARCHAR}, #{project,jdbcType=VARCHAR}, #{subject,jdbcType=VARCHAR}, 
+      #{modelId,jdbcType=VARCHAR}, #{priority,jdbcType=INTEGER}, #{createTime,jdbcType=TIMESTAMP},
+      #{updateTime,jdbcType=TIMESTAMP}, #{jobDurationMillis,jdbcType=BIGINT}, #{mvcc}, #{jobContent,jdbcType=BINARY})
+  </insert>
+
+  <delete id="deleteByJobId" parameterType="java.lang.String">
+    delete from ${jobInfoTable}
+    where job_id = #{jobId,jdbcType=BIGINT}
+  </delete>
+  <delete id="deleteByJobIdList">
+    delete from ${jobInfoTable}
+    where
+    <foreach close=")" collection="jobStatusList" index="index" item="item" open="job_status in (" separator=",">
+      #{item}
+    </foreach>
+    <foreach close=")" collection="jobIdList" index="index" item="item" open="AND job_id in (" separator=",">
+      #{item}
+    </foreach>
+  </delete>
+  <delete id="deleteByProject" parameterType="java.lang.String">
+    delete from ${jobInfoTable}
+    where project = #{project,jdbcType=VARCHAR}
+  </delete>
+  <insert id="insertJobInfoSelective" parameterType="org.apache.kylin.job.domain.JobInfo">
+    insert into ${jobInfoTable}
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="jobId != null">
+        job_id,
+      </if>
+      <if test="jobType != null">
+        job_type,
+      </if>
+      <if test="jobStatus != null">
+        job_status,
+      </if>
+      <if test="project != null">
+        project,
+      </if>
+      <if test="subject != null">
+        subject,
+      </if>
+      <if test="modelId != null">
+        model_id,
+      </if>
+      <if test="priority != null">
+        priority,
+      </if>
+      <if test="createTime != null">
+        create_time,
+      </if>
+      <if test="updateTime != null">
+        update_time,
+      </if>
+      <if test="jobDurationMillis != null">
+        job_duration_millis,
+      </if>
+      <if test="mvcc != null">
+        mvcc,
+      </if>
+      <if test="jobContent != null">
+        job_content,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="jobId != null">
+        #{jobId,jdbcType=VARCHAR},
+      </if>
+      <if test="jobType != null">
+        #{jobType,jdbcType=VARCHAR},
+      </if>
+      <if test="jobStatus != null">
+        #{jobStatus,jdbcType=VARCHAR},
+      </if>
+      <if test="project != null">
+        #{project,jdbcType=VARCHAR},
+      </if>
+      <if test="subject != null">
+        #{subject,jdbcType=VARCHAR},
+      </if>
+      <if test="modelId != null">
+        #{modelId,jdbcType=VARCHAR},
+      </if>
+      <if test="priority != null">
+        #{priority,jdbcType=INTEGER},
+      </if>
+      <if test="createTime != null">
+        #{createTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="jobDurationMillis != null">
+        #{jobDurationMillis,jdbcType=BIGINT},
+      </if>
+      <if test="mvcc != null">
+        #{mvcc},
+      </if>
+      <if test="jobContent != null">
+        #{jobContent,jdbcType=BINARY},
+      </if>
+    </trim>
+  </insert>
+  <select id="selectByJobId" parameterType="java.lang.String" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from ${jobInfoTable}
+    where job_id = #{jobId,jdbcType=VARCHAR}
+  </select>
+  <update id="updateByJobIdSelective" parameterType="org.apache.kylin.job.domain.JobInfo">
+    update ${jobInfoTable}
+    <set>
+      <if test="jobType != null">
+        job_type = #{jobType,jdbcType=VARCHAR},
+      </if>
+      <if test="jobStatus != null">
+        job_status = #{jobStatus,jdbcType=VARCHAR},
+      </if>
+      <if test="project != null">
+        project = #{project,jdbcType=VARCHAR},
+      </if>
+      <if test="subject != null">
+        subject = #{subject,jdbcType=VARCHAR},
+      </if>
+      <if test="modelId != null">
+        model_id = #{modelId,jdbcType=VARCHAR},
+      </if>
+      <if test="priority != null">
+        priority = #{priority,jdbcType=INTEGER},
+      </if>
+      <if test="createTime != null">
+        create_time = #{createTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        update_time = #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="jobDurationMillis != null">
+        job_duration_millis = #{jobDurationMillis,jdbcType=BIGINT},
+      </if>
+      <if test="jobContent != null">
+        job_content = #{jobContent,jdbcType=BINARY},
+      </if>
+      mvcc = mvcc + 1
+    </set>
+    where job_id = #{jobId,jdbcType=VARCHAR} and mvcc = #{mvcc}
+  </update>
+  <select id="findJobIdListByStatusBatch" resultType="java.lang.String">
+    select job_id
+    from ${jobInfoTable}
+    where job_status = #{status,jdbcType=VARCHAR}
+    ORDER BY priority,create_time ASC
+	LIMIT #{batchSize,jdbcType=SMALLINT}
+  </select>
+  <select id="selectByJobFilter" parameterType="org.apache.kylin.job.rest.JobMapperFilter" resultMap="ResultMapWithBLOBs">
+    select
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from ${jobInfoTable}
+    <where>
+      <if test="project != null">
+        project = #{project}
+      </if>
+      <if test="queryStartTime != null">
+        AND update_time &gt;= #{queryStartTime}
+      </if>
+      <if test="statuses != null">
+        <foreach close=")" collection="statuses" index="index" item="item" open="AND job_status in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="jobNames != null">
+        <foreach close=")" collection="jobNames" index="index" item="item" open="AND job_type in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="modelIds != null">
+        <foreach close=")" collection="modelIds" index="index" item="item" open="AND model_id in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="jobId != null">
+        AND job_id like #{jobId}
+      </if>
+      <if test="jobIds != null">
+        <foreach close=")" collection="jobIds" index="index" item="item" open="AND job_id in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="subjects != null">
+        <foreach close=")" collection="subjects" index="index" item="item" open="AND subject in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="timeRange != null">
+        AND create_time &gt;= #{timeRange[0]} AND create_time &lt;= #{timeRange[1]}
+      </if>
+    </where>
+    <if test="orderByFiled != null">
+      order by ${orderByFiled}  ${orderType}
+    </if>
+    <if test="offset&gt;=0 and limit&gt;=0">
+      limit ${limit} offset ${offset}
+    </if>
+  </select>
+
+  <select id="getEarliestCreateTime" parameterType="java.lang.String" resultType="java.util.Date">
+    select min(create_time)
+    from ${jobInfoTable}
+    <where>
+      <if test="project != null">
+        project = #{project,jdbcType=VARCHAR}
+      </if>
+    </where>
+  </select>
+
+  <select id="countByJobFilter" parameterType="org.apache.kylin.job.rest.JobMapperFilter" resultType="long">
+    select
+    count(1)
+    from ${jobInfoTable}
+    <where>
+      <if test="project != null">
+        project = #{project}
+      </if>
+      <if test="queryStartTime != null">
+        AND update_time &gt;= #{queryStartTime}
+      </if>
+      <if test="statuses != null">
+        <foreach close=")" collection="statuses" index="index" item="item" open="AND job_status in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="jobNames != null">
+        <foreach close=")" collection="jobNames" index="index" item="item" open="AND job_type in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="modelIds != null">
+        <foreach close=")" collection="modelIds" index="index" item="item" open="AND model_id in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="jobId != null">
+        AND job_id like #{jobId}
+      </if>
+      <if test="jobIds != null">
+        <foreach close=")" collection="jobIds" index="index" item="item" open="AND job_id in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+      <if test="subjects != null">
+        <foreach close=")" collection="subjects" index="index" item="item" open="AND subject in (" separator=",">
+          #{item}
+        </foreach>
+      </if>
+    </where>
+  </select>
+</mapper>

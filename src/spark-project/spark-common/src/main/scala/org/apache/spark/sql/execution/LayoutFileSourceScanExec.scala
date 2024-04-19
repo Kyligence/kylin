@@ -24,7 +24,7 @@ import org.apache.spark.TaskContext
 import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.catalog.BucketSpec
-import org.apache.spark.sql.catalyst.expressions.{And, Ascending, Attribute, AttributeReference, BoundReference, DynamicPruningExpression, Expression, Literal, PlanExpression, Predicate, SortOrder, UnsafeProjection}
+import org.apache.spark.sql.catalyst.expressions.{And, Ascending, Attribute, AttributeReference, BoundReference, DynamicPruningExpression, Expression, FileSourceMetadataAttribute, Literal, PlanExpression, Predicate, SortOrder, UnsafeProjection}
 import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.physical.{HashPartitioning, Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
@@ -65,6 +65,9 @@ case class LayoutFileSourceScanExec(
    disableBucketedScan: Boolean = false,
    sourceScanRows: Long = 1L)
   extends DataSourceScanExec {
+
+  lazy val metadataColumns: Seq[AttributeReference] =
+    output.collect { case FileSourceMetadataAttribute(attr) => attr }
 
   // Note that some vals referring the file-based relation are lazy intentionally
   // so that this plan can be canonicalized on executor side too. See SPARK-23731.
@@ -339,7 +342,7 @@ case class LayoutFileSourceScanExec(
       driverMetrics("staticFilesNum") = filesNum
       driverMetrics("staticFilesSize") = filesSize
     }
-    if (relation.partitionSchemaOption.isDefined) {
+    if (relation.partitionSchema.nonEmpty) {
       driverMetrics("numPartitions") = partitions.length
     }
   }
@@ -359,7 +362,7 @@ case class LayoutFileSourceScanExec(
       None
     }
   } ++ {
-    if (relation.partitionSchemaOption.isDefined) {
+    if (!relation.partitionSchema.isEmpty) {
       Map(
         "numPartitions" -> SQLMetrics.createMetric(sparkContext, "number of partitions read"),
         "pruningTime" ->
@@ -484,9 +487,11 @@ case class LayoutFileSourceScanExec(
       val start = System.currentTimeMillis()
       val cachePartitions = filePartitions.map(CacheFilePartition.convertFilePartitionToCache(_))
       logInfo(s"Convert bucketed file partition took: ${(System.currentTimeMillis() - start)}")
-      new CacheFileScanRDD(fsRelation.sparkSession, readFile, cachePartitions)
+      new CacheFileScanRDD(fsRelation.sparkSession, readFile, cachePartitions,
+        requiredSchema, metadataColumns)
     } else {
-      new FileScanRDD(fsRelation.sparkSession, readFile, filePartitions)
+      new FileScanRDD(fsRelation.sparkSession, readFile, filePartitions,
+        requiredSchema, metadataColumns)
     }
   }
 
@@ -508,20 +513,34 @@ case class LayoutFileSourceScanExec(
     logInfo(s"Planning scan with bin packing, max size: $maxSplitBytes bytes, " +
       s"open cost is considered as scanning $openCostInBytes bytes.")
 
+    // Filter files with bucket pruning if possible
+    val bucketingEnabled = fsRelation.sparkSession.sessionState.conf.bucketingEnabled
+    val shouldProcess: Path => Boolean = optionalBucketSet match {
+      case Some(bucketSet) if bucketingEnabled =>
+        // Do not prune the file if bucket file name is invalid
+        filePath => BucketingUtils.getBucketId(filePath.getName).forall(bucketSet.get)
+      case _ =>
+        _ => true
+    }
+
     val splitFiles = selectedPartitions.flatMap { partition =>
       partition.files.flatMap { file =>
         // getPath() is very expensive so we only want to call it once in this block:
         val filePath = file.getPath
-        val isSplitable = relation.fileFormat.isSplitable(
-          relation.sparkSession, relation.options, filePath)
-        PartitionedFileUtil.splitFiles(
-          sparkSession = relation.sparkSession,
-          file = file,
-          filePath = filePath,
-          isSplitable = isSplitable,
-          maxSplitBytes = maxSplitBytes,
-          partitionValues = partition.values
-        )
+        if (shouldProcess(filePath)) {
+          val isSplitable = relation.fileFormat.isSplitable(
+            relation.sparkSession, relation.options, filePath)
+          PartitionedFileUtil.splitFiles(
+            sparkSession = relation.sparkSession,
+            file = file,
+            filePath = filePath,
+            isSplitable = isSplitable,
+            maxSplitBytes = maxSplitBytes,
+            partitionValues = partition.values
+          )
+        } else {
+          Seq.empty
+        }
       }
     }.sortBy(_.length)(implicitly[Ordering[Long]].reverse)
 
@@ -532,9 +551,11 @@ case class LayoutFileSourceScanExec(
       val start = System.currentTimeMillis()
       val cachePartitions = partitions.map(CacheFilePartition.convertFilePartitionToCache(_))
       logInfo(s"Convert bucketed file partition took: ${(System.currentTimeMillis() - start)}")
-      new CacheFileScanRDD(fsRelation.sparkSession, readFile, cachePartitions)
+      new CacheFileScanRDD(fsRelation.sparkSession, readFile, cachePartitions,
+        requiredSchema, metadataColumns)
     } else {
-      new FileScanRDD(fsRelation.sparkSession, readFile, partitions)
+      new FileScanRDD(fsRelation.sparkSession, readFile, partitions,
+        requiredSchema, metadataColumns)
     }
   }
 

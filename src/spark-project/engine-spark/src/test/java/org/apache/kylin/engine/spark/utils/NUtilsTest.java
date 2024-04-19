@@ -18,7 +18,7 @@
 
 package org.apache.kylin.engine.spark.utils;
 
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.engine.spark.builder.CreateFlatTable;
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -27,7 +27,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class NUtilsTest extends NLocalWithSparkSessionTest {
+public class NUtilsTest extends NLocalWithSparkSessionTestBase {
 
     @Before
     public void setup() throws Exception {

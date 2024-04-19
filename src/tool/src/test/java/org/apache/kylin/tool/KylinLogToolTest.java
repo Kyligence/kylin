@@ -17,14 +17,23 @@
  */
 package org.apache.kylin.tool;
 
+import static org.apache.kylin.common.util.TestUtils.writeToFile;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.tool.obf.KylinConfObfuscatorTest;
 import org.apache.kylin.tool.util.ToolUtil;
@@ -611,5 +620,69 @@ public class KylinLogToolTest extends NLocalFileMetadataTestCase {
 
         FileUtils.deleteQuietly(new File(hdfsPath));
         Assert.assertTrue(new File(mainDir, String.format("job_tmp/%s", zipFile)).exists());
+    }
+
+    @Test
+    public void testExtractLogFromWorkingDir() throws IOException {
+        File mainDir = new File(temporaryFolder.getRoot(), testName.getMethodName());
+        FileUtils.forceMkdir(mainDir);
+
+        String hdfsPath = getTestConfig().getHdfsWorkingDirectory();
+        String normPath = hdfsPath.startsWith("file://") ? hdfsPath.substring(7) : hdfsPath;
+
+        File remoteFile = new File(normPath, "_logs/yl-common-001");
+        File commonJStack = new File(remoteFile, "jstack.1666");
+        File commonGC = new File(remoteFile, "kylin.gc.pid" + ToolUtil.getKylinPid() + ".0");
+        FileUtils.forceMkdir(remoteFile);
+        writeToFile(commonJStack);
+        writeToFile(commonGC);
+
+        File remoteFile2 = new File(normPath, "_logs/yl-query-001");
+        File queryJStack = new File(remoteFile2, "jstack.1667");
+        File queryGC = new File(remoteFile2, "kylin.gc.pid" + ToolUtil.getKylinPid() + ".3");
+        FileUtils.forceMkdir(remoteFile2);
+        writeToFile(queryJStack);
+        writeToFile(queryGC);
+
+        KylinLogTool.extractLogFromWorkingDir(mainDir, Arrays.asList("yl-common-001"));
+        Assert.assertTrue(commonJStack.exists() && commonGC.exists());
+
+        FileUtils.cleanDirectory(mainDir);
+        KylinLogTool.extractLogFromWorkingDir(mainDir, new ArrayList<>());
+        Assert.assertTrue(commonJStack.exists() && commonGC.exists() && queryGC.exists() && queryJStack.exists());
+    }
+
+    @Test
+    public void testExtractLogFromWorkingDirWithMultipleInstance() throws IOException, InterruptedException {
+        KylinConfig config = getTestConfig();
+        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        Path remoteDir = new Path(config.getHdfsWorkingDirectory(), "_logs");
+        fs.mkdirs(remoteDir);
+
+        config.setProperty("kylin.log.gc-and-jstack.retention-time", "3s");
+        Path toDeletePath1 = new Path(remoteDir, "instance_1");
+        Path toDeletePath2 = new Path(remoteDir, "instance_2");
+        fs.mkdirs(toDeletePath1);
+        fs.mkdirs(toDeletePath2);
+        HadoopUtil.writeStringToHdfs("test", new Path(toDeletePath2, "gc.log"));
+        HadoopUtil.writeStringToHdfs("test", new Path(toDeletePath2, "jstack.log"));
+
+        TimeUnit.SECONDS.sleep(3);
+
+        Path retentionPath1 = new Path(remoteDir, "instance_3");
+        Path retentionPath2 = new Path(remoteDir, "instance_4");
+        fs.mkdirs(retentionPath1);
+        fs.mkdirs(retentionPath2);
+        HadoopUtil.writeStringToHdfs("test", new Path(retentionPath2, "gc.log"));
+        HadoopUtil.writeStringToHdfs("test", new Path(retentionPath2, "jstack.log"));
+
+        File mainDir = new File(temporaryFolder.getRoot(), testName.getMethodName());
+        File logDir = new File(mainDir, "logs");
+        KylinLogTool.extractLogFromWorkingDir(mainDir, new ArrayList<>());
+        Assert.assertFalse(new File(logDir, "instance_1").exists());
+        Assert.assertFalse(new File(logDir, "instance_2").exists());
+        Assert.assertTrue(new File(logDir, "instance_3").exists());
+        Assert.assertTrue(new File(logDir, "instance_4").exists());
+        Assert.assertEquals(2, new File(logDir, "instance_4").listFiles().length);
     }
 }

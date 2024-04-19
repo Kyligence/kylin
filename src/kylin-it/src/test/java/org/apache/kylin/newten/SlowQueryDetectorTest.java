@@ -27,13 +27,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.KylinTimeoutException;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.pushdown.SparkSqlClient;
@@ -66,11 +63,6 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
     public void setup() {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         createTestMetadata();
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
         slowQueryDetector = new SlowQueryDetector(100, TIMEOUT_MS);
         slowQueryDetector.start();
     }
@@ -82,7 +74,6 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
 
     @After
     public void after() {
-        NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
         slowQueryDetector.interrupt();
     }

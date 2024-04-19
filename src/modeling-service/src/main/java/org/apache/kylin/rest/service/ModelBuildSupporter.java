@@ -21,6 +21,7 @@ package org.apache.kylin.rest.service;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.rest.response.JobInfoResponse;
 import org.apache.kylin.rest.response.JobInfoResponseWithFailure;
 import org.apache.kylin.rest.service.params.IncrementBuildSegmentParams;
@@ -29,6 +30,8 @@ public interface ModelBuildSupporter {
     JobInfoResponse incrementBuildSegmentsManually(IncrementBuildSegmentParams params) throws Exception;
 
     JobInfoResponse.JobInfo constructIncrementBuild(IncrementBuildSegmentParams params);
+
+    NDataSegment createSegment(IncrementBuildSegmentParams params) throws IOException;
 
     void refreshSegments(String project, String table, String refreshStart, String refreshEnd, String affectedStart,
             String affectedEnd) throws IOException;

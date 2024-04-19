@@ -48,6 +48,7 @@ import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.SnapshotRawResource;
 import org.apache.kylin.common.persistence.VersionedRawResource;
+import org.apache.kylin.common.util.FileSystemUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 
@@ -93,7 +94,8 @@ public class HDFSMetadataStore extends MetadataStore {
                 if (!fs.exists(new Path(path))) {
                     fs.mkdirs(new Path(path));
                 }
-                rootPath = Stream.of(fs.listStatus(new Path(path)))
+                rootPath = Stream.of(FileSystemUtil.listStatus(fs, new Path(path)))
+                        .filter(fileStatus -> fileStatus.getPath().getName().endsWith("_backup"))
                         .max(Comparator.comparing(FileStatus::getModificationTime)).map(FileStatus::getPath)
                         .orElse(new Path(path + "/backup_0/"));
                 if (!fs.exists(rootPath)) {
@@ -223,15 +225,18 @@ public class HDFSMetadataStore extends MetadataStore {
     }
 
     @Override
-    public void dump(ResourceStore store, Collection<String> resources) throws Exception {
+    public void dump(ResourceStore store, Collection<String> resources) throws IOException, InterruptedException {
         val compressedFile = new Path(this.rootPath, COMPRESSED_FILE);
         try (FSDataOutputStream out = fs.create(compressedFile, true);
                 ZipOutputStream zipOut = new ZipOutputStream(new CheckedOutputStream(out, new CRC32()))) {
             for (String resPath : resources) {
                 val raw = store.getResource(resPath);
+                if (Thread.interrupted()){
+                    throw new InterruptedException();
+                }
                 compress(zipOut, raw);
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new IOException("Put compressed resource fail", e);
         }
     }

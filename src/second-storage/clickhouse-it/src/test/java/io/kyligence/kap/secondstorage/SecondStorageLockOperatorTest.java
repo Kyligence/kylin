@@ -40,6 +40,9 @@ import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.job.dao.JobInfoDao;
+import org.apache.kylin.job.service.JobInfoService;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -60,7 +63,6 @@ import org.apache.kylin.rest.service.AccessService;
 import org.apache.kylin.rest.service.FusionModelService;
 import org.apache.kylin.rest.service.IUserGroupService;
 import org.apache.kylin.rest.service.IndexPlanService;
-import org.apache.kylin.rest.service.JobService;
 import org.apache.kylin.rest.service.ModelBuildService;
 import org.apache.kylin.rest.service.ModelSemanticHelper;
 import org.apache.kylin.rest.service.ModelService;
@@ -147,8 +149,8 @@ public class SecondStorageLockOperatorTest extends SecondStorageMetadataHelperTe
 
     @Mock
     private final AclEvaluate aclEvaluate = Mockito.spy(AclEvaluate.class);
-    @Mock
-    private final JobService jobService = Mockito.spy(JobService.class);
+    @InjectMocks
+    private final JobInfoService jobInfoService = Mockito.spy(new JobInfoService());
     @Mock
     private final AclUtil aclUtil = Mockito.spy(AclUtil.class);
 
@@ -226,6 +228,10 @@ public class SecondStorageLockOperatorTest extends SecondStorageMetadataHelperTe
         ReflectionTestUtils.setField(modelBuildService, "modelService", modelService);
         ReflectionTestUtils.setField(modelBuildService, "segmentHelper", segmentHelper);
         ReflectionTestUtils.setField(modelBuildService, "aclEvaluate", aclEvaluate);
+
+        JobInfoDao jobInfoDao = JobContextUtil.getJobInfoDao(KylinConfig.getInstanceFromEnv());
+        ReflectionTestUtils.setField(jobInfoService, "jobInfoDao", jobInfoDao);
+        ReflectionTestUtils.setField(jobInfoService, "aclEvaluate", aclEvaluate);
 
         ReflectionTestUtils.setField(segmentController, "modelService", modelService);
 

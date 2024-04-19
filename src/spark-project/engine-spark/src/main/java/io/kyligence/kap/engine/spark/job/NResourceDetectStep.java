@@ -18,16 +18,17 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import lombok.extern.slf4j.Slf4j;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.job.DefaultSparkBuildJobHandler;
-import org.apache.kylin.engine.spark.job.NSparkExecutable;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.NSparkExecutable;
 
-import java.util.Map;
-import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class NResourceDetectStep extends NSparkExecutable {

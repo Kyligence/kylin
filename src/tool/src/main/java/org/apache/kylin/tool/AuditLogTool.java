@@ -56,7 +56,7 @@ import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.tool.constant.StringConstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,7 +162,7 @@ public class AuditLogTool extends ExecutableApplication {
         if (StringUtils.isEmpty(jobId)) {
             throw new KylinException(PARAMETER_EMPTY, "job");
         }
-        AbstractExecutable job = NExecutableManager.getInstance(kylinConfig, project).getJob(jobId);
+        AbstractExecutable job = ExecutableManager.getInstance(kylinConfig, project).getJob(jobId);
         long startTs = job.getStartTime();
         long endTs = job.getEndTime();
 

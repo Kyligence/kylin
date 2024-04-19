@@ -18,8 +18,12 @@
 
 package org.apache.kylin.rest.service;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.security.UserGroupInformation;
@@ -29,6 +33,8 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.engine.spark.utils.ComputedColumnEvalUtil;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.ManagementType;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -40,7 +46,10 @@ import org.apache.kylin.metadata.query.QueryTimesResponse;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.constant.Constant;
+import org.apache.kylin.rest.delegate.JobStatisticsInvoker;
+import org.apache.kylin.rest.delegate.ModelMetadataBaseInvoker;
 import org.apache.kylin.rest.request.ModelRequest;
+import org.apache.kylin.rest.response.BuildBaseIndexResponse;
 import org.apache.kylin.rest.response.SimplifiedMeasure;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.AclPermissionUtil;
@@ -70,15 +79,18 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import io.kyligence.kap.clickhouse.MockSecondStorage;
 import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
+import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
 import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import io.kyligence.kap.secondstorage.config.Node;
 import io.kyligence.kap.secondstorage.management.SecondStorageService;
+import io.kyligence.kap.secondstorage.metadata.NodeGroup;
 import lombok.val;
 import lombok.var;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ SpringContext.class, UserGroupInformation.class })
-@PowerMockIgnore({ "javax.management.*", "javax.script.*" })
+@PowerMockIgnore({ "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*", "com.sun.security.*" })
 public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCase {
 
     @InjectMocks
@@ -125,6 +137,8 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
                 .thenAnswer(invocation -> PowerMockito.mock(PermissionGrantingStrategy.class));
         PowerMockito.when(SpringContext.getBean(SecondStorageUpdater.class))
                 .thenAnswer(invocation -> new SecondStorageService());
+        PowerMockito.when(SpringContext.getBean(ModelMetadataBaseInvoker.class))
+                .thenAnswer(invocation -> new ModelMetadataBaseInvoker());
 
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         overwriteSystemProp("kylin.model.multi-partition-enabled", "true");
@@ -167,6 +181,12 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
         EventBusFactory.getInstance().register(eventListener, true);
         EventBusFactory.getInstance().register(modelBrokenListener, false);
         SparkJobFactoryUtils.initJobFactory();
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobInfoDao(getTestConfig());
+
+        JobStatisticsService jobStatisticsService = new JobStatisticsService();
+        JobStatisticsInvoker.setDelegate(jobStatisticsService);
     }
 
     @After
@@ -175,6 +195,7 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
         EventBusFactory.getInstance().unregister(modelBrokenListener);
         EventBusFactory.getInstance().restart();
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -201,6 +222,34 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
 
         val indexResponse = modelService.updateDataModelSemantic(project, modelRequest);
         Assert.assertFalse(indexResponse.isCleanSecondStorage());
+    }
+
+    @Test
+    public void testConvertToRequestWithSecondStorage() throws IOException {
+        val model = "741ca86a-1f13-46da-a59f-95fb68615e3a";
+        val project = "default";
+        MockSecondStorage.mock("default", new ArrayList<>(), this);
+        val indexPlanManager = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            indexPlanManager.updateIndexPlan(model, indexPlan -> {
+                indexPlan.createAndAddBaseIndex(indexPlan.getModel());
+            });
+            return null;
+        }, project);
+        SecondStorageUtil.initModelMetaData("default", model);
+        Assert.assertTrue(indexPlanManager.getIndexPlan(model).containBaseTableLayout());
+        ModelRequest request = new ModelRequest();
+        request.setWithSecondStorage(true);
+        request.setUuid(model);
+        BuildBaseIndexResponse changedResponse = mock(BuildBaseIndexResponse.class);
+        Mockito.doCallRealMethod().when(modelService).changeSecondStorageIfNeeded("default", request, () -> true);
+
+        when(changedResponse.hasTableIndexChange()).thenReturn(true);
+        modelService.changeSecondStorageIfNeeded(project, request, () -> true);
+        Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
+
+        val modelRequest = modelService.convertToRequest(modelService.getModelById(model, project));
+        Assert.assertTrue(modelRequest.isWithSecondStorage());
     }
 
     @Test
@@ -247,5 +296,45 @@ public class ModelServiceWithSecondStorageTest extends NLocalFileMetadataTestCas
         request.setSimplifiedDimensions(model.getAllNamedColumns().stream().filter(NDataModel.NamedColumn::isDimension)
                 .collect(Collectors.toList()));
         return JsonUtil.readValue(JsonUtil.writeValueAsString(request), ModelRequest.class);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testListNodesByProject() throws IOException {
+        val project = "default";
+        MockSecondStorage.mock(project, new ArrayList<>(), this);
+        val nodeGroupManagerOption = SecondStorageUtil.nodeGroupManager(KylinConfig.getInstanceFromEnv(), project);
+
+        Assert.assertTrue(nodeGroupManagerOption.isPresent());
+        val nodeGroupManager = nodeGroupManagerOption.get();
+
+        NodeGroup nodeGroup1 = new NodeGroup();
+        nodeGroup1.setNodeNames(Lists.newArrayList("node01", "node02"));
+        NodeGroup nodeGroup2 = new NodeGroup();
+        nodeGroup2.setNodeNames(Lists.newArrayList("node01"));
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            nodeGroupManager.createAS(nodeGroup1);
+            return null;
+        }, project);
+
+        val mockNodeMap = (Map<String, Node>) (ReflectionTestUtils.getField(SecondStorageNodeHelper.class, "NODE_MAP"));
+        mockNodeMap.put("node01", new Node().setName("node01").setIp("127.0.0.1").setPort(9000));
+        mockNodeMap.put("node02", new Node().setName("node02").setIp("127.0.0.2").setPort(9000));
+        mockNodeMap.put("node03", new Node().setName("node03").setIp("127.0.0.3").setPort(9000));
+
+        Assert.assertEquals(2, SecondStorageNodeHelper.getALlNodesInProject(project).size());
+        Assert.assertEquals(3, SecondStorageNodeHelper.getALlNodes().size());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testAllListNodes() throws IOException {
+        MockSecondStorage.mock("default", new ArrayList<>(), this);
+
+        val mockNodeMap = (Map<String, Node>) (ReflectionTestUtils.getField(SecondStorageNodeHelper.class, "NODE_MAP"));
+        mockNodeMap.put("node01", new Node().setName("node01").setIp("127.0.0.1").setPort(9000));
+        mockNodeMap.put("node02", new Node().setName("node02").setIp("127.0.0.2").setPort(9000));
+        mockNodeMap.put("node03", new Node().setName("node03").setIp("127.0.0.3").setPort(9000));
+        Assert.assertEquals(3, SecondStorageNodeHelper.getALlNodes().size());
     }
 }

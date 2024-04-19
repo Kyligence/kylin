@@ -19,8 +19,8 @@
 package org.apache.kylin.job.common;
 
 import org.apache.kylin.common.util.BufferedLogger;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.slf4j.LoggerFactory;
 
@@ -45,11 +45,11 @@ public class ShellExecutable extends AbstractExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) {
+    protected ExecuteResult doWork(JobContext context) {
         try {
             logger.info("executing:{}", getCmd());
             val patternedLogger = new BufferedLogger(logger);
-            val result = context.getConfig().getCliCommandExecutor().execute(getCmd(), patternedLogger);
+            val result = context.getKylinConfig().getCliCommandExecutor().execute(getCmd(), patternedLogger);
 
             Preconditions.checkState(result.getCode() == 0);
             return ExecuteResult.createSucceed(result.getCmd());

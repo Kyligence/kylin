@@ -48,15 +48,17 @@ import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.job.constant.ExecutableConstants;
+import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ChainedExecutable;
 import org.apache.kylin.job.execution.ChainedStageExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobSchedulerModeEnum;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.execution.StageBase;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -188,9 +190,8 @@ public class SecondStorageUtil {
 
     public static List<AbstractExecutable> findSecondStorageRelatedJobByProject(String project) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        NExecutableManager executableManager = NExecutableManager.getInstance(config, project);
-        return executableManager.getJobs().stream().map(executableManager::getJob)
-                .filter(job -> RELATED_JOBS.contains(job.getJobType())).collect(Collectors.toList());
+        ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
+        return executableManager.getExecutablesByJobType(RELATED_JOBS);
     }
 
     public static void validateProjectLock(String project, List<String> requestLocks) {
@@ -200,7 +201,7 @@ public class SecondStorageUtil {
     public static void validateDisableModel(String project, String modelId) {
         validateProjectLock(project, Arrays.asList(LockTypeEnum.LOAD.name()));
         List<AbstractExecutable> jobs = SecondStorageUtil.findSecondStorageRelatedJobByProject(project);
-        if (jobs.stream().filter(job -> RUNNING_STATE.contains(job.getStatus()))
+        if (jobs.stream().filter(job -> RUNNING_STATE.contains(job.getStatusInMem()))
                 .anyMatch(job -> job.getTargetSubject().equals(modelId))) {
             String name = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
                     .getDataModelDesc(modelId).getAlias();
@@ -450,26 +451,26 @@ public class SecondStorageUtil {
     }
 
     public static ExecutableState getJobStatus(String project, String jobId) {
-        NExecutableManager manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-        return manager.getJob(jobId).getStatus();
+        ExecutableManager manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        return manager.getJob(jobId).getStatusInMem();
     }
 
     public static void checkJobRestart(String project, String jobId) {
-        if (!isProjectEnable(project))
+        if (!isProjectEnable(project)) {
             return;
-        checkJobRestart(NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getJob(jobId));
+        }
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        ExecutablePO executablePO = JobContextUtil.getJobInfoDao(config).getExecutablePOByUuid(jobId);
+        AbstractExecutable executable = ExecutableManager.getInstance(config, project)
+                .fromPO(executablePO);
+        checkJobRestart(project, executable);
     }
 
-    public static boolean checkStorageEmpty(String project, String modelId, long layoutId) {
-        List<TableData> tableDataList = getTableFlow(project, modelId).getTableData(layoutId);
-        return CollectionUtils.isEmpty(tableDataList)
-                || tableDataList.stream().allMatch(tableData -> CollectionUtils.isEmpty(tableData.getPartitions()));
-    }
-
-    @VisibleForTesting
-    public static void checkJobRestart(AbstractExecutable executable) {
-        boolean canRestart = executable.getJobType() != JobTypeEnum.EXPORT_TO_SECOND_STORAGE
-                && executable.getJobType() != JobTypeEnum.SECOND_STORAGE_REFRESH_SECONDARY_INDEXES;
+    public static void checkJobRestart(String project, AbstractExecutable executable) {
+        if (!isProjectEnable(project)) return;
+        JobTypeEnum type = executable.getJobType();
+        boolean canRestart = type != JobTypeEnum.EXPORT_TO_SECOND_STORAGE
+                && type != JobTypeEnum.SECOND_STORAGE_REFRESH_SECONDARY_INDEXES;
         if (BUILD_JOBS.contains(executable.getJobType()) && hasSecondStorageLoadJob(executable)) {
             if (executable.getJobSchedulerMode() == JobSchedulerModeEnum.DAG) {
                 Optional<ChainedStageExecutable> detectResourceTask = getChainedStageExecutableByName(
@@ -484,6 +485,12 @@ public class SecondStorageUtil {
         if (!canRestart) {
             throw new KylinException(ServerErrorCode.JOB_RESTART_FAILED, MsgPicker.getMsg().getJobRestartFailed());
         }
+    }
+
+    public static boolean checkStorageEmpty(String project, String modelId, long layoutId) {
+        List<TableData> tableDataList = getTableFlow(project, modelId).getTableData(layoutId);
+        return CollectionUtils.isEmpty(tableDataList)
+                || tableDataList.stream().allMatch(tableData -> CollectionUtils.isEmpty(tableData.getPartitions()));
     }
 
     public static void checkSegmentRemove(String project, String modelId, String[] ids) {
@@ -507,7 +514,7 @@ public class SecondStorageUtil {
     public static void checkJobResume(String project, String jobId) {
         if (!isProjectEnable(project))
             return;
-        checkJobResume(NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getJob(jobId));
+        checkJobResume(ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getJob(jobId));
     }
 
     @VisibleForTesting
@@ -524,7 +531,7 @@ public class SecondStorageUtil {
         if (!isProjectEnable(project)) {
             return;
         }
-        checkJobPause(NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getJob(jobId));
+        checkJobPause(ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getJob(jobId));
     }
 
     private static void checkJobPause(AbstractExecutable executable) {

@@ -20,6 +20,8 @@ package org.apache.kylin.job.execution;
 
 import static org.apache.kylin.job.execution.JobTypeEnum.STAGE;
 
+import org.apache.kylin.job.JobContext;
+import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.exception.ExecuteException;
 
 import org.apache.kylin.guava30.shaded.common.base.MoreObjects;
@@ -39,7 +41,7 @@ public class StageBase extends AbstractExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    public ExecuteResult doWork(JobContext context) throws ExecuteException {
         return null;
     }
 
@@ -53,7 +55,15 @@ public class StageBase extends AbstractExecutable {
         return getOutput(segmentId).getState();
     }
 
+    public ExecutableState getStatusInMem(String segmentId) {
+        return getOutput(segmentId, getPo()).getState();
+    }
+
     public Output getOutput(String segmentId) {
         return getManager().getOutput(getId(), segmentId);
+    }
+
+    public Output getOutput(String segmentId, ExecutablePO executablePO) {
+        return getManager().getOutput(getId(), executablePO, segmentId);
     }
 }

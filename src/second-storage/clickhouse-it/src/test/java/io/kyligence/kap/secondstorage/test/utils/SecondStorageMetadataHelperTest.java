@@ -21,7 +21,7 @@ package io.kyligence.kap.secondstorage.test.utils;
 import java.util.List;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -75,8 +75,8 @@ public abstract class SecondStorageMetadataHelperTest {
         return getNDataModelManager().getDataModelDesc(getModelId());
     }
 
-    protected NExecutableManager getNExecutableManager() {
-        return NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
+    protected ExecutableManager getNExecutableManager() {
+        return ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
     }
 
     protected List<NodeGroup> getNodeGroups() {

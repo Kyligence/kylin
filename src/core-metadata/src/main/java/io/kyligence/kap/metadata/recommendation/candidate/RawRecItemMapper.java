@@ -59,6 +59,7 @@ public interface RawRecItemMapper {
             @Result(column = "create_time", property = "createTime", jdbcType = JdbcType.BIGINT),
             @Result(column = "update_time", property = "updateTime", jdbcType = JdbcType.BIGINT),
             @Result(column = "depend_ids", property = "dependIDs", jdbcType = JdbcType.VARCHAR, typeHandler = RawRecItemTable.DependIdHandler.class),
+            @Result(column = "mvcc", property = "mvcc", jdbcType = JdbcType.BIGINT),
             @Result(column = "layout_metric", property = "layoutMetric", jdbcType = JdbcType.VARCHAR, typeHandler = RawRecItemTable.LayoutMetricHandler.class),
             @Result(column = "cost", property = "cost", jdbcType = JdbcType.DOUBLE),
             @Result(column = "total_latency_of_last_day", property = "totalLatencyOfLastDay", jdbcType = JdbcType.DOUBLE),

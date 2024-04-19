@@ -65,7 +65,7 @@ public class MonitorServiceTest extends SourceTestCase {
         getTestConfig().setProperty("kylin.monitor.interval", "1");
         getTestConfig().setProperty("kylin.monitor.job-statistic-interval", "10");
         getTestConfig().setMetadataUrl(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password="
+                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password="
         );
         getTestConfig().setProperty("kylin.query.share-state-switch-implement", "jdbc");
         overwriteSystemProp("HADOOP_USER_NAME", "root");

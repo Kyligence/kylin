@@ -77,6 +77,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import lombok.val;
 import lombok.var;
 
+
 public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
     private static final String PROJECT = "default";
 
@@ -88,16 +89,19 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
 
     @InjectMocks
     private final TableService tableService = Mockito.spy(new TableService());
+
     @InjectMocks
-    private final JobService jobService = Mockito.spy(new JobService());
+    private FusionModelService fusionModelService = Mockito.spy(new FusionModelService());
+
+    @InjectMocks
+    private final JobSupporter jobInfoService = Mockito.spy(JobSupporter.class);
+
     @Mock
     private final AclTCRService aclTCRService = Mockito.spy(AclTCRService.class);
     @Mock
     private final AclEvaluate aclEvaluate = Mockito.spy(AclEvaluate.class);
     @Mock
     protected IUserGroupService userGroupService = Mockito.spy(NUserGroupService.class);
-    @InjectMocks
-    private FusionModelService fusionModelService = Mockito.spy(new FusionModelService());
 
     @Before
     public void setUp() {
@@ -110,7 +114,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         ReflectionTestUtils.setField(tableService, "modelService", modelService);
         ReflectionTestUtils.setField(tableService, "fusionModelService", fusionModelService);
         ReflectionTestUtils.setField(tableService, "aclTCRService", aclTCRService);
-        ReflectionTestUtils.setField(tableService, "jobService", jobService);
+        ReflectionTestUtils.setField(tableService, "jobInfoService", jobInfoService);
         ReflectionTestUtils.setField(queryHistoryService, "aclEvaluate", aclEvaluate);
         ReflectionTestUtils.setField(queryHistoryService, "modelService", modelService);
         ReflectionTestUtils.setField(queryHistoryService, "userGroupService", userGroupService);
@@ -158,7 +162,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
                 Lists.newArrayList(new QueryMetrics.RealizationMetrics[] { metrics1, metrics2 }));
         acceleratedQuery.setQueryHistoryInfo(queryHistoryInfo);
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(pushdownQuery, failedQuery, acceleratedQuery)).when(queryHistoryDAO)
                 .getQueryHistoriesByConditions(Mockito.any(), Mockito.anyInt(), Mockito.anyInt());
         Mockito.doReturn(10L).when(queryHistoryDAO).getQueryHistoriesSize(Mockito.any(), Mockito.anyString());
@@ -218,7 +222,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         queryStatistics.setCount(100);
         queryStatistics.setMeanDuration(500);
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(queryStatistics).when(queryHistoryDAO).getQueryCountAndAvgDuration(0, Long.MAX_VALUE,
                 "default");
         Mockito.doReturn(queryHistoryDAO).when(queryHistoryService).getQueryHistoryDao();
@@ -234,7 +238,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         long startTime = format.parse("2018-01-01").getTime();
         long endTime = format.parse("2018-01-03").getTime();
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(getTestStatistics()).when(queryHistoryDAO).getQueryCountByModel(startTime, endTime, "default");
         Mockito.doReturn(getTestStatistics()).when(queryHistoryDAO).getQueryCountByTime(Mockito.anyLong(),
                 Mockito.anyLong(), Mockito.anyString(), Mockito.anyString());
@@ -273,7 +277,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         long startTime = format.parse("2018-01-01").getTime();
         long endTime = format.parse("2018-01-03").getTime();
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(getTestStatistics()).when(queryHistoryDAO).getAvgDurationByModel(startTime, endTime,
                 "default");
         Mockito.doReturn(getTestStatistics()).when(queryHistoryDAO).getAvgDurationByTime(Mockito.anyLong(),
@@ -406,7 +410,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
                 Lists.newArrayList(new QueryMetrics.RealizationMetrics[] { metrics1, metrics2 }));
         acceleratedQuery.setQueryHistoryInfo(queryHistoryInfo2);
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(layoutNullQuery, acceleratedQuery)).when(queryHistoryDAO)
                 .getQueryHistoriesByConditions(Mockito.any(), Mockito.anyInt(), Mockito.anyInt());
         Mockito.doReturn(10L).when(queryHistoryDAO).getQueryHistoriesSize(Mockito.any(), Mockito.anyString());
@@ -456,7 +460,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
                 Lists.newArrayList(new QueryMetrics.RealizationMetrics[] { metrics1, metrics2 }));
         containSnapshotQuery.setQueryHistoryInfo(queryHistoryInfo2);
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(noSnapshotQuery, containSnapshotQuery)).when(queryHistoryDAO)
                 .getQueryHistoriesByConditions(Mockito.any(), Mockito.anyInt(), Mockito.anyInt());
         Mockito.doReturn(10L).when(queryHistoryDAO).getQueryHistoriesSize(Mockito.any(), Mockito.anyString());
@@ -497,7 +501,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
                 Lists.newArrayList(new QueryMetrics.RealizationMetrics[] { metrics1, metrics2, metrics3 }));
         snapshotQuery.setQueryHistoryInfo(queryHistoryInfo);
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(snapshotQuery)).when(queryHistoryDAO)
                 .getQueryHistoriesByConditions(Mockito.any(), Mockito.anyInt(), Mockito.anyInt());
         Mockito.doReturn(10L).when(queryHistoryDAO).getQueryHistoriesSize(Mockito.any(), Mockito.anyString());
@@ -531,7 +535,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         snapshotQuery.setQueryRealizations(
                 "741ca86a-1f13-46da-a59f-95fb68615e3a#null#null;89af4ee2-2cdb-4b07-b39e-4c29856309aa#1#Agg Index#[snapshot1, snapshot2]");
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(snapshotQuery)).when(queryHistoryDAO)
                 .getQueryHistoriesByConditions(Mockito.any(), Mockito.anyInt(), Mockito.anyInt());
         Mockito.doReturn(10L).when(queryHistoryDAO).getQueryHistoriesSize(Mockito.any(), Mockito.anyString());
@@ -581,7 +585,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         queryHistory2.setEngineType("CONSTANTS");
         queryHistory2.setQuerySubmitter("TEST");
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(queryHistory, queryHistory1, queryHistory2)).when(queryHistoryDAO)
                 .getQueryHistoriesByConditions(Mockito.any(), Mockito.anyInt(), Mockito.anyInt());
         Mockito.doReturn(10L).when(queryHistoryDAO).getQueryHistoriesSize(Mockito.any(), Mockito.anyString());
@@ -680,7 +684,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         QueryHistory queryHistory2 = new QueryHistory();
         queryHistory2.setQuerySubmitter("TEST2");
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(queryHistory, queryHistory1, queryHistory2)).when(queryHistoryDAO)
                 .getQueryHistoriesSubmitters(Mockito.any(), Mockito.anyInt());
         Mockito.doReturn(queryHistoryDAO).when(queryHistoryService).getQueryHistoryDao();
@@ -715,7 +719,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         QueryStatistics queryStatistics3 = new QueryStatistics();
         queryStatistics3.setModel("82fa7671-a935-45f5-8779-85703601f49b");
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(queryStatistics, queryStatistics1, queryStatistics2, queryStatistics3))
                 .when(queryHistoryDAO).getQueryHistoriesModelIds(Mockito.any());
         Mockito.doReturn(queryHistoryDAO).when(queryHistoryService).getQueryHistoryDao();
@@ -745,7 +749,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         queryHistory.setQueryRealizations(
                 "741ca86a-1f13-46da-a59f-95fb686153a#null#null,89af4ee2-2cdb-4b07-b39e-4c29856309aa#1222#Agg Index");
 
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(queryHistory)).when(queryHistoryDAO)
                 .getQueryHistoriesByConditions(Mockito.any(), Mockito.anyInt(), Mockito.anyInt());
         Mockito.doReturn(10L).when(queryHistoryDAO).getQueryHistoriesSize(Mockito.any(), Mockito.anyString());
@@ -990,7 +994,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         QueryHistoryInfo queryHistoryInfo3 = new QueryHistoryInfo();
         queryHistoryInfo3.setRealizationMetrics(Lists.newArrayList(new QueryMetrics.RealizationMetrics[] { metrics4 }));
         query3.setQueryHistoryInfo(queryHistoryInfo3);
-        RDBMSQueryHistoryDAO queryHistoryDAO = Mockito.mock(RDBMSQueryHistoryDAO.class);
+        RDBMSQueryHistoryDAO queryHistoryDAO = mock(RDBMSQueryHistoryDAO.class);
         Mockito.doReturn(Lists.newArrayList(query1, query2, query3)).when(queryHistoryDAO)
                 .getQueryHistoriesByConditions(Mockito.any(), Mockito.anyInt(), Mockito.anyInt());
         Mockito.doReturn(10L).when(queryHistoryDAO).getQueryHistoriesSize(Mockito.any(), Mockito.anyString());

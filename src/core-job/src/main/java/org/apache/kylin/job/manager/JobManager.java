@@ -18,9 +18,9 @@
 
 package org.apache.kylin.job.manager;
 
-import static org.apache.kylin.guava30.shaded.common.base.Preconditions.checkNotNull;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_ABANDON;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_STORAGE_QUOTA_LIMIT;
+import static org.apache.kylin.guava30.shaded.common.base.Preconditions.checkNotNull;
 
 import java.util.stream.Collectors;
 
@@ -29,6 +29,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.logging.SetLogCategory;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.common.ExecutableUtil;
 import org.apache.kylin.job.common.SegmentUtil;
 import org.apache.kylin.job.execution.JobTypeEnum;
@@ -37,8 +38,10 @@ import org.apache.kylin.job.handler.AddIndexHandler;
 import org.apache.kylin.job.handler.AddSegmentHandler;
 import org.apache.kylin.job.handler.MergeSegmentHandler;
 import org.apache.kylin.job.handler.RefreshSegmentHandler;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.handler.SnapshotJobHandler;
+import org.apache.kylin.job.handler.TableSamplingJobHandler;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -46,9 +49,6 @@ import org.apache.kylin.metadata.model.NDataModelManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- *
- **/
 @Slf4j
 public class JobManager {
 
@@ -56,8 +56,9 @@ public class JobManager {
 
     private String project;
 
-    public static JobManager getInstance(KylinConfig config, String project) {
-        return config.getManager(project, JobManager.class);
+    public JobManager(KylinConfig config, String project) {
+        this.config = config;
+        this.project = project;
     }
 
     // called by reflection
@@ -67,33 +68,31 @@ public class JobManager {
         return new JobManager(conf, project);
     }
 
-    public String addSegmentJob(JobParam jobParam) {
-        jobParam.setJobTypeEnum(JobTypeEnum.INC_BUILD);
-        return addJob(jobParam);
+    public static JobManager getInstance(KylinConfig config, String project) {
+        return config.getManager(project, JobManager.class);
     }
 
-    public String addIndexJob(JobParam jobParam) {
-        val relatedSegments = SegmentUtil.getValidSegments(jobParam.getModel(), project).stream()
-                .map(NDataSegment::getId).collect(Collectors.toSet());
-        jobParam.withTargetSegments(relatedSegments);
-        return addRelatedIndexJob(jobParam);
-    }
+    public String addJob(JobParam jobParam, AbstractJobHandler handler) {
+        try(SetLogCategory ignored = new SetLogCategory(LogConstant.BUILD_CATEGORY)) {
+            if (!config.isJobNode() && !config.isUTEnv() && !config.isMetadataNode()) {
+                throw new KylinException(JOB_CREATE_ABANDON);
+            }
+            checkNotNull(project);
+            checkStorageQuota(project);
+            jobParam.setProject(project);
+            ExecutableUtil.computeParams(jobParam);
 
-    public String addRelatedIndexJob(JobParam jobParam) {
-        boolean noNeed = (jobParam.getTargetSegments() == null
-                && SegmentUtil.getValidSegments(jobParam.getModel(), project).isEmpty())
-                || (jobParam.getTargetSegments() != null && jobParam.getTargetSegments().isEmpty());
-        if (noNeed) {
-            log.debug("No need to add index build job due to there is no valid segment in {}.", jobParam.getModel());
-            return null;
+            AbstractJobHandler localHandler = handler != null ? handler : createJobHandler(jobParam);
+            if (localHandler == null)
+                return null;
+
+            localHandler.handle(jobParam);
+            return jobParam.getJobId();
         }
-        jobParam.setJobTypeEnum(JobTypeEnum.INDEX_BUILD);
-        return addJob(jobParam);
     }
 
-    public String mergeSegmentJob(JobParam jobParam) {
-        jobParam.setJobTypeEnum(JobTypeEnum.INDEX_MERGE);
-        return addJob(jobParam);
+    public String addJob(JobParam jobParam) {
+        return addJob(jobParam, null);
     }
 
     public String refreshSegmentJob(JobParam jobParam) {
@@ -111,68 +110,76 @@ public class JobManager {
         return addJob(jobParam);
     }
 
+    public String mergeSegmentJob(JobParam jobParam) {
+        jobParam.setJobTypeEnum(JobTypeEnum.INDEX_MERGE);
+        return addJob(jobParam);
+    }
+
+    public String addRelatedIndexJob(JobParam jobParam) {
+        boolean noNeed = (jobParam.getTargetSegments() == null
+                && SegmentUtil.getValidSegments(jobParam.getModel(), project).isEmpty())
+                || (jobParam.getTargetSegments() != null && jobParam.getTargetSegments().isEmpty());
+        if (noNeed) {
+            log.debug("No need to add index build job due to there is no valid segment in {}.", jobParam.getModel());
+            return null;
+        }
+        jobParam.setJobTypeEnum(JobTypeEnum.INDEX_BUILD);
+        return addJob(jobParam);
+    }
+
+    public String addIndexJob(JobParam jobParam) {
+        val relatedSegments = SegmentUtil.getValidSegments(jobParam.getModel(), project).stream()
+                .map(NDataSegment::getId).collect(Collectors.toSet());
+        jobParam.withTargetSegments(relatedSegments);
+        return addRelatedIndexJob(jobParam);
+    }
+
+    public String addSegmentJob(JobParam jobParam) {
+        jobParam.setJobTypeEnum(JobTypeEnum.INC_BUILD);
+        return addJob(jobParam);
+    }
+
     public String buildPartitionJob(JobParam jobParam) {
         jobParam.setJobTypeEnum(JobTypeEnum.SUB_PARTITION_BUILD);
         return addJob(jobParam);
     }
 
-    public String addJob(JobParam jobParam) {
-        return addJob(jobParam, null);
-    }
-
-    public String addJob(JobParam jobParam, AbstractJobHandler handler) {
-        try(SetLogCategory ignored = new SetLogCategory(LogConstant.BUILD_CATEGORY)){
-            if (!config.isJobNode() && !config.isUTEnv()) {
-                throw new KylinException(JOB_CREATE_ABANDON);
-            }
-            checkNotNull(project);
-            checkStorageQuota(project);
-            jobParam.setProject(project);
-            ExecutableUtil.computeParams(jobParam);
-
-            AbstractJobHandler localHandler = handler != null ? handler : createJobHandler(jobParam);
-            if (localHandler == null)
-                return null;
-
-            localHandler.handle(jobParam);
-            return jobParam.getJobId();
-        }
-    }
-
     private AbstractJobHandler createJobHandler(JobParam jobParam) {
         AbstractJobHandler handler;
         switch (jobParam.getJobTypeEnum()) {
-        case INC_BUILD:
-            handler = new AddSegmentHandler();
-            break;
-        case INDEX_MERGE:
-            handler = new MergeSegmentHandler();
-            break;
-        case INDEX_BUILD:
-        case SUB_PARTITION_BUILD:
-            handler = new AddIndexHandler();
-            break;
-        case INDEX_REFRESH:
-        case SUB_PARTITION_REFRESH:
-            handler = new RefreshSegmentHandler();
-            break;
-        case EXPORT_TO_SECOND_STORAGE:
-            throw new UnsupportedOperationException();
-        default:
-            log.error("jobParam doesn't have matched job: {}", jobParam.getJobTypeEnum());
-            return null;
+            case INC_BUILD:
+                handler = new AddSegmentHandler();
+                break;
+            case INDEX_MERGE:
+                handler = new MergeSegmentHandler();
+                break;
+            case INDEX_BUILD:
+            case SUB_PARTITION_BUILD:
+                handler = new AddIndexHandler();
+                break;
+            case INDEX_REFRESH:
+            case SUB_PARTITION_REFRESH:
+                handler = new RefreshSegmentHandler();
+                break;
+            case TABLE_SAMPLING:
+                handler = new TableSamplingJobHandler();
+                break;
+            case SNAPSHOT_BUILD:
+            case SNAPSHOT_REFRESH:
+                handler = new SnapshotJobHandler();
+                break;
+            case EXPORT_TO_SECOND_STORAGE:
+                throw new UnsupportedOperationException();
+            default:
+                log.error("jobParam doesn't have matched job: {}", jobParam.getJobTypeEnum());
+                return null;
         }
         return handler;
     }
 
-    public JobManager(KylinConfig config, String project) {
-        this.config = config;
-        this.project = project;
-    }
-
     public static void checkStorageQuota(String project) {
-        val scheduler = NDefaultScheduler.getInstance(project);
-        if (scheduler.hasStarted() && scheduler.getContext().isReachQuotaLimit()) {
+        JobContext jobContext = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
+        if (null != jobContext && jobContext.isProjectReachQuotaLimit(project)) {
             log.error("Add job failed due to no available storage quota in project {}", project);
             throw new KylinException(JOB_STORAGE_QUOTA_LIMIT);
         }

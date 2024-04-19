@@ -18,9 +18,9 @@
 
 package org.apache.kylin.rest.controller;
 
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_ID_EMPTY;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_ID_EMPTY;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,19 +33,24 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.rest.response.DataResult;
-import org.apache.kylin.rest.response.EnvelopeResponse;
-import org.apache.kylin.common.persistence.transaction.UpdateJobStatusEventNotifier;
-import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.rest.JobFilter;
+import org.apache.kylin.job.service.JobInfoService;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.rest.request.JobErrorRequest;
-import org.apache.kylin.rest.request.JobFilter;
 import org.apache.kylin.rest.request.JobUpdateRequest;
 import org.apache.kylin.rest.request.SparkJobTimeRequest;
 import org.apache.kylin.rest.request.SparkJobUpdateRequest;
 import org.apache.kylin.rest.request.StageRequest;
+import org.apache.kylin.rest.response.DataResult;
+import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.EventResponse;
 import org.apache.kylin.rest.response.ExecutableResponse;
 import org.apache.kylin.rest.response.ExecutableStepResponse;
@@ -55,13 +60,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -78,6 +86,9 @@ public class JobController extends BaseController {
     @Autowired
     @Qualifier("jobService")
     private JobService jobService;
+
+    @Autowired
+    private JobInfoService jobInfoService;
 
     @Override
     protected Logger getLogger() {
@@ -100,16 +111,15 @@ public class JobController extends BaseController {
             @RequestParam(value = "page_size", required = false, defaultValue = "10") Integer pageSize,
             @RequestParam(value = "sort_by", required = false, defaultValue = "last_modified") String sortBy,
             @RequestParam(value = "reverse", required = false, defaultValue = "true") boolean reverse) {
-        jobService.checkJobStatus(statuses);
+        jobInfoService.checkJobStatus(statuses);
         checkRequiredArg("time_filter", timeFilter);
-        JobFilter jobFilter = new JobFilter(statuses, jobNames, timeFilter, subject, key, exactMatch, project, sortBy,
-                reverse);
-        DataResult<List<ExecutableResponse>> executables;
-        if (!StringUtils.isEmpty(project)) {
-            executables = jobService.listJobs(jobFilter, pageOffset, pageSize);
-        } else {
-            executables = jobService.listGlobalJobs(jobFilter, pageOffset, pageSize);
-        }
+        JobFilter jobFilter = new JobFilter(jobInfoService.parseJobStatus(statuses), jobNames, timeFilter, subject, key,
+                exactMatch, project, sortBy, reverse);
+        // pageOffset is 1,2,3.... means pageNo
+        Integer pageOffsetNew = pageOffset * pageSize;
+        List<ExecutableResponse> result = jobInfoService.listJobs(jobFilter, pageOffsetNew, pageSize);
+        long count = jobInfoService.countJobs(jobFilter);
+        DataResult<List<ExecutableResponse>> executables = new DataResult<>(result, (int) count, pageOffset, pageSize);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, executables, "");
     }
 
@@ -120,15 +130,15 @@ public class JobController extends BaseController {
     public EnvelopeResponse<String> dropJob(@RequestParam(value = "project", required = false) String project,
             @RequestParam(value = "job_ids", required = false) List<String> jobIds,
             @RequestParam(value = "statuses", required = false) List<String> statuses) throws IOException {
-        jobService.checkJobStatus(statuses);
+        jobInfoService.checkJobStatus(statuses);
         if (StringUtils.isBlank(project) && CollectionUtils.isEmpty(jobIds)) {
             throw new KylinException(JOB_ID_EMPTY, "delete");
         }
 
         if (null != project) {
-            jobService.batchDropJob(project, jobIds, statuses);
+            jobInfoService.batchDropJob(project, jobIds, statuses);
         } else {
-            jobService.batchDropGlobalJob(jobIds, statuses);
+            jobInfoService.batchDropGlobalJob(jobIds, statuses);
         }
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
@@ -136,22 +146,31 @@ public class JobController extends BaseController {
     @ApiOperation(value = "updateJobStatus", tags = { "DW" }, notes = "Update Body: job_ids")
     @PutMapping(value = "/status")
     @ResponseBody
-    public EnvelopeResponse<String> updateJobStatus(@RequestBody JobUpdateRequest jobUpdateRequest) throws IOException {
+    public EnvelopeResponse<String> updateJobStatus(@RequestBody JobUpdateRequest jobUpdateRequest,
+            @RequestHeader HttpHeaders headers) throws IOException {
         checkRequiredArg("action", jobUpdateRequest.getAction());
-        jobService.checkJobStatusAndAction(jobUpdateRequest);
+        jobInfoService.checkJobStatusAndAction(jobUpdateRequest);
+        Map<String, List<String>> nodeWithJobs = JobContextUtil
+                .splitJobIdsByScheduleInstance(jobUpdateRequest.getJobIds());
+        if (needRouteToOtherInstance(nodeWithJobs, jobUpdateRequest.getAction(), headers)) {
+            return remoteUpdateJobStatus(jobUpdateRequest, headers, nodeWithJobs);
+        }
         if (StringUtils.isBlank(jobUpdateRequest.getProject())
                 && CollectionUtils.isEmpty(jobUpdateRequest.getJobIds())) {
             throw new KylinException(JOB_ID_EMPTY, jobUpdateRequest.getAction());
         }
 
-        if (!StringUtils.isEmpty(jobUpdateRequest.getProject())) {
-            jobService.batchUpdateJobStatus(jobUpdateRequest.getJobIds(), jobUpdateRequest.getProject(),
-                    jobUpdateRequest.getAction(), jobUpdateRequest.getStatuses());
-        } else {
-            jobService.batchUpdateGlobalJobStatus(jobUpdateRequest.getJobIds(), jobUpdateRequest.getAction(),
-                    jobUpdateRequest.getStatuses());
-            EventBusFactory.getInstance().postAsync(new UpdateJobStatusEventNotifier(jobUpdateRequest.getJobIds(),
-                    jobUpdateRequest.getAction(), jobUpdateRequest.getStatuses()));
+        jobInfoService.batchUpdateJobStatus(jobUpdateRequest.getJobIds(), jobUpdateRequest.getProject(),
+                jobUpdateRequest.getAction(), jobUpdateRequest.getStatuses());
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    private EnvelopeResponse<String> remoteUpdateJobStatus(JobUpdateRequest jobUpdateRequest, HttpHeaders headers,
+            Map<String, List<String>> nodeWithJobs) throws IOException {
+        for (Map.Entry<String, List<String>> entry : nodeWithJobs.entrySet()) {
+            jobUpdateRequest.setJobIds(entry.getValue());
+            forwardRequestToTargetNode(JsonUtil.writeValueAsBytes(jobUpdateRequest), headers, entry.getKey(),
+                    "/jobs/status");
         }
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
@@ -163,7 +182,7 @@ public class JobController extends BaseController {
             @RequestParam(value = "project") String project) {
         checkProjectName(project);
         checkRequiredArg(JOB_ID_ARG_NAME, jobId);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, jobService.getJobDetail(project, jobId), "");
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, jobInfoService.getJobDetail(project, jobId), "");
     }
 
     @ApiOperation(value = "updateJobStatus", tags = {
@@ -176,7 +195,7 @@ public class JobController extends BaseController {
         Map<String, String> result = new HashMap<>();
         result.put(JOB_ID_ARG_NAME, jobId);
         result.put(STEP_ID_ARG_NAME, stepId);
-        result.put("cmd_output", jobService.getJobOutput(project, jobId, stepId));
+        result.put("cmd_output", jobInfoService.getJobOutput(project, jobId, stepId));
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, result, "");
     }
 
@@ -191,7 +210,7 @@ public class JobController extends BaseController {
         checkRequiredArg(JOB_ID_ARG_NAME, jobId);
         checkRequiredArg(STEP_ID_ARG_NAME, stepId);
         String downloadFilename = String.format(Locale.ROOT, "%s_%s.log", projectName, stepId);
-        InputStream jobOutput = jobService.getAllJobOutput(projectName, jobId, stepId);
+        InputStream jobOutput = jobInfoService.getAllJobOutput(projectName, jobId, stepId);
         setDownloadResponse(jobOutput, downloadFilename, MediaType.APPLICATION_OCTET_STREAM_VALUE, response);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
@@ -244,9 +263,9 @@ public class JobController extends BaseController {
         checkProjectName(request.getProject());
         logger.info("updateJobError errorRequest is : {}", request);
 
-        jobService.updateJobError(request.getProject(), request.getJobId(), request.getFailedStepId(),
-                request.getFailedSegmentId(), request.getFailedStack(), request.getFailedReason());
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+        return updateJobInfoWithCheck(request.getProject(), request.getJobId(), request.getJobLastRunningStartTime(),
+                () -> jobInfoService.updateJobError(request.getProject(), request.getJobId(), request.getFailedStepId(),
+                        request.getFailedSegmentId(), request.getFailedStack(), request.getFailedReason()));
     }
 
     /**
@@ -264,9 +283,11 @@ public class JobController extends BaseController {
         }
         checkProjectName(stageRequest.getProject());
         logger.info("updateStageStatus stageRequest is : {}", stageRequest);
-        jobService.updateStageStatus(stageRequest.getProject(), stageRequest.getTaskId(), stageRequest.getSegmentId(),
-                stageRequest.getStatus(), stageRequest.getUpdateInfo(), stageRequest.getErrMsg());
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+        return updateJobInfoWithCheck(stageRequest.getProject(), stageRequest.getTaskId(),
+                stageRequest.getJobLastRunningStartTime(),
+                () -> jobInfoService.updateStageStatus(stageRequest.getProject(), stageRequest.getTaskId(),
+                        stageRequest.getSegmentId(), stageRequest.getStatus(), stageRequest.getUpdateInfo(),
+                        stageRequest.getErrMsg()));
     }
 
     /**
@@ -280,11 +301,9 @@ public class JobController extends BaseController {
     @ResponseBody
     public EnvelopeResponse<String> updateSparkJobInfo(@RequestBody SparkJobUpdateRequest sparkJobUpdateRequest) {
         checkProjectName(sparkJobUpdateRequest.getProject());
-        jobService.updateSparkJobInfo(sparkJobUpdateRequest.getProject(), sparkJobUpdateRequest.getJobId(),
-                sparkJobUpdateRequest.getTaskId(), sparkJobUpdateRequest.getYarnAppId(),
-                sparkJobUpdateRequest.getYarnAppUrl());
-
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+        return updateJobInfoWithCheck(sparkJobUpdateRequest.getProject(), sparkJobUpdateRequest.getJobId(),
+                sparkJobUpdateRequest.getJobLastRunningStartTime(),
+                () -> jobInfoService.updateSparkJobInfo(sparkJobUpdateRequest));
     }
 
     /**
@@ -298,11 +317,52 @@ public class JobController extends BaseController {
     @ResponseBody
     public EnvelopeResponse<String> updateSparkJobTime(@RequestBody SparkJobTimeRequest sparkJobTimeRequest) {
         checkProjectName(sparkJobTimeRequest.getProject());
-        jobService.updateSparkTimeInfo(sparkJobTimeRequest.getProject(), sparkJobTimeRequest.getJobId(),
-                sparkJobTimeRequest.getTaskId(), sparkJobTimeRequest.getYarnJobWaitTime(),
-                sparkJobTimeRequest.getYarnJobRunTime());
+        return updateJobInfoWithCheck(sparkJobTimeRequest.getProject(), sparkJobTimeRequest.getJobId(),
+                sparkJobTimeRequest.getJobLastRunningStartTime(),
+                () -> jobInfoService.updateSparkTimeInfo(sparkJobTimeRequest.getProject(),
+                        sparkJobTimeRequest.getJobId(), sparkJobTimeRequest.getTaskId(),
+                        sparkJobTimeRequest.getYarnJobWaitTime(), sparkJobTimeRequest.getYarnJobRunTime()));
+    }
 
+    private EnvelopeResponse<String> updateJobInfoWithCheck(String project, String taskOrJobId,
+            String jobLastRunningStartTime, Runnable runner) {
+        try {
+            JobContextUtil.withTxAndRetry(() -> {
+                checkJobStatus(project, taskOrJobId, jobLastRunningStartTime);
+                runner.run();
+                return true;
+            });
+        } catch (Exception e) {
+            logger.warn("Update job info failed.", e);
+            if (!checkJobStatusWithOutException(project, taskOrJobId, jobLastRunningStartTime)) {
+                return new EnvelopeResponse<>(KylinException.CODE_UNDEFINED, "", "Job has stopped.");
+            }
+            return new EnvelopeResponse<>(KylinException.CODE_UNDEFINED, "", "");
+        }
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    private boolean checkJobStatusWithOutException(String project, String jobOrTaskId, String jobLastRunningStartTime) {
+        try {
+            checkJobStatus(project, jobOrTaskId, jobLastRunningStartTime);
+            return true;
+        } catch (IllegalStateException ignored) {
+            return false;
+        }
+    }
+
+    private void checkJobStatus(String project, String jobOrTaskId, String jobLastRunningStartTime) {
+        ExecutableManager execMgr = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        String jobId = ExecutableManager.extractJobId(jobOrTaskId);
+        AbstractExecutable job = execMgr.getJob(jobId);
+        if (job.getOutput().getState() != ExecutableState.RUNNING) {
+            throw new IllegalStateException(String.format("Job's state is : %s instead of %s !",
+                    job.getOutput().getState(), ExecutableState.RUNNING));
+        }
+        if (!String.valueOf(job.getOutput().getLastRunningStartTime()).equals(jobLastRunningStartTime)) {
+            throw new IllegalStateException(String.format("Job's lastRunningStartTime is : %s instead of %s !",
+                    job.getOutput().getLastRunningStartTime(), jobLastRunningStartTime));
+        }
     }
 
     @Deprecated
@@ -327,11 +387,17 @@ public class JobController extends BaseController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, jobService.getEventsInfoGroupByModel(project), "");
     }
 
-    @ApiOperation(value = "startProfile", tags = {"DW"}, notes = "")
+    @PostMapping(value = "/destroy_job_process")
+    @ApiOperation(value = "destroyJobProcess", tags = { "DW" })
+    @ResponseBody
+    public void destroyJobProcess(@RequestParam("project") String project) {
+        ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).destroyAllProcess();
+    }
+
+    @ApiOperation(value = "startProfile", tags = { "DW" }, notes = "")
     @GetMapping(value = "/profile/start_project")
     @ResponseBody
-    public EnvelopeResponse<String> profile(
-            @RequestParam(value = "project") String project,
+    public EnvelopeResponse<String> profile(@RequestParam(value = "project") String project,
             @RequestParam(value = "step_id") String jobStepId,
             @RequestParam(value = "params", defaultValue = "start,event=cpu", required = false) String params,
             HttpServletRequest request) {
@@ -341,15 +407,13 @@ public class JobController extends BaseController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
 
-    @ApiOperation(value = "dumpProfile", tags = {"DW"}, notes = "")
+    @ApiOperation(value = "dumpProfile", tags = { "DW" }, notes = "")
     @GetMapping(value = "/profile/dump_project")
     @ResponseBody
-    public EnvelopeResponse<String> stopProfile(
-            @RequestParam(value = "project") String project,
+    public EnvelopeResponse<String> stopProfile(@RequestParam(value = "project") String project,
             @RequestParam(value = "step_id") String jobStepId,
             @RequestParam(value = "params", defaultValue = "flamegraph", required = false) String params,
-            HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletRequest request, HttpServletResponse response) {
         jobService.setResponseLanguage(request);
         checkProjectName(project);
         Pair<InputStream, String> jobOutputAndDownloadFile = new Pair<>();
@@ -362,11 +426,10 @@ public class JobController extends BaseController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
 
-    @ApiOperation(value = "startProfileByYarnAppId", tags = {"DW"}, notes = "")
+    @ApiOperation(value = "startProfileByYarnAppId", tags = { "DW" }, notes = "")
     @GetMapping(value = "/profile/start_appid")
     @ResponseBody
-    public EnvelopeResponse<String> profileByYarnAppId(
-            @RequestParam(value = "app_id") String yarnAppId,
+    public EnvelopeResponse<String> profileByYarnAppId(@RequestParam(value = "app_id") String yarnAppId,
             @RequestParam(value = "params", defaultValue = "start,event=cpu", required = false) String params,
             HttpServletRequest request) {
         jobService.setResponseLanguage(request);
@@ -374,14 +437,12 @@ public class JobController extends BaseController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
 
-    @ApiOperation(value = "dumpProfile", tags = {"DW"}, notes = "")
+    @ApiOperation(value = "dumpProfile", tags = { "DW" }, notes = "")
     @GetMapping(value = "/profile/dump_appid")
     @ResponseBody
-    public EnvelopeResponse<String> stopProfileByYarnAppId(
-            @RequestParam(value = "app_id") String yarnAppId,
+    public EnvelopeResponse<String> stopProfileByYarnAppId(@RequestParam(value = "app_id") String yarnAppId,
             @RequestParam(value = "params", defaultValue = "flamegraph", required = false) String params,
-            HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletRequest request, HttpServletResponse response) {
         jobService.setResponseLanguage(request);
         Pair<InputStream, String> jobOutputAndDownloadFile = new Pair<>();
         jobService.dumpProfileByYarnAppId(yarnAppId, params, jobOutputAndDownloadFile);

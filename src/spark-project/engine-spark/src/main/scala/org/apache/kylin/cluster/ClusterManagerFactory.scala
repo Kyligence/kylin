@@ -23,7 +23,6 @@ import org.apache.kylin.guava30.shaded.common.util.concurrent.SimpleTimeLimiter
 import org.apache.kylin.common.KylinConfig
 import org.apache.spark.util.KylinReflectUtils
 
-
 object ClusterManagerFactory {
 
   val pool: ExecutorService = Executors.newCachedThreadPool
@@ -31,7 +30,7 @@ object ClusterManagerFactory {
   def create(kylinConfig: KylinConfig): IClusterManager = {
     val timeLimiter = SimpleTimeLimiter.create(pool)
     val target = KylinReflectUtils.createObject(kylinConfig.getClusterManagerClassName)._1.asInstanceOf[IClusterManager]
-
+    target.withConfig(kylinConfig)
     timeLimiter.newProxy(target, classOf[IClusterManager], kylinConfig.getClusterManagerTimeoutThreshold, TimeUnit.SECONDS);
   }
 }

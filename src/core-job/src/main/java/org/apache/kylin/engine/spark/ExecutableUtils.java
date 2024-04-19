@@ -17,50 +17,42 @@
  */
 package org.apache.kylin.engine.spark;
 
-import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.job.util.ExecutableParaUtil;
+
+import lombok.val;
 
 public class ExecutableUtils {
 
-    private ExecutableUtils() {}
-
     public static ResourceStore getRemoteStore(KylinConfig config, AbstractExecutable buildTask) {
-        String buildStepUrl = buildTask.getParam(NBatchConstants.P_OUTPUT_META_URL);
+        val buildStepUrl = ExecutableParaUtil.getOutputMetaUrl(buildTask);
+        return getRemoteStore(config, buildStepUrl);
+    }
 
-        KylinConfig buildConfig = KylinConfig.createKylinConfig(config);
-        buildConfig.setMetadataUrl(buildStepUrl);
+    public static ResourceStore getRemoteStore(KylinConfig config, String outputMetaUrl) {
+        val buildConfig = KylinConfig.createKylinConfig(config);
+        buildConfig.setMetadataUrl(outputMetaUrl);
         return ResourceStore.getKylinMetaStore(buildConfig);
     }
 
     public static String getDataflowId(AbstractExecutable buildTask) {
-        return buildTask.getParam(NBatchConstants.P_DATAFLOW_ID);
+        return ExecutableParaUtil.getDataflowId(buildTask);
     }
 
     public static Set<String> getSegmentIds(AbstractExecutable buildTask) {
-        return Stream.of(StringUtils.split(buildTask.getParam(NBatchConstants.P_SEGMENT_IDS), ","))
-                .collect(Collectors.toSet());
+        return ExecutableParaUtil.getSegmentIds(buildTask);
     }
 
     public static Set<Long> getLayoutIds(AbstractExecutable buildTask) {
-        return Stream.of(StringUtils.split(buildTask.getParam(NBatchConstants.P_LAYOUT_IDS), ",")).map(Long::parseLong)
-                .collect(Collectors.toSet());
+        return ExecutableParaUtil.getLayoutIds(buildTask);
 
     }
 
     public static Set<Long> getPartitionIds(AbstractExecutable buildTask) {
-        if (CollectionUtils.isEmpty(buildTask.getTargetPartitions())) {
-            return new HashSet<>();
-        }
-        return buildTask.getTargetPartitions();
+        return ExecutableParaUtil.getPartitionIds(buildTask);
     }
-
 }

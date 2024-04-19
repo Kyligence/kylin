@@ -18,17 +18,12 @@
 package org.apache.kylin.tool;
 
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.CANDIDATE_LOG;
-import static org.apache.kylin.tool.constant.DiagSubTaskEnum.JOB_EVENTLOGS;
-import static org.apache.kylin.tool.constant.DiagSubTaskEnum.JOB_TMP;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.LOG;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SOURCE_TABLE_STATS;
-import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SPARK_LOGS;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.YARN;
 
 import java.io.File;
 import java.util.Locale;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.commons.cli.Option;
 import org.apache.commons.io.FileUtils;
@@ -39,14 +34,14 @@ import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.project.NProjectManager;
-import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.tool.snapshot.SnapshotSourceTableStatsTool;
 import org.apache.kylin.tool.util.DiagnosticFilesChecker;
 import org.slf4j.Logger;
@@ -125,7 +120,7 @@ public class JobDiagInfoTool extends AbstractInfoExtractorTool {
         }
         String project = job.getProject();
         long startTime = job.getCreateTime();
-        long endTime = job.getEndTime() != 0 ? job.getEndTime() : System.currentTimeMillis();
+        long endTime = job.getOutput().getEndTime() != 0 ? job.getOutput().getEndTime() : System.currentTimeMillis();
         logger.info("job project : {} , startTime : {} , endTime : {}", project, startTime, endTime);
 
         if (includeMeta) {
@@ -146,6 +141,8 @@ public class JobDiagInfoTool extends AbstractInfoExtractorTool {
         }
 
         String modelId = job.getTargetModelId();
+        ExecutableManager executableManager = ExecutableManager.getInstance(getKylinConfig(), project);
+        AbstractExecutable executable = executableManager.fromPO(job);
         if (StringUtils.isNotEmpty(modelId)) {
             exportRecCandidate(project, modelId, exportDir, false, recordTime);
         }
@@ -168,7 +165,7 @@ public class JobDiagInfoTool extends AbstractInfoExtractorTool {
 
         exportConf(exportDir, recordTime, includeConf, includeBin);
 
-        exportSparkLog(exportDir, recordTime, project, jobId, job);
+        exportJobSparkLog(exportDir, recordTime, project, jobId, job);
         exportCandidateLog(exportDir, recordTime, project, startTime, endTime);
         exportKgLogs(exportDir, startTime, endTime, recordTime);
 
@@ -178,7 +175,7 @@ public class JobDiagInfoTool extends AbstractInfoExtractorTool {
 
         executeTimeoutTask(taskQueue);
 
-        exportSourceTableStats(exportDir, recordTime, project, job);
+        exportSourceTableStats(exportDir, recordTime, project, executable);
 
         executorService.shutdown();
         awaitDiagPackageTermination(getKapConfig().getDiagPackageTimeout());
@@ -223,52 +220,10 @@ public class JobDiagInfoTool extends AbstractInfoExtractorTool {
         scheduleTimeoutTask(candidateLogTask, CANDIDATE_LOG);
     }
 
-    private void exportSparkLog(File exportDir, final File recordTime, String project, String jobId,
-            AbstractExecutable job) {
-        // job spark log
-        val sparkLogTask = executorService.submit(() -> {
-            recordTaskStartTime(SPARK_LOGS);
-            KylinLogTool.extractSparkLog(exportDir, project, jobId);
-            recordTaskExecutorTimeToFile(SPARK_LOGS, recordTime);
-        });
-
-        scheduleTimeoutTask(sparkLogTask, SPARK_LOGS);
-
-        // extract job step eventLogs
-        val eventLogTask = executorService.submit(() -> {
-            if (job instanceof DefaultExecutable) {
-                recordTaskStartTime(JOB_EVENTLOGS);
-                val appIds = NExecutableManager.getInstance(getKylinConfig(), project).getYarnApplicationJobs(jobId);
-                KylinConfig config = getConfigForModelOrProjectLevel(job.getTargetModelId(), project);
-                Map<String, String> sparkConf = config.getSparkConfigOverride();
-                KylinLogTool.extractJobEventLogs(exportDir, appIds, sparkConf);
-                recordTaskExecutorTimeToFile(JOB_EVENTLOGS, recordTime);
-            }
-        });
-
-        scheduleTimeoutTask(eventLogTask, JOB_EVENTLOGS);
-
-        // job tmp
-        val jobTmpTask = executorService.submit(() -> {
-            recordTaskStartTime(JOB_TMP);
-            KylinLogTool.extractJobTmp(exportDir, project, jobId);
-            recordTaskExecutorTimeToFile(JOB_TMP, recordTime);
-        });
-
-        scheduleTimeoutTask(jobTmpTask, JOB_TMP);
-    }
 
     @VisibleForTesting
-    public AbstractExecutable getJobByJobId(String jobId) {
-        val projects = NProjectManager.getInstance(getKylinConfig()).listAllProjects().stream()
-                .map(ProjectInstance::getName).collect(Collectors.toList());
-        for (String project : projects) {
-            AbstractExecutable job = NExecutableManager.getInstance(getKylinConfig(), project).getJob(jobId);
-            if (job != null) {
-                return job;
-            }
-        }
-        return null;
+    public ExecutablePO getJobByJobId(String jobId) {
+        return JobContextUtil.getJobInfoDao(getKylinConfig()).getExecutablePOByUuid(jobId);
     }
 
     protected KylinConfig getConfigForModelOrProjectLevel(String modelId, String project) {

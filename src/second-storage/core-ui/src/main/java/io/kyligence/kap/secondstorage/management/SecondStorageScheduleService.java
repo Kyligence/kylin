@@ -18,14 +18,27 @@
 
 package io.kyligence.kap.secondstorage.management;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import io.kyligence.kap.secondstorage.metadata.TableEntity;
-import io.kyligence.kap.secondstorage.metadata.TablePlan;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
+import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.project.ProjectInstance;
+import org.springframework.scheduling.annotation.Scheduled;
+
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.secondstorage.NameUtil;
 import io.kyligence.kap.secondstorage.SecondStorageLockUtils;
 import io.kyligence.kap.secondstorage.SecondStorageNodeHelper;
@@ -34,22 +47,10 @@ import io.kyligence.kap.secondstorage.database.DatabaseOperator;
 import io.kyligence.kap.secondstorage.database.QueryOperator;
 import io.kyligence.kap.secondstorage.enums.LockTypeEnum;
 import io.kyligence.kap.secondstorage.factory.SecondStorageFactoryUtils;
-import lombok.extern.slf4j.Slf4j;
+import io.kyligence.kap.secondstorage.metadata.TableEntity;
+import io.kyligence.kap.secondstorage.metadata.TablePlan;
 import lombok.val;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.persistence.RootPersistentEntity;
-import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.metadata.model.SegmentRange;
-import org.apache.kylin.metadata.project.ProjectInstance;
-import org.springframework.scheduling.annotation.Scheduled;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class SecondStorageScheduleService {
@@ -157,7 +158,7 @@ public class SecondStorageScheduleService {
             List<String> tempTables = operator.listTables(database).stream()
                     .filter(NameUtil::isTempTable).map(table -> table.replace("-", "_")).collect(Collectors.toList());
 
-            val execManager = NExecutableManager.getInstance(config, project);
+            val execManager = ExecutableManager.getInstance(config, project);
             val allJobs = execManager.getAllJobs();
             List<String> discardJobs = allJobs.stream()
                     .filter(job -> job.getOutput().getStatus().equals(ExecutableState.DISCARDED.name()))

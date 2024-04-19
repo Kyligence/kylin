@@ -96,10 +96,10 @@ object ExpressionUtils {
           df.arguments(),
           df.examples(),
           df.note(),
-          null,
+          "",
           df.since(),
-          null,
-          null)
+          "",
+          "")
       } else {
         // This exists for the backward compatibility with old `ExpressionDescription`s defining
         // the extended description in `extended()`.

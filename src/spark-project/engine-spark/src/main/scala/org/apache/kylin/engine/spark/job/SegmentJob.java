@@ -146,7 +146,7 @@ public abstract class SegmentJob extends SparkApplication {
         return Boolean.parseBoolean(s);
     }
 
-    protected boolean isPartitioned() {
+    public boolean isPartitioned() {
         return Objects.nonNull(indexPlan.getModel().getPartitionDesc())
                 && Objects.nonNull(indexPlan.getModel().getMultiPartitionDesc());
     }

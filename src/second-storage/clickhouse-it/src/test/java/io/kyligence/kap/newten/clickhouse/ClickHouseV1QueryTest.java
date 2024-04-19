@@ -55,7 +55,7 @@ public class ClickHouseV1QueryTest extends NLocalWithSparkSessionTest {
     @Test
     public void testMultipleShard() throws Exception {
         boolean result = ClickHouseUtils.prepare2Instances(true, (JdbcDatabaseContainer<?> clickhouse1,
-                Connection connection1, JdbcDatabaseContainer<?> clickhouse2, Connection connection2) -> {
+                                                                  Connection connection1, JdbcDatabaseContainer<?> clickhouse2, Connection connection2) -> {
 
             List<String> shardList = ImmutableList.of(clickhouse1.getJdbcUrl(), clickhouse2.getJdbcUrl());
             String shards = ShardOptions$.MODULE$.buildSharding(JavaConversions.asScalaBuffer(shardList));

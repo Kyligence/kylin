@@ -18,6 +18,8 @@
 
 package org.apache.kylin.job.execution;
 
+import org.apache.kylin.job.JobContext;
+
 public class SucceedDagTestExecutable extends AbstractExecutable {
 
     public SucceedDagTestExecutable() {
@@ -30,7 +32,7 @@ public class SucceedDagTestExecutable extends AbstractExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) {
+    public ExecuteResult doWork(JobContext context) {
         return ExecuteResult.createSucceed();
     }
 

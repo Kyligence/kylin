@@ -24,11 +24,11 @@ import java.util.Map;
 
 import org.apache.kylin.job.common.SegmentUtil;
 import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.metadata.model.SegmentSecondStorageStatusEnum;
-import org.apache.kylin.metadata.model.SegmentStatusEnumToDisplay;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
+import org.apache.kylin.metadata.model.SegmentSecondStorageStatusEnum;
+import org.apache.kylin.metadata.model.SegmentStatusEnumToDisplay;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;

@@ -60,7 +60,7 @@ import lombok.var;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@OverwriteProp(key = "kylin.metadata.url", value = "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=")
+@OverwriteProp(key = "kylin.metadata.url", value = "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=")
 public class ScheduleServiceTest extends NLocalFileMetadataTestCase {
     @Mock
     private MetadataBackupService backupService = Mockito.spy(MetadataBackupService.class);
@@ -100,7 +100,7 @@ public class ScheduleServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testMetadataBackupException() {
+    public void testMetadataBackupException() throws Exception {
         getTestConfig().setProperty("kylin.metadata.ops-cron-timeout", "300000ms");
         ReflectionTestUtils.setField(scheduleService, "backupService", new MetadataBackupService() {
             @SneakyThrows(IOException.class)
@@ -110,11 +110,11 @@ public class ScheduleServiceTest extends NLocalFileMetadataTestCase {
         });
         EpochManager epochManager = EpochManager.getInstance();
         epochManager.updateAllEpochs();
-        scheduleService.routineTask();
+        scheduleService.doRoutineTask();
     }
 
     @Test
-    public void testRoutineTask() {
+    public void testRoutineTask() throws Exception {
         getTestConfig().setProperty("kylin.metadata.ops-cron-timeout", "300000ms");
         doNothing().when(projectService).garbageCleanup(anyLong());
         EpochManager epochManager = EpochManager.getInstance();
@@ -123,7 +123,7 @@ public class ScheduleServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testTimeoutException() {
+    public void testTimeoutException() throws Exception {
         getTestConfig().setProperty("kylin.metadata.ops-cron-timeout", "1000ms");
         ReflectionTestUtils.setField(scheduleService, "backupService", new MetadataBackupService() {
             @SneakyThrows(Exception.class)

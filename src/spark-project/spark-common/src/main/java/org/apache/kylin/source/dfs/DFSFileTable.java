@@ -26,6 +26,7 @@ import java.util.Arrays;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.kylin.common.util.FileSystemUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.source.IReadableTable;
@@ -95,7 +96,7 @@ public class DFSFileTable implements IReadableTable {
         if (status.isFile()) {
             allFiles.add(status);
         } else {
-            FileStatus[] listStatus = fs.listStatus(new Path(path));
+            FileStatus[] listStatus = FileSystemUtil.listStatus(fs, new Path(path));
             allFiles.addAll(Arrays.asList(listStatus));
         }
 

@@ -38,4 +38,6 @@ public class StageRequest implements ProjectInsensitiveRequest {
     private String errMsg;
     @JsonProperty("update_info")
     private Map<String, String> updateInfo;
+    @JsonProperty("job_last_running_start_time")
+    private String jobLastRunningStartTime;
 }

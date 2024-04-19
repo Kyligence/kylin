@@ -215,7 +215,7 @@ public class SparkSourceServiceTest extends NLocalFileMetadataTestCase {
     @Test
     public void testExportTables() throws Exception {
         // hive data source
-        String expectedTableStructure = "CREATE EXTERNAL TABLE `default`.`hive_bigints`(   `id` BIGINT) "
+        String expectedTableStructure = "CREATE EXTERNAL TABLE default.hive_bigints (   id BIGINT) "
                 + "ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' "
                 + "WITH SERDEPROPERTIES (   'serialization.format' = '1') STORED AS   "
                 + "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'   "

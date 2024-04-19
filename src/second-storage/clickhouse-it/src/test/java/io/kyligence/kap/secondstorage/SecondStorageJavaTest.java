@@ -44,13 +44,15 @@ import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobSchedulerModeEnum;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.scheduler.JdbcJobScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
@@ -164,7 +166,7 @@ public class SecondStorageJavaTest implements JobWaiter {
         request.setModel(modelId);
         request.setSegmentIds(segs);
         secondStorageEndpoint.cleanStorage(request, segs);
-        val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val job = manager.getAllExecutables().stream().filter(ClickHouseSegmentCleanJob.class::isInstance).findFirst();
         Assert.assertTrue(job.isPresent());
         waitJobFinish(project, job.get().getId());
@@ -193,7 +195,7 @@ public class SecondStorageJavaTest implements JobWaiter {
         request.setModelName(modelName);
         request.setSegmentIds(segs);
         openSecondStorageEndpoint.cleanStorage(request);
-        val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val job1 = manager.getAllExecutables().stream().filter(ClickHouseSegmentCleanJob.class::isInstance).findFirst();
         int partitionNum = tableFlowManager.get().get(modelId)
                 .orElseThrow(() -> new IllegalStateException("tableflow not found")).getTableDataList().get(0)
@@ -315,7 +317,7 @@ public class SecondStorageJavaTest implements JobWaiter {
     @Test
     public void testModelCleanJobWithoutSegments() {
         val jobId = triggerModelCleanJob(project, modelId, enableTestUser.getUser());
-        val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val job = manager.getJob(jobId);
         Assert.assertTrue(job.getDataRangeStart() < job.getDataRangeEnd());
     }
@@ -445,7 +447,7 @@ public class SecondStorageJavaTest implements JobWaiter {
         request.setModel(modelId);
         request.setSegmentIds(segs);
         secondStorageEndpoint.cleanStorage(request, segs);
-        val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val job = manager.getAllExecutables().stream().filter(ClickHouseSegmentCleanJob.class::isInstance).findFirst();
         Assert.assertTrue(job.isPresent());
         waitJobFinish(project, job.get().getId());
@@ -460,22 +462,25 @@ public class SecondStorageJavaTest implements JobWaiter {
         cleanSegments(segs);
         registerWaitPoint(SecondStorageConcurrentTestUtil.WAIT_BEFORE_COMMIT, 10000);
         val jobId = triggerClickHouseLoadJob(project, modelId, enableTestUser.getUser(), segs);
+        JobContext jobContext = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
         await().atMost(15, TimeUnit.SECONDS).until(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             return ((DefaultExecutable) executableManager.getJob(jobId)).getTasks().stream()
                     .anyMatch(t -> t.getStatus() == ExecutableState.RUNNING);
         });
         await().pollDelay(5, TimeUnit.SECONDS).until(() -> {
             EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+                val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
                 executableManager.pauseJob(jobId);
                 return null;
             }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
             return true;
         });
         waitJobEnd(project, jobId);
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        await().atMost(15, TimeUnit.SECONDS).until(() -> scheduler.getContext().getRunningJobs().values().size() == 0);
+
+        JdbcJobScheduler jobScheduler = jobContext.getJobScheduler();
+        await().atMost(15, TimeUnit.SECONDS).until(() -> jobScheduler.getRunningJob().size() == 0);
+
         val tableFlowManager = SecondStorageUtil.tableFlowManager(KylinConfig.getInstanceFromEnv(), project);
         int partitionNum = tableFlowManager.get().get(modelId)
                 .orElseThrow(() -> new IllegalStateException("tableflow not found")).getTableDataList().get(0)
@@ -485,18 +490,18 @@ public class SecondStorageJavaTest implements JobWaiter {
                 SecondStorageLockUtils.containsKey(modelId, SegmentRange.TimePartitionedSegmentRange.createInfinite()));
 
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
-            val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             val job = manager.getJob(jobId);
             Assert.assertEquals(ExecutableState.PAUSED, job.getStatus());
         });
 
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             executableManager.resumeJob(jobId);
             return null;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID, jobId);
         await().atMost(10, TimeUnit.SECONDS).until(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             return executableManager.getJob(jobId).getStatus() == ExecutableState.RUNNING;
         });
         waitJobFinish(project, jobId);
@@ -513,7 +518,7 @@ public class SecondStorageJavaTest implements JobWaiter {
         registerWaitPoint(SecondStorageConcurrentTestUtil.WAIT_BEFORE_COMMIT, 10000);
         val jobId = triggerClickHouseLoadJob(project, modelId, enableTestUser.getUser(), segs);
         await().atMost(15, TimeUnit.SECONDS).until(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             return ((DefaultExecutable) executableManager.getJob(jobId)).getTasks().stream()
                     .anyMatch(t -> t.getStatus() == ExecutableState.RUNNING);
         });
@@ -577,22 +582,22 @@ public class SecondStorageJavaTest implements JobWaiter {
         executable1.setProject(project);
         executable1.setJobType(JobTypeEnum.EXPORT_TO_SECOND_STORAGE);
         executable1.addTask(exportCh);
-        Assert.assertThrows(KylinException.class, () -> SecondStorageUtil.checkJobRestart(executable1));
+        Assert.assertThrows(KylinException.class, () -> SecondStorageUtil.checkJobRestart(project, executable1));
 
         DefaultExecutable executable2 = new DefaultExecutable();
         executable2.setProject(project);
         executable2.setJobType(JobTypeEnum.INDEX_BUILD);
         executable2.addTask(updateMetadata);
-        SecondStorageUtil.checkJobRestart(executable2);
+        SecondStorageUtil.checkJobRestart(project, executable2);
 
         executable2.addTask(exportCh);
-        SecondStorageUtil.checkJobRestart(executable2);
+        SecondStorageUtil.checkJobRestart(project, executable2);
 
         executable2.setJobSchedulerMode(JobSchedulerModeEnum.DAG);
-        Assert.assertThrows(KylinException.class, () -> SecondStorageUtil.checkJobRestart(executable2));
+        Assert.assertThrows(KylinException.class, () -> SecondStorageUtil.checkJobRestart(project, executable2));
 
         executable2.getTasks().add(0, detectResource);
-        SecondStorageUtil.checkJobRestart(executable2);
+        SecondStorageUtil.checkJobRestart(project, executable2);
     }
 
     @Test

@@ -22,8 +22,8 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -44,7 +44,7 @@ public class ExecutableDurationContext {
     public ExecutableDurationContext(String project, String jobId) {
         this.project = project;
         this.jobId = jobId;
-        val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         DefaultExecutable job = (DefaultExecutable) manager.getJob(jobId);
         record = new Record(job.getStatus(), job.getDuration(), job.getWaitTime(), job.getCreateTime());
         val steps = job.getTasks();

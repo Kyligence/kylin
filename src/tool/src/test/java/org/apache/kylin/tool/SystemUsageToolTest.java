@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.TimeUtil;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
@@ -53,12 +54,16 @@ public class SystemUsageToolTest extends NLocalFileMetadataTestCase {
     public void setup() throws Exception {
         createTestMetadata();
         queryHistoryDAO = RDBMSQueryHistoryDAO.getInstance();
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobInfoDao(getTestConfig());
     }
 
     @After
     public void teardown() {
         queryHistoryDAO.deleteAllQueryHistory();
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test

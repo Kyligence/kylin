@@ -21,6 +21,7 @@ package org.apache.kylin.job.execution;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
 
 /**
@@ -33,7 +34,7 @@ public interface Executable {
 
     String getDisplayName();
 
-    ExecuteResult execute(ExecutableContext executableContext) throws ExecuteException;
+    ExecuteResult execute(JobContext jobContext) throws ExecuteException;
 
     ExecutableState getStatus();
 

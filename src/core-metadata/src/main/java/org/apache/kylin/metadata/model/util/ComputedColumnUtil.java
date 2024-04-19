@@ -82,6 +82,10 @@ public class ComputedColumnUtil {
         return String.format(Locale.ROOT, "%s_%s_%s", ComputedColumnUtil.CC_NAME_PREFIX, ts, index);
     }
 
+    public static String uniqueCCName(String unique) {
+        return String.format(Locale.ROOT, "%s_%s", ComputedColumnUtil.CC_NAME_PREFIX, unique);
+    }
+
     public static String shareCCNameAcrossModel(ComputedColumnDesc newCC, NDataModel newModel,
             List<NDataModel> otherModels) {
         try {

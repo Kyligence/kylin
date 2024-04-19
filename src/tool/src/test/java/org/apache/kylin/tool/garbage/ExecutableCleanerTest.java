@@ -22,30 +22,34 @@ import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.ExecutablePO;
-import org.apache.kylin.job.dao.NExecutableDao;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.dao.JobInfoDao;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.job.util.JobContextUtil;
+import org.apache.kylin.rest.delegate.ModelMetadataBaseInvoker;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class ExecutableCleanerTest extends NLocalFileMetadataTestCase {
 
     private static final String DEFAULT_PROJECT = "default";
 
-    private NExecutableManager manager;
-    private NExecutableDao dao;
+    private ExecutableManager manager;
 
     @Before
     public void init() {
         createTestMetadata();
-        manager = NExecutableManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
-        dao = NExecutableDao.getInstance(getTestConfig(), DEFAULT_PROJECT);
+        JobContextUtil.cleanUp();
+        manager = ExecutableManager.getInstance(getTestConfig(), DEFAULT_PROJECT);
     }
 
     @After
     public void destroy() {
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -66,6 +70,7 @@ public class ExecutableCleanerTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(1, manager.getJobs().size());
     }
 
+
     @Test
     public void testCleanupWithCleanableJob() {
         String jobId = RandomUtil.randomUUIDStr();
@@ -83,18 +88,24 @@ public class ExecutableCleanerTest extends NLocalFileMetadataTestCase {
 
     private void createUnexpiredJob(String jobId) {
         long survivalTime = getTestConfig().getExecutableSurvivalTimeThreshold();
-        createJob(jobId, System.currentTimeMillis() - survivalTime + 2000);
+        createJob(jobId, System.currentTimeMillis() - survivalTime + 5000);
     }
 
     private void createJob(String jobId, long createTime) {
+        JobInfoDao jobInfoDao = JobContextUtil.getJobInfoDao(getTestConfig());
+        ModelMetadataBaseInvoker modelMetadataBaseInvoker = Mockito.mock(ModelMetadataBaseInvoker.class);
+        Mockito.when(modelMetadataBaseInvoker.getModelNameById(Mockito.anyString(), Mockito.anyString()))
+                .thenReturn("test");
+
         MockCleanableExecutable executable = new MockCleanableExecutable();
         executable.setParam("test1", "test1");
         executable.setId(jobId);
         executable.setProject(DEFAULT_PROJECT);
-        ExecutablePO po = NExecutableManager.toPO(executable, DEFAULT_PROJECT);
+        executable.setJobType(JobTypeEnum.INC_BUILD);
+        ExecutablePO po = ExecutableManager.toPO(executable, DEFAULT_PROJECT);
         ExecutableOutputPO executableOutputPO = new ExecutableOutputPO();
         executableOutputPO.setCreateTime(createTime);
         po.setOutput(executableOutputPO);
-        dao.addJob(po);
+        jobInfoDao.addJob(po);
     }
 }

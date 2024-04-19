@@ -25,12 +25,13 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.service.JobInfoService;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -122,6 +123,8 @@ public class IncrementalTest implements JobWaiter {
     @Mock
     private final AclUtil aclUtil = Mockito.spy(AclUtil.class);
 
+    @InjectMocks
+    private final JobInfoService jobInfoService = Mockito.spy(new JobInfoService());
     @Before
     public void setUp() {
         System.setProperty("kylin.second-storage.wait-index-build-second", "1");
@@ -189,7 +192,7 @@ public class IncrementalTest implements JobWaiter {
         request.setModel(modelId);
         secondStorageEndpoint.cleanStorage(request, segs.subList(0, 1));
 
-        val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
+        val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         val jobs = executableManager.listExecByModelAndStatus(modelId, ExecutableState::isRunning, null);
         jobs.forEach(job -> waitJobFinish(getProject(), job.getId()));
 

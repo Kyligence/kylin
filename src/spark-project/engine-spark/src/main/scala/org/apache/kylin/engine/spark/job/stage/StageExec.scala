@@ -18,14 +18,14 @@
 
 package org.apache.kylin.engine.spark.job.stage
 
-import org.apache.kylin.guava30.shaded.common.base.Throwables
-import org.apache.kylin.guava30.shaded.common.util.concurrent.RateLimiter
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.common.util.JsonUtil
-import org.apache.kylin.job.execution.ExecutableState
 import org.apache.kylin.engine.spark.application.SparkApplication
 import org.apache.kylin.engine.spark.job.{KylinBuildEnv, ParamsConstants}
-import org.apache.kylin.metadata.cube.model.{NBatchConstants, NDataSegment}
+import org.apache.kylin.guava30.shaded.common.base.Throwables
+import org.apache.kylin.guava30.shaded.common.util.concurrent.RateLimiter
+import org.apache.kylin.job.execution.{ExecutableState, NSparkExecutable}
+import org.apache.kylin.metadata.cube.model.NDataSegment
 import org.apache.spark.internal.Logging
 
 import java.util
@@ -106,6 +106,7 @@ trait StageExec extends Logging {
     payload.put("status", status)
     payload.put("err_msg", errMsg)
     payload.put("update_info", updateInfo)
+    payload.put("job_last_running_start_time", context.getParam(NSparkExecutable.JOB_LAST_RUNNING_START_TIME))
     val json = JsonUtil.writeValueAsString(payload)
     val params = new util.HashMap[String, String]()
     val config = KylinConfig.getInstanceFromEnv

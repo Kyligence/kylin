@@ -28,13 +28,12 @@ import org.apache.kylin.common.persistence.transaction.AccessRevokeEventNotifier
 import org.apache.kylin.common.persistence.transaction.AclGrantEventNotifier;
 import org.apache.kylin.common.persistence.transaction.AclRevokeEventNotifier;
 import org.apache.kylin.common.persistence.transaction.AclTCRRevokeEventNotifier;
-import org.apache.kylin.common.persistence.transaction.AddS3CredentialToSparkBroadcastEventNotifier;
+import org.apache.kylin.common.persistence.transaction.AddCredentialToSparkBroadcastEventNotifier;
 import org.apache.kylin.common.persistence.transaction.AuditLogBroadcastEventNotifier;
 import org.apache.kylin.common.persistence.transaction.BroadcastEventReadyNotifier;
 import org.apache.kylin.common.persistence.transaction.EpochCheckBroadcastNotifier;
 import org.apache.kylin.common.persistence.transaction.LogicalViewBroadcastNotifier;
 import org.apache.kylin.common.persistence.transaction.StopQueryBroadcastEventNotifier;
-import org.apache.kylin.common.persistence.transaction.UpdateJobStatusEventNotifier;
 import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.rest.broadcaster.BroadcastEventHandler;
 import org.apache.kylin.rest.broadcaster.Broadcaster;
@@ -45,7 +44,6 @@ import org.apache.kylin.rest.service.AuditLogService;
 import org.apache.kylin.rest.service.JobService;
 import org.apache.kylin.rest.service.QueryService;
 import org.apache.kylin.rest.service.UserAclService;
-
 import org.apache.spark.sql.LogicalViewLoader;
 import org.apache.spark.sql.SparderEnv;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,18 +114,14 @@ public class BroadcastListener implements BroadcastEventHandler {
             accessService.updateAccessFromRemote(null, (AccessBatchGrantEventNotifier) notifier, null);
         } else if (notifier instanceof AccessRevokeEventNotifier) {
             accessService.updateAccessFromRemote(null, null, (AccessRevokeEventNotifier) notifier);
-        } else if (notifier instanceof UpdateJobStatusEventNotifier) {
-            UpdateJobStatusEventNotifier updateJobStatusEventNotifier = (UpdateJobStatusEventNotifier) notifier;
-            jobService.batchUpdateGlobalJobStatus(updateJobStatusEventNotifier.getJobIds(),
-                    updateJobStatusEventNotifier.getAction(), updateJobStatusEventNotifier.getStatuses());
         } else if (notifier instanceof AclTCRRevokeEventNotifier) {
             AclTCRRevokeEventNotifier aclTCRRevokeEventNotifier = (AclTCRRevokeEventNotifier) notifier;
             aclTCRService.revokeAclTCR(aclTCRRevokeEventNotifier.getSid(), aclTCRRevokeEventNotifier.isPrinciple());
-        } else if (notifier instanceof AddS3CredentialToSparkBroadcastEventNotifier) {
-            AddS3CredentialToSparkBroadcastEventNotifier s3CredentialNotifier = (AddS3CredentialToSparkBroadcastEventNotifier) notifier;
-            SparderEnv.addS3Credential(
-                    new TableExtDesc.S3RoleCredentialInfo(s3CredentialNotifier.getBucket(),
-                            s3CredentialNotifier.getRole(), s3CredentialNotifier.getEndpoint()),
+        } else if (notifier instanceof AddCredentialToSparkBroadcastEventNotifier) {
+            AddCredentialToSparkBroadcastEventNotifier credentialNotifier = (AddCredentialToSparkBroadcastEventNotifier) notifier;
+            SparderEnv.addCredential(
+                    new TableExtDesc.RoleCredentialInfo(credentialNotifier.getBucket(),
+                            credentialNotifier.getRole(), credentialNotifier.getEndpoint(), credentialNotifier.getType(), credentialNotifier.getRegion()),
                     SparderEnv.getSparkSession());
         } else if (notifier instanceof AdminUserSyncEventNotifier) {
             AdminUserSyncEventNotifier adminUserSyncEventNotifier = (AdminUserSyncEventNotifier) notifier;

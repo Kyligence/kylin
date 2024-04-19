@@ -17,7 +17,14 @@
  */
 package org.apache.kylin.rest.initialize;
 
+import java.io.IOException;
+import java.util.Map;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.rest.service.JobService;
 import org.apache.kylin.rest.service.ModelBuildService;
 import org.springframework.beans.factory.InitializingBean;
@@ -40,5 +47,21 @@ public class BuildAppInitializer implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         EventBusFactory.getInstance().registerService(jobService);
         EventBusFactory.getInstance().registerService(modelBuildService);
+        checkSparkLogPath();
+    }
+
+    public static void checkSparkLogPath() throws IOException {
+        Map<String, String> sparkConfigOverride = KylinConfig.getInstanceFromEnv().getSparkConfigOverride();
+        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        if (sparkConfigOverride.containsKey("spark.eventLog.dir")) {
+            String logDir = sparkConfigOverride.get("spark.eventLog.dir").trim();
+            boolean eventLogEnabled = Boolean.parseBoolean(sparkConfigOverride.get("spark.eventLog.enabled"));
+            if (eventLogEnabled && !logDir.isEmpty()) {
+                Path logPath = new Path(logDir);
+                if (!fs.exists(logPath)) {
+                    fs.mkdirs(logPath);
+                }
+            }
+        }
     }
 }

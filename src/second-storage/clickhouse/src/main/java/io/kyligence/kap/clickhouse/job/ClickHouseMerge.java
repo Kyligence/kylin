@@ -89,7 +89,7 @@ public class ClickHouseMerge extends ClickHouseLoad {
             EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() ->
                     getDataFlow().update(copied -> copied.getTableDataList().forEach(tableData -> {
                         tableData.mergePartitions(oldSegmentIds, targetSegmentId);
-                    })), project, 1, getEpochId());
+                    })), project, 1);
             return;
         }
 
@@ -102,7 +102,7 @@ public class ClickHouseMerge extends ClickHouseLoad {
                     } else {
                         tableData.mergePartitions(oldSegmentIds, targetSegmentId);
                     }
-                })), project, 1, getEpochId());
+                })), project, 1);
     }
 
     @Override

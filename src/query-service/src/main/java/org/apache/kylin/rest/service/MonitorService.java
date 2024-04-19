@@ -38,10 +38,11 @@ import org.apache.kylin.common.metrics.service.QueryMonitorMetric;
 import org.apache.kylin.common.state.StateSwitchConstant;
 import org.apache.kylin.common.util.ClusterConstant;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.state.QueryShareStateManager;
@@ -128,15 +129,16 @@ public class MonitorService extends BasicService implements ApplicationListener<
                 return queryMonitorMetric;
             }
         });
-        if (kylinConfig.isJobNode()) {
-            monitorReporter.submit(
-                    new AbstractMonitorCollectTask(Lists.newArrayList(ClusterConstant.ALL, ClusterConstant.JOB)) {
-                        @Override
-                        protected MonitorMetric collect() {
-                            return collectJobMetric();
-                        }
-                    });
+        if (!kylinConfig.isJobNode() && !kylinConfig.isDataLoadingNode()) {
+            return;
         }
+        monitorReporter.submit(
+                new AbstractMonitorCollectTask(Lists.newArrayList(ClusterConstant.ALL, ClusterConstant.JOB)) {
+                    @Override
+                    protected MonitorMetric collect() {
+                        return collectJobMetric();
+                    }
+                });
     }
 
     private JobStatusMonitorMetric collectJobMetric() {
@@ -146,17 +148,19 @@ public class MonitorService extends BasicService implements ApplicationListener<
         List<AbstractExecutable> errorJobs = new ArrayList<>();
 
         for (ProjectInstance project : getReadableProjects()) {
-            val executableManager = getManager(NExecutableManager.class, project.getName());
+            val executableManager = getManager(ExecutableManager.class, project.getName());
 
-            for (AbstractExecutable executable : executableManager.getAllExecutables()) {
-                if (executable.getStatus().isFinalState()) {
+            for (ExecutablePO executablePO : executableManager.getAllJobs()) {
+                AbstractExecutable executable = executableManager.fromPO(executablePO);
+                if (executable.getStatusInMem().isFinalState()) {
                     finishedJobs.add(executable);
-                } else if (ExecutableState.RUNNING == executable.getStatus()) {
+                } else if (ExecutableState.RUNNING == executable.getStatusInMem()) {
                     runningJobs.add(executable);
-                } else if (ExecutableState.READY == executable.getStatus()
-                        || ExecutableState.PAUSED == executable.getStatus()) {
+                } else if (ExecutableState.READY == executable.getStatusInMem()
+                        || ExecutableState.PAUSED == executable.getStatusInMem()
+                        || ExecutableState.PENDING == executable.getStatusInMem()) {
                     pendingJobs.add(executable);
-                } else if (ExecutableState.ERROR == executable.getStatus()) {
+                } else if (ExecutableState.ERROR == executable.getStatusInMem()) {
                     errorJobs.add(executable);
                 }
             }
@@ -330,7 +334,7 @@ public class MonitorService extends BasicService implements ApplicationListener<
 
     private boolean pendingOnYarn(Set<String> runningOnYarnJobs, AbstractExecutable executable) {
         val parent = (DefaultExecutable) executable;
-        val runningJob = parent.getTasks().stream().filter(e -> e.getStatus() == ExecutableState.RUNNING).findFirst()
+        val runningJob = parent.getTasks().stream().filter(e -> e.getStatusInMem() == ExecutableState.RUNNING).findFirst()
                 .orElse(null);
         if (runningJob == null) {
             return false;

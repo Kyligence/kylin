@@ -27,8 +27,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -123,16 +123,17 @@ public class SourceTestCase extends NLocalFileMetadataTestCase {
     }
 
     protected List<AbstractExecutable> getRunningExecutables(String project, String model) {
-        List<AbstractExecutable> runningExecutables = NExecutableManager
+        List<AbstractExecutable> runningExecutables = ExecutableManager
                 .getInstance(KylinConfig.getInstanceFromEnv(), project).getRunningExecutables(project, model);
         runningExecutables.sort(Comparator.comparing(AbstractExecutable::getCreateTime));
         return runningExecutables;
     }
 
     protected void deleteJobByForce(AbstractExecutable executable) {
-        val exManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+        val exManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
         exManager.updateJobOutput(executable.getId(), ExecutableState.DISCARDED);
         exManager.deleteJob(executable.getId());
     }
 
 }
+

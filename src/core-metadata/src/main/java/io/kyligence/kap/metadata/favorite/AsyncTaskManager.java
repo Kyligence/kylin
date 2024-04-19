@@ -21,92 +21,123 @@ package io.kyligence.kap.metadata.favorite;
 import java.util.List;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.persistence.JsonSerializer;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.Serializer;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.Singletons;
+import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.metadata.MetadataConstants;
-import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
+import org.apache.kylin.metadata.asynctask.AbstractAsyncTask;
+import org.apache.kylin.metadata.asynctask.MetadataRestoreTask;
+import org.apache.kylin.metadata.favorite.AsyncTaskStore;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class AsyncTaskManager {
 
     public static final String ASYNC_ACCELERATION_TASK = "async_acceleration_task";
+    public static final String METADATA_RECOVER_TASK = "metadata_recover_task";
+    public static final List<String> ALL_TASK_TYPES = Lists.newArrayList(ASYNC_ACCELERATION_TASK,
+            METADATA_RECOVER_TASK);
 
-    public static final Serializer<AsyncAccelerationTask> ASYNC_ACCELERATION_SERIALIZER = new JsonSerializer<>(
-            AsyncAccelerationTask.class);
-
-    private final KylinConfig kylinConfig;
-    private final ResourceStore resourceStore;
-    private final String resourceRoot;
+    private final AsyncTaskStore asyncTaskStore;
     private final String project;
 
-    private AsyncTaskManager(KylinConfig kylinConfig, String project) {
-        if (!UnitOfWork.isAlreadyInTransaction())
-            log.info("Initializing AccelerateTagManager with KylinConfig Id: {} for project {}",
-                    System.identityHashCode(kylinConfig), project);
+    private AsyncTaskManager(String project) throws Exception {
         this.project = project;
-        this.kylinConfig = kylinConfig;
-        resourceStore = ResourceStore.getKylinMetaStore(this.kylinConfig);
-        this.resourceRoot = "/" + project + ResourceStore.ASYNC_TASK;
+        this.asyncTaskStore = new AsyncTaskStore(KylinConfig.getInstanceFromEnv());
     }
 
-    // called by reflection
-    static AsyncTaskManager newInstance(KylinConfig config, String project) {
-        return new AsyncTaskManager(config, project);
+    public static AsyncTaskManager getInstance(String project) {
+        return Singletons.getInstance(project, AsyncTaskManager.class);
     }
 
-    public static AsyncTaskManager getInstance(KylinConfig kylinConfig, String project) {
-        return kylinConfig.getManager(project, AsyncTaskManager.class);
+    public DataSourceTransactionManager getTransactionManager() {
+        return asyncTaskStore.getTransactionManager();
     }
 
-    private String path(String uuid) {
-        return this.resourceRoot + "/" + uuid + MetadataConstants.FILE_SURFIX;
-    }
-
-    public void save(AsyncAccelerationTask asyncTask) {
+    public void save(AbstractAsyncTask asyncTask) {
         if (asyncTask.getTaskType().equalsIgnoreCase(ASYNC_ACCELERATION_TASK)) {
-            resourceStore.checkAndPutResource(path(asyncTask.getUuid()), asyncTask, ASYNC_ACCELERATION_SERIALIZER);
+            saveOrUpdateAsyncAccelerationTask(asyncTask);
+        } else if (asyncTask.getTaskType().equalsIgnoreCase(METADATA_RECOVER_TASK)) {
+            saveOrUpdateMetadataRestoreTask(asyncTask);
+        }
+    }
+
+    private void saveOrUpdateMetadataRestoreTask(AbstractAsyncTask asyncTask) {
+        AbstractAsyncTask asyncTask1 = get(asyncTask.getTaskType(), asyncTask.getTaskKey());
+        if (asyncTask1 == null) {
+            asyncTask.setCreateTime(System.currentTimeMillis());
+            asyncTask.setUpdateTime(asyncTask.getCreateTime());
+            asyncTaskStore.save(asyncTask);
+        } else {
+            asyncTask.setUpdateTime(System.currentTimeMillis());
+            asyncTaskStore.update(asyncTask);
+        }
+    }
+
+    private void saveOrUpdateAsyncAccelerationTask(AbstractAsyncTask asyncTask) {
+        asyncTask.setTaskKey(project);
+        if (asyncTask.getId() == 0) {
+            asyncTask.setProject(project);
+            asyncTask.setCreateTime(System.currentTimeMillis());
+            asyncTask.setUpdateTime(asyncTask.getCreateTime());
+            asyncTaskStore.save(asyncTask);
+        } else {
+            asyncTask.setUpdateTime(System.currentTimeMillis());
+            asyncTaskStore.update(asyncTask);
         }
     }
     
-    public AsyncAccelerationTask copyForWrite(AsyncAccelerationTask task) {
-        if (task.getProject() == null) {
-            task.setProject(project);
-        }
-        return CachedCrudAssist.copyForWrite(task, ASYNC_ACCELERATION_SERIALIZER, null, resourceStore);
+    public <T extends AbstractAsyncTask> T copyForWrite(T task) {
+        // No need to copy, just return the origin object
+        // This will be rewrite after metadata is refactored
+        return task;
     }
 
     public AbstractAsyncTask get(String taskType) {
-        List<AsyncAccelerationTask> asyncAccelerationTaskList = Lists.newArrayList();
-        if (taskType.equalsIgnoreCase(ASYNC_ACCELERATION_TASK)) {
-            asyncAccelerationTaskList = resourceStore.getAllResources(resourceRoot, ASYNC_ACCELERATION_SERIALIZER);
-            if (asyncAccelerationTaskList.isEmpty()) {
-                return new AsyncAccelerationTask(false, Maps.newHashMap(), ASYNC_ACCELERATION_TASK);
-            }
+        return get(taskType, project);
+    }
+
+    public AbstractAsyncTask get(String taskType, String taskKey) {
+        if (!taskType.equalsIgnoreCase(ASYNC_ACCELERATION_TASK) && !taskType.equalsIgnoreCase(METADATA_RECOVER_TASK)) {
+            throw new IllegalArgumentException("TaskType " + taskType + "is not supported!");
         }
-        return asyncAccelerationTaskList.get(0);
+        AbstractAsyncTask asyncTask = asyncTaskStore.queryByTypeAndKey(taskType, taskKey);
+        switch(taskType) {
+            case ASYNC_ACCELERATION_TASK:
+                if (asyncTask == null) {
+                    return new AsyncAccelerationTask(false, Maps.newHashMap(), ASYNC_ACCELERATION_TASK);
+                } else {
+                    return AsyncAccelerationTask.copyFromAbstractTask(asyncTask);
+                }
+            case METADATA_RECOVER_TASK:
+                return MetadataRestoreTask.copyFromAbstractTask(asyncTask);
+            default:
+                return asyncTask;
+        }
+    }
+
+    public List<AbstractAsyncTask> getAllAsyncTaskByType(String taskType) {
+        if (!taskType.equalsIgnoreCase(ASYNC_ACCELERATION_TASK) && !taskType.equalsIgnoreCase(METADATA_RECOVER_TASK)) {
+            throw new IllegalArgumentException("TaskType " + taskType + "is not supported!");
+        }
+        return asyncTaskStore.queryByType(taskType);
     }
 
     public static void resetAccelerationTagMap(String project) {
         log.info("reset acceleration tag for project({})", project);
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            AsyncTaskManager manager = getInstance(KylinConfig.getInstanceFromEnv(), project);
+        AsyncTaskManager manager = getInstance(project);
+        JdbcUtil.withTxAndRetry(manager.getTransactionManager(), () -> {
             AsyncAccelerationTask asyncAcceleration = (AsyncAccelerationTask) manager.get(ASYNC_ACCELERATION_TASK);
             AsyncAccelerationTask copied = manager.copyForWrite(asyncAcceleration);
             copied.setAlreadyRunning(false);
             copied.setUserRefreshedTagMap(Maps.newHashMap());
-            getInstance(KylinConfig.getInstanceFromEnv(), project).save(copied);
+            manager.save(asyncAcceleration);
             return null;
-        }, project);
+        });
         log.info("rest acceleration tag successfully for project({})", project);
     }
 
@@ -118,19 +149,15 @@ public class AsyncTaskManager {
             return;
         }
 
-        if (!EpochManager.getInstance().checkEpochOwner(project) && !kylinConfig.isUTEnv()) {
-            return;
-        }
-
         log.info("start to clean acceleration tag by user");
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            AsyncTaskManager manager = getInstance(KylinConfig.getInstanceFromEnv(), project);
+        AsyncTaskManager manager = getInstance(project);
+        JdbcUtil.withTxAndRetry(manager.getTransactionManager(), () -> {
             AsyncAccelerationTask asyncAcceleration = (AsyncAccelerationTask) manager.get(ASYNC_ACCELERATION_TASK);
             AsyncAccelerationTask copied = manager.copyForWrite(asyncAcceleration);
             copied.getUserRefreshedTagMap().put(userName, false);
-            getInstance(KylinConfig.getInstanceFromEnv(), project).save(copied);
+            manager.save(asyncAcceleration);
             return null;
-        }, project);
+        });
         log.info("clean acceleration tag successfully for project({}: by user {})", project, userName);
     }
 }

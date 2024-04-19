@@ -64,6 +64,7 @@ public class RawRecItem {
     private long createTime;
     private long updateTime;
     private int[] dependIDs;
+    private long mvcc;
 
     // only for raw layout recommendation
     private LayoutMetric layoutMetric;

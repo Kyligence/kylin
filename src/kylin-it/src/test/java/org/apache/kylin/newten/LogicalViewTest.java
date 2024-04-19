@@ -21,19 +21,15 @@ package org.apache.kylin.newten;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.util.ExecAndComp;
-
 import org.apache.spark.sql.SparderEnv;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,16 +47,14 @@ public class LogicalViewTest extends NLocalWithSparkSessionTest {
     overwriteSystemProp("kylin.source.ddl.logical-view.enabled", "true");
     this.createTestMetadata("src/test/resources/ut_meta/logical_view");
     dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
-    NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-    scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-    if (!scheduler.hasStarted()) {
-      throw new RuntimeException("scheduler has not been started");
-    }
+
+    JobContextUtil.cleanUp();
+    JobContextUtil.getJobContext(getTestConfig());
   }
 
   @After
   public void after() throws Exception {
-    NDefaultScheduler.destroyInstance();
+    JobContextUtil.cleanUp();
     cleanupTestMetadata();
   }
 

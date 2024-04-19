@@ -219,6 +219,20 @@ class KylinSessionTest extends SparderBaseFunSuite with LocalMetadata {
     sc.stop()
   }
 
+  test("KE-40191 Sparder run on k8s, generate executorPodNamePrefix") {
+    val appName = "sparder-query"
+    val executorPodNamePrefix1 = KylinSession.generateExecutorPodNamePrefixForK8s(appName)
+    assert(executorPodNamePrefix1.equalsIgnoreCase(appName))
+
+    val appName2 = "LongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLong" +
+      "LongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLong" +
+      "LongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLong" +
+      "LongLongLongLongLongLongLongLongLongLongLongLongName"
+    val executorPodNamePrefix2 = KylinSession.generateExecutorPodNamePrefixForK8s(appName2)
+    assert(!executorPodNamePrefix2.contains(appName2))
+    assert(executorPodNamePrefix2.length <= 47)
+  }
+
   private def createTaskSetManager(stageId: Int, numTasks: Int, taskScheduler: TaskSchedulerImpl): TaskSetManager = {
     val tasks = Array.tabulate[Task[_]](numTasks) { i =>
       new FakeTask(stageId, i, Nil)

@@ -18,25 +18,26 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import org.apache.kylin.guava30.shaded.common.base.Throwables;
-import lombok.val;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.engine.spark.job.LogJobInfoUtils;
-import org.apache.kylin.engine.spark.job.SegmentJob;
-import org.apache.kylin.engine.spark.job.exec.MergeExec;
-import org.apache.kylin.engine.spark.job.stage.BuildParam;
-import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.metadata.cube.model.NDataSegment;
-import org.apache.spark.tracker.BuildContext;
+import static org.apache.kylin.job.execution.stage.StageType.MERGE_COLUMN_BYTES;
+import static org.apache.kylin.job.execution.stage.StageType.MERGE_FLAT_TABLE;
+import static org.apache.kylin.job.execution.stage.StageType.MERGE_INDICES;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-import static org.apache.kylin.engine.spark.job.StageType.MERGE_COLUMN_BYTES;
-import static org.apache.kylin.engine.spark.job.StageType.MERGE_FLAT_TABLE;
-import static org.apache.kylin.engine.spark.job.StageType.MERGE_INDICES;
+import org.apache.commons.lang.StringUtils;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.engine.spark.job.LogJobInfoUtils;
+import org.apache.kylin.engine.spark.job.SegmentJob;
+import org.apache.kylin.engine.spark.job.exec.MergeExec;
+import org.apache.kylin.engine.spark.job.stage.BuildParam;
+import org.apache.kylin.guava30.shaded.common.base.Throwables;
+import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.spark.tracker.BuildContext;
+
+import lombok.val;
 
 public class SegmentMergeJob extends SegmentJob {
 

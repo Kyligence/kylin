@@ -6,12 +6,12 @@
     </formats>
     <fileSets>
         <fileSet>
-            <directory>${basedir}/../../build/conf</directory>
+            <directory>${basedir}/../../../build/conf</directory>
             <outputDirectory>conf</outputDirectory>
             <fileMode>0644</fileMode>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../../build/bin</directory>
+            <directory>${basedir}/../../../build/bin</directory>
             <outputDirectory>bin</outputDirectory>
             <fileMode>0755</fileMode>
         </fileSet>
@@ -22,12 +22,17 @@
             </excludes>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../../build/sbin</directory>
+            <directory>${basedir}/../../../build/sbin</directory>
             <outputDirectory>sbin</outputDirectory>
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../../build/spark</directory>
+            <directory>${basedir}/../../../build/async-profiler-lib</directory>
+            <outputDirectory>lib</outputDirectory>
+            <fileMode>0644</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${basedir}/../../../build/spark</directory>
             <outputDirectory>spark</outputDirectory>
             <excludes>
                 <exclude>lib/spark-examples-*</exclude>
@@ -36,10 +41,15 @@
                 <exclude>R/**</exclude>
             </excludes>
         </fileSet>
+        <fileSet>
+            <directory>${basedir}/src/main/resources/config</directory>
+            <outputDirectory>conf</outputDirectory>
+            <fileMode>0644</fileMode>
+        </fileSet>
     </fileSets>
     <files>
         <file>
-            <source>../common-booter/target/common-booter-${project.version}.jar</source>
+            <source>target/kylin-common-booter-${project.version}.jar</source>
             <outputDirectory>server/</outputDirectory>
             <destName>newten.jar</destName>
         </file>
@@ -47,18 +57,6 @@
             <source>../assembly/target/kylin-assembly-${project.version}-job.jar</source>
             <outputDirectory>lib/</outputDirectory>
             <destName>newten-job.jar</destName>
-        </file>
-        <file>
-            <source>${basedir}/src/main/resources/config/config.yaml</source>
-            <outputDirectory>conf/</outputDirectory>
-        </file>
-        <file>
-            <source>${basedir}/src/main/resources/config/init.properties</source>
-            <outputDirectory>conf/</outputDirectory>
-        </file>
-        <file>
-            <source>${basedir}/src/main/resources/config/config_library.csv</source>
-            <outputDirectory>conf/</outputDirectory>
         </file>
     </files>
     <dependencySets>

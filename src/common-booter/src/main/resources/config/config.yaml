@@ -34,12 +34,12 @@ kylin:
         - target: org.apache.kylin.common.KylinConfig
           type: nacos
           properties:
-            app: "${APP_NAME:yinglong-common-booter}"
+            app: "${APP_NAME:common}"
             zhName: "${APP_DISPLAY_NAME:基础服务}"
-            dataIds: "${APP_NAME:yinglong-common-booter}-kylin-config"
+            dataIds: "${APP_NAME:common}-kylin-config"
             group: "${TENANT_ID}"
             autoRefresh: true
             needInit: true
-            initConfigContent: "${KYLIN_HOME}/conf/init.properties"
+            initConfigContent: "${KYLIN_HOME}/conf/init${CONFIG_INIT_SPEC:}.properties"
             configPropertyFileType: "PROPERTIES"
             configLibrary: "${KYLIN_HOME}/conf/config_library.csv"

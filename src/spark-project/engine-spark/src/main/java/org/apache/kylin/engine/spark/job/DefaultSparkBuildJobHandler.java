@@ -18,7 +18,7 @@
 
 package org.apache.kylin.engine.spark.job;
 
-import static org.apache.kylin.engine.spark.job.NSparkExecutable.SPARK_MASTER;
+import static org.apache.kylin.job.execution.NSparkExecutable.SPARK_MASTER;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +34,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.kylin.cluster.ClusterManagerFactory;
+import org.apache.kylin.cluster.IClusterManager;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigBase;
 import org.apache.kylin.common.util.BufferedLogger;
@@ -41,8 +43,6 @@ import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.job.exception.ExecuteException;
-import org.apache.kylin.cluster.ClusterManagerFactory;
-import org.apache.kylin.cluster.IClusterManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -22,13 +22,12 @@ import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLI
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_TABLE_NAME;
-import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_TABLE_REFRESH_PARAMETER;
+import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_SAMPLING_RANGE_INVALID;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.PROJECT_NOT_EXIST;
 import static org.apache.kylin.rest.util.TableUtils.calculateTableSize;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,6 +41,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.job.service.TableSampleService;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.request.AWSTableLoadRequest;
@@ -66,16 +66,14 @@ import org.apache.kylin.rest.response.PreReloadTableResponse;
 import org.apache.kylin.rest.response.PreUnloadTableResponse;
 import org.apache.kylin.rest.response.RefreshAffectedSegmentsResponse;
 import org.apache.kylin.rest.response.TableNameResponse;
-import org.apache.kylin.rest.response.TableRefresh;
-import org.apache.kylin.rest.response.TableRefreshAll;
 import org.apache.kylin.rest.response.TablesAndColumnsResponse;
 import org.apache.kylin.rest.response.UpdateAWSTableExtDescResponse;
 import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.TableExtService;
-import org.apache.kylin.rest.service.TableSamplingService;
 import org.apache.kylin.rest.service.TableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -86,6 +84,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.View;
 
 import io.swagger.annotations.ApiOperation;
 import lombok.val;
@@ -97,6 +96,8 @@ import lombok.extern.slf4j.Slf4j;
 public class NTableController extends NBasicController {
 
     private static final String TABLE = "table";
+    private static final int MAX_SAMPLING_ROWS = 20_000_000;
+    private static final int MIN_SAMPLING_ROWS = 10_000;
 
     @Autowired
     @Qualifier("tableService")
@@ -107,12 +108,12 @@ public class NTableController extends NBasicController {
     private TableExtService tableExtService;
 
     @Autowired
-    @Qualifier("modelService")
-    private ModelService modelService;
+    @Qualifier("tableSampleService")
+    private TableSampleService tableSampleService;
 
     @Autowired
-    @Qualifier("tableSamplingService")
-    private TableSamplingService tableSamplingService;
+    @Qualifier("modelService")
+    private ModelService modelService;
 
     @ApiOperation(value = "getTableDesc", tags = {
             "AI" }, notes = "Update Param: is_fuzzy, page_offset, page_size; Update Response: no format!")
@@ -233,10 +234,9 @@ public class NTableController extends NBasicController {
 
         LoadTableResponse loadTableResponse = tableExtService.loadTablesWithShortCircuit(tableLoadRequest);
 
-        if (!loadTableResponse.getNeedRealSampling().isEmpty()
-                && Boolean.TRUE.equals(tableLoadRequest.getNeedSampling())) {
-            TableSamplingService.checkSamplingRows(tableLoadRequest.getSamplingRows());
-            tableSamplingService.sampling(loadTableResponse.getNeedRealSampling(), tableLoadRequest.getProject(),
+        if (!loadTableResponse.getNeedRealSampling().isEmpty() && Boolean.TRUE.equals(tableLoadRequest.getNeedSampling())) {
+            checkSamplingRows(tableLoadRequest.getSamplingRows());
+            tableSampleService.sampling(loadTableResponse.getNeedRealSampling(), tableLoadRequest.getProject(),
                     tableLoadRequest.getSamplingRows(), tableLoadRequest.getPriority(), tableLoadRequest.getYarnQueue(),
                     tableLoadRequest.getTag());
         }
@@ -265,8 +265,8 @@ public class NTableController extends NBasicController {
         loadTableResponse.getLoaded().addAll(loadByTable.getLoaded());
 
         if (!loadTableResponse.getLoaded().isEmpty() && Boolean.TRUE.equals(tableLoadRequest.getNeedSampling())) {
-            TableSamplingService.checkSamplingRows(tableLoadRequest.getSamplingRows());
-            tableSamplingService.sampling(loadTableResponse.getLoaded(), tableLoadRequest.getProject(),
+            checkSamplingRows(tableLoadRequest.getSamplingRows());
+            tableSampleService.sampling(loadTableResponse.getLoaded(), tableLoadRequest.getProject(),
                     tableLoadRequest.getSamplingRows(), tableLoadRequest.getPriority(), tableLoadRequest.getYarnQueue(),
                     tableLoadRequest.getTag());
         }
@@ -460,7 +460,7 @@ public class NTableController extends NBasicController {
             throw new KylinException(INVALID_TABLE_NAME, MsgPicker.getMsg().getTableNameCannotEmpty());
         }
         if (request.isNeedSample()) {
-            TableSamplingService.checkSamplingRows(request.getMaxRows());
+            checkSamplingRows(request.getMaxRows());
         }
         tableService.reloadTable(request.getProject(), request.getTable(), request.isNeedSample(), request.getMaxRows(),
                 request.isNeedBuild(), request.getPriority(), request.getYarnQueue());
@@ -492,21 +492,12 @@ public class NTableController extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, tableService.checkSSBDataBase(), "");
     }
 
-    @ApiOperation(value = "catalogCache", tags = { "DW" })
-    @PutMapping(value = "single_catalog_cache", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
-    @ResponseBody
-    public EnvelopeResponse<TableRefresh> refreshSingleCatalogCache(@RequestBody HashMap refreshRequest) {
-        checkRefreshParam(refreshRequest);
-        TableRefresh response = tableService.refreshSingleCatalogCache(refreshRequest);
-        return new EnvelopeResponse<>(response.getCode(), response, response.getMsg());
-    }
-
+    @Deprecated
     @ApiOperation(value = "catalogCache", tags = { "DW" })
     @PutMapping(value = "catalog_cache", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
-    @ResponseBody
-    public EnvelopeResponse<TableRefreshAll> refreshCatalogCache(final HttpServletRequest refreshRequest) {
-        TableRefreshAll response = tableService.refreshAllCatalogCache(refreshRequest);
-        return new EnvelopeResponse<>(response.getCode(), response, response.getMsg());
+    public String refreshCatalogCache(final HttpServletRequest refreshRequest) {
+        refreshRequest.setAttribute(View.RESPONSE_STATUS_ATTRIBUTE, HttpStatus.PERMANENT_REDIRECT);
+        return "redirect:/api/query/catalog_cache";
     }
 
     @ApiOperation(value = "modelTables", tags = { "AI" })
@@ -519,15 +510,9 @@ public class NTableController extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, res, "");
     }
 
-    private void checkRefreshParam(Map refreshRequest) {
-        val message = MsgPicker.getMsg();
-        Object tables = refreshRequest.get("tables");
-        if (tables == null) {
-            throw new KylinException(INVALID_TABLE_REFRESH_PARAMETER, message.getTableRefreshParamInvalid(), false);
-        } else if (refreshRequest.keySet().size() > 1) {
-            throw new KylinException(INVALID_TABLE_REFRESH_PARAMETER, message.getTableRefreshParamMore(), false);
-        } else if (!(tables instanceof List)) {
-            throw new KylinException(INVALID_TABLE_REFRESH_PARAMETER, message.getTableRefreshParamInvalid(), false);
+    public static void checkSamplingRows(int rows) {
+        if (rows > MAX_SAMPLING_ROWS || rows < MIN_SAMPLING_ROWS) {
+            throw new KylinException(JOB_SAMPLING_RANGE_INVALID, MIN_SAMPLING_ROWS, MAX_SAMPLING_ROWS);
         }
     }
 

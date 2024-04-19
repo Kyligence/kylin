@@ -84,8 +84,10 @@ class MetadataBackupServiceJdbcMetadataTest {
         val rootMetadataFS = HadoopUtil.getWorkingFileSystem();
         Assert.assertEquals(1, rootMetadataFS.listStatus(rootMetadataPath).length);
         val path = rootMetadataFS.listStatus(rootMetadataPath)[0].getPath();
-        Assert.assertEquals(2, rootMetadataFS.listStatus(path).length);
-        FSDataInputStream fis = rootMetadataFS.open(new Path(path.toString() + File.separator + "_image"));
+        Assert.assertEquals(1, rootMetadataFS.listStatus(path).length);
+        val coreMetadataPath = rootMetadataFS.listStatus(path)[0].getPath();
+        Assert.assertEquals(2, rootMetadataFS.listStatus(coreMetadataPath).length);
+        FSDataInputStream fis = rootMetadataFS.open(new Path(coreMetadataPath.toString() + File.separator + "_image"));
         BufferedReader reader = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
         String image = reader.readLine();
         ImageDesc imageDesc = JsonUtil.readValue(image, ImageDesc.class);

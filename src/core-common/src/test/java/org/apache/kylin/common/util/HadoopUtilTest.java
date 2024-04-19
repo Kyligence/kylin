@@ -19,14 +19,19 @@ package org.apache.kylin.common.util;
 
 import static org.apache.kylin.common.util.HadoopUtil.MAPR_FS_PREFIX;
 import static org.apache.kylin.common.util.HadoopUtil.readStringFromHdfs;
+import static org.apache.kylin.common.util.TestUtils.writeToFile;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.kylin.junit.annotation.MetadataInfo;
+import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -207,5 +212,72 @@ class HadoopUtilTest {
     @Test
     void testGetWritingClusterFileSystem() {
         Assertions.assertNotNull(HadoopUtil.getWritingClusterFileSystem());
+    }
+
+    @Test
+    void testUploadFileToHdfsAndDownload() throws IOException {
+        FileSystem fs = HadoopUtil.getWorkingFileSystem();
+        File localDir1 = new File(tempDir.toFile(), "logs");
+        File localDir2 = new File(tempDir.toFile(), "diag_logs");
+        File localHdfs = new File(tempDir.toFile(), "_logs");
+        org.apache.hadoop.fs.Path hdfsPath = new org.apache.hadoop.fs.Path(localHdfs.getAbsolutePath());
+        FileUtils.forceMkdir(localDir1);
+        FileUtils.forceMkdir(localDir2);
+        fs.mkdirs(hdfsPath);
+
+        // test upload & download file
+        File tmpFile = new File(localDir1, "kylin.gc.pid1.0");
+        org.apache.hadoop.fs.Path tmpHdfsPath = new org.apache.hadoop.fs.Path(hdfsPath, "kylin.gc.pid1.0");
+        writeToFile(tmpFile);
+        HadoopUtil.uploadFileToHdfs(tmpFile, hdfsPath);
+        HadoopUtil.downloadFileFromHdfsWithoutError(tmpHdfsPath, localDir2);
+        checkFile(localDir1, localDir2);
+
+        // test upload & download folder
+        FileUtils.cleanDirectory(localDir2);
+        FileUtils.cleanDirectory(localHdfs);
+
+        File tmpFile2 = new File(localDir1, "kylin.gc.pid1.1");
+        writeToFile(tmpFile2);
+        HadoopUtil.uploadFileToHdfs(localDir1, hdfsPath);
+        HadoopUtil.downloadFileFromHdfsWithoutError(hdfsPath, localDir2);
+        checkFile(localDir1, localDir2);
+
+        // test upload & download recursive folder
+        FileUtils.cleanDirectory(localDir2);
+        FileUtils.cleanDirectory(localHdfs);
+
+        File tmpFolder = new File(localDir1, "f1");
+        File tmpFolder2 = new File(tmpFolder, "f2");
+        File tmpFile3 = new File(tmpFolder, "kylin.gc.pid1.1");
+        File tmpFile4 = new File(tmpFolder, "kylin.gc.pid1.1");
+        File tmpFile5 = new File(tmpFolder2, "kylin.gc.pid1.1");
+        File tmpFile6 = new File(tmpFolder2, "kylin.gc.pid1.1");
+        FileUtils.forceMkdir(tmpFolder);
+        FileUtils.forceMkdir(tmpFolder2);
+        writeToFile(tmpFile3);
+        writeToFile(tmpFile4);
+        writeToFile(tmpFile5);
+        writeToFile(tmpFile6);
+        HadoopUtil.uploadFileToHdfs(localDir1, hdfsPath);
+        HadoopUtil.downloadFileFromHdfsWithoutError(hdfsPath, localDir2);
+        checkFile(localDir1, localDir2);
+    }
+
+    private void checkFile(File file1, File file2) {
+        if (file1.isDirectory() && file2.isDirectory()) {
+            Assert.assertEquals(file1.listFiles().length, file2.listFiles().length);
+            for (File file : file1.listFiles()) {
+                checkFile(new File(file1, file.getName()), new File(file2, file.getName()));
+            }
+        } else if (file1.isFile() && file2.isFile()) {
+            try (FileInputStream is1 = new FileInputStream(file1); FileInputStream is2 = new FileInputStream(file2)) {
+                Assert.assertTrue(IOUtils.contentEquals(is1, is2));
+            } catch (IOException e) {
+                Assert.fail(e.getMessage());
+            }
+        } else {
+            Assert.fail();
+        }
     }
 }

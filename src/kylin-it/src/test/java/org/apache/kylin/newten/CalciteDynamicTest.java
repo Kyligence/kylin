@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.ListUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparderEnv;
@@ -46,8 +46,8 @@ public class CalciteDynamicTest extends NLocalWithSparkSessionTest {
     }
 
     @After
-    public void after() {
-        NDefaultScheduler.destroyInstance();
+    public void after() throws Exception {
+        JobContextUtil.cleanUp();
     }
 
     @Test

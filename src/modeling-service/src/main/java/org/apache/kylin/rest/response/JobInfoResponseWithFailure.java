@@ -43,12 +43,22 @@ public class JobInfoResponseWithFailure extends JobInfoResponse {
             KylinException kylinException = entry.getValue();
 
             FailedSegmentJobWithReason failedSeg = new FailedSegmentJobWithReason(dataflow, dataflow.getSegment(segId));
-            Error errorInfo = new Error(kylinException.getErrorCodeProducer().getErrorCode().getCode(),
-                    kylinException.getMessage());
+            String code = getErrorCode(kylinException);
+            Error errorInfo = new Error(code, kylinException.getMessage());
             failedSeg.setError(errorInfo);
 
             failedSegments.add(failedSeg);
         }
+    }
+
+    private String getErrorCode(KylinException kylinException) {
+        String code = null;
+        if (null != kylinException.getErrorCode()) {
+            code = kylinException.getErrorCode().getCodeString();
+        } else if (null != kylinException.getErrorCodeProducer()) {
+            code = kylinException.getErrorCodeProducer().getErrorCode().getCode();
+        }
+        return code;
     }
 
     @Data

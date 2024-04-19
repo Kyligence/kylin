@@ -22,7 +22,7 @@ import java.util.List;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.TempMetadataBuilder;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
@@ -36,7 +36,7 @@ import org.mockito.Mockito;
 
 import lombok.val;
 
-public class NSparkMetadataExplorerTest extends NLocalWithSparkSessionTest {
+public class NSparkMetadataExplorerTest extends NLocalWithSparkSessionTestBase {
 
     @Test
     public void testListDatabases() throws Exception {

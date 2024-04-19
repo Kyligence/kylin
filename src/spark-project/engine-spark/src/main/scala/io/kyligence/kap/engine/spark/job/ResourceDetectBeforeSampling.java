@@ -35,7 +35,7 @@ public class ResourceDetectBeforeSampling extends SparkApplication implements Re
         final TableDesc tableDesc = NTableMetadataManager.getInstance(config, project).getTableDesc(tableName);
         Map<String, String> params = NProjectManager.getInstance(config).getProject(project)
                 .getLegalOverrideKylinProps();
-        long rowCount = Long.parseLong(getParam(NBatchConstants.P_SAMPLING_ROWS));
+        int rowCount = Integer.parseInt(getParam(NBatchConstants.P_SAMPLING_ROWS));
         params.put("sampleRowCount", String.valueOf(rowCount));
         final Dataset<Row> dataset = SourceFactory
                 .createEngineAdapter(tableDesc, NSparkCubingEngine.NSparkCubingSource.class)

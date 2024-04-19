@@ -39,7 +39,6 @@
     </properties>
 
     <dependencies>
-
         <dependency>
             <groupId>com.jcraft</groupId>
             <artifactId>jsch</artifactId>

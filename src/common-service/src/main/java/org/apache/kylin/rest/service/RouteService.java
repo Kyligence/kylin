@@ -41,7 +41,7 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -186,7 +186,7 @@ public class RouteService extends BasicService {
         Preconditions.checkNotNull(jobId);
         val allProjects = getManager(NProjectManager.class).listAllProjects();
         for (ProjectInstance projectInstance : allProjects) {
-            val executableManager = getManager(NExecutableManager.class, projectInstance.getName());
+            val executableManager = getManager(ExecutableManager.class, projectInstance.getName());
             val job = executableManager.getJob(jobId);
             if (Objects.nonNull(job)) {
                 log.info("Job[{}] project is [{}]", jobId, job.getProject());

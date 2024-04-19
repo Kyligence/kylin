@@ -20,7 +20,6 @@ package org.apache.kylin.rest.config.initialize;
 
 import java.util.Map;
 
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.common.metrics.MetricsCategory;
 import org.apache.kylin.common.metrics.MetricsGroup;
 import org.apache.kylin.common.metrics.MetricsName;
@@ -39,7 +38,8 @@ import lombok.extern.slf4j.Slf4j;
 public class JobSchedulerListener {
     @Subscribe
     public void onJobIsReady(JobReadyNotifier notifier) {
-        NDefaultScheduler.getInstance(notifier.getProject()).fetchJobsImmediately();
+        //TODO schedule job immediately
+        //        NDefaultScheduler.getInstance(notifier.getProject()).fetchJobsImmediately();
     }
 
     @Subscribe

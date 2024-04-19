@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.util.FileSystemUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 
 import lombok.val;
@@ -45,7 +46,7 @@ public class HDFSMetadataTool {
 
         while (childrenSize >= kylinConfig.getMetadataBackupCountThreshold()) {
             // remove the oldest backup metadata dir
-            val maybeOldest = Stream.of(fs.listStatus(rootMetadataBackupPath))
+            val maybeOldest = Stream.of(FileSystemUtil.listStatus(fs, rootMetadataBackupPath))
                     .min(Comparator.comparing(FileStatus::getModificationTime));
             if (maybeOldest.isPresent()) {
                 fs.delete(maybeOldest.get().getPath(), true);

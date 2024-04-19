@@ -49,6 +49,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -71,6 +72,7 @@ import com.taobao.arthas.agent.attach.ArthasAgent;
 import lombok.Getter;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.ehcache.CacheManager;
 
 @Slf4j
 @Configuration
@@ -131,9 +133,14 @@ public class AppConfig implements WebMvcConfigurer {
     }
 
     @Bean
+    public CacheManager ehCacheCacheManager(Environment environment) {
+        return cacheFactoryBean(environment).getObject();
+    }
+
+    @Bean
     public EhCacheCacheManager cacheManager(Environment environment) {
         val manager = new EhCacheCacheManager();
-        manager.setCacheManager(cacheFactoryBean(environment).getObject());
+        manager.setCacheManager(ehCacheCacheManager(environment));
         return manager;
     }
 
@@ -186,6 +193,11 @@ public class AppConfig implements WebMvcConfigurer {
                 SimpleBeanPropertyFilter.serializeAllExcept("password"));
 
         return objectMapper.setFilterProvider(filterProvider);
+    }
+
+    @Bean
+    public MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter() {
+        return new MappingJackson2HttpMessageConverter(getObjectMapper());
     }
 
     @Bean

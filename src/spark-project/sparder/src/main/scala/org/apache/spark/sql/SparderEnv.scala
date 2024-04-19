@@ -18,18 +18,12 @@
 
 package org.apache.spark.sql
 
-import java.lang.{Boolean => JBoolean, String => JString}
-import java.security.PrivilegedAction
-import java.util.Map
-import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{Callable, ExecutorService}
-
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.kylin.common.exception.{KylinException, KylinTimeoutException, ServerErrorCode}
 import org.apache.kylin.common.msg.MsgPicker
-import org.apache.kylin.common.util.{DefaultHostInfoFetcher, HadoopUtil, S3AUtil}
+import org.apache.kylin.common.util.{DefaultHostInfoFetcher, FileSystemUtil, HadoopUtil}
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
 import org.apache.kylin.engine.spark.filter.{BloomFilterSkipCollector, ParquetPageFilterCollector}
 import org.apache.kylin.metadata.model.{NTableMetadataManager, TableExtDesc}
@@ -47,6 +41,12 @@ import org.apache.spark.sql.hive.HiveStorageRule
 import org.apache.spark.sql.udf.UdfManager
 import org.apache.spark.util.{ThreadUtils, Utils}
 import org.apache.spark.{ExecutorAllocationClient, SparkConf, SparkContext}
+
+import java.lang.{Boolean => JBoolean, String => JString}
+import java.security.PrivilegedAction
+import java.util.Map
+import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.{Callable, ExecutorService}
 
 // scalastyle:off
 object SparderEnv extends Logging {
@@ -68,16 +68,20 @@ object SparderEnv extends Logging {
   @volatile
   var lastStartSparkFailureTime: Long = 0
 
-  private var _executorAllocationClient: Option[ExecutorAllocationClient] = None
+  private var _containerSchedulerManager: Option[ContainerSchedulerManager] = None
 
-  def getSparkSession: SparkSession = {
+  def getSparkSessionWithConfig(config: KylinConfig): SparkSession = {
     if (spark == null || spark.sparkContext.isStopped) {
       logInfo("Init spark.")
-      initSpark(() => doInitSpark())
+      initSpark(() => doInitSpark(), config)
     }
     if (spark == null)
       throw new KylinException(ServerErrorCode.SPARK_FAILURE, MsgPicker.getMsg.getSparkFailure)
     spark
+  }
+
+  def getSparkSession: SparkSession = {
+    getSparkSessionWithConfig(null)
   }
 
   def rollUpEventLog(): String = {
@@ -150,7 +154,7 @@ object SparderEnv extends Logging {
     }
   }
 
-  def initSpark(doInit: () => Unit): Unit = {
+  def initSpark(doInit: () => Unit, config: KylinConfig = null): Unit = {
     // do init
     try {
       initializingLock.lock()
@@ -161,6 +165,9 @@ object SparderEnv extends Logging {
 
         initializingExecutor.submit(new Callable[Unit]() {
           override def call(): Unit = {
+            if (config != null) {
+              KylinConfig.setAndUnsetThreadLocalConfig(config)
+            }
             try {
               logInfo("Initializing Spark thread starting.")
               doInit()
@@ -237,7 +244,6 @@ object SparderEnv extends Logging {
             .enableHiveSupport()
             .getOrCreateKylinSession()
       }
-
       injectExtensions(sparkSession.extensions)
       if (KylinConfig.getInstanceFromEnv.getPercentileApproxAlgorithm.equalsIgnoreCase("t-digest")) {
         UdfManager.register(sparkSession, KapFunctions.percentileFunction)
@@ -250,18 +256,19 @@ object SparderEnv extends Logging {
           .currentThread()
           .getContextClassLoader
           .toString)
-      setExecutorAllocationClient(sparkSession.sparkContext)
       registerListener(sparkSession.sparkContext)
+      registerContainerSchedulerManager(sparkSession.sparkContext)
       registerQueryMetrics(sparkSession.sparkContext)
       APP_MASTER_TRACK_URL = null
       startSparkFailureTimes = 0
       lastStartSparkFailureTime = 0
 
-      //add s3 permission credential from tableExt
-      if (KylinConfig.getInstanceFromEnv.useDynamicS3RoleCredentialInTable) {
+      if (KylinConfig.getInstanceFromEnv.useDynamicRoleCredentialInTable) {
         NProjectManager.getInstance(KylinConfig.getInstanceFromEnv).listAllProjects().forEach(project => {
           val tableMetadataManager = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv, project.getName)
-          tableMetadataManager.listAllTables().forEach(tableDesc => SparderEnv.addS3Credential(tableMetadataManager.getOrCreateTableExt(tableDesc).getS3RoleCredentialInfo, spark))
+          tableMetadataManager.listAllTables().forEach(tableDesc =>
+            SparderEnv.addCredential(tableMetadataManager.getOrCreateTableExt(tableDesc).getRoleCredentialInfo, spark)
+          )
         })
       }
       if (KylinConfig.getInstanceFromEnv.isDDLLogicalViewEnabled) {
@@ -275,6 +282,28 @@ object SparderEnv extends Logging {
     }
   }
 
+  def containerSchedulerManager: Option[ContainerSchedulerManager] = _containerSchedulerManager
+
+  //for test
+  def setContainerSchedulerManager(containerSchedulerManager: ContainerSchedulerManager): Unit = {
+    _containerSchedulerManager = Some(containerSchedulerManager)
+    _containerSchedulerManager.foreach(_.start())
+  }
+
+  def registerContainerSchedulerManager(sc: SparkContext): Unit = {
+    if (KylinConfig.getInstanceFromEnv.isContainerSchedulerEnabled) {
+      _containerSchedulerManager = sc.schedulerBackend match {
+        case client: ExecutorAllocationClient =>
+          Some(new ContainerSchedulerManager(
+            client, sc.listenerBus, sc.conf,
+            cleaner = sc.cleaner, resourceProfileManager = sc.resourceProfileManager))
+        case _ =>
+          None
+      }
+      _containerSchedulerManager.foreach(_.start())
+    }
+  }
+
   def injectExtensions(sse: SparkSessionExtensions): Unit = {
     sse.injectPlannerStrategy(_ => KylinSourceStrategy)
     sse.injectPlannerStrategy(_ => LayoutFileSourceStrategy)
@@ -282,22 +311,6 @@ object SparderEnv extends Logging {
     sse.injectOptimizerRule(_ => new ConvertInnerJoinToSemiJoin())
     if (KapConfig.getInstanceFromEnv.isConstraintPropagationEnabled) {
       sse.injectOptimizerRule(_ => RewriteInferFiltersFromConstraints)
-    }
-  }
-
-  //for test
-  def setExecutorAllocationClient(client: ExecutorAllocationClient): Unit = {
-    _executorAllocationClient = Some(client)
-  }
-
-  def executorAllocationClient: Option[ExecutorAllocationClient] = _executorAllocationClient
-
-  def setExecutorAllocationClient(sc: SparkContext): Unit = {
-    _executorAllocationClient = sc.schedulerBackend match {
-      case client: ExecutorAllocationClient =>
-        Some(client)
-      case _ =>
-        None
     }
   }
 
@@ -383,9 +396,10 @@ object SparderEnv extends Logging {
     _needCompute.set(false)
   }
 
-  def addS3Credential(s3CredentialInfo: TableExtDesc.S3RoleCredentialInfo, sparkSession: SparkSession): Unit = {
-    if (s3CredentialInfo != null) {
-      val conf: Map[String, String] = S3AUtil.generateRoleCredentialConfByBucketAndRoleAndEndpoint(s3CredentialInfo.getBucket, s3CredentialInfo.getRole, s3CredentialInfo.getEndpoint)
+  def addCredential(credentialInfo: TableExtDesc.RoleCredentialInfo, sparkSession: SparkSession): Unit = {
+    if (credentialInfo != null) {
+      val conf: Map[String, String] = FileSystemUtil.generateRoleCredentialConf(
+        credentialInfo.getType, credentialInfo.getBucket, credentialInfo.getRole, credentialInfo.getEndpoint, credentialInfo.getRegion)
       conf.forEach((key: String, value: String) => sparkSession.conf.set(key, value))
     }
 

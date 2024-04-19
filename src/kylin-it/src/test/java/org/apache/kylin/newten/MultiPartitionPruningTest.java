@@ -25,13 +25,11 @@ import java.util.Map;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.util.Shell;
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.junit.TimeZoneTestRunner;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -83,20 +81,17 @@ public class MultiPartitionPruningTest extends NLocalWithSparkSessionTest implem
 
     @Before
     public void setup() throws Exception {
-        overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/multi_partition_pruning");
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
         overwriteSystemProp("kylin.model.multi-partition-enabled", "true");
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     @After
     public void after() throws Exception {
-        NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Override
@@ -420,6 +415,7 @@ public class MultiPartitionPruningTest extends NLocalWithSparkSessionTest implem
     @Test
     public void testPartitionPruningChinese() throws Exception {
         val dfName = "9cde9d25-9334-4b92-b229-a00f49453757";
+        SparderEnv.getSparkSession().conf().set("spark.sql.adaptive.enabled", "false");
 
         // segment1 [2012-01-01, 2013-01-01] partition value FT, 中国
         // segment2 [2013-01-01, 2014-01-01] partition value 中国

@@ -253,7 +253,7 @@ kylin.metadata.first-day-of-week,String,一周的第一天,The first day of a we
 kylin.metadata.history-source-usage-cron,String,更新容量计费的 cron 表达式,Update CRON expression of capacity billing,TRUE,TRUE
 kylin.metadata.history-source-usage-unwrap-computed-column,boolean,是否将可计算列展开计算容量,Whether the calculated column is expanded to calculate the capacity,TRUE,TRUE
 kylin.metadata.key-case-insensitive,boolean,当本地用户、用户组较多影响到接口响应时，可以将该参数设置为 true，可以提高部分接口的响应速度,"When local users and user groups affect the interface response, the parameter can be set to true, which can improve the response speed of some interfaces",TRUE,TRUE
-kylin.metadata.ops-cron,boolean,定时备份元数据、垃圾清理的定时任务 cron 表达式，默认值是 0 0 0 * * *,"Timing backup metad data, the timing task of garbage clearance CRON expression, the default value is 0 0 0 * * * *",TRUE,TRUE
+kylin.metadata.ops-cron,String,定时备份元数据、垃圾清理的定时任务 cron 表达式，默认值是 0 0 0 * * *,"Timing backup metad data, the timing task of garbage clearance CRON expression, the default value is 0 0 0 * * * *",TRUE,TRUE
 kylin.metadata.random-admin-password.enabled,boolean,admin使用随机密码,admin uses random passwords,TRUE,TRUE
 kylin.metadata.semi-automatic-mode,boolean,前端：当前project 是否含有半自动的标志；后端：是否默认使用半自动档,Front end: whether the current Project contains semi -automatic signs; back -end: Whether the semi -automatic file is used by default,TRUE,TRUE
 kylin.metadata.url,String,Kyligence Enterprise 元数据库路径。,Kyligence Enterprise metad database path.,TRUE,TRUE
@@ -564,3 +564,7 @@ kylin.env.log-rotate-check-cron,String,日志滚动的 cron 表达式,cron for l
 kylin.env.log-rotate-enabled,boolean,是否开启日志滚动,whether to enable log rotate,FALSE,TRUE
 kylin.model.measure-name-check-enabled,boolean,是否校验度量名称,whether to validate measure's name,FALSE,TRUE
 kylin.security.acl.row-filter-limit-threshold,int,行级权限过滤条件的最大个数,max count for row filter values,FALSE,TRUE
+kyligence.kyiam.sdk.tenant-id,string,iam 租户ID,iam tenant id,TRUE,TRUE
+kyligence.kyiam.sdk.security.gateway-path-filter.ignore-url,string,,iam gateway ignore url,TRUE,TRUE
+kyligence.kyiam.sdk.security.gateway-path-filter.forbid-url,string,,iam gateway forbid url,TRUE,TRUE
+kylin.extension.metadata.factory,string,extension metadata factory,extension metadata factory,TRUE,TRUE

@@ -18,14 +18,14 @@
 
 package org.apache.kylin.engine.spark.source;
 
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.junit.Assert;
 import org.junit.Test;
 
 import lombok.val;
 
 
-public class SparkSqlUtilTest extends NLocalWithSparkSessionTest {
+public class SparkSqlUtilTest extends NLocalWithSparkSessionTestBase {
 
     @Test
     public void getViewOrignalTables() throws Exception {

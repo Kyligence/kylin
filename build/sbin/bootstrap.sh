@@ -311,8 +311,6 @@ function startKE(){
 
     checkHiveDirAcl
 
-    runToolInternal org.apache.kylin.tool.upgrade.AddInstanceColumnCLI
-
     runToolInternal org.apache.kylin.tool.security.AdminUserInitCLI
     if [[ $? == 1 ]]; then
       quit "Create Admin user failed, for more details please refer to \"\$KYLIN_HOME/logs/shell.stderr\"."

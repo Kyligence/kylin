@@ -711,6 +711,10 @@ public class KylinConfig extends KylinConfigBase {
             return THREAD_ENV_INSTANCE.get();
         }
 
+        public KylinConfig getOriginConfig() {
+            return originThreadLocalConfig == null ? SYS_ENV_INSTANCE : originThreadLocalConfig;
+        }
+
         @Override
         public void close() {
             THREAD_ENV_INSTANCE.remove();

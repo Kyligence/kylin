@@ -18,6 +18,7 @@
 
 package org.apache.kylin.engine.spark.utils;
 
+import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
@@ -36,6 +37,7 @@ public class SparkJobFactoryUtils {
         new NSparkCubingJob();
         new NSparkMergingJob();
         new NSparkSnapshotJob();
+        new NTableSamplingJob();
     }
 
     public static boolean needBuildSnapshots(AbstractExecutable buildTask) {

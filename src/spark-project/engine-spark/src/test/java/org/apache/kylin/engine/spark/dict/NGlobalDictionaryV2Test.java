@@ -28,7 +28,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.spark.HashPartitioner;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
@@ -53,7 +53,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import scala.Tuple2;
 
-public class NGlobalDictionaryV2Test extends NLocalWithSparkSessionTest {
+public class NGlobalDictionaryV2Test extends NLocalWithSparkSessionTestBase {
 
     private final static int BUCKET_SIZE = 10;
 

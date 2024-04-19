@@ -23,11 +23,10 @@ import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.job.engine.JobEngineConfig;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -49,21 +48,16 @@ public class NSparkCubingJobOnYarnTest extends NLocalFileMetadataTestCase {
 
     @Before
     public void setup() throws Exception {
-        overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         createTestMetadata();
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance("default");
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        overwriteSystemProp("kylin.hadoop.conf.dir", "../examples/test_case_data/sandbox");
-        overwriteSystemProp("SPARK_HOME", "../../build/spark");
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     @After
     public void after() throws Exception {
-        NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -74,7 +68,7 @@ public class NSparkCubingJobOnYarnTest extends NLocalFileMetadataTestCase {
         config.setProperty("kylin.engine.spark.job-jar", "../assembly/target/ke-assembly-4.0.0-SNAPSHOT-job.jar");
 
         NDataflowManager dsMgr = NDataflowManager.getInstance(config, "default");
-        NExecutableManager execMgr = NExecutableManager.getInstance(config, "default");
+        ExecutableManager execMgr = ExecutableManager.getInstance(config, "default");
 
         NDataflow df = dsMgr.getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
         NDataflowUpdate update = new NDataflowUpdate(df.getUuid());

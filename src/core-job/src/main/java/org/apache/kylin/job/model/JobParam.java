@@ -55,6 +55,8 @@ public class JobParam {
     @Setter(AccessLevel.NONE)
     private Set<Long> targetLayouts = Sets.newHashSet();
 
+    private String table;
+
     private String owner;
 
     private String model;
@@ -147,6 +149,16 @@ public class JobParam {
         this.setTargetLayouts(targetLayouts);
     }
 
+    public JobParam withProject(String project) {
+        this.project = project;
+        return this;
+    }
+
+    public JobParam withOwner(String owner) {
+        this.owner = owner;
+        return this;
+    }
+
     public JobParam withIgnoredSnapshotTables(Set<String> ignoredSnapshotTables) {
         this.ignoredSnapshotTables = ignoredSnapshotTables;
         return this;
@@ -176,6 +188,11 @@ public class JobParam {
 
     public JobParam withTag(Object tag) {
         this.tag = tag;
+        return this;
+    }
+
+    public JobParam withTable(String table) {
+        this.table = table;
         return this;
     }
 

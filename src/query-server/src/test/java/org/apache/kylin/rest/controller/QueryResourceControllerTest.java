@@ -56,7 +56,7 @@ public class QueryResourceControllerTest {
     @Test
     public void testAdjustQueryResource() throws Exception {
         QueryResourceService.QueryResource queryResource = new QueryResourceService.QueryResource();
-        queryResource.setInstance(1);
+        queryResource.setCores(1);
         mockMvc.perform(MockMvcRequestBuilders.put("/api/resource/query/adjust").contentType(MediaType.APPLICATION_JSON)
                 .content(JsonUtil.writeValueAsString(queryResource))
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
@@ -65,18 +65,18 @@ public class QueryResourceControllerTest {
         Mockito.verify(queryResourceController).adjustQueryResource(Mockito.any());
         Mockito.when(queryResourceService.isAvailable()).thenReturn(true);
         Mockito.when(queryResourceService.adjustQueryResource(queryResource)).thenReturn(queryResource);
-        Assert.assertEquals(queryResource.getInstance(),
-                queryResourceController.adjustQueryResource(queryResource).getInstance());
+        Assert.assertEquals(queryResource.getCores(),
+                queryResourceController.adjustQueryResource(queryResource).getCores());
     }
 
     @Test
-    public void testGetExecutorSize() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/resource/query/executor")
+    public void testGetQueueNames() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/resource/query/queueNames")
                 .contentType(MediaType.APPLICATION_JSON).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        Mockito.verify(queryResourceController).getExecutorSize();
+        Mockito.verify(queryResourceController).getQueueNames();
         Mockito.when(queryResourceService.isAvailable()).thenReturn(true);
-        Mockito.when(queryResourceService.getExecutorSize()).thenReturn(1);
-        Assert.assertEquals(1, queryResourceController.getExecutorSize());
+        Mockito.when(queryResourceService.getQueueName()).thenReturn("test-queue");
+        Assert.assertEquals(1, queryResourceController.getQueueNames().size());
     }
 }

@@ -66,6 +66,12 @@ public class EnhancedUnitOfWork {
                 return null;
             });
         }
+        //disable transaction for data-loading node and smart node
+        if (config.isDataLoadingNode() || config.isSmartNode()) {
+            params.setTransparent(true);
+            params.setMaxRetry(1);
+        }
         return UnitOfWork.doInTransactionWithRetry(params);
     }
 }
+

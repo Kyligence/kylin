@@ -18,6 +18,7 @@
 
 package org.apache.kylin.rest.response;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -141,6 +142,8 @@ public class ProjectConfigResponse {
     private boolean jdbcSourceEnable;
     @JsonProperty("jdbc_source_driver")
     private String jdbcSourceDriver;
+    @JsonProperty("override_kylin_properties")
+    private LinkedHashMap<String, String> overrideKylinProps;
 
     public void setFrequencyTimeWindow(int frequencyTimeWindow) {
         switch (frequencyTimeWindow) {

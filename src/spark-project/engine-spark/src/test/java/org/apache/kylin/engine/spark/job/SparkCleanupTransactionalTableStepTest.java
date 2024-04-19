@@ -17,22 +17,21 @@
  */
 package org.apache.kylin.engine.spark.job;
 
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import io.kyligence.kap.engine.spark.job.SparkCleanupTransactionalTableStep;
+import java.io.IOException;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.job.exception.ExecuteException;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
+import io.kyligence.kap.engine.spark.job.SparkCleanupTransactionalTableStep;
 
-public class SparkCleanupTransactionalTableStepTest extends NLocalWithSparkSessionTest {
+public class SparkCleanupTransactionalTableStepTest extends NLocalWithSparkSessionTestBase {
 
     @Test
     public void testGenerateDropTableCommand() {
@@ -56,13 +55,11 @@ public class SparkCleanupTransactionalTableStepTest extends NLocalWithSparkSessi
     @Test
     public void testDoWork() {
         SparkCleanupTransactionalTableStep step = new SparkCleanupTransactionalTableStep(0);
-        ExecutableContext context = new ExecutableContext(Maps.newConcurrentMap(), Maps.newConcurrentMap(),
-                getTestConfig(), 0);
         step.setProject("SSB");
 
         try {
             createHDFSFile();
-            step.doWork(context);
+            step.doWork(null);
         } catch (ExecuteException e) {
             Assert.assertEquals("Can not delete intermediate table", e.getMessage());
         } catch (IOException ex) {

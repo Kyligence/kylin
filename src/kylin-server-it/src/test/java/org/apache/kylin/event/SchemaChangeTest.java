@@ -42,11 +42,9 @@ import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.TempMetadataBuilder;
 import org.apache.kylin.engine.spark.ExecutableUtils;
-import org.apache.kylin.engine.spark.merger.AfterBuildResourceMerger;
-import org.apache.kylin.job.engine.JobEngineConfig;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -65,6 +63,7 @@ import org.apache.kylin.rest.service.QueryService;
 import org.apache.kylin.rest.service.TableService;
 import org.apache.kylin.rest.service.UserGrantedAuthority;
 import org.apache.kylin.rest.service.UserService;
+import org.apache.kylin.rest.service.merger.AfterBuildResourceMerger;
 import org.apache.kylin.server.AbstractMVCIntegrationTestCase;
 import org.apache.kylin.source.jdbc.H2Database;
 import org.apache.kylin.util.JobFinishHelper;
@@ -144,6 +143,7 @@ public class SchemaChangeTest extends AbstractMVCIntegrationTestCase {
     @AfterClass
     public static void afterClass() {
         ss.close();
+        JobContextUtil.cleanUp();
     }
 
     @Before
@@ -164,11 +164,11 @@ public class SchemaChangeTest extends AbstractMVCIntegrationTestCase {
         projectManager.forceDropProject("broken_test");
         projectManager.forceDropProject("bad_query_test");
 
-        val scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
 
-        NExecutableManager originExecutableManager = NExecutableManager.getInstance(getTestConfig(), getProject());
-        NExecutableManager executableManager = Mockito.spy(originExecutableManager);
+        ExecutableManager originExecutableManager = ExecutableManager.getInstance(getTestConfig(), getProject());
+        ExecutableManager executableManager = Mockito.spy(originExecutableManager);
 
         val config = KylinConfig.getInstanceFromEnv();
         val dsMgr = NDataflowManager.getInstance(config, getProject());
@@ -183,7 +183,7 @@ public class SchemaChangeTest extends AbstractMVCIntegrationTestCase {
         val round1 = Lists.newArrayList(layouts);
         val segmentRange = SegmentRange.TimePartitionedSegmentRange.createInfinite();
         val toBuildLayouts = Sets.newLinkedHashSet(round1);
-        val execMgr = NExecutableManager.getInstance(config, getProject());
+        val execMgr = ExecutableManager.getInstance(config, getProject());
         // ready dataflow, segment, cuboid layout
         val oneSeg = dsMgr.appendSegment(df, segmentRange);
         val job = NSparkCubingJob.create(Sets.newHashSet(oneSeg), toBuildLayouts, "ADMIN", null);
@@ -213,8 +213,7 @@ public class SchemaChangeTest extends AbstractMVCIntegrationTestCase {
     @After
     public void teardown() throws Exception {
         cleanPushdownEnv();
-
-        NDefaultScheduler.destroyInstance();
+        JobContextUtil.cleanUp();
     }
 
     @Test

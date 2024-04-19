@@ -35,6 +35,7 @@ import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 
 public final class FileUtils {
     public static File findFile(String dir, String ptn) {
@@ -99,4 +100,22 @@ public final class FileUtils {
             out.write(buffer);
         }
     }
+
+    public static boolean fileExist(String path){
+        if (StringUtils.isBlank(path)){
+            throw new RuntimeException("path can not be blank");
+        }
+
+        return new File(path).isFile();
+    }
+
+    public static boolean folderExist(String path){
+        if (StringUtils.isBlank(path)){
+            throw new RuntimeException("path can not be blank");
+        }
+
+        return new File(path).isDirectory();
+    }
+
+
 }

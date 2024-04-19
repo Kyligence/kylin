@@ -20,6 +20,9 @@ package org.apache.kylin.rest.controller;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_JSON;
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 
+import java.util.Set;
+
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.rest.service.QueryResourceService;
 import org.apache.kylin.rest.service.QueryResourceService.QueryResource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,20 +43,21 @@ public class QueryResourceController {
 
     @PutMapping(value = "/adjust")
     @ResponseBody
-    public QueryResourceService.QueryResource adjustQueryResource(@RequestBody QueryResource resource) {
+    public QueryResource adjustQueryResource(@RequestBody QueryResource resource) {
         if (queryResourceService.isAvailable()) {
             return queryResourceService.adjustQueryResource(resource);
         }
         return new QueryResource();
     }
 
-    @GetMapping(value = "/executor")
+    @GetMapping(value = "/queueNames")
     @ResponseBody
-    public int getExecutorSize() {
+    public Set<String> getQueueNames() {
+        Set<String> queues = Sets.newHashSet();
         if (queryResourceService.isAvailable()) {
-            return queryResourceService.getExecutorSize();
+            queues.add(queryResourceService.getQueueName());
         }
-        return -1;
+        return queues;
     }
 
 }

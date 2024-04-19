@@ -40,12 +40,14 @@ import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.dao.ExecutablePO;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
+import org.apache.kylin.job.scheduler.JdbcJobScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -170,7 +172,7 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
                 () -> secondStorageEndpoint.cleanStorage(request, segs.subList(0, 1)), project);
 
-        val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
+        val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         val jobs = executableManager.listExecByModelAndStatus(modelId, ExecutableState::isRunning, null);
         jobs.forEach(job -> waitJobFinish(getProject(), job.getId()));
 
@@ -216,7 +218,7 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
     @Test
     public void testRemoveSegmentFromSecondStorage() throws Exception {
         buildIncrementalLoadQuery("2012-01-01", "2012-01-02");
-        val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
+        val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         val jobs = executableManager.listExecByModelAndStatus(modelId, ExecutableState::isRunning, null);
         jobs.forEach(job -> waitJobFinish(getProject(), job.getId()));
         val tableFlowManager = SecondStorageUtil.tableFlowManager(KylinConfig.getInstanceFromEnv(), project);
@@ -384,7 +386,7 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         request.setSegmentIds(segs);
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> secondStorageEndpoint.cleanStorage(request, segs),
                 project);
-        val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val job = manager.getAllExecutables().stream().filter(ClickHouseSegmentCleanJob.class::isInstance).findFirst();
         Assert.assertTrue(job.isPresent());
         waitJobFinish(project, job.get().getId());
@@ -401,7 +403,7 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         registerWaitPoint(SecondStorageConcurrentTestUtil.WAIT_PAUSED, 10000);
         val jobId = refreshSegment(segs.get(1), false);
         await().atMost(15, TimeUnit.SECONDS).until(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             ExecutablePO jobDetail = executableManager.getAllJobs().stream().filter(job -> job.getId().equals(jobId))
                     .findFirst().orElseThrow(() -> new IllegalStateException("Job not found"));
             long finishedCount = jobDetail.getTasks().stream()
@@ -409,7 +411,7 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
             return finishedCount >= 3;
         });
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             executableManager.pauseJob(jobId);
             return null;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
@@ -419,9 +421,9 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         } catch (KylinException e) {
             Assert.assertEquals(ServerErrorCode.JOB_RESUME_FAILED.toErrorCode(), e.getErrorCode());
         }
-        //        Thread.sleep(15000);
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        await().atMost(15, TimeUnit.SECONDS).until(() -> scheduler.getContext().getRunningJobs().values().size() == 0);
+
+        waitUntilNoRunningJob(15);
+
         val tableFlowManager = SecondStorageUtil.tableFlowManager(KylinConfig.getInstanceFromEnv(), project);
         int partitionNum = tableFlowManager.get().get(modelId)
                 .orElseThrow(() -> new IllegalStateException("tableflow not found")).getTableDataList().get(0)
@@ -431,19 +433,19 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
                 SecondStorageLockUtils.containsKey(modelId, SegmentRange.TimePartitionedSegmentRange.createInfinite()));
 
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
-            val manager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val manager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             val job = manager.getJob(jobId);
             Assert.assertEquals(ExecutableState.PAUSED, job.getStatus());
             //            Assert.assertEquals("{\"completedSegments\":[],\"completedFiles\":[]}", job.getOutput().getExtra().get(LoadContext.CLICKHOUSE_LOAD_CONTEXT));
         });
 
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             executableManager.resumeJob(jobId);
             return null;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
         await().atMost(10, TimeUnit.SECONDS).until(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             return executableManager.getJob(jobId).getStatus() == ExecutableState.RUNNING;
         });
         waitJobFinish(project, jobId);
@@ -466,13 +468,14 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         await().atMost(15, TimeUnit.SECONDS).until(
                 () -> SecondStorageConcurrentTestUtil.isWaiting(SecondStorageConcurrentTestUtil.WAIT_AFTER_COMMIT));
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             executableManager.pauseJob(jobId);
             return null;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
         waitJobEnd(project, jobId);
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        await().atMost(15, TimeUnit.SECONDS).until(() -> scheduler.getContext().getRunningJobs().values().size() == 0);
+
+        waitUntilNoRunningJob(15);
+
         val tableFlowManager = SecondStorageUtil.tableFlowManager(KylinConfig.getInstanceFromEnv(), project);
         int partitionNum = tableFlowManager.get().get(modelId)
                 .orElseThrow(() -> new IllegalStateException("tableflow not found")).getTableDataList().get(0)
@@ -482,12 +485,12 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
                 SecondStorageLockUtils.containsKey(modelId, SegmentRange.TimePartitionedSegmentRange.createInfinite()));
 
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             executableManager.resumeJob(jobId);
             return null;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
         await().atMost(10, TimeUnit.SECONDS).until(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             return executableManager.getJob(jobId).getStatus() == ExecutableState.RUNNING;
         });
         waitJobFinish(project, jobId);
@@ -512,13 +515,14 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         val jobId = triggerClickHouseLoadJob(project, modelId, enableTestUser.getUser(), segs);
         await().atMost(15, TimeUnit.SECONDS).until(() -> SecondStorageConcurrentTestUtil.isWaiting(WAIT_BEFORE_COMMIT));
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             executableManager.pauseJob(jobId);
             return null;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
         waitJobEnd(project, jobId);
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(project);
-        await().atMost(15, TimeUnit.SECONDS).until(() -> scheduler.getContext().getRunningJobs().values().size() == 0);
+
+        waitUntilNoRunningJob(15);
+
         val tableFlowManager = SecondStorageUtil.tableFlowManager(KylinConfig.getInstanceFromEnv(), project);
         int partitionNum = tableFlowManager.get().get(modelId)
                 .orElseThrow(() -> new IllegalStateException("tableflow not found")).getTableDataList().get(0)
@@ -528,12 +532,12 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
                 SecondStorageLockUtils.containsKey(modelId, SegmentRange.TimePartitionedSegmentRange.createInfinite()));
 
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             executableManager.resumeJob(jobId);
             return null;
         }, project, 1, UnitOfWork.DEFAULT_EPOCH_ID);
         await().atMost(10, TimeUnit.SECONDS).until(() -> {
-            val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             return executableManager.getJob(jobId).getStatus() == ExecutableState.RUNNING;
         });
         waitJobFinish(project, jobId);
@@ -542,5 +546,11 @@ public class IncrementalWithIntPartitionTest implements JobWaiter {
         Assert.assertEquals(4, pn);
         Assert.assertEquals(48, IncrementalWithIntPartitionTest.getModelRowCount(project, modelId));
         SecondStorageUtil.checkSecondStorageData(project);
+    }
+
+    private void waitUntilNoRunningJob(int waitMs) {
+        JobContext jobContext = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
+        JdbcJobScheduler jobScheduler = jobContext.getJobScheduler();
+        await().atMost(15, TimeUnit.SECONDS).until(() -> jobScheduler.getRunningJob().size() == 0);
     }
 }

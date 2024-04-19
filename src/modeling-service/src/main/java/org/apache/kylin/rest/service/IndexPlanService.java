@@ -59,9 +59,9 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.common.SegmentUtil;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
@@ -172,26 +172,26 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         aclEvaluate.checkProjectOperationDesignPermission(project);
         try {
             val kylinConfig = KylinConfig.getInstanceFromEnv();
-            val indexPlanManager = getManager(NIndexPlanManager.class, project);
             val modelManager = NDataModelManager.getInstance(kylinConfig, request.getProject());
             IndexPlan originIndexPlan = getIndexPlan(request.getProject(), request.getModelId());
             val model = modelManager.getDataModelDesc(request.getModelId());
 
             Preconditions.checkNotNull(model);
-
+            val indexPlanManager = getManager(NIndexPlanManager.class, project);
             val indexPlan = indexPlanManager.updateIndexPlan(originIndexPlan.getUuid(), copyForWrite -> {
                 RuleBasedIndex ruleBasedIndex = convertRequestToRuleBasedIndex(request);
                 ruleBasedIndex.setLastModifiedTime(System.currentTimeMillis());
                 copyForWrite.setRuleBasedIndex(ruleBasedIndex, Sets.newHashSet(), false, true,
                         request.isRestoreDeletedIndex());
             });
+
             BuildIndexResponse response = new BuildIndexResponse();
             if (request.isLoadData()) {
                 response = semanticUpater.handleIndexPlanUpdateRule(request.getProject(), model.getUuid(),
                         originIndexPlan.getRuleBasedIndex(), indexPlan.getRuleBasedIndex(), false);
             }
             modelChangeSupporters.forEach(listener -> listener.onUpdate(project, request.getModelId()));
-            return new Pair<>(indexPlanManager.getIndexPlan(originIndexPlan.getUuid()), response);
+            return new Pair<>(indexPlan, response);
         } catch (Exception e) {
             logger.error("Update agg index failed...", e);
             throw e;
@@ -268,7 +268,6 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     public BuildIndexResponse createTableIndex(String project, String modelId, LayoutEntity newLayout,
             boolean loadData) {
         NIndexPlanManager indexPlanManager = getManager(NIndexPlanManager.class, project);
-        val jobManager = getManager(JobManager.class, project);
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(modelId);
         for (LayoutEntity cuboidLayout : indexPlan.getAllLayouts()) {
             if (cuboidLayout.equals(newLayout) && cuboidLayout.isManual()) {
@@ -311,7 +310,8 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
                     return new BuildIndexResponse(BuildIndexResponse.BuildIndexType.NO_SEGMENT);
                 }
                 getManager(SourceUsageManager.class).licenseCheckWrap(project,
-                        () -> jobManager.addIndexJob(new JobParam(indexPlan.getUuid(), BasicService.getUsername())));
+                        () -> getManager(JobManager.class, project)
+                                .addIndexJob(new JobParam(indexPlan.getUuid(), BasicService.getUsername())));
                 return new BuildIndexResponse(BuildIndexResponse.BuildIndexType.NORM_BUILD);
             }
         }
@@ -599,12 +599,11 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         Segments<NDataSegment> segments = df.getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING,
                 SegmentStatusEnum.NEW);
 
-        val executableManager = getManager(NExecutableManager.class, project);
-        List<AbstractExecutable> executables = executableManager.listExecByModelAndStatus(modelId,
-                ExecutableState::isProgressing, JobTypeEnum.INDEX_BUILD, JobTypeEnum.INC_BUILD,
-                JobTypeEnum.INDEX_REFRESH, JobTypeEnum.INDEX_MERGE);
+        val executableManager = getManager(ExecutableManager.class, project);
+        val executablesCount = executableManager.countByModelAndStatus(modelId, ExecutableState::isProgressing,
+                JobTypeEnum.INDEX_BUILD, JobTypeEnum.INC_BUILD, JobTypeEnum.INDEX_REFRESH, JobTypeEnum.INDEX_MERGE);
 
-        if (segments.isEmpty() && executables.isEmpty()) {
+        if (segments.isEmpty() && executablesCount == 0) {
             result.setShowLoadData(false);
         }
 
@@ -839,12 +838,11 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
     }
 
     public Map<String, Set<Long>> getLayoutsByRunningJobs(String project, String modelId) {
-        List<AbstractExecutable> runningJobList = NExecutableManager
-                .getInstance(KylinConfig.getInstanceFromEnv(), project) //
-                .getPartialExecutablesByStatusList(
-                        Sets.newHashSet(ExecutableState.READY, ExecutableState.RUNNING, ExecutableState.PAUSED,
-                                ExecutableState.ERROR), //
-                        path -> StringUtils.endsWith(path, modelId));
+        List<AbstractExecutable> runningJobList = ExecutableManager
+                .getInstance(KylinConfig.getInstanceFromEnv(), project).getPartialExecutablesByStatusList(
+                        Sets.newHashSet(ExecutableState.READY, ExecutableState.PENDING, ExecutableState.RUNNING,
+                                ExecutableState.PAUSED, ExecutableState.ERROR), //
+                        modelId);
 
         Map<String, Set<Long>> underConstructionLayoutsMap = new HashMap<>();
         runningJobList.stream()

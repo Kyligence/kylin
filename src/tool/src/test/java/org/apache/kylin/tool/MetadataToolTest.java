@@ -59,6 +59,7 @@ import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.ResourceTool;
 import org.apache.kylin.common.persistence.metadata.JdbcAuditLogStore;
+import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
@@ -66,7 +67,10 @@ import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.helper.MetadataToolHelper;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -83,9 +87,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.val;
 import lombok.var;
 
@@ -105,6 +106,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     @Before
     public void setup() {
         createTestMetadata();
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     @After
@@ -116,6 +118,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
             logger.warn("drop all objects error.", e);
         }
         cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     private MetadataTool tool(String path) {
@@ -139,10 +142,12 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         val archiveFolder = junitFolder.listFiles()[0];
         Assertions.assertThat(archiveFolder).exists();
 
-        Assertions.assertThat(archiveFolder.list()).isNotEmpty().containsOnly("default", "UUID", "_global");
+        val coreMetaFolder = findFile(archiveFolder.listFiles(), f -> f.getName().equals("core_meta"));
 
-        val projectFolder = findFile(archiveFolder.listFiles(), f -> f.getName().equals("default"));
-        assertProjectFolder(projectFolder, archiveFolder);
+        Assertions.assertThat(coreMetaFolder.list()).isNotEmpty().containsOnly("default", "UUID", "_global");
+
+        val projectFolder = findFile(coreMetaFolder.listFiles(), f -> f.getName().equals("default"));
+        assertProjectFolder(projectFolder, coreMetaFolder);
     }
 
     @Test
@@ -237,22 +242,26 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         val archiveFolder = junitFolder.listFiles()[0];
         Assertions.assertThat(archiveFolder).exists();
 
-        Assertions.assertThat(archiveFolder.list()).isNotEmpty().containsOnlyOnce("UUID").containsAnyOf("default",
+        val coreMetaFolder = findFile(archiveFolder.listFiles(), f -> f.getName().equals("core_meta"));
+
+        Assertions.assertThat(coreMetaFolder.list()).isNotEmpty().containsOnlyOnce("UUID").containsAnyOf("default",
                 "ssb", "tdvt");
-        Assertions.assertThat(archiveFolder.listFiles())
+        Assertions.assertThat(coreMetaFolder.listFiles())
                 .filteredOn(f -> !f.getName().equals("UUID") && !f.getName().startsWith("_"))
-                .allMatch(projectFolder -> assertProjectFolder(projectFolder, archiveFolder));
+                .allMatch(projectFolder -> assertProjectFolder(projectFolder, coreMetaFolder));
 
     }
 
     @Test
     public void testRestoreOverwriteAll() throws IOException {
         val junitFolder = temporaryFolder.getRoot();
-        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitFolder, "/");
+        val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
+        junitCoreMetaFolder.mkdir();
+        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitCoreMetaFolder, "/");
 
         //there is a project that destResourceStore contains and srcResourceStore doesn't contain
-        FileUtils.forceDelete(Paths.get(junitFolder.getAbsolutePath(), "/demo").toFile());
-        FileUtils.deleteQuietly(Paths.get(junitFolder.getAbsolutePath(), "_global", "project", "demo.json").toFile());
+        FileUtils.forceDelete(Paths.get(junitCoreMetaFolder.getAbsolutePath(), "/demo").toFile());
+        FileUtils.deleteQuietly(Paths.get(junitCoreMetaFolder.getAbsolutePath(), "_global", "project", "demo.json").toFile());
 
         //there is a project that destResourceStore doesn't contain and srcResourceStore contains
         val destResourceStore = ResourceStore.getKylinMetaStore(getTestConfig());
@@ -275,7 +284,9 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     @Test
     public void testRestoreUpdateAll() throws IOException {
         val junitFolder = temporaryFolder.getRoot();
-        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitFolder, "/");
+        val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
+        junitCoreMetaFolder.mkdir();
+        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitCoreMetaFolder, "/");
 
         val destResourceStore = ResourceStore.getKylinMetaStore(getTestConfig());
         String deletePath = "/broken_test/model_desc/3f8941de-d01c-42b8-91b5-44646390864b.json";
@@ -315,7 +326,9 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     @Test
     public void testRestoreUpdateProject() throws IOException {
         val junitFolder = temporaryFolder.getRoot();
-        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitFolder, "/");
+        val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
+        junitCoreMetaFolder.mkdir();
+        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitCoreMetaFolder, "/");
 
         val destResourceStore = ResourceStore.getKylinMetaStore(getTestConfig());
         String deletePath = "/broken_test/model_desc/f1bb4bbd-a638-442b-a276-e301fde0d7f6.json";
@@ -399,7 +412,9 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     public void testRestoreOverwriteAllWithSrcOrDestIsEmpty() throws Exception {
         val emptyFolder = temporaryFolder.newFolder();
         val restoreFolder = temporaryFolder.newFolder();
-        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), restoreFolder, "/");
+        val restoreCoreMetaFolder = new File(restoreFolder.getAbsolutePath() + "/core_meta");
+        restoreCoreMetaFolder.mkdir();
+        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), restoreCoreMetaFolder, "/");
 
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNotNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("ssb")).isNotNull();
@@ -418,11 +433,14 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testRestoreDuplicateUuidModel() throws Exception {
-        val restoreFolder = temporaryFolder.newFolder();
-        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), restoreFolder, "/");
+        val backupPath = temporaryFolder.newFolder();
+        String backFolder = "testRestoreDuplicateUuidMode_backup";
+        val backupTool = new MetadataTool(getTestConfig());
+        backupTool.execute(new String[] { "-backup", "-dir", backupPath.getAbsolutePath(), "-folder", backFolder});
 
         val tool = new MetadataTool(getTestConfig());
-        tool.execute(new String[] { "-restore", "-dir", restoreFolder.getAbsolutePath() });
+        val restorePath = backupPath.getAbsolutePath() + "/" + backFolder;
+        tool.execute(new String[] { "-restore", "-dir", restorePath });
         NDataModelManager dataModelManager = NDataModelManager.getInstance(getTestConfig(), "default");
 
         String modelId = "82fa7671-a935-45f5-8779-85703601f49a";
@@ -442,22 +460,26 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         dataModelManager.createDataModelDesc(nDataModel2, nDataModel2.getOwner());
 
         try {
-            tool.execute(new String[] { "-restore", "-dir", restoreFolder.getAbsolutePath() });
+            tool.execute(new String[] { "-restore", "-dir", restorePath });
         } catch (Exception e) {
             assertTrue(e instanceof KylinException);
+            assertTrue(e.getCause() instanceof TransactionException);
+            assertTrue(e.getCause().getCause() instanceof KylinException);
             assertEquals(
                     "KE-050041203: Please modify the model name and then restore:[project]:models: [default]:ut_inner_join_cube_partial,test_encoding",
-                    e.getCause().toString());
+                    e.getCause().getCause().toString());
         }
         long start = System.currentTimeMillis() / 1000;
         await().until(() -> start != (System.currentTimeMillis() / 1000));
         try {
-            tool.execute(new String[] { "-restore", "-project", "default", "-dir", restoreFolder.getAbsolutePath() });
+            tool.execute(new String[] { "-restore", "-project", "default", "-dir", restorePath });
         } catch (Exception e) {
             assertTrue(e instanceof KylinException);
+            assertTrue(e.getCause() instanceof TransactionException);
+            assertTrue(e.getCause().getCause() instanceof KylinException);
             assertEquals(
                     "KE-050041203: Please modify the model name and then restore:[project]:models: [default]:ut_inner_join_cube_partial,test_encoding",
-                    e.getCause().toString());
+                    e.getCause().getCause().toString());
         }
 
         Assertions.assertThat(dataModelManager.getDataModelDesc(modelId)).isNull();
@@ -465,7 +487,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         long start2 = System.currentTimeMillis() / 1000;
         await().until(() -> start2 != (System.currentTimeMillis() / 1000));
-        tool.execute(new String[] { "-restore", "-dir", restoreFolder.getAbsolutePath(), "--after-truncate" });
+        tool.execute(new String[] { "-restore", "-dir", restorePath, "--after-truncate" });
 
         Assertions.assertThat(dataModelManager.getDataModelDesc(modelId)).isNotNull();
         Assertions.assertThat(dataModelManager.getDataModelDesc(modelId2)).isNotNull();
@@ -522,7 +544,9 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         resourceStore.getMetadataStore().setAuditLogStore(new JdbcAuditLogStore(getTestConfig(), jdbcTemplate,
                 new DataSourceTransactionManager(jdbcTemplate.getDataSource()), "test_audit_log"));
         val junitFolder = temporaryFolder.getRoot();
-        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitFolder, "/");
+        val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
+        junitCoreMetaFolder.mkdir();
+        MetadataToolTestFixture.fixtureRestoreTest(getTestConfig(), junitCoreMetaFolder, "/");
 
         assertBeforeRestoreTest();
         val tool = new MetadataTool(getTestConfig());
@@ -535,11 +559,12 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         val rootPath = Stream.of(fs.listStatus(new Path(path)))
                 .max(Comparator.comparing(FileStatus::getModificationTime)).map(FileStatus::getPath)
                 .orElse(new Path(path + "/backup_0/"));
-        try (val in = fs.open(new Path(rootPath, "_image"))) {
+        try (val in = fs.open(new Path(rootPath + "/core_meta", "_image"))) {
             val image = JsonUtil.readValue(IOUtils.toByteArray(in), ImageDesc.class);
             Assert.assertEquals(resourceStore.listResourcesRecursively("/default").size() + 2,
                     image.getOffset().longValue());
         }
+        FileUtils.deleteDirectory(junitFolder.getAbsoluteFile());
     }
 
     @Test
@@ -563,7 +588,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         val rootPath = Stream.of(fs.listStatus(new Path(path)))
                 .max(Comparator.comparing(FileStatus::getModificationTime)).map(FileStatus::getPath)
                 .orElse(new Path(path + "/backup_0/"));
-        try (val in = fs.open(new Path(rootPath, "_image"))) {
+        try (val in = fs.open(new Path(rootPath + "/core_meta", "_image"))) {
             val image = JsonUtil.readValue(IOUtils.toByteArray(in), ImageDesc.class);
             Assert.assertEquals(resourceStore.listResourcesRecursively("/default").size() + 2,
                     image.getOffset().longValue());
@@ -573,12 +598,14 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     @Test
     public void testRestoreOverwriteProjectWithSrcOrDestIsEmpty() throws Exception {
         val junitFolder = temporaryFolder.getRoot();
-        ResourceTool.copy(getTestConfig(), KylinConfig.createInstanceFromUri(junitFolder.getAbsolutePath()), "/");
+        val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
+        junitCoreMetaFolder.mkdir();
+        ResourceTool.copy(getTestConfig(), KylinConfig.createInstanceFromUri(junitCoreMetaFolder.getAbsolutePath()), "/");
         val tool = new MetadataTool(getTestConfig());
 
         //there is a project metadata that destResourceStore contains and srcResourceStore doesn't contain
-        FileUtils.forceDelete(Paths.get(junitFolder.getAbsolutePath(), "demo").toFile());
-        FileUtils.deleteQuietly(Paths.get(junitFolder.getAbsolutePath(), "_global", "project", "demo.json").toFile());
+        FileUtils.forceDelete(Paths.get(junitCoreMetaFolder.getAbsolutePath(), "demo").toFile());
+        FileUtils.deleteQuietly(Paths.get(junitCoreMetaFolder.getAbsolutePath(), "_global", "project", "demo.json").toFile());
 
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNotNull();
         tool.execute(new String[] { "-restore", "-project", "demo", "-dir", junitFolder.getAbsolutePath(),
@@ -692,7 +719,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
     JdbcTemplate getJdbcTemplate() throws Exception {
         val url = StorageURL.valueOf(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MySQL,username=sa,password=");
         val props = datasourceParameters(url);
         val dataSource = BasicDataSourceFactory.createDataSource(props);
         return new JdbcTemplate(dataSource);
@@ -708,12 +735,14 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         val tool = new MetadataTool(getTestConfig());
         tool.execute(new String[] { "-backup", "-project", "newten", "-dir", test1.getAbsolutePath() });
         var archiveFolder = test1.listFiles()[0];
-        var projectFolder = findFile(archiveFolder.listFiles(), f -> f.getName().equals("newten"));
+        var coreMetaFolder = findFile(archiveFolder.listFiles(), f -> f.getName().equals("core_meta"));
+        var projectFolder = findFile(coreMetaFolder.listFiles(), f -> f.getName().equals("newten"));
         Assertions.assertThat(projectFolder.list()).contains("table_exd");
         tool.execute(
                 new String[] { "-backup", "-project", "newten", "-dir", test2.getAbsolutePath(), "-excludeTableExd" });
         archiveFolder = test2.listFiles()[0];
-        projectFolder = findFile(archiveFolder.listFiles(), f -> f.getName().equals("newten"));
+        coreMetaFolder = findFile(archiveFolder.listFiles(), f -> f.getName().equals("core_meta"));
+        projectFolder = findFile(coreMetaFolder.listFiles(), f -> f.getName().equals("newten"));
         Assertions.assertThat(projectFolder.list()).doesNotContain("table_exd");
     }
 

@@ -27,22 +27,23 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import lombok.var;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.util.ExecutorServiceUtil;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.ZipFileUtils;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.tool.constant.SensitiveConfigKeysConstant;
 import org.apache.kylin.tool.obf.KylinConfObfuscatorTest;
 import org.apache.kylin.tool.snapshot.SnapshotSourceTableStatsTool;
+import org.apache.kylin.tool.util.JobMetadataWriter;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.junit.After;
@@ -53,9 +54,10 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 
 import lombok.val;
-import org.mockito.Mockito;
+import lombok.var;
 
 public class JobDiagInfoToolTest extends NLocalFileMetadataTestCase {
 
@@ -74,6 +76,17 @@ public class JobDiagInfoToolTest extends NLocalFileMetadataTestCase {
         KylinConfObfuscatorTest.prepare();
     }
 
+    public void createTestMetadata(String... overlay) {
+        super.createTestMetadata(overlay);
+        JobMetadataWriter.writeJobMetaData(getTestConfig());
+    }
+
+    @After
+    public void tearDown() {
+        cleanupTestMetadata();
+        JobContextUtil.cleanUp();
+    }
+
     @After
     public void teardown() {
         cleanupTestMetadata();
@@ -83,8 +96,8 @@ public class JobDiagInfoToolTest extends NLocalFileMetadataTestCase {
     public void testGetJobByJobId() {
         val job = new JobDiagInfoTool().getJobByJobId("dd5a6451-0743-4b32-b84d-2ddc8052429f");
         Assert.assertEquals("newten", job.getProject());
-        Assert.assertEquals(1574130051721L, job.getCreateTime());
-        Assert.assertEquals(1574818631319L, job.getEndTime());
+        Assert.assertEquals(1574130051721L, job.getOutput().getCreateTime());
+        Assert.assertEquals(1574818631319L, job.getOutput().getEndTime());
     }
 
     @Test

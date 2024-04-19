@@ -20,12 +20,10 @@ package org.apache.kylin.job.execution;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -48,14 +46,12 @@ public class ExecutableContext {
 
     private final ConcurrentMap<String, Thread> runningJobThreads;
     private final ConcurrentMap<String, Executable> runningJobs;
-    private final Set<String> frozenJobs;
     private final ConcurrentMap<String, Long> runningJobInfos;
     private final KylinConfig kylinConfig;
 
     public ExecutableContext(ConcurrentMap<String, Executable> runningJobs, ConcurrentMap<String, Long> runningJobInfos,
             KylinConfig kylinConfig, long epochId) {
         this.runningJobThreads = Maps.newConcurrentMap();
-        this.frozenJobs = Sets.newConcurrentHashSet();
         this.runningJobs = runningJobs;
         this.runningJobInfos = runningJobInfos;
         this.kylinConfig = kylinConfig;
@@ -66,13 +62,12 @@ public class ExecutableContext {
         return kylinConfig;
     }
 
-    // Only used when the job starts scheduling
     public void addRunningJob(Executable executable) {
+        runningJobThreads.put(executable.getId(), Thread.currentThread());
         runningJobs.put(executable.getId(), executable);
         runningJobInfos.put(executable.getId(), System.currentTimeMillis());
     }
 
-    // Only used when the job is completed
     public void removeRunningJob(Executable executable) {
         runningJobThreads.remove(executable.getId());
         runningJobs.remove(executable.getId());
@@ -83,24 +78,8 @@ public class ExecutableContext {
         return runningJobThreads.get(executable.getId());
     }
 
-    public void addRunningJobThread(Executable executable) {
-        runningJobThreads.put(executable.getId(), Thread.currentThread());
-    }
-
     public Map<String, Executable> getRunningJobs() {
         return Collections.unmodifiableMap(runningJobs);
-    }
-
-    public void addFrozenJob(String jobId) {
-        frozenJobs.add(jobId);
-    }
-
-    public boolean isFrozenJob(String jobId) {
-        return frozenJobs.contains(jobId);
-    }
-
-    public void removeFrozenJob(String jobId) {
-        frozenJobs.remove(jobId);
     }
 
     public Map<String, Long> getRunningJobInfos() {

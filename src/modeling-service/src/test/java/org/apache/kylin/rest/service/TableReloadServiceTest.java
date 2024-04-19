@@ -51,8 +51,9 @@ import org.apache.kylin.guava30.shaded.common.base.Joiner;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
@@ -146,6 +147,8 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         });
         NTableMetadataManager.getInstance(getTestConfig(), PROJECT);
 
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobInfoDao(getTestConfig());
     }
 
     @After
@@ -158,6 +161,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         EventBusFactory.getInstance().unregister(modelBrokenListener);
         EventBusFactory.getInstance().restart();
         super.cleanup();
+        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -330,7 +334,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         }, false);
 
         val jobs = tableService.innerReloadTable(PROJECT, "DEFAULT.TEST_KYLIN_FACT", true, null);
-        val execManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        val execManager = ExecutableManager.getInstance(getTestConfig(), PROJECT);
         val executables = execManager.getRunningExecutables(PROJECT, MODEL_ID);
         val indexPlan = indexManager.getIndexPlan(MODEL_ID);
         Assert.assertEquals(
@@ -1153,7 +1157,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
 
     @Test
     public void testReloadTableRemoveCol() throws Exception {
-        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+            ExecutableManager executableManager = ExecutableManager.getInstance(getTestConfig(), PROJECT);
         AbstractExecutable job = new NTableSamplingJob();
         String tableIdentity = "DEFAULT.TEST_ORDER";
         job.setTargetSubject(tableIdentity);
@@ -1171,7 +1175,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
 
     @Test
     public void testReloadTableAddCol() throws Exception {
-        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        ExecutableManager executableManager = ExecutableManager.getInstance(getTestConfig(), PROJECT);
         AbstractExecutable job = new NTableSamplingJob();
         String tableIdentity = "DEFAULT.TEST_ORDER";
         job.setTargetSubject(tableIdentity);
@@ -1187,7 +1191,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
 
     @Test
     public void testReloadTableChangeColType() throws Exception {
-        NExecutableManager executableManager = NExecutableManager.getInstance(getTestConfig(), PROJECT);
+        ExecutableManager executableManager = ExecutableManager.getInstance(getTestConfig(), PROJECT);
         AbstractExecutable job = new NTableSamplingJob();
         String tableIdentity = "DEFAULT.TEST_KYLIN_FACT";
         job.setTargetSubject(tableIdentity);
@@ -1720,6 +1724,27 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
     }
 
     @Test
+    public void testReloadNoChangeAndUpdateTableExtDesc() throws Exception {
+        S3TableExtInfo tableExtInfo = prepareTableExtInfo("DEFAULT.TEST_ORDER", "endpoint", "role");
+        prepareTableExt("DEFAULT.TEST_ORDER");
+        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.use-dynamic-role-credential-in-table", "true");
+        tableService.innerReloadTable(PROJECT, tableExtInfo.getName(), true, tableExtInfo);
+        val tableManager = NTableMetadataManager.getInstance(getTestConfig(), PROJECT);
+        val table = tableManager.getTableDesc(tableExtInfo.getName());
+        TableExtDesc tableExtDesc = tableManager.getTableExtIfExists(table);
+        String endpoint = tableExtDesc.getDataSourceProps().get(TableExtDesc.S3_ENDPOINT_KEY);
+        String roleArn = tableExtDesc.getDataSourceProps().get(TableExtDesc.S3_ROLE_PROPERTY_KEY);
+        Assert.assertEquals("endpoint", endpoint);
+        Assert.assertEquals("role", roleArn);
+        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.use-dynamic-role-credential-in-table", "false");
+        tableService.innerReloadTable(PROJECT, tableExtInfo.getName(), true, null);
+        tableExtDesc = tableManager.getTableExtIfExists(table);
+        endpoint = tableExtDesc.getDataSourceProps().get(TableExtDesc.S3_ENDPOINT_KEY);
+        roleArn = tableExtDesc.getDataSourceProps().get(TableExtDesc.S3_ROLE_PROPERTY_KEY);
+        Assert.assertNull(endpoint);
+        Assert.assertNull(roleArn);
+    }
+
     public void testReloadTableWithSecondStorage() throws Exception {
         val model = "741ca86a-1f13-46da-a59f-95fb68615e3a";
         val project = "default";
@@ -1745,28 +1770,6 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
 
         Assert.assertTrue(SecondStorageUtil.isModelEnable(project, model));
         Assert.assertTrue(SecondStorageUtil.isModelEnableWithoutCheckKylinInfo(project, model));
-    }
-
-    @Test
-    public void testReloadNoChangeAndUpdateTableExtDesc() throws Exception {
-        S3TableExtInfo tableExtInfo = prepareTableExtInfo("DEFAULT.TEST_ORDER", "endpoint", "role");
-        prepareTableExt("DEFAULT.TEST_ORDER");
-        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.use-dynamic-S3-role-credential-in-table", "true");
-        tableService.innerReloadTable(PROJECT, tableExtInfo.getName(), true, tableExtInfo);
-        val tableManager = NTableMetadataManager.getInstance(getTestConfig(), PROJECT);
-        val table = tableManager.getTableDesc(tableExtInfo.getName());
-        TableExtDesc tableExtDesc = tableManager.getTableExtIfExists(table);
-        String endpoint = tableExtDesc.getDataSourceProps().get(TableExtDesc.S3_ENDPOINT_KEY);
-        String roleArn = tableExtDesc.getDataSourceProps().get(TableExtDesc.S3_ROLE_PROPERTY_KEY);
-        Assert.assertEquals("endpoint", endpoint);
-        Assert.assertEquals("role", roleArn);
-        KylinConfig.getInstanceFromEnv().setProperty("kylin.env.use-dynamic-S3-role-credential-in-table", "false");
-        tableService.innerReloadTable(PROJECT, tableExtInfo.getName(), true, null);
-        tableExtDesc = tableManager.getTableExtIfExists(table);
-        endpoint = tableExtDesc.getDataSourceProps().get(TableExtDesc.S3_ENDPOINT_KEY);
-        roleArn = tableExtDesc.getDataSourceProps().get(TableExtDesc.S3_ROLE_PROPERTY_KEY);
-        Assert.assertNull(endpoint);
-        Assert.assertNull(roleArn);
     }
 
     @Test
@@ -1807,10 +1810,11 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         Assert.assertEquals("role", roleArn);
     }
 
-    @Test(expected = Exception.class)
+    @Test
     public void testReloadAWSTableCompatibleCrossAccountNeedSample() {
         S3TableExtInfo tableExtInfo = prepareTableExtInfo("DEFAULT.TEST_ORDER", "endpoint", "role");
         prepareTableExt("DEFAULT.TEST_ORDER");
+        // #reloadAWSTableCompatibleCrossAccount needs a TableSampleService, we changed it to avoid NPE.
         tableService.reloadAWSTableCompatibleCrossAccount(PROJECT, tableExtInfo, true, 10000, true, 3, null);
     }
 

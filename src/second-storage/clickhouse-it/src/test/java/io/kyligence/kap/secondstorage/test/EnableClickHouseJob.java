@@ -24,7 +24,7 @@ import java.util.List;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.Unsafe;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.eclipse.jetty.toolchain.test.SimpleRequest;
 import org.junit.Assert;
 import org.testcontainers.containers.JdbcDatabaseContainer;
@@ -77,7 +77,7 @@ public class EnableClickHouseJob extends EnableScheduler implements JobWaiter {
     @SneakyThrows
     @Override
     protected void after() {
-        val execManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val execManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val jobs = execManager.getAllExecutables();
         jobs.forEach(job -> waitJobEnd(project, job.getId()));
         val jobInfo = secondStorageService.changeProjectSecondStorageState(project, null, false);

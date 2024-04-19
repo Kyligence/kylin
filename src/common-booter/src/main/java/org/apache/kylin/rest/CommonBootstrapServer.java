@@ -23,11 +23,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ImportResource;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @ImportResource(locations = { "applicationContext.xml", "kylinSecurity.xml" })
 @SpringBootApplication
 @EnableCaching
-@EnableFeignClients
+@EnableFeignClients(basePackages = { "io.kyligence", "org.apache.kylin" })
+@EnableScheduling
 public class CommonBootstrapServer {
 
     public static void main(String[] args) {

@@ -31,6 +31,7 @@ public class SizeConvertUtilTest {
 
     @Test
     public void testGB() {
+        Assert.assertEquals(1, SizeConvertUtil.byteStringAs(1024 * 1024 * 1024 + "b", ByteUnit.GiB));
         Assert.assertEquals(100, SizeConvertUtil.byteStringAs("100GB", ByteUnit.GiB));
         Assert.assertEquals(100 * 1024, SizeConvertUtil.byteStringAs("100GB", ByteUnit.MiB));
         Assert.assertEquals(100 * 1024 * 1024, SizeConvertUtil.byteStringAs("100GB", ByteUnit.KiB));

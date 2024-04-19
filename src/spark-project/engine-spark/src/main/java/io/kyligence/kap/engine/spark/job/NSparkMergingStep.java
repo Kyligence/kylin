@@ -18,16 +18,17 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import lombok.NoArgsConstructor;
-import lombok.val;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
-import org.apache.kylin.engine.spark.job.NSparkExecutable;
-import org.apache.kylin.engine.spark.merger.MetadataMerger;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.constant.ExecutableConstants;
+import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -36,9 +37,8 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import lombok.NoArgsConstructor;
+import lombok.val;
 
 @NoArgsConstructor
 public class NSparkMergingStep extends NSparkExecutable {
@@ -62,9 +62,10 @@ public class NSparkMergingStep extends NSparkExecutable {
         return dumpList;
     }
 
-    @Override
-    public void mergerMetadata(MetadataMerger merger) {
-        merger.merge(this);
+    public static class Mockup {
+        public static void main(String[] args) {
+            logger.info(Mockup.class + ".main() invoked, args: " + Arrays.toString(args));
+        }
     }
 
     @Override
@@ -97,11 +98,5 @@ public class NSparkMergingStep extends NSparkExecutable {
 
         return result;
 
-    }
-
-    public static class Mockup {
-        public static void main(String[] args) {
-            logger.info(Mockup.class + ".main() invoked, args: " + Arrays.toString(args));
-        }
     }
 }

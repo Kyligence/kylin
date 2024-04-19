@@ -24,12 +24,6 @@
 
 package org.apache.spark.sql.execution.columnar
 
-import java.io.{IOException, InputStream}
-import java.lang.reflect.Method
-import java.nio.ByteBuffer
-import java.time.ZoneId
-import java.util
-
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.RecordWriter
@@ -40,7 +34,7 @@ import org.apache.parquet.hadoop.api.WriteSupport
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 import org.apache.parquet.io._
 import org.apache.parquet.schema.Type
-import org.apache.parquet.{HadoopReadOptions, ParquetReadOptions}
+import org.apache.parquet.{HadoopReadOptions, ParquetReadOptions, VersionParser}
 import org.apache.spark.TaskContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -49,6 +43,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateUnsafeProjection
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, UnsafeRow}
 import org.apache.spark.sql.columnar.{CachedBatch, CachedBatchSerializer}
+import org.apache.spark.sql.execution.datasources.DataSourceUtils
 import org.apache.spark.sql.execution.datasources.parquet._
 import org.apache.spark.sql.execution.vectorized.{OffHeapColumnVector, OnHeapColumnVector, WritableColumnVector}
 import org.apache.spark.sql.internal.SQLConf
@@ -57,6 +52,11 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.vectorized.{ColumnVector, ColumnarBatch}
 import org.apache.spark.storage.StorageLevel
 
+import java.io.{IOException, InputStream}
+import java.lang.reflect.Method
+import java.nio.ByteBuffer
+import java.time.ZoneId
+import java.util
 import scala.collection.JavaConverters._
 import scala.collection.SeqLike
 import scala.collection.mutable.ArrayBuffer
@@ -141,11 +141,11 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
   }
 
   /**
-    * This method checks if the datatype passed is officially supported by parquet.
-    *
-    * Please refer to https://github.com/apache/parquet-format/blob/master/LogicalTypes.md to see
-    * the what types are supported by parquet.
-    */
+   * This method checks if the datatype passed is officially supported by parquet.
+   *
+   * Please refer to https://github.com/apache/parquet-format/blob/master/LogicalTypes.md to see
+   * the what types are supported by parquet.
+   */
   private def isTypeSupportedByParquet(dataType: DataType): Boolean = {
     dataType match {
       case CalendarIntervalType | NullType => false
@@ -288,8 +288,18 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
     protected val datetimeRebaseMode: SQLConf.LegacyBehaviorPolicy.Value = //
       LegacyBehaviorPolicy.withName(conf.getConf(SQLConf.PARQUET_REBASE_MODE_IN_WRITE))
 
+
+    protected val datetimeRebaseModeInRead: SQLConf.LegacyBehaviorPolicy.Value = //
+      LegacyBehaviorPolicy.withName(conf.getConf(SQLConf.PARQUET_REBASE_MODE_IN_READ))
+
+
     protected val int96RebaseMode: SQLConf.LegacyBehaviorPolicy.Value = //
       LegacyBehaviorPolicy.withName(conf.getConf(SQLConf.PARQUET_INT96_REBASE_MODE_IN_WRITE))
+
+    protected val int96RebaseModeInRead: SQLConf.LegacyBehaviorPolicy.Value = //
+      LegacyBehaviorPolicy.withName(conf.getConf(SQLConf.PARQUET_INT96_REBASE_MODE_IN_READ))
+
+
 
     private val sparkSchema = cacheAttributes.toStructType
     private val requestedSchema = selectedAttributes.toStructType
@@ -297,8 +307,8 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
     protected val readOptions: ParquetReadOptions = HadoopReadOptions.builder(hadoopConf).build()
 
     /**
-      * We are getting this method using reflection because its a package-private
-      */
+     * We are getting this method using reflection because its a package-private
+     */
     protected val readBatchMethod: Method = {
       val reflected = classOf[VectorizedColumnReader].getDeclaredMethod("readBatch", Integer.TYPE,
         classOf[WritableColumnVector])
@@ -323,6 +333,7 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
 
       val parquetCachedBatch = iter.next().asInstanceOf[ParquetCachedBatch]
       val inputFile = new ByteArrayInputFile(parquetCachedBatch.buffer)
+
 
       autoClose(ParquetFileReader.open(inputFile, readOptions)) { fileReader =>
         val parquetSchema = fileReader.getFooter.getFileMetaData.getSchema
@@ -387,6 +398,16 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
       private var totalCountLoadedSoFar: Long = 0
 
       private val fileReader = ParquetFileReader.open(new ByteArrayInputFile(parquetCachedBatch.buffer), readOptions)
+
+      private val footerFileMetaData = fileReader.getFooter.getFileMetaData
+      private val datetimeRebaseSpec = DataSourceUtils.datetimeRebaseSpec(
+        footerFileMetaData.getKeyValueMetaData.get,
+        datetimeRebaseModeInRead.toString)
+
+      private val int96RebaseSpec = DataSourceUtils.int96RebaseSpec(
+        footerFileMetaData.getKeyValueMetaData.get,
+        int96RebaseModeInRead.toString)
+
       // Ensure file reader was closed.
       Option(TaskContext.get()).foreach(_.addTaskCompletionListener[Unit](_ => close()))
 
@@ -506,17 +527,22 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
         if (pages == null) {
           throw new IOException(s"Expecting more rows but reached last block. Read $rowsReturned out of $totalRowCount")
         }
+
+        val versionParser = VersionParser.parse(fileReader.getFileMetaData().getCreatedBy())
+
         columnReaders = new Array[VectorizedColumnReader](columnsRequested.size)
         for (i <- 0 until columnsRequested.size) {
           if (!missingColumns(i)) {
             columnReaders(i) =
               new VectorizedColumnReader(columnsInCache.get(i),
-                typesInCache.get(i).getLogicalTypeAnnotation,
-                pages.getPageReader(columnsInCache.get(i)),
-                pages.getRowIndexes().orElse(null),
+                true,
+                pages,
                 convertTz.orNull,
-                datetimeRebaseMode.toString,
-                int96RebaseMode.toString)
+                datetimeRebaseSpec.mode.toString,
+                datetimeRebaseSpec.timeZone.toString,
+                int96RebaseSpec.mode.toString,
+                int96RebaseSpec.timeZone.toString,
+                versionParser)
           }
         }
         totalCountLoadedSoFar += pages.getRowCount
@@ -641,8 +667,8 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
   }
 
   /**
-    * Copied from Spark org.apache.spark.util.ByteBufferInputStream
-    */
+   * Copied from Spark org.apache.spark.util.ByteBufferInputStream
+   */
   private class ByteBufferInputStream(private var buffer: ByteBuffer)
     extends InputStream with Serializable {
 
@@ -684,8 +710,8 @@ class ColumnarCachedBatchSerializer extends CachedBatchSerializer {
     }
 
     /**
-      * Clean up the buffer, and potentially dispose of it using StorageUtils.dispose().
-      */
+     * Clean up the buffer, and potentially dispose of it using StorageUtils.dispose().
+     */
     private def cleanUp(): Unit = {
       if (buffer != null) {
         buffer = null

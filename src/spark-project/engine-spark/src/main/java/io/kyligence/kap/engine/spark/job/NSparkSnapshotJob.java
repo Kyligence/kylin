@@ -18,22 +18,30 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import lombok.SneakyThrows;
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.engine.spark.job.JobStepType;
-import org.apache.kylin.job.execution.DefaultExecutableOnTable;
-import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.metadata.cube.model.NBatchConstants;
-import org.apache.kylin.metadata.model.TableDesc;
-import org.sparkproject.guava.base.Preconditions;
+import static org.apache.kylin.engine.spark.stats.utils.HiveTableRefChecker.isNeedCleanUpTransactionalTableJob;
 
 import java.util.Set;
 
-import static org.apache.kylin.engine.spark.stats.utils.HiveTableRefChecker.isNeedCleanUpTransactionalTableJob;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.job.execution.DefaultExecutableOnTable;
+import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.job.execution.step.JobStepType;
+import org.apache.kylin.job.factory.JobFactory;
+import org.apache.kylin.job.factory.JobFactoryConstant;
+import org.apache.kylin.job.handler.SnapshotJobHandler;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableDesc;
+import org.sparkproject.guava.base.Preconditions;
 
+import lombok.SneakyThrows;
 public class NSparkSnapshotJob extends DefaultExecutableOnTable {
+
+    static {
+        JobFactory.register(JobFactoryConstant.SNAPSHOT_JOB_FACTORY, new SnapshotJobFactory());
+    }
     public NSparkSnapshotJob() {
         super();
     }
@@ -42,21 +50,31 @@ public class NSparkSnapshotJob extends DefaultExecutableOnTable {
         super(notSetId);
     }
 
+    @SneakyThrows
     public static NSparkSnapshotJob create(TableDesc tableDesc, String submitter, String partitionCol,
-                                           boolean incrementBuild, Set<String> partitionToBuild, boolean isRefresh, String yarnQueue, Object tag) {
+            boolean incrementBuild, Set<String> partitionToBuild, boolean isRefresh) {
         JobTypeEnum jobType = isRefresh ? JobTypeEnum.SNAPSHOT_REFRESH : JobTypeEnum.SNAPSHOT_BUILD;
-        return create(tableDesc, submitter, jobType, RandomUtil.randomUUIDStr(), partitionCol, incrementBuild,
-                partitionToBuild, yarnQueue, tag);
+        String partitionValueString = partitionToBuild == null ? null : JsonUtil.writeValueAsString(partitionToBuild);
+        return create(tableDesc, submitter, jobType, RandomUtil.randomUUIDStr(), partitionCol, String.valueOf(incrementBuild),
+                partitionValueString);
     }
 
     public static NSparkSnapshotJob create(TableDesc tableDesc, String submitter, boolean isRefresh, String yarnQueue) {
         JobTypeEnum jobType = isRefresh ? JobTypeEnum.SNAPSHOT_REFRESH : JobTypeEnum.SNAPSHOT_BUILD;
-        return create(tableDesc, submitter, jobType, RandomUtil.randomUUIDStr(), null, false, null, yarnQueue, null);
+        return create(tableDesc, submitter, jobType, RandomUtil.randomUUIDStr(), null, "false", null);
     }
 
-    @SneakyThrows
+    public static NSparkSnapshotJob create(SnapshotJobHandler.SnapshotJobBuildParam jobBuildParam) {
+        NTableMetadataManager tblMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                jobBuildParam.getProject());
+        TableDesc tableDesc = tblMgr.getTableDesc(jobBuildParam.getTable());
+        return create(tableDesc, jobBuildParam.getSubmitter(), jobBuildParam.getJobType(), jobBuildParam.getJobId(),
+                jobBuildParam.getPartitionCol(), jobBuildParam.getIncrementalBuild(),
+                jobBuildParam.getPartitionsToBuild());
+    }
+
     public static NSparkSnapshotJob create(TableDesc tableDesc, String submitter, JobTypeEnum jobType, String jobId,
-                                           String partitionCol, boolean incrementalBuild, Set<String> partitionToBuild, String yarnQueue, Object tag) {
+            String partitionCol, String incrementalBuild, String partitionToBuild) {
         Preconditions.checkArgument(submitter != null);
         NSparkSnapshotJob job = new NSparkSnapshotJob();
         String project = tableDesc.getProject();
@@ -71,14 +89,11 @@ public class NSparkSnapshotJob extends DefaultExecutableOnTable {
         job.setParam(NBatchConstants.P_JOB_ID, jobId);
         job.setParam(NBatchConstants.P_TABLE_NAME, tableDesc.getIdentity());
 
-        job.setParam(NBatchConstants.P_INCREMENTAL_BUILD, incrementalBuild + "");
+        job.setParam(NBatchConstants.P_INCREMENTAL_BUILD, incrementalBuild);
         job.setParam(NBatchConstants.P_SELECTED_PARTITION_COL, partitionCol);
         if (partitionToBuild != null) {
-            job.setParam(NBatchConstants.P_SELECTED_PARTITION_VALUE, JsonUtil.writeValueAsString(partitionToBuild));
+            job.setParam(NBatchConstants.P_SELECTED_PARTITION_VALUE, partitionToBuild);
         }
-
-        job.setSparkYarnQueueIfEnabled(project, yarnQueue);
-        job.setTag(tag);
 
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         JobStepType.BUILD_SNAPSHOT.createStep(job, config);
@@ -91,6 +106,17 @@ public class NSparkSnapshotJob extends DefaultExecutableOnTable {
 
     public NSparkSnapshotBuildingStep getSnapshotBuildingStep() {
         return getTask(NSparkSnapshotBuildingStep.class);
+    }
+
+    public static class SnapshotJobFactory extends JobFactory {
+
+        protected SnapshotJobFactory() {
+        }
+
+        @Override
+        protected NSparkSnapshotJob create(JobBuildParams jobBuildParams) {
+            return NSparkSnapshotJob.create((SnapshotJobHandler.SnapshotJobBuildParam) jobBuildParams);
+        }
     }
 
 }

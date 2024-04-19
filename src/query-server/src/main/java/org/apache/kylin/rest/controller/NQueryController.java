@@ -22,6 +22,7 @@ import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLI
 import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON;
 import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_DOWNLOAD_FILE;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_NAME;
+import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_TABLE_REFRESH_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.PERMISSION_DENIED;
 import static org.apache.kylin.common.exception.ServerErrorCode.REDIS_CLEAR_ERROR;
 
@@ -33,6 +34,7 @@ import java.text.SimpleDateFormat;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -43,6 +45,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 
@@ -87,10 +90,13 @@ import org.apache.kylin.rest.response.SQLResponse;
 import org.apache.kylin.rest.response.ServerExtInfoResponse;
 import org.apache.kylin.rest.response.ServerInfoResponse;
 import org.apache.kylin.rest.response.SyncFileSegmentsResponse;
+import org.apache.kylin.rest.response.TableRefresh;
+import org.apache.kylin.rest.response.TableRefreshAll;
 import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.QueryCacheManager;
 import org.apache.kylin.rest.service.QueryHistoryService;
 import org.apache.kylin.rest.service.QueryService;
+import org.apache.kylin.rest.service.TableService;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.util.DataRangeUtils;
 import org.slf4j.Logger;
@@ -149,6 +155,9 @@ public class NQueryController extends NBasicController {
     private AclEvaluate aclEvaluate;
 
     @Autowired
+    @Qualifier("tableService")
+    private TableService tableService;
+
     private ModelService modelService;
 
     @Override
@@ -691,6 +700,35 @@ public class NQueryController extends NBasicController {
             }
         } catch (NullPointerException e) {
             //do nothing
+        }
+    }
+
+    @ApiOperation(value = "catalogCache", tags = { "DW" })
+    @PutMapping(value = "single_catalog_cache", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
+    @ResponseBody
+    public EnvelopeResponse<TableRefresh> refreshSingleCatalogCache(@RequestBody HashMap refreshRequest) {
+        checkRefreshParam(refreshRequest);
+        TableRefresh response = tableService.refreshSingleCatalogCache(refreshRequest);
+        return new EnvelopeResponse<>(response.getCode(), response, response.getMsg());
+    }
+
+    @ApiOperation(value = "catalogCache", tags = { "DW" })
+    @PutMapping(value = "catalog_cache", produces = { HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
+    @ResponseBody
+    public EnvelopeResponse refreshCatalogCache(final HttpServletRequest refreshRequest) {
+        TableRefreshAll response = tableService.refreshAllCatalogCache(refreshRequest);
+        return new EnvelopeResponse<>(response.getCode(), response, response.getMsg());
+    }
+
+    private void checkRefreshParam(Map refreshRequest) {
+        val message = MsgPicker.getMsg();
+        Object tables = refreshRequest.get("tables");
+        if (tables == null) {
+            throw new KylinException(INVALID_TABLE_REFRESH_PARAMETER, message.getTableRefreshParamInvalid(), false);
+        } else if (refreshRequest.keySet().size() > 1) {
+            throw new KylinException(INVALID_TABLE_REFRESH_PARAMETER, message.getTableRefreshParamMore(), false);
+        } else if (!(tables instanceof List)) {
+            throw new KylinException(INVALID_TABLE_REFRESH_PARAMETER, message.getTableRefreshParamInvalid(), false);
         }
     }
 }

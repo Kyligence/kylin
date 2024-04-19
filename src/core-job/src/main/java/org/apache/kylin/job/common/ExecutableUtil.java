@@ -74,7 +74,9 @@ public abstract class ExecutableUtil {
             jobParam.getCondition().put(JobParam.ConditionConstant.MULTI_PARTITION_JOB, true);
         }
         ExecutableUtil paramUtil = implementations.get(jobParam.getJobTypeEnum());
-        paramUtil.computeLayout(jobParam);
+        if (paramUtil != null) {
+            paramUtil.computeLayout(jobParam);
+        }
         if (jobParam.isMultiPartitionJob()) {
             paramUtil.computePartitions(jobParam);
         }

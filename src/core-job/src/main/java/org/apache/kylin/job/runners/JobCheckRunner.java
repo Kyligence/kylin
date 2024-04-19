@@ -20,50 +20,45 @@ package org.apache.kylin.job.runners;
 import java.util.Map;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.job.execution.Executable;
-import org.apache.kylin.job.execution.NExecutableManager;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
+import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.job.JobContext;
+import org.apache.kylin.job.core.AbstractJobExecutable;
+import org.apache.kylin.job.dao.ExecutablePO;
+import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.scheduler.JdbcJobScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import lombok.val;
 
-public class JobCheckRunner extends AbstractDefaultSchedulerRunner {
+public class JobCheckRunner implements Runnable {
+
+    private JobContext jobContext;
 
     private static final Logger logger = LoggerFactory.getLogger(JobCheckRunner.class);
 
-    public JobCheckRunner(NDefaultScheduler nDefaultScheduler) {
-        super(nDefaultScheduler);
+    public JobCheckRunner(JobContext jobContext) {
+        this.jobContext = jobContext;
     }
 
-    private boolean checkTimeoutIfNeeded(String jobId, Long startTime) {
+    private boolean discardTimeoutJob(String jobId, String project, Long startTime) {
         Integer timeOutMinute = KylinConfig.getInstanceFromEnv().getSchedulerJobTimeOutMinute();
         if (timeOutMinute == 0) {
             return false;
         }
-        val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-        if (executableManager.getJob(jobId).getStatus().isFinalState()) {
-            return false;
-        }
-        long duration = System.currentTimeMillis() - startTime;
-        long durationMins = Math.toIntExact(duration / (60 * 1000));
-        return durationMins >= timeOutMinute;
-    }
-
-    private boolean discardTimeoutJob(String jobId, Long startTime) {
+        val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        AbstractExecutable jobExecutable = executableManager.getJob(jobId);
         try {
-            if (checkTimeoutIfNeeded(jobId, startTime)) {
-                return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                    if (checkTimeoutIfNeeded(jobId, startTime)) {
-                        logger.error("project {} job {} running timeout.", project, jobId);
-                        NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).errorJob(jobId);
-                        return true;
-                    }
-                    return false;
-                }, project, UnitOfWork.DEFAULT_MAX_RETRY, context.getEpochId(), jobId);
+            if (checkTimeoutIfNeeded(jobExecutable, startTime, timeOutMinute)) {
+                logger.error("project {} job {} running timeout.", project, jobId);
+                return JobContextUtil.withTxAndRetry(() -> {
+                    ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).errorJob(jobId);
+                    return true;
+                });
             }
+            return false;
         } catch (Exception e) {
             logger.warn("[UNEXPECTED_THINGS_HAPPENED] project " + project + " job " + jobId
                     + " should be timeout but discard failed", e);
@@ -71,20 +66,47 @@ public class JobCheckRunner extends AbstractDefaultSchedulerRunner {
         return false;
     }
 
+    private boolean checkTimeoutIfNeeded(AbstractExecutable jobExecutable, Long startTime, Integer timeOutMinute) {
+        if (jobExecutable.getStatusInMem().isFinalState()) {
+            return false;
+        }
+        long duration = System.currentTimeMillis() - startTime;
+        long durationMins = Math.toIntExact(duration / (60 * 1000));
+        return durationMins >= timeOutMinute;
+    }
+
     @Override
-    protected void doRun() {
-
-        logger.info("start check project {} job pool.", project);
-
-        val executableManager = NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-        Map<String, Executable> runningJobs = context.getRunningJobs();
-        Map<String, Long> runningJobInfos = context.getRunningJobInfos();
-        for (final String id : executableManager.getJobs()) {
-            if (runningJobs.containsKey(id)) {
-                discardTimeoutJob(id, runningJobInfos.get(id));
-                stopJobIfSQLReached(id);
+    public void run() {
+        logger.info("Start check job pool.");
+        JdbcJobScheduler jdbcJobScheduler = jobContext.getJobScheduler();
+        Map<String, Pair<AbstractJobExecutable, Long>> runningJobs = jdbcJobScheduler.getRunningJob();
+        for (Map.Entry<String, Pair<AbstractJobExecutable, Long>> entry : runningJobs.entrySet()) {
+            String jobId = entry.getKey();
+            AbstractJobExecutable jobExecutable = entry.getValue().getFirst();
+            long startTime = entry.getValue().getSecond();
+            String project = jobExecutable.getProject();
+            if (JobCheckUtil.markSuicideJob(jobId, jobContext)) {
+                logger.info("suicide job = {} on checker runner", jobId);
+                continue;
+            }
+            if (discardTimeoutJob(jobId, project, startTime)) {
+                logger.info("discardTimeoutJob job = {} on checker runner", jobId);
+                continue;
+            }
+            if (stopJobIfStorageQuotaLimitReached(jobContext, jobId, project)) {
+                logger.info("stopJobIfStorageQuotaLimitReached job = {} on checker runner", jobId);
+                continue;
             }
         }
+    }
 
+    private boolean stopJobIfStorageQuotaLimitReached(JobContext jobContext, String jobId, String project) {
+        if (!KylinConfig.getInstanceFromEnv().isStorageQuotaEnabled()) {
+            return false;
+        }
+        val executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        ExecutablePO executablePO = executableManager.getExecutablePO(jobId);
+        AbstractExecutable jobExecutable = executableManager.fromPO(executablePO);
+        return JobCheckUtil.stopJobIfStorageQuotaLimitReached(jobContext, executablePO, jobExecutable);
     }
 }

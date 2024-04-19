@@ -31,8 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.annotation.Clarification;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -56,12 +55,9 @@ import lombok.extern.slf4j.Slf4j;
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Enterprise")
 public class ITStorageCleanerTest extends NLocalWithSparkSessionTest {
 
-    private NDefaultScheduler scheduler;
-
     @Before
     public void setUp() throws Exception {
         overwriteSystemProp("kylin.job.event.poll-interval-second", "1");
-        overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "2");
         overwriteSystemProp("kylin.engine.spark.build-class-name",
                 "org.apache.kylin.engine.spark.job.MockedDFBuildJob");
         overwriteSystemProp("kylin.garbage.storage.cuboid-layout-survival-time-threshold", "0s");
@@ -72,9 +68,9 @@ public class ITStorageCleanerTest extends NLocalWithSparkSessionTest {
                 "top_n")) {
             projectMgr.forceDropProject(project);
         }
-        NDefaultScheduler.destroyInstance();
-        scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(getTestConfig()));
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
 
         val tableMgr = NTableMetadataManager.getInstance(getTestConfig(), getProject());
         val table = tableMgr.getTableDesc("DEFAULT.TEST_KYLIN_FACT");
@@ -84,8 +80,8 @@ public class ITStorageCleanerTest extends NLocalWithSparkSessionTest {
 
     @After
     public void tearDown() throws Exception {
-        NDefaultScheduler.destroyInstance();
         this.cleanupTestMetadata();
+        JobContextUtil.cleanUp();
     }
 
     @Test

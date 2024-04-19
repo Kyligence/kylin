@@ -18,24 +18,24 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
+import java.io.IOException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
-import org.apache.kylin.engine.spark.job.NSparkExecutable;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.exception.ExecuteException;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
+import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
+import io.kyligence.kap.secondstorage.SecondStorageUtil;
 public class NSparkCleanupAfterMergeStep extends NSparkExecutable {
 
     private static final Logger logger = LoggerFactory.getLogger(NSparkCleanupAfterMergeStep.class);
@@ -49,7 +49,7 @@ public class NSparkCleanupAfterMergeStep extends NSparkExecutable {
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    protected ExecuteResult doWork(JobContext context) throws ExecuteException {
 
         String name = getParam(NBatchConstants.P_DATAFLOW_ID);
         String[] segmentIds = StringUtils.split(getParam(NBatchConstants.P_SEGMENT_IDS), ",");

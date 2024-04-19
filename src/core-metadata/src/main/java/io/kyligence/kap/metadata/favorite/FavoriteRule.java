@@ -23,17 +23,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.annotation.Clarification;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.util.RandomUtil;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.metadata.MetadataConstants;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -45,7 +42,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @EqualsAndHashCode
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Enterprise")
-public class FavoriteRule extends RootPersistentEntity {
+public class FavoriteRule {
 
     public static final String FREQUENCY_RULE_NAME = "frequency";
     public static final String COUNT_RULE_NAME = "count";
@@ -65,21 +62,20 @@ public class FavoriteRule extends RootPersistentEntity {
             FavoriteRule.SUBMITTER_GROUP_RULE_NAME, FavoriteRule.REC_SELECT_RULE_NAME,
             FavoriteRule.EXCLUDED_TABLES_RULE, MIN_HIT_COUNT, EFFECTIVE_DAYS, UPDATE_FREQUENCY);
 
+    private int id;
+    private String project;
+    private List<AbstractCondition> conds = Lists.newArrayList();
+    private String name;
+    private boolean enabled;
+    private long updateTime;
+    private long createTime;
+    private long mvcc;
+
     public FavoriteRule(List<AbstractCondition> conds, String name, boolean isEnabled) {
         this.conds = conds;
         this.name = name;
         this.enabled = isEnabled;
     }
-
-    @JsonProperty("conds")
-    private List<AbstractCondition> conds = Lists.newArrayList();
-    @JsonProperty("name")
-    private String name;
-    @JsonProperty("enabled")
-    private boolean enabled;
-
-    @JsonIgnore
-    private String project;
 
     public static List<FavoriteRule> getAllDefaultRule() {
         return FAVORITE_RULE_NAMES.stream().map(ruleName -> getDefaultRuleIfNull(null, ruleName))
@@ -130,16 +126,11 @@ public class FavoriteRule extends RootPersistentEntity {
             return null;
         }
     }
-    
-    @Override
-    public String getResourcePath() {
-        return "/" + project + ResourceStore.QUERY_FILTER_RULE_RESOURCE_ROOT + "/" + resourceName() + MetadataConstants.FILE_SURFIX;
-    }
 
-    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+    @JsonSubTypes({ @JsonSubTypes.Type(value = Condition.class), @JsonSubTypes.Type(value = SQLCondition.class) })
     @NoArgsConstructor
     public abstract static class AbstractCondition implements Serializable {
-
     }
 
     @Getter

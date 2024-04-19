@@ -20,6 +20,7 @@ package org.apache.kylin.job.execution;
 
 import java.util.List;
 
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.exception.ExecuteException;
 
 public interface DagExecutable extends Executable {
@@ -30,5 +31,5 @@ public interface DagExecutable extends Executable {
 
     <T extends AbstractExecutable> T getTask(Class<T> clz);
 
-    void dagSchedule(List<Executable> executables, ExecutableContext context) throws ExecuteException;
+    void dagSchedule(List<Executable> executables, JobContext context) throws ExecuteException;
 }

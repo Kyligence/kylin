@@ -18,6 +18,7 @@
 
 package org.apache.kylin.common.asyncprofiler;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -74,5 +75,14 @@ public class AsyncArchUtil {
 
     private static void addProcessors(ArchType archType, final String... keys) {
         Stream.of(keys).forEach(key -> ARCH_TO_PROCESSOR.put(key, archType));
+    }
+
+    public static boolean isMuslLibc() {
+        File ld_musl_x86_64_file = new File("/lib/ld-musl-x86_64.so.1");
+        File ld_musl_aarch64_file = new File("/lib/ld-musl-aarch64.so.1");
+        if(ld_musl_x86_64_file.exists() || ld_musl_aarch64_file.exists()){
+            return true;
+        }
+        return false;
     }
 }

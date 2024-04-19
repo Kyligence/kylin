@@ -24,12 +24,12 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.kylin.common.util.CliCommandExecutor;
-import org.apache.kylin.common.util.ShellException;
-import org.apache.kylin.job.execution.NExecutableManager;
 import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.ProcessUtils;
+import org.apache.kylin.common.util.ShellException;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,7 +55,7 @@ public class ProcessStatusListenerTest extends NLocalFileMetadataTestCase {
     @Ignore
     public void testKillProcess() {
         EventBusFactory.getInstance().register(new ProcessStatusListener(), true);
-        val executableManager = NExecutableManager.getInstance(getTestConfig(), "default");
+        val executableManager = ExecutableManager.getInstance(getTestConfig(), "default");
         final String jobId = "job000000001";
         final String execCmd = "nohup sleep 30 & sleep 30";
 

@@ -23,12 +23,13 @@ import java.util.Map;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.logging.SetLogCategory;
 import org.apache.kylin.common.util.SetThreadName;
+import org.apache.kylin.job.JobContext;
 
 import lombok.val;
 
 public class ExecutableThread extends Thread {
     private Map<String, Executable> dagExecutablesMap;
-    private ExecutableContext context;
+    private JobContext context;
     private DefaultExecutable dagExecutable;
     private Executable executable;
 
@@ -36,7 +37,7 @@ public class ExecutableThread extends Thread {
     }
 
     public ExecutableThread(DefaultExecutable dagExecutable, Map<String, Executable> dagExecutablesMap,
-            ExecutableContext context, Executable executable) {
+                            JobContext context, Executable executable) {
         this.dagExecutable = dagExecutable;
         this.dagExecutablesMap = dagExecutablesMap;
         this.context = context;
@@ -49,12 +50,11 @@ public class ExecutableThread extends Thread {
         val jobIdSimple = dagExecutable.getId().split("-")[0];
         val project = dagExecutable.getProject();
         try (SetThreadName ignored = new SetThreadName("JobWorker(project:%s,jobid:%s)", project, jobIdSimple);
-                SetLogCategory ignore = new SetLogCategory(LogConstant.SCHEDULE_CATEGORY)) {
-            context.addRunningJob(executable);
-            context.addRunningJobThread(executable);
+             SetLogCategory ignore = new SetLogCategory(LogConstant.SCHEDULE_CATEGORY)) {
+            // context.addRunningJob(executable);
             dagExecutable.executeDagExecutable(dagExecutablesMap, executable, context);
         } finally {
-            context.removeRunningJob(executable);
+            // context.removeRunningJob(executable);
         }
     }
 }

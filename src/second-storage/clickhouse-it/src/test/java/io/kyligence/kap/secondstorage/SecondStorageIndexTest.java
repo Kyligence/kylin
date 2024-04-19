@@ -38,13 +38,14 @@ import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.ExecutableState;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.service.JobInfoService;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -214,6 +215,9 @@ public class SecondStorageIndexTest implements JobWaiter {
     @Mock
     private final OpenSecondStorageEndpoint openSecondStorageEndpoint = Mockito.spy(new OpenSecondStorageEndpoint());
 
+    @Mock
+    private final JobInfoService jobInfoService = Mockito.spy(new JobInfoService());
+
     private EmbeddedHttpServer _httpServer = null;
     protected IndexDataConstructor indexDataConstructor;
     private final SparkSession ss = sharedSpark.getSpark();
@@ -357,9 +361,9 @@ public class SecondStorageIndexTest implements JobWaiter {
 
         secondStorageService.cleanModel(getProject(), modelId);
         waitAllJoEnd();
-        getNExecutableManager().resumeJob(jobId);
+        getExecutableManager().resumeJob(jobId);
         waitJobEnd(getProject(), jobId);
-        assertEquals(ExecutableState.SUCCEED, getNExecutableManager().getJob(jobId).getStatus());
+        assertEquals(ExecutableState.SUCCEED, getExecutableManager().getJob(jobId).getStatus());
 
         checkEmpty(modelId);
     }
@@ -398,10 +402,10 @@ public class SecondStorageIndexTest implements JobWaiter {
         assertEquals(1, tableEntity.getSecondaryIndexColumns().size());
         assertEquals(0, tableEntity.getSecondaryIndexColumns().stream().findFirst().get().intValue());
 
-        long jobCnt = getNExecutableManager().getAllExecutables().stream()
+        long jobCnt = getExecutableManager().getAllExecutables().stream()
                 .filter(job -> job instanceof ClickHouseRefreshSecondaryIndexJob).count();
         updatePrimaryIndexAndSecondaryIndex(modelName, null, Sets.newHashSet("TEST_KYLIN_FACT.LEAF_CATEG_ID"));
-        assertEquals(jobCnt, getNExecutableManager().getAllExecutables().stream()
+        assertEquals(jobCnt, getExecutableManager().getAllExecutables().stream()
                 .filter(job -> job instanceof ClickHouseRefreshSecondaryIndexJob).count());
 
         tableEntity = getTablePlan(modelId).getTableMetas().get(0);
@@ -457,13 +461,13 @@ public class SecondStorageIndexTest implements JobWaiter {
         val primaryIndexList = Lists.<String> newArrayList();
         assertThrows(TransactionException.class,
                 () -> updatePrimaryIndexAndSecondaryIndex(modelName, primaryIndexList, null));
-        long jobCnt = getNExecutableManager().getAllExecutables().stream()
+        long jobCnt = getExecutableManager().getAllExecutables().stream()
                 .filter(job -> job instanceof ClickHouseRefreshSecondaryIndexJob).count();
         String jobId = updatePrimaryIndexAndSecondaryIndex(modelName, null, Sets.newHashSet());
         checkJobOperation(jobId);
         waitAllJoEnd();
         jobCnt++;
-        assertEquals(jobCnt, getNExecutableManager().getAllExecutables().stream()
+        assertEquals(jobCnt, getExecutableManager().getAllExecutables().stream()
                 .filter(job -> job instanceof ClickHouseRefreshSecondaryIndexJob).count());
 
         // test range lock
@@ -481,7 +485,7 @@ public class SecondStorageIndexTest implements JobWaiter {
         updatePrimaryIndexAndSecondaryIndex(modelName, null, Sets.newHashSet("TEST_KYLIN_FACT.TRANS_ID"));
         waitAllJoEnd();
         jobCnt++;
-        assertEquals(jobCnt, getNExecutableManager().getAllExecutables().stream()
+        assertEquals(jobCnt, getExecutableManager().getAllExecutables().stream()
                 .filter(job -> job instanceof ClickHouseRefreshSecondaryIndexJob).count());
         tableData = getTableFlow(modelId).getTableDataList().get(0);
         partition = tableData.getPartitions().get(0);
@@ -521,7 +525,7 @@ public class SecondStorageIndexTest implements JobWaiter {
         });
 
         updatePrimaryIndexAndSecondaryIndex(modelName, Lists.newArrayList(), Sets.newHashSet());
-        assertEquals(jobCnt, NExecutableManager.getInstance(getConfig(), getProject()).getAllExecutables().stream()
+        assertEquals(jobCnt, ExecutableManager.getInstance(getConfig(), getProject()).getAllExecutables().stream()
                 .filter(job -> job instanceof ClickHouseRefreshSecondaryIndexJob).count());
         checkEmpty(modelId);
 
@@ -791,8 +795,8 @@ public class SecondStorageIndexTest implements JobWaiter {
         return NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
     }
 
-    private NExecutableManager getNExecutableManager() {
-        return NExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
+    private ExecutableManager getExecutableManager() {
+        return ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
     }
 
     private NDataflow getDataFlow(String modelId) {
@@ -812,7 +816,7 @@ public class SecondStorageIndexTest implements JobWaiter {
     }
 
     private void waitAllJoEnd() {
-        getNExecutableManager().getAllExecutables().forEach(exec -> waitJobEnd(getProject(), exec.getId()));
+        getExecutableManager().getAllExecutables().forEach(exec -> waitJobEnd(getProject(), exec.getId()));
     }
 
     private TablePlan getTablePlan(String modelId) {

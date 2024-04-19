@@ -28,7 +28,7 @@ import org.apache.kylin.common.persistence.transaction.EventListenerRegistry;
 import org.apache.kylin.rest.service.CommonQueryCacheSupporter;
 
 /**
- * Lister that monitors the table schema chagnes via KE metadata changes on path /{procjet}/table/{table}.json
+ * Lister that monitors the table schema changes via KE metadata changes on path /{procjet}/table/{table}.json
  * On table schema changes, the listener will
  *    1. invalidate all table schema cache under the same project
  */

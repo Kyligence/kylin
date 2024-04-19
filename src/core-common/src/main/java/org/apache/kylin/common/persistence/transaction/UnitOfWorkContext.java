@@ -67,6 +67,10 @@ public class UnitOfWorkContext {
         onUpdatedTasks.add(task);
     }
 
+    KylinConfig getOriginConfig() {
+        return localConfig.getOriginConfig();
+    }
+
     public void doBeforeUpdate(UnitTask task) {
         onStartUpdateTasks.add(task);
     }

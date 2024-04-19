@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -79,8 +80,11 @@ public class JdbcAuditLogStore implements AuditLogStore {
     static final String AUDIT_LOG_TABLE_OPERATOR = "operator";
     static final String AUDIT_LOG_TABLE_INSTANCE = "instance";
     static final String CREATE_TABLE = "create.auditlog.store.table";
-    static final String META_KEY_META_MVCC_INDEX = "%s_meta_key_meta_mvcc_index";
-    static final String META_KEY_META_MVCC_INDEX_KEY = "create.auditlog.store.tableindex.meta_key_meta_mvcc_index";
+    static final String META_KEY_META_MVCC_INDEX = "meta_key_meta_mvcc_index";
+    static final String META_TS_INDEX = "meta_ts_index";
+    static final String[] AUDIT_LOG_INDEX_NAMES = {META_KEY_META_MVCC_INDEX, META_TS_INDEX};
+
+    static final String META_INDEX_KEY_PREFIX = "create.auditlog.store.tableindex.";
 
     static final String INSERT_SQL = "insert into %s ("
             + Joiner.on(",").join(AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS,
@@ -275,7 +279,7 @@ public class JdbcAuditLogStore implements AuditLogStore {
 
     @Override
     public void restore(long currentId) {
-        if (config.isJobNode() && !config.isUTEnv()) {
+        if ((config.isJobNode() || config.isMetadataNode()) && !config.isUTEnv()) {
             log.info("current maxId is {}", currentId);
             replayWorker.startSchedule(currentId, false);
             return;
@@ -374,22 +378,24 @@ public class JdbcAuditLogStore implements AuditLogStore {
     }
 
     void createIndexIfNotExist() {
-        try {
-            String indexName = String.format(Locale.ROOT, META_KEY_META_MVCC_INDEX, table);
-            if (isIndexExists(jdbcTemplate.getDataSource().getConnection(), table, indexName)) {
-                return;
-            }
-            Properties properties = loadMedataProperties();
-            var sql = properties.getProperty(META_KEY_META_MVCC_INDEX_KEY);
+        Arrays.stream(AUDIT_LOG_INDEX_NAMES).forEach(index -> {
+            try {
+                String indexName = String.format(Locale.ROOT, "%s_" + index, table);
+                if (isIndexExists(jdbcTemplate.getDataSource().getConnection(), table, indexName)) {
+                    return;
+                }
+                Properties properties = loadMedataProperties();
+                var sql = properties.getProperty(META_INDEX_KEY_PREFIX + index);
 
-            if (Strings.isNullOrEmpty(sql)) {
-                return;
+                if (Strings.isNullOrEmpty(sql)) {
+                    return;
+                }
+                jdbcTemplate.execute(String.format(Locale.ROOT, sql, indexName, table));
+                log.info("Succeed to create table {} index: {}", table, indexName);
+            } catch (Exception e) {
+                log.warn("Failed create index on table {}", table, e);
             }
-            jdbcTemplate.execute(String.format(Locale.ROOT, sql, indexName, table));
-            log.info("Succeed to create table {} index: {}", table, indexName);
-        } catch (Exception e) {
-            log.warn("Failed create index on table {}", table, e);
-        }
+        });
     }
 
     void createIfNotExist() throws Exception {

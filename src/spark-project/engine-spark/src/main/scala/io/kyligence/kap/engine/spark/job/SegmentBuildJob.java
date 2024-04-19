@@ -18,14 +18,14 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import static org.apache.kylin.engine.spark.job.StageType.BUILD_DICT;
-import static org.apache.kylin.engine.spark.job.StageType.BUILD_LAYER;
-import static org.apache.kylin.engine.spark.job.StageType.GATHER_FLAT_TABLE_STATS;
-import static org.apache.kylin.engine.spark.job.StageType.GENERATE_FLAT_TABLE;
-import static org.apache.kylin.engine.spark.job.StageType.MATERIALIZED_FACT_TABLE;
-import static org.apache.kylin.engine.spark.job.StageType.REFRESH_COLUMN_BYTES;
-import static org.apache.kylin.engine.spark.job.StageType.REFRESH_SNAPSHOTS;
-import static org.apache.kylin.engine.spark.job.StageType.WAITE_FOR_RESOURCE;
+import static org.apache.kylin.job.execution.stage.StageType.BUILD_DICT;
+import static org.apache.kylin.job.execution.stage.StageType.BUILD_LAYER;
+import static org.apache.kylin.job.execution.stage.StageType.GATHER_FLAT_TABLE_STATS;
+import static org.apache.kylin.job.execution.stage.StageType.GENERATE_FLAT_TABLE;
+import static org.apache.kylin.job.execution.stage.StageType.MATERIALIZED_FACT_TABLE;
+import static org.apache.kylin.job.execution.stage.StageType.REFRESH_COLUMN_BYTES;
+import static org.apache.kylin.job.execution.stage.StageType.REFRESH_SNAPSHOTS;
+import static org.apache.kylin.job.execution.stage.StageType.WAITE_FOR_RESOURCE;
 
 import java.io.IOException;
 import java.util.List;

@@ -51,7 +51,7 @@ public class RDBMSQueryHistoryDaoTest extends NLocalFileMetadataTestCase {
     public void setup() throws Exception {
         createTestMetadata();
         getTestConfig().setMetadataUrl(
-                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1,username=sa,password=");
+                "test@jdbc,driverClassName=org.h2.Driver,url=jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MYSQL,username=sa,password=");
         queryHistoryDAO = RDBMSQueryHistoryDAO.getInstance();
     }
 

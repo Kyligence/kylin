@@ -50,6 +50,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.constant.ObsConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
@@ -57,11 +58,12 @@ import org.apache.kylin.common.persistence.Serializer;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.CliCommandExecutor;
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.common.util.S3AUtil;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.constant.JobStatusEnum;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.acl.AclTCR;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
@@ -122,12 +124,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class TableServiceTest extends CSVSourceTestCase {
-
+    public static final String S3_ROLE_ARN_KEY_FORMAT = "fs.s3a.bucket.%s.assumed.role.arn";
+    public static final String S3_ENDPOINT_KEY_FORMAT = "fs.s3a.bucket.%s.endpoint";
     @InjectMocks
     private final TableService tableService = Mockito.spy(new TableService());
-
-    @InjectMocks
-    private final JobSupporter jobService = Mockito.spy(JobSupporter.class);
 
     @Mock
     private final ModelService modelService = Mockito.spy(ModelService.class);
@@ -162,13 +162,15 @@ public class TableServiceTest extends CSVSourceTestCase {
     @InjectMocks
     private FusionModelService fusionModelService = Mockito.spy(new FusionModelService());
 
+    @InjectMocks
+    private JobSupporter jobInfoService = Mockito.spy(JobSupporter.class);
+
     private final StreamingJobListener eventListener = new StreamingJobListener();
 
     @Before
     public void setup() {
         super.setup();
         overwriteSystemProp("HADOOP_USER_NAME", "root");
-
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", Mockito.spy(AclUtil.class));
         ReflectionTestUtils.setField(modelService, "aclEvaluate", aclEvaluate);
         ReflectionTestUtils.setField(tableService, "aclEvaluate", aclEvaluate);
@@ -178,12 +180,12 @@ public class TableServiceTest extends CSVSourceTestCase {
         ReflectionTestUtils.setField(tableService, "kafkaService", kafkaServiceMock);
         ReflectionTestUtils.setField(fusionModelService, "modelService", modelService);
         ReflectionTestUtils.setField(tableService, "fusionModelService", fusionModelService);
-        ReflectionTestUtils.setField(tableService, "jobService", jobService);
         ReflectionTestUtils.setField(userAclService, "userService", userService);
         ReflectionTestUtils.setField(accessService, "userAclService", userAclService);
         ReflectionTestUtils.setField(accessService, "userService", userService);
         ReflectionTestUtils.setField(accessService, "aclService", aclService);
         ReflectionTestUtils.setField(tableService, "accessService", accessService);
+        ReflectionTestUtils.setField(tableService, "jobInfoService", jobInfoService);
         NProjectManager projectManager = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
         ProjectInstance projectInstance = projectManager.getProject("default");
         LinkedHashMap<String, String> overrideKylinProps = projectInstance.getOverrideKylinProps();
@@ -200,12 +202,24 @@ public class TableServiceTest extends CSVSourceTestCase {
             //
         }
         EventBusFactory.getInstance().register(eventListener, true);
+
+        JobContextUtil.cleanUp();
+        JobContext jobContext = JobContextUtil.getJobContext(getTestConfig());
+        try {
+            // need not start job scheduler
+            jobContext.destroy();
+        } catch (Exception e) {
+            log.error("Destroy jobContext failed.");
+            throw new RuntimeException("Destroy jobContext failed.", e);
+        }
     }
 
     @After
     public void tearDown() {
         EventBusFactory.getInstance().unregister(eventListener);
         cleanupTestMetadata();
+        FileUtils.deleteQuietly(new File("metastore_db"));
+        JobContextUtil.cleanUp();
         FileUtils.deleteQuietly(new File("../modeling-service/metastore_db"));
     }
 
@@ -510,10 +524,10 @@ public class TableServiceTest extends CSVSourceTestCase {
 
     @Test
     public void testLoadTableToProjectWithS3Role() throws IOException {
-        getTestConfig().setProperty("kylin.env.use-dynamic-S3-role-credential-in-table", "true");
-        assert !SparderEnv.getSparkSession().conf().contains(String.format(S3AUtil.ROLE_ARN_KEY_FORMAT, "testbucket"));
-        List<TableDesc> tables = tableService
-                .getTableDesc("default", true, "TEST_COUNTRY", "DEFAULT", true, Collections.emptyList(), 10).getFirst();
+        getTestConfig().setProperty("kylin.env.use-dynamic-role-credential-in-table", "true");
+        assert !SparderEnv.getSparkSession().conf().contains(String.format(S3_ROLE_ARN_KEY_FORMAT, "testbucket"));
+        List<TableDesc> tables = tableService.getTableDesc("default", true, "TEST_COUNTRY", "DEFAULT", true,
+                Collections.emptyList(), 10).getFirst();
         TableDesc nTableDesc = new TableDesc(tables.get(0));
         TableExtDesc tableExt = new TableExtDesc();
         tableExt.setIdentity("DEFAULT.TEST_COUNTRY");
@@ -522,29 +536,69 @@ public class TableServiceTest extends CSVSourceTestCase {
         tableExtDesc.addDataSourceProp(TableExtDesc.LOCATION_PROPERTY_KEY, "s3://testbucket/path");
         tableExtDesc.addDataSourceProp(TableExtDesc.S3_ENDPOINT_KEY, "us-west-2.amazonaws.com");
         String[] result = tableService.loadTableToProject(nTableDesc, tableExtDesc, "default");
-        assert SparderEnv.getSparkSession().conf().get(String.format(S3AUtil.ROLE_ARN_KEY_FORMAT, "testbucket"))
+        assert SparderEnv.getSparkSession().conf().get(String.format(S3_ROLE_ARN_KEY_FORMAT, "testbucket"))
                 .equals("testRole");
-        assert SparderEnv.getSparkSession().conf().get(String.format(S3AUtil.S3_ENDPOINT_KEY_FORMAT, "testbucket"))
+        assert SparderEnv.getSparkSession().conf().get(String.format(S3_ENDPOINT_KEY_FORMAT, "testbucket"))
                 .equals("us-west-2.amazonaws.com");
         Assert.assertEquals(1, result.length);
     }
 
     @Test
     public void testAddAndBroadcastSparkSession() {
-        getTestConfig().setProperty("kylin.env.use-dynamic-S3-role-credential-in-table", "true");
+        getTestConfig().setProperty("kylin.env.use-dynamic-role-credential-in-table", "true");
         tableService.addAndBroadcastSparkSession(null);
-        TableExtDesc.S3RoleCredentialInfo roleCredentialInfo;
-        roleCredentialInfo = new TableExtDesc.S3RoleCredentialInfo("testbucket2", "", "");
+        TableExtDesc.RoleCredentialInfo roleCredentialInfo;
+        String type = ObsConfig.S3.getType();
+        roleCredentialInfo = new TableExtDesc.RoleCredentialInfo("testbucket2", "", "", type, "");
         tableService.addAndBroadcastSparkSession(roleCredentialInfo);
         assert !SparderEnv.getSparkSession().conf().contains("fs.s3a.bucket2.testbucket.aws.credentials.provider");
-        roleCredentialInfo = new TableExtDesc.S3RoleCredentialInfo("testbucket2", "testRole", "");
+        roleCredentialInfo = new TableExtDesc.RoleCredentialInfo("testbucket2", "testRole", "", type, "");
         tableService.addAndBroadcastSparkSession(roleCredentialInfo);
-        assert SparderEnv.getSparkSession().conf().get(String.format(S3AUtil.ROLE_ARN_KEY_FORMAT, "testbucket2"))
+        assert SparderEnv.getSparkSession().conf().get(String.format(S3_ROLE_ARN_KEY_FORMAT, "testbucket2"))
                 .equals("testRole");
+
+        getTestConfig().setProperty("kylin.env.use-dynamic-role-credential-in-table", "false");
+        getTestConfig().setProperty("kylin.env.use-dynamic-S3-role-credential-in-table", "true");
+        roleCredentialInfo = new TableExtDesc.RoleCredentialInfo("testbucket2", "testRole", "", type, "");
+        tableService.addAndBroadcastSparkSession(roleCredentialInfo);
+        assert SparderEnv.getSparkSession().conf().get(String.format(S3_ROLE_ARN_KEY_FORMAT, "testbucket2"))
+                       .equals("testRole");
+
         getTestConfig().setProperty("kylin.env.use-dynamic-S3-role-credential-in-table", "false");
-        roleCredentialInfo = new TableExtDesc.S3RoleCredentialInfo("testbucket1", "testRole", "");
+        roleCredentialInfo = new TableExtDesc.RoleCredentialInfo("testbucket1", "testRole", "", type, "");
         tableService.addAndBroadcastSparkSession(roleCredentialInfo);
         assert !SparderEnv.getSparkSession().conf().contains("fs.s3a.bucket.testbucket1.aws.credentials.provider");
+
+        type = ObsConfig.OSS.getType();
+        roleCredentialInfo = new TableExtDesc.RoleCredentialInfo("testbucket2", "", "", type, "");
+        tableService.addAndBroadcastSparkSession(roleCredentialInfo);
+        assert !SparderEnv.getSparkSession().conf().contains("fs.oss.bucket2.testbucket.credentials.provider");
+
+        getTestConfig().setProperty("kylin.env.use-dynamic-role-credential-in-table", "true");
+        roleCredentialInfo = new TableExtDesc.RoleCredentialInfo("testbucket2",
+                "acs:ram::1111111:role/readonly,acs:ram::1111111:role/readwrite",
+                "oss-cn-shanghai-internal.aliyuncs.com", type, "cn-shanghai");
+        tableService.addAndBroadcastSparkSession(roleCredentialInfo);
+        // fs.oss.bucket.testbucket2.credentials.provider
+        assert SparderEnv.getSparkSession().conf().contains(String.format(ObsConfig.OSS.getAssumedRoleCredentialProviderKey(), "testbucket2"));
+        assert SparderEnv.getSparkSession().conf().contains(String.format(ObsConfig.OSS.getCredentialProviderKey(), "testbucket2"));
+        assert SparderEnv.getSparkSession().conf().contains(String.format(ObsConfig.OSS.getEndpointKey(), "testbucket2"));
+        assert SparderEnv.getSparkSession().conf().contains(String.format(ObsConfig.OSS.getRegionKey(), "testbucket2"));
+        assert SparderEnv.getSparkSession().conf().contains(String.format(ObsConfig.OSS.getRoleArnKey(), "testbucket2"));
+        assert SparderEnv.getSparkSession().conf().get("fs.oss.bucket.testbucket2.credentials.provider")
+                        .equals(ObsConfig.OSS.getCredentialProviderValue());
+        assert SparderEnv.getSparkSession().conf().get("fs.oss.bucket.testbucket2.assumed.role.credentials.provider")
+                        .equals(ObsConfig.OSS.getAssumedRoleCredentialProviderValue());
+        roleCredentialInfo = new TableExtDesc.RoleCredentialInfo("testbucket2", "testRole", "", type, "");
+        tableService.addAndBroadcastSparkSession(roleCredentialInfo);
+        assert SparderEnv.getSparkSession().conf().get(String.format(ObsConfig.OSS.getRoleArnKey(), "testbucket2"))
+                       .equals("testRole");
+
+        getTestConfig().setProperty("kylin.env.use-dynamic-role-credential-in-table", "false");
+        roleCredentialInfo = new TableExtDesc.RoleCredentialInfo("testbucket3", "testRole", "", type, "");
+        tableService.addAndBroadcastSparkSession(roleCredentialInfo);
+        assert !SparderEnv.getSparkSession().conf().contains("fs.oss.bucket.testbucket3.credentials.provider");
+
     }
 
     @Test

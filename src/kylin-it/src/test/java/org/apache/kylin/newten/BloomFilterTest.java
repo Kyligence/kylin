@@ -41,8 +41,7 @@ import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.engine.spark.filter.BloomFilterSkipCollector;
 import org.apache.kylin.engine.spark.filter.ParquetBloomFilter;
 import org.apache.kylin.engine.spark.filter.QueryFiltersCollector;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.junit.TimeZoneTestRunner;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -93,18 +92,17 @@ public class BloomFilterTest extends NLocalWithSparkSessionTest implements Adapt
         overwriteSystemProp("kylin.bloom.build.enabled", "true");
         overwriteSystemProp("kylin.query.filter.collect-interval", "10");
         this.createTestMetadata("src/test/resources/ut_meta/bloomfilter");
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
+
         QueryFiltersCollector.initScheduler();
         dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
+
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     @After
     public void after() throws Exception {
-        NDefaultScheduler.destroyInstance();
+        JobContextUtil.cleanUp();
         QueryFiltersCollector.destoryScheduler();
         cleanupTestMetadata();
     }

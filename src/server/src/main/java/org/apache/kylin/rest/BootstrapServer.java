@@ -18,6 +18,8 @@
 
 package org.apache.kylin.rest;
 
+import java.time.Duration;
+
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.http11.Http11NioProtocol;
 import org.apache.curator.x.discovery.ServiceInstance;
@@ -25,7 +27,9 @@ import org.apache.curator.x.discovery.details.InstanceSerializer;
 import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.EncryptUtil;
-import io.kyligence.kap.metadata.epoch.EpochManager;
+import org.apache.kylin.guava30.shaded.common.base.Charsets;
+import org.apache.kylin.guava30.shaded.common.hash.Hashing;
+import org.mybatis.spring.annotation.MapperScan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -34,8 +38,12 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuitBreakerFactory;
+import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigBuilder;
+import org.springframework.cloud.client.circuitbreaker.Customizer;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.loadbalancer.annotation.LoadBalancerClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.cloud.zookeeper.discovery.ZookeeperInstance;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.annotation.Bean;
@@ -47,8 +55,8 @@ import org.springframework.session.config.annotation.web.http.EnableSpringHttpSe
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
-import org.apache.kylin.guava30.shaded.common.base.Charsets;
-import org.apache.kylin.guava30.shaded.common.hash.Hashing;
+import io.github.resilience4j.timelimiter.TimeLimiterConfig;
+import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 
 @ImportResource(locations = { "applicationContext.xml", "kylinSecurity.xml" })
@@ -59,6 +67,8 @@ import lombok.val;
 @EnableDiscoveryClient
 @LoadBalancerClient(name = "spring-boot-provider", configuration = org.apache.kylin.rest.LoadBalanced.class)
 @EnableSpringHttpSession
+@EnableFeignClients(basePackages = { "io.kyligence", "org.apache.kylin" })
+@MapperScan("org.apache.kylin.job.mapper")
 public class BootstrapServer implements ISmartApplicationListenerForSystem {
 
     private static final Logger logger = LoggerFactory.getLogger(BootstrapServer.class);
@@ -75,6 +85,12 @@ public class BootstrapServer implements ISmartApplicationListenerForSystem {
             tomcat.addAdditionalTomcatConnectors(createSslConnector());
         }
         return tomcat;
+    }
+
+    @Bean
+    public Customizer<Resilience4JCircuitBreakerFactory> defaultCustomizer() {
+        return factory -> factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
+                .timeLimiterConfig(TimeLimiterConfig.custom().timeoutDuration(Duration.ofHours(1)).build()).build());
     }
 
     private Connector createSslConnector() {

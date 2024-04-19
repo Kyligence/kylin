@@ -24,15 +24,21 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
@@ -42,6 +48,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
@@ -54,6 +61,7 @@ import org.apache.kylin.common.persistence.transaction.BroadcastEventReadyNotifi
 import org.apache.kylin.common.util.JsonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -69,11 +77,12 @@ public class RestClient {
 
     private static final int HTTP_CONNECTION_TIMEOUT_MS = 30000;
     private static final int HTTP_SOCKET_TIMEOUT_MS = 120000;
+    public static final String ROUTED = "routed";
+    private static final String COOKIE = "Cookie";
+    private static final String AUTHORIZATION = "Authorization";
 
     private static final String SCHEME_HTTP = "http://";
-    private static final String ROUTED = "routed";
     private static final String KYLIN_API_PATH = "/kylin/api";
-
     public static boolean matchFullRestPattern(String uri) {
         return FULL_REST_PATTERN.matcher(uri).matches();
     }
@@ -132,6 +141,11 @@ public class RestClient {
             provider.setCredentials(AuthScope.ANY, credentials);
             client.setCredentialsProvider(provider);
         }
+    }
+
+    public RestClient resetBaseUrlWithoutKylin() {
+        this.baseUrl = SCHEME_HTTP + host + ":" + port;
+        return this;
     }
 
     public HttpResponse query(String sql, String project) throws IOException {
@@ -202,9 +216,91 @@ public class RestClient {
         return response;
     }
 
+    public HttpResponse forwardGet(HttpHeaders headers, String targetUrl, boolean autoClean) throws IOException {
+        String url = baseUrl + targetUrl;
+        HttpGet get = newGet(url);
+        get.addHeader(ROUTED, "true");
+        get.addHeader(AUTHORIZATION, headers.getFirst(AUTHORIZATION));
+        get.addHeader(COOKIE, headers.getFirst(COOKIE));
+        HttpResponse response = null;
+        try {
+            response = client.execute(get);
+            if (response.getStatusLine().getStatusCode() != 200) {
+                String msg = EntityUtils.toString(response.getEntity());
+                throw new KylinException(CommonErrorCode.FAILED_FORWARD_METADATA_ACTION,
+                        response.getStatusLine().getStatusCode() + "\n" + url + "\n" + msg);
+            }
+        } finally {
+            if (autoClean) {
+                cleanup(get, response);
+            }
+        }
+        return response;
+    }
+
+    public HttpResponse forwardPut(byte[] requestEntity, HttpHeaders headers, String targetUrl, boolean autoClean)
+            throws IOException {
+        String url = baseUrl + targetUrl;
+        HttpPut put = newPut(url);
+        put.addHeader(ROUTED, "true");
+        put.addHeader(AUTHORIZATION, headers.getFirst(AUTHORIZATION));
+        put.addHeader(COOKIE, headers.getFirst(COOKIE));
+        HttpResponse response = null;
+        try {
+            put.setEntity(new ByteArrayEntity(requestEntity, ContentType.APPLICATION_JSON));
+            response = client.execute(put);
+            if (response.getStatusLine().getStatusCode() != 200) {
+                String msg = EntityUtils.toString(response.getEntity());
+                throw new KylinException(CommonErrorCode.FAILED_FORWARD_METADATA_ACTION, "Invalid response "
+                        + response.getStatusLine().getStatusCode() + " with url " + url + "\n" + msg);
+            }
+        } finally {
+            if (autoClean) {
+                cleanup(put, response);
+            }
+        }
+        return response;
+    }
+
+    public HttpResponse forwardPostWithUrlEncodedForm(String targetUrl, HttpHeaders headers, Map<String, String> form)
+            throws IOException {
+        String url = baseUrl + targetUrl;
+        HttpPost httpPost = new HttpPost(url);
+        httpPost.addHeader("Content-type", "application/x-www-form-urlencoded; charset=utf-8");
+        httpPost.addHeader(ROUTED, "true");
+        if (null != headers) {
+            httpPost.addHeader(AUTHORIZATION, headers.getFirst(AUTHORIZATION));
+            httpPost.addHeader(COOKIE, headers.getFirst(COOKIE));
+        }
+        List<NameValuePair> nameValuePairs = new ArrayList<>();
+        if (null != form) {
+            form.entrySet()
+                    .forEach(entry -> nameValuePairs.add(new BasicNameValuePair(entry.getKey(), entry.getValue())));
+        }
+        HttpResponse response = null;
+        try {
+            httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs, "UTF-8"));
+            response = client.execute(httpPost);
+            if (response.getStatusLine().getStatusCode() != 200) {
+                String msg = EntityUtils.toString(response.getEntity());
+                throw new KylinException(CommonErrorCode.FAILED_FORWARD_METADATA_ACTION, "Invalid response "
+                        + response.getStatusLine().getStatusCode() + " with url " + url + "\n" + msg);
+            }
+        } finally {
+            cleanup(httpPost, response);
+        }
+        return response;
+    }
+
     private void addHttpHeaders(HttpRequestBase method) {
         method.addHeader("Accept", "application/json, text/plain, */*");
         method.addHeader("Content-Type", "application/json");
+    }
+
+    private HttpGet newGet(String url) {
+        HttpGet get = new HttpGet(url);
+        addHttpHeaders(get);
+        return get;
     }
 
     private HttpPost newPost(String url) {

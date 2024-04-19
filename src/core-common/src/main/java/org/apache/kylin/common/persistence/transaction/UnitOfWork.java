@@ -55,6 +55,7 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.SetThreadName;
 import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.AccessLevel;
@@ -203,9 +204,10 @@ public class UnitOfWork {
         val unitName = params.getUnitName();
         val readonly = params.isReadonly();
         checkEpoch(params);
+
         final UnitOfWorkContext unitOfWork = initUnitOfContext(params, unitName, readonly);
 
-        if (readonly || !params.isUseSandbox()) {
+        if (readonly || !params.isUseSandbox() || params.isTransparent()) {
             unitOfWork.setLocalConfig(null);
             return unitOfWork;
         }
@@ -256,7 +258,7 @@ public class UnitOfWork {
 
     private static <T> void checkEpoch(UnitOfWorkParams<T> params) throws Exception {
         val checker = params.getEpochChecker();
-        if (checker != null && !params.isReadonly()) {
+        if (checker != null && !params.isReadonly() && !params.isTransparent()) {
             checker.process();
         }
     }
@@ -271,7 +273,7 @@ public class UnitOfWork {
     static <T> void endTransaction(String traceId, UnitOfWorkParams<T> params) throws Exception {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         val work = get();
-        if (work.isReadonly() || !work.isUseSandbox()) {
+        if (work.isReadonly() || !work.isUseSandbox() || work.isTransparent()) {
             work.cleanResource();
             return;
         }
@@ -295,23 +297,28 @@ public class UnitOfWork {
             }
         }).collect(Collectors.<Event> toList());
 
-        //clean rs and config
-        work.cleanResource();
-
-        val originConfig = KylinConfig.getInstanceFromEnv();
-        // publish events here
-        val metadataStore = ResourceStore.getKylinMetaStore(originConfig).getMetadataStore();
-        val writeInterceptor = params.getWriteInterceptor();
-        val unitMessages = packageEvents(eventList, get().getProject(), traceId, writeInterceptor,
-                params.getProjectId());
-        long entitiesSize = unitMessages.getMessages().stream().filter(event -> event instanceof ResourceRelatedEvent)
-                .count();
-        try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
-            log.debug("transaction {} updates {} metadata items", traceId, entitiesSize);
+        UnitMessages unitMessages = null;
+        long entitiesSize = 0;
+        KylinConfig originConfig = work.getOriginConfig();
+        try {
+            // publish events here
+            val metadataStore = ResourceStore.getKylinMetaStore(originConfig).getMetadataStore();
+            val writeInterceptor = params.getWriteInterceptor();
+            unitMessages = packageEvents(eventList, get().getProject(), traceId, writeInterceptor,
+                    params.getProjectId());
+            entitiesSize = unitMessages.getMessages().stream().filter(event -> event instanceof ResourceRelatedEvent)
+                    .count();
+            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
+                log.debug("transaction {} updates {} metadata items", traceId, entitiesSize);
+            }
+            checkEpoch(params);
+            val unitName = params.getUnitName();
+            metadataStore.batchUpdate(unitMessages, get().getParams().isSkipAuditLog(), unitName, params.getEpochId());
+        } finally {
+            //clean rs and config
+            work.cleanResource();
         }
-        checkEpoch(params);
-        val unitName = params.getUnitName();
-        metadataStore.batchUpdate(unitMessages, get().getParams().isSkipAuditLog(), unitName, params.getEpochId());
+
         if (entitiesSize != 0 && !params.isReadonly() && !params.isSkipAuditLog() && !config.isUTEnv()) {
             factory.postAsync(new AuditLogBroadcastEventNotifier());
         }
@@ -399,7 +406,21 @@ public class UnitOfWork {
     }
 
     public static boolean isAlreadyInTransaction() {
-        return threadLocals.get() != null;
+        return threadLocals.get() != null && !threadLocals.get().isTransparent();
+    }
+
+    public static void doAfterUpdate(UnitOfWorkContext.UnitTask task) {
+        if (isAlreadyInTransaction()) {
+            get().doAfterUpdate(task);
+            return;
+        }
+        try {
+            task.run();
+        } catch (KylinException e) {
+          throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Execute 'doAfterUpdate' failed.", e);
+        }
     }
 
     public static boolean isReplaying() {

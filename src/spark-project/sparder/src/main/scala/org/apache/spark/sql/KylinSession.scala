@@ -20,14 +20,14 @@ package org.apache.spark.sql
 
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.security.UserGroupInformation
-import org.apache.kylin.common.util.{HadoopUtil, Unsafe}
+import org.apache.kylin.common.util.{AddressUtil, HadoopUtil, Unsafe}
 import org.apache.kylin.common.{KapConfig, KylinConfig}
 import org.apache.kylin.metadata.query.BigQueryThresholdUpdater
 import org.apache.kylin.query.plugin.asyncprofiler.QueryAsyncProfilerSparkPlugin
 import org.apache.kylin.query.plugin.diagnose.DiagnoseSparkPlugin
 import org.apache.kylin.query.util.ExtractFactory
 import org.apache.spark.internal.Logging
-import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
+import org.apache.spark.scheduler.{ContainerInitializeListener, SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.SparkSession.Builder
 import org.apache.spark.sql.internal.{SQLConf, SessionState, SharedState, StaticSQLConf}
 import org.apache.spark.sql.udf.UdfManager
@@ -39,6 +39,7 @@ import org.springframework.expression.spel.standard.SpelExpressionParser
 import java.io._
 import java.net.URI
 import java.nio.file.Paths
+import java.util.UUID
 import scala.collection.JavaConverters._
 
 class KylinSession(
@@ -241,10 +242,28 @@ object KylinSession extends Logging {
         sparkConf.set("hive.metastore.sasl.enabled", "true")
       }
 
-      kapConfig.getSparkConf.asScala.foreach {
+      kapConfig.getSparkConf.asScala.foreach{
         case (k, v) =>
           sparkConf.set(k, v)
       }
+
+      // the length of the `podNamePrefix` needs to be less than or equal to 47
+      sparkConf.get("spark.master") match {
+        case v if v.startsWith("k8s") =>
+          val appName = sparkConf.get("spark.app.name", System.getenv("HOSTNAME"))
+          val podNamePrefix = generateExecutorPodNamePrefixForK8s(appName)
+          logInfo(s"Sparder run on k8s, generated executorPodNamePrefix is $podNamePrefix")
+          sparkConf.setIfMissing("spark.kubernetes.executor.podNamePrefix", podNamePrefix)
+          val olapEngineNamespace = System.getenv("NAME_SPACE")
+          sparkConf.set("spark.kubernetes.executor.label.component", "sparder-driver-executor")
+          sparkConf.set("spark.kubernetes.executor.label.olap-engine-namespace", olapEngineNamespace)
+          if (sparkConf.get("spark.submit.deployMode", "").equals("cluster")) {
+            sparkConf.set("spark.kubernetes.driver.label.component", "sparder-driver-executor")
+            sparkConf.set("spark.kubernetes.driver.label.olap-engine-namespace", olapEngineNamespace)
+          }
+        case _ =>
+      }
+
       val instances = sparkConf.get("spark.executor.instances").toInt
       val cores = sparkConf.get("spark.executor.cores").toInt
       val sparkCores = instances * cores
@@ -286,6 +305,13 @@ object KylinSession extends Logging {
         } else {
           sparkConf.set("spark.jars", kapConfig.sparderJars)
           sparkConf.set("spark.files", kapConfig.sparderFiles())
+        }
+
+        // spark on k8s with client mode, set the spark.driver.host = local ip
+        if (sparkConf.get("spark.master").startsWith("k8s") && "client".equals(sparkConf.get("spark.submit.deployMode", "client"))) {
+          if (!sparkConf.contains("spark.driver.host")) {
+            sparkConf.set("spark.driver.host", AddressUtil.getLocalHostExactAddress)
+          }
         }
 
         val fileName = KylinConfig.getInstanceFromEnv.getKylinJobJarPath
@@ -330,6 +356,17 @@ object KylinSession extends Logging {
       }
 
       checkAndSetSparkPlugins(sparkConf)
+
+      if (KylinConfig.getInstanceFromEnv.isContainerSchedulerEnabled) {
+        ContainerInitializeListener.start()
+        val key = "spark.extraListeners";
+        val extraListeners = sparkConf.get(key, "")
+        if (extraListeners.isEmpty) {
+          sparkConf.set(key, "org.apache.spark.scheduler.ContainerInitializeListener")
+        } else {
+          sparkConf.set(key, "org.apache.spark.scheduler.ContainerInitializeListener," + extraListeners)
+        }
+      }
 
       sparkConf
     }
@@ -387,6 +424,15 @@ object KylinSession extends Logging {
       }
     }
     extensions
+  }
+
+  def generateExecutorPodNamePrefixForK8s(appName: String): String = {
+    val appNameLength = appName.length
+    if (appNameLength > 0 && appNameLength <= 47) {
+      appName
+    } else {
+      s"sparder-${UUID.randomUUID().toString.replaceAll("-", "")}"
+    }
   }
 
   def applyFairSchedulerConfig(kapConfig: KapConfig, confFileDirPath: String, sparkConf: SparkConf): Unit = {

@@ -86,6 +86,9 @@ spring:
       connect-string: ${kylin.env.zookeeper-connect-string}
       discovery:
         root: /kylin/${kylin.metadata.url.unique-id}/services
+    nacos:
+      discovery:
+        enabled: false
   session:
     store-type: NONE
     jdbc:
@@ -102,11 +105,21 @@ spring:
     filter:
       dispatcher-types: forward, request, error, async
 
+mybatis:
+  mapper-locations: classpath:/mybatis-mapper/*Mapper.xml
+#  configuration:
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
 arthas:
   app-name: ${kylin.server.mode}_${server.port}
   http-port: -1
   telnet-port: -1
-  tunnel-server: ws://127.0.0.1:7777/ws
+
+feign:
+  hystrix:
+    enabled: true
+  circuitbreaker:
+    enabled: true
 
 ---
 spring:

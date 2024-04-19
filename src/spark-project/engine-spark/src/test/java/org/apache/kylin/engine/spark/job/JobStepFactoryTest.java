@@ -32,13 +32,13 @@ import lombok.val;
 import lombok.var;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
+import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.job.factory.JobFactory;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -59,7 +59,7 @@ import org.sparkproject.guava.collect.Sets;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class JobStepFactoryTest extends NLocalWithSparkSessionTest {
+public class JobStepFactoryTest extends NLocalWithSparkSessionTestBase {
     private KylinConfig config;
 
     @Before
@@ -69,7 +69,6 @@ public class JobStepFactoryTest extends NLocalWithSparkSessionTest {
 
     @After
     public void after() {
-        NDefaultScheduler.destroyInstance();
         cleanupTestMetadata();
     }
 
@@ -78,7 +77,7 @@ public class JobStepFactoryTest extends NLocalWithSparkSessionTest {
         String table = "DEFAULT.TEST_KYLIN_FACT";
         NTableMetadataManager tableMetadataManager = NTableMetadataManager.getInstance(config, getProject());
         final TableDesc tableDesc = tableMetadataManager.getTableDesc(table);
-        NTableSamplingJob job = NTableSamplingJob.create(tableDesc, getProject(), "ADMIN", 20000);
+        NTableSamplingJob job = NTableSamplingJob.internalCreate(tableDesc, getProject(), "ADMIN", 20000);
         Assert.assertEquals(table, job.getTargetSubject());
         Assert.assertEquals(getProject(), job.getParam(NBatchConstants.P_PROJECT_NAME));
         Assert.assertEquals(tableDesc.getIdentity(), job.getParam(NBatchConstants.P_TABLE_NAME));
@@ -102,7 +101,7 @@ public class JobStepFactoryTest extends NLocalWithSparkSessionTest {
     public void testAddStepInSamplingFailedForTableNotExist() {
         final TableDesc tableDesc = NTableMetadataManager.getInstance(config, getProject()).getTableDesc("abc");
         try {
-            NTableSamplingJob.create(tableDesc, getProject(), "ADMIN", 20000);
+            NTableSamplingJob.internalCreate(tableDesc, getProject(), "ADMIN", 20000);
             Assert.fail();
         } catch (IllegalArgumentException ex) {
             Assert.assertEquals("Create table sampling job failed for table not exist!", ex.getMessage());
@@ -216,7 +215,7 @@ public class JobStepFactoryTest extends NLocalWithSparkSessionTest {
         val oneSeg = dataflowManager.appendSegment(dataflow, new SegmentRange.TimePartitionedSegmentRange(start, end));
         NSparkCubingJob job = NSparkCubingJob.create(new JobFactory.JobBuildParams(Sets.newHashSet(oneSeg),
                 Sets.newLinkedHashSet(layouts), "ADMIN", JobTypeEnum.INDEX_BUILD, jobId, null, null, null, null, null));
-        NExecutableManager.getInstance(getTestConfig(), "default").addJob(job);
-        return NExecutableManager.getInstance(getTestConfig(), "default").getJob(jobId);
+        ExecutableManager.getInstance(getTestConfig(), "default").addJob(job);
+        return ExecutableManager.getInstance(getTestConfig(), "default").getJob(jobId);
     }
 }

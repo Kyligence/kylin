@@ -25,8 +25,8 @@ import org.apache.kylin.common.exception.JobErrorCode;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.job.execution.AbstractExecutable;
+import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.execution.NExecutableManager;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,7 +41,7 @@ public class SecondStorageJobUtil {
 
     public static List<AbstractExecutable> findSecondStorageJobByProject(String project) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        NExecutableManager executableManager = NExecutableManager.getInstance(config, project);
+        ExecutableManager executableManager = ExecutableManager.getInstance(config, project);
         return executableManager.getJobs().stream().map(executableManager::getJob)
                 .filter(job -> SECOND_STORAGE_JOBS.contains(job.getJobType()))
                 .collect(Collectors.toList());

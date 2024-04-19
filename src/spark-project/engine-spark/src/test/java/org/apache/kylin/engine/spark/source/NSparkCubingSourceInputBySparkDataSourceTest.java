@@ -19,13 +19,13 @@ package org.apache.kylin.engine.spark.source;
 
 import java.util.List;
 
-import org.apache.kylin.metadata.model.ColumnDesc;
-import org.apache.kylin.metadata.model.TableDesc;
-import org.apache.kylin.source.SourceFactory;
-import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
+import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.engine.spark.NSparkCubingEngine;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
+import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.source.SourceFactory;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.Assert;
@@ -34,7 +34,7 @@ import org.junit.Test;
 
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
-public class NSparkCubingSourceInputBySparkDataSourceTest extends NLocalWithSparkSessionTest {
+public class NSparkCubingSourceInputBySparkDataSourceTest extends NLocalWithSparkSessionTestBase {
 
     private final ColumnDesc[] COLUMN_DESCS = new ColumnDesc[2];
 

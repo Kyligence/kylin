@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.kylin.job.JobContext;
 
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
@@ -53,7 +54,7 @@ public class TestWithStageExecutable extends BaseTestExecutable implements Chain
     }
 
     @Override
-    public ExecuteResult doWork(ExecutableContext context) {
+    public ExecuteResult doWork(JobContext context) {
         return ExecuteResult.createSucceed();
     }
 

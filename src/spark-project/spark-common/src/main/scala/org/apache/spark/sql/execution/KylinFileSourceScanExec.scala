@@ -164,10 +164,12 @@ class KylinFileSourceScanExec(
       val start = System.currentTimeMillis()
       val cachePartitions = filePartitions.map(CacheFilePartition.convertFilePartitionToCache)
       logInfo(s"Convert bucketed file partition took: ${System.currentTimeMillis() - start}")
-      new CacheFileScanRDD(fsRelation.sparkSession, readFile, cachePartitions)
+      new CacheFileScanRDD(fsRelation.sparkSession, readFile, cachePartitions,
+        requiredSchema, metadataColumns)
     } else {
       logInfo(s"Create FileScanRDD")
-      new FileScanRDD(fsRelation.sparkSession, readFile, filePartitions)
+      new FileScanRDD(fsRelation.sparkSession, readFile, filePartitions,
+        requiredSchema, metadataColumns)
     }
   }
 
@@ -253,10 +255,12 @@ class KylinFileSourceScanExec(
       val start = System.currentTimeMillis()
       val cachePartitions = partitions.map(CacheFilePartition.convertFilePartitionToCache)
       logInfo(s"Convert file partition took: ${System.currentTimeMillis() - start}")
-      new CacheFileScanRDD(fsRelation.sparkSession, readFile, cachePartitions)
+      new CacheFileScanRDD(fsRelation.sparkSession, readFile, cachePartitions,
+        requiredSchema, metadataColumns)
     } else {
       logInfo(s"Create FileScanRDD")
-      new FileScanRDD(fsRelation.sparkSession, readFile, partitions)
+      new FileScanRDD(fsRelation.sparkSession, readFile, partitions,
+        requiredSchema, metadataColumns)
     }
   }
 

@@ -37,4 +37,7 @@ public class SparkJobTimeRequest implements ProjectInsensitiveRequest {
     private String yarnJobWaitTime;
     @JsonProperty("yarn_job_run_time")
     private String yarnJobRunTime;
+
+    @JsonProperty("job_last_running_start_time")
+    private String jobLastRunningStartTime;
 }

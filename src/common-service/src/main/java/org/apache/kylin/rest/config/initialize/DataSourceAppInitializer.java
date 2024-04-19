@@ -38,7 +38,9 @@ public class DataSourceAppInitializer implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         val kylinConfig = KylinConfig.getInstanceFromEnv();
-        if (kylinConfig.isJobNode() && kylinConfig.getLoadHiveTablenameEnabled()) {
+        boolean needDataSourceInitializer = (kylinConfig.isJobNode() || kylinConfig.isMetadataNode()
+                || kylinConfig.isSmartNode()) && kylinConfig.getLoadHiveTablenameEnabled();
+        if (needDataSourceInitializer) {
             taskScheduler.scheduleWithFixedDelay(DataSourceState.getInstance(),
                     kylinConfig.getLoadHiveTablenameIntervals() * Constant.SECOND);
         }

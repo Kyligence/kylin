@@ -85,6 +85,16 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
     }
   }
 
+  def catalogTable(database: String, table: String, f: (String, String) => Unit): Unit = {
+    SparderEnv.setSparkSession(spark)
+    val tableFullNmae = "spark_catalog." + database + "." + table
+    spark.sql("CREATE TABLE IF NOT EXISTS " + tableFullNmae + " (id long) USING DELTA")
+    spark.sql("insert into " + tableFullNmae + " values(1)")
+    withTable(tableFullNmae) {
+      f(database, table)
+    }
+  }
+
   def hiveTable(table: String, f: (KylinConfig, SessionCatalog, CatalogTable) => Unit): Unit = {
     val config = KylinConfig.getInstanceFromEnv
     SparderEnv.setSparkSession(spark)
@@ -193,7 +203,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
       init(tableName, table.database) {
         val tableIdentity = table.qualifiedName.toLowerCase(Locale.ROOT)
         val locationPath = table.location.getPath
-        val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath, config)
+        val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath)
         val snapshotTablesLocationsJson = snapshotSourceTableStatsService.createSnapshotSourceTableStats(locationPath, config,
           locationFilesStatus)
         snapshotSourceTableStatsService.writeSourceTableStats(DEFAULT_PROJECT, tableIdentity, snapshotTablesLocationsJson)
@@ -223,7 +233,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
         try {
           val tableIdentity = table.qualifiedName.toLowerCase(Locale.ROOT)
           val locationPath = table.location.getPath
-          val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath, config)
+          val locationFilesStatus: util.List[FileStatus] = snapshotSourceTableStatsService.getLocationFileStatus(locationPath)
           val snapshotTablesLocationsJson = snapshotSourceTableStatsService.createSnapshotSourceTableStats(locationPath, config,
             locationFilesStatus)
           snapshotSourceTableStatsService.writeSourceTableStats(DEFAULT_PROJECT, tableIdentity, snapshotTablesLocationsJson)
@@ -276,6 +286,18 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
     })
   }
 
+  test("checkSourceTableStats - catalog table") {
+    val tableName = "hive_table_types" + RandomUtil.randomUUIDStr().replace("-", "_")
+    val catalogName = "spark_catalog"
+    catalogTable("default", tableName, (database, table) => {
+      writeEmptyJsonFile(catalogName + ".default." + table)
+      writeMarkFile()
+      val response = snapshotSourceTableStatsService.checkSourceTableStats(DEFAULT_PROJECT, database, table, null, catalogName)
+      assertTrue(response.getNeedRefresh)
+      assertTrue(CollectionUtils.isEmpty(response.getNeedRefreshPartitionsValue))
+    })
+  }
+
   test("checkSourceTableStats - hive table - no json") {
     val tableName = "hive_table_types" + RandomUtil.randomUUIDStr().replace("-", "_")
     hiveTable(tableName, (config, catalog, table) => {
@@ -297,7 +319,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
         val needCheckPartitions = partitions.asScala.sortBy(partition => partition.createTime).reverse
           .slice(0, config.getSnapshotAutoRefreshFetchPartitionsCount).asJava
 
-        snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus, config)
+        snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus)
         for (partition <- partitions.asScala) {
           snapshotSourceTableStatsService.createPartitionSnapshotSourceTableStats(partition, needSavePartitionsFilesStatus,
             snapshotTablesLocationsJson, config)
@@ -347,7 +369,7 @@ class SnapshotSourceTableStatsServiceTest extends SparderBaseFunSuite with Local
           val needCheckPartitions = partitions.asScala.sortBy(partition => partition.createTime).reverse
             .slice(0, config.getSnapshotAutoRefreshFetchPartitionsCount).asJava
 
-          snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus, config)
+          snapshotSourceTableStatsService.putNeedSavePartitionsFilesStatus(needCheckPartitions, needSavePartitionsFilesStatus)
           for (partition <- partitions.asScala) {
             snapshotSourceTableStatsService.createPartitionSnapshotSourceTableStats(partition, needSavePartitionsFilesStatus,
               snapshotTablesLocationsJson, config)

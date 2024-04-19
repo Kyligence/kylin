@@ -18,9 +18,8 @@
 
 package io.kyligence.kap.engine.spark.job;
 
-import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
-import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import lombok.val;
+import java.util.Set;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KapConfig;
@@ -29,24 +28,22 @@ import org.apache.kylin.engine.spark.ExecutableUtils;
 import org.apache.kylin.engine.spark.cleanup.SnapshotChecker;
 import org.apache.kylin.engine.spark.utils.FileNames;
 import org.apache.kylin.engine.spark.utils.HDFSUtils;
+import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.job.JobContext;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.exception.ExecuteException;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutableOnModel;
-import org.apache.kylin.job.execution.ExecutableContext;
 import org.apache.kylin.job.execution.ExecuteResult;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.TableRef;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Set;
+import lombok.val;
 
 public class NSparkUpdateMetadataStep extends AbstractExecutable {
-
-    private static final Logger logger = LoggerFactory.getLogger(NSparkUpdateMetadataStep.class);
 
     public NSparkUpdateMetadataStep() {
         this.setName(ExecutableConstants.STEP_UPDATE_METADATA);
@@ -56,17 +53,15 @@ public class NSparkUpdateMetadataStep extends AbstractExecutable {
         super(notSetId);
     }
 
+    private static final Logger logger = LoggerFactory.getLogger(NSparkUpdateMetadataStep.class);
+
     @Override
-    public ExecuteResult doWork(ExecutableContext context) throws ExecuteException {
+    protected ExecuteResult doWork(JobContext context) throws ExecuteException {
         val parent = getParent();
         Preconditions.checkArgument(parent instanceof DefaultExecutableOnModel);
         val handler = ((DefaultExecutableOnModel) parent).getHandler();
         try {
-            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(UnitOfWorkParams.builder().processor(() -> {
-                handler.handleFinished();
-                return null;
-            }).retryMoreTimeForDeadLockException(true).epochId(context.getEpochId()).unitName(handler.getProject())
-                    .build());
+            handler.handleFinished();
             cleanExpiredSnapshot();
             return ExecuteResult.createSucceed();
         } catch (Throwable throwable) {

@@ -53,6 +53,58 @@ public class JdbcUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(JdbcUtil.class);
 
+    private static final ThreadLocal txThreadLocal = new ThreadLocal();
+
+    public static <T> T withTxAndRetry(DataSourceTransactionManager transactionManager, Callback<T> consumer){
+        return withTxAndRetry(transactionManager, consumer, TransactionDefinition.ISOLATION_REPEATABLE_READ, 3);
+    }
+
+    public static <T> T withTxAndRetry(DataSourceTransactionManager transactionManager, Callback<T> consumer, int retryLimit){
+        return withTxAndRetry(transactionManager, consumer, TransactionDefinition.ISOLATION_REPEATABLE_READ, retryLimit);
+    }
+
+    public static boolean isInExistingTx(){
+        return txThreadLocal.get() != null;
+    }
+
+    public static <T> T withTxAndRetry(DataSourceTransactionManager transactionManager, Callback<T> consumer,
+            int isolationLevel, int retryLimit) {
+        boolean inExistingTx = false;
+        int retryCount = 0;
+        try {
+            inExistingTx = isInExistingTx();
+            if (!inExistingTx) {
+                txThreadLocal.set(new Object());
+            }
+
+            do {
+                try {
+                    return withTransaction(transactionManager, consumer, isolationLevel);
+                } catch (RuntimeException runtimeException) {
+                    String exceptionClassName = runtimeException.getClass().getName();
+                    String message = runtimeException.getMessage();
+                    if (inExistingTx) {
+                        logger.warn("failed on = {}, message = {}, and inExistingTx, will throw", exceptionClassName,
+                                message);
+                        throw runtimeException;
+                    } else if (retryCount++ < retryLimit) {
+                        logger.warn("failed on = {}, message = {}, retryCount = {}, will retry", exceptionClassName,
+                                message, (retryCount - 1));
+                    } else {
+                        logger.warn("failed on = {}, message = {}, and touch retry-limit, will throw",
+                                exceptionClassName, message);
+                        throw runtimeException;
+                    }
+
+                }
+            } while (true);
+        } finally {
+            if (!inExistingTx) {
+                txThreadLocal.remove();
+            }
+        }
+    }
+
     public static <T> T withTransactionTimeout(DataSourceTransactionManager transactionManager, Callback<T> consumer,
             int timeout) {
         return withTransaction(transactionManager, consumer, TransactionDefinition.ISOLATION_REPEATABLE_READ, null,
@@ -216,7 +268,7 @@ public class JdbcUtil {
     public static Properties datasourceParametersForUT(StorageURL url) {
         Properties props = new Properties();
         props.put("driverClassName", "org.h2.Driver");
-        props.put("url", "jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1");
+        props.put("url", "jdbc:h2:mem:db_default;DB_CLOSE_DELAY=-1;MODE=MySQL");
         props.put("username", "sa");
         props.put("password", "");
         props.put("maxTotal", "50");

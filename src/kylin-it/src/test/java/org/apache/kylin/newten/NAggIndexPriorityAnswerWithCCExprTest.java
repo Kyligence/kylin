@@ -21,11 +21,9 @@ package org.apache.kylin.newten;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.job.engine.JobEngineConfig;
-import org.apache.kylin.job.impl.threadpool.NDefaultScheduler;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -56,16 +54,13 @@ public class NAggIndexPriorityAnswerWithCCExprTest extends NLocalWithSparkSessio
         overwriteSystemProp("kylin.query.layout.prefer-aggindex", "true");
         this.createTestMetadata("src/test/resources/ut_meta/aggindex_priority_answer_withccexpr");
 
-        NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());
-        scheduler.init(new JobEngineConfig(KylinConfig.getInstanceFromEnv()));
-        if (!scheduler.hasStarted()) {
-            throw new RuntimeException("scheduler has not been started");
-        }
+        JobContextUtil.cleanUp();
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     @After
     public void after() throws Exception {
-        NDefaultScheduler.destroyInstance();
+        JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }
 

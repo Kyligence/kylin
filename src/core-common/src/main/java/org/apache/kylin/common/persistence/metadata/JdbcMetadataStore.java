@@ -41,11 +41,12 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.VersionedRawResource;
-import org.apache.kylin.common.util.CompressionUtils;
 import org.apache.kylin.common.persistence.UnitMessages;
+import org.apache.kylin.common.persistence.VersionedRawResource;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.persistence.metadata.jdbc.RawResourceRowMapper;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.CompressionUtils;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -106,7 +107,7 @@ public class JdbcMetadataStore extends MetadataStore {
         val url = config.getMetadataUrl();
         val props = JdbcUtil.datasourceParameters(url);
         val dataSource = JdbcDataSource.getDataSource(props);
-        transactionManager = new DataSourceTransactionManager(dataSource);
+        transactionManager = JdbcDataSource.getTransactionManager(dataSource);
         jdbcTemplate = new JdbcTemplate(dataSource);
         table = url.getIdentifier();
         isUT = config.isUTEnv();
@@ -125,6 +126,9 @@ public class JdbcMetadataStore extends MetadataStore {
             @Override
             public Object handle() {
                 checkEpochModified(unitPath, epochId);
+                if (UnitOfWork.isAlreadyInTransaction() && UnitOfWork.get().isTransparent()) {
+                    throw new IllegalStateException("Transaction is in transparent mode, please use feign api to update core metadata.");
+                }
                 int affectedRow;
                 if (bs != null) {
                     val result = jdbcTemplate.query(

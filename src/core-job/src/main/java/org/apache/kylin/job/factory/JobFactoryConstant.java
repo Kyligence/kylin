@@ -26,6 +26,8 @@ public class JobFactoryConstant {
 
     public static final String CUBE_JOB_FACTORY = "CUBE_JOB_FACTORY";
     public static final String MERGE_JOB_FACTORY = "MERGE_JOB_FACTORY";
+    public static final String TABLE_SAMPLING_JOB_FACTORY = "TABLE_SAMPLING_JOB_FACTORY";
+    public static final String SNAPSHOT_JOB_FACTORY = "SNAPSHOT_JOB_FACTORY";
     public static final String STORAGE_JOB_FACTORY = "STORAGE_JOB_FACTORY";
     public static final String STORAGE_NODE_CLEAN_FACTORY = "STORAGE_NODE_CLEAN_FACTORY";
     public static final String STORAGE_MODEL_CLEAN_FACTORY = "STORAGE_MODEL_CLEAN_FACTORY";
