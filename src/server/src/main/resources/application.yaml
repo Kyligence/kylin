@@ -62,6 +62,8 @@ management:
       enabled: true
     refresh:
       enabled: true
+    licenseService:
+      enabled: false
 
 spring:
   servlet:

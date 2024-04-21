@@ -53,6 +53,7 @@ public class Message {
     private static final String LICENSE_ERROR_PRE = "The license couldn’t be updated:\n";
     private static final String LICENSE_ERROR_SUFF = "\nPlease upload a new license, or contact Kyligence.";
     private static final String LICENSE_OVERDUE_TRIAL = "The license has expired and the validity period is [%s - %s]. Please upload a new license or contact Kyligence.";
+    private static final String LICENSE_EXTERNAL_ERROR = "Parsing the license failed and the error message is as follows[%s]. Please restart and try again.";
     private static final String LICENSE_NODES_EXCEED = "The number of nodes which you are using is higher than the allowable number. Please contact your Kyligence account manager.";
     private static final String LICENSE_NODES_NOT_MATCH = "The cluster information dose not match the license. Please upload a new license or contact Kyligence.";
     private static final String LICENSE_OVER_VOLUME = "The current used system capacity exceeds the license’s limit. Please upload a new license, or contact Kyligence.";
@@ -594,6 +595,10 @@ public class Message {
 
     public String getLicenseErrorSuff() {
         return LICENSE_ERROR_SUFF;
+    }
+
+    public String getLicenseExternalError() {
+        return LICENSE_EXTERNAL_ERROR;
     }
 
     public String getLicenseOverdueTrial() {

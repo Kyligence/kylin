@@ -559,6 +559,11 @@ public class CnMessage extends Message {
     }
 
     @Override
+    public String getLicenseExternalError() {
+        return "解析license失败，错误信息如下所示：[%s]，请重启后再试。";
+    }
+
+    @Override
     public String getLicenseOverdueTrial() {
         return "许可证已过期，当前有效期为[%s - %s]。请重新上传新的许可证或联系 Kyligence 销售人员。";
     }
