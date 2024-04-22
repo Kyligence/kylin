@@ -410,10 +410,8 @@ public class BaseController {
         }
     }
 
-    protected boolean needRouteToOtherInstance(Map<String, List<String>> nodeWithJobs, String action,
-            HttpHeaders headers) {
-        if ("true".equals(headers.getFirst(RestClient.ROUTED))
-                || JobActionEnum.RESUME.name().equalsIgnoreCase(action)) {
+    protected boolean needRouteToOtherInstance(Map<String, List<String>> nodeWithJobs, String action) {
+        if (JobActionEnum.RESUME.name().equalsIgnoreCase(action)) {
             return false;
         }
         Set<String> targetNodes = nodeWithJobs.keySet();

@@ -163,7 +163,7 @@ public class JobController extends BaseController {
         jobInfoService.checkJobStatusAndAction(jobUpdateRequest);
         Map<String, List<String>> nodeWithJobs = JobContextUtil
                 .splitJobIdsByScheduleInstance(jobUpdateRequest.getJobIds());
-        if (needRouteToOtherInstance(nodeWithJobs, jobUpdateRequest.getAction(), headers)) {
+        if (needRouteToOtherInstance(nodeWithJobs, jobUpdateRequest.getAction())) {
             return remoteUpdateJobStatus(jobUpdateRequest, headers, nodeWithJobs);
         }
         if (StringUtils.isBlank(jobUpdateRequest.getProject())

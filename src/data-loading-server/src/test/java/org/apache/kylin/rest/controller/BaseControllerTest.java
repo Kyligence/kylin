@@ -32,15 +32,19 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.USER_AUTH_I
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.Message;
+import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.job.constant.JobActionEnum;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.constant.ModelStatusToDisplayEnum;
@@ -294,6 +298,29 @@ public class BaseControllerTest extends NLocalFileMetadataTestCase {
             Assert.assertTrue(e instanceof KylinException);
             Assert.assertEquals(SEGMENT_EMPTY_PARAMETER.getCodeMsg(), e.getLocalizedMessage());
         }
+    }
+
+    @Test
+    public void testNeedRoutedToOtherInstance() {
+        Map<String, List<String>> nodeWithJobs = new HashMap<>();
+
+        // all jobs running on current node
+        nodeWithJobs.put(AddressUtil.getLocalInstance(), Lists.newArrayList("job1", "job2"));
+        Assert.assertFalse(baseController.needRouteToOtherInstance(nodeWithJobs, JobActionEnum.RESUME.name()));
+        Assert.assertFalse(baseController.needRouteToOtherInstance(nodeWithJobs, JobActionEnum.PAUSE.name()));
+
+        // some jobs running on other nodes
+        nodeWithJobs.put("node1", Lists.newArrayList("job1", "job2"));
+        nodeWithJobs.put("node2", Lists.newArrayList("job3", "job4"));
+
+        Assert.assertFalse(baseController.needRouteToOtherInstance(nodeWithJobs, JobActionEnum.RESUME.name()));
+        Assert.assertTrue(baseController.needRouteToOtherInstance(nodeWithJobs, JobActionEnum.PAUSE.name()));
+
+        // all jobs running on other nodes
+        nodeWithJobs.clear();
+        nodeWithJobs.put("node1", Lists.newArrayList("job1", "job2"));
+        Assert.assertFalse(baseController.needRouteToOtherInstance(nodeWithJobs, JobActionEnum.RESUME.name()));
+        Assert.assertTrue(baseController.needRouteToOtherInstance(nodeWithJobs, JobActionEnum.PAUSE.name()));
     }
 
 }
