@@ -678,9 +678,11 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             sqlRequest.setSql(rawSql.getStatementString());
             // Set user sql for log & record purpose
             queryContext.setUserSQL(rawSql.getFullTextString());
+            // Set first hint string for later use
+            queryContext.setFirstHintStr(rawSql.getFirstHintString());
 
             // Apply model priority if provided
-            applyModelPriority(queryContext, rawSql.getFullTextString());
+            applyModelPriority(queryContext, rawSql);
 
             // Apply sql black list check if matching
             applyQuerySqlBlacklist(project, rawSql.getStatementString());
@@ -1777,8 +1779,9 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         return Joiner.on(";").join(Joiner.on("_").join(aclNames), Joiner.on("_").join(aclTimes));
     }
 
-    private void applyModelPriority(QueryContext queryContext, String sql) {
-        queryContext.setModelPriorities(QueryModelPriorities.getModelPrioritiesFromComment(sql));
+    private void applyModelPriority(QueryContext queryContext, RawSql rawSql) {
+        queryContext.setModelPriorities(QueryModelPriorities.getModelPrioritiesFromHintStrOrComment(
+                rawSql.getFirstHintString(), rawSql.getFullTextString()));
     }
 
     public List<TableMetaWithType> getMetadataAddType(String project, String modelAlias) {

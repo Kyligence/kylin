@@ -73,7 +73,7 @@ object SparkSqlClient {
 
     try {
       // process cache hint like -- select * from xxx /*+ ACCEPT_CACHE_TIME(158176387682000) */
-      val sqlToRun = KylinCacheFileSystem.processAcceptCacheTimeInSql(sql)
+      KylinCacheFileSystem.processAcceptCacheTimeInHintStr(QueryContext.current().getFirstHintStr)
 
       val db = if (StringUtils.isNotBlank(project)) {
         NProjectManager.getInstance(KylinConfig.getInstanceFromEnv).getDefaultDatabase(project)
@@ -81,7 +81,7 @@ object SparkSqlClient {
         null
       }
       ss.sessionState.conf.setLocalProperty(DEFAULT_DB, db)
-      val dfOfPushDown = ss.sql(sqlToRun)
+      val dfOfPushDown = ss.sql(sql)
       if (NProjectManager.getProjectConfig(project).isPrintQueryPlanEnabled) {
         logger.info(dfOfPushDown.queryExecution.logical.toString())
       }
@@ -92,7 +92,7 @@ object SparkSqlClient {
       autoSetShufflePartitions(df)
       QueryContext.current().record("auto_set_parts")
 
-      val iter = if (FileSegments.isSyncFileSegSql(sqlToRun)) {
+      val iter = if (FileSegments.isSyncFileSegSql(sql)) {
         val nParts = df.rdd.getNumPartitions // trigger file scan, whose result will be captured by FileSegmentsDetector
         (
           ImmutableList.of(ImmutableList.of(nParts.toString).asInstanceOf[JList[String]]),
@@ -100,7 +100,7 @@ object SparkSqlClient {
           ImmutableList.of(new StructField("CNT", -5, "BIGINT", 0, 0, false))
         )
       } else {
-        dfToList(ss, sqlToRun, df)
+        dfToList(ss, sql, df)
       }
       QueryContext.current().record("collect_result")
       SoftAffinityManager.logAuditAsks()

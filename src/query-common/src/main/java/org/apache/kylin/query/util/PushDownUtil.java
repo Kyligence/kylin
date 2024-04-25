@@ -35,7 +35,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.BadRequestException;
@@ -90,9 +89,6 @@ public class PushDownUtil {
 
     private static final Logger logger = LoggerFactory.getLogger("query");
 
-    // sql hint "/*+ MODEL_PRIORITY({cube_name}) */"
-    private static final Pattern SQL_HINT_PATTERN = Pattern
-            .compile("/\\*\\s*\\+\\s*(?i)MODEL_PRIORITY\\s*\\([\\s\\S]*\\)\\s*\\*/");
     public static final String DEFAULT_SCHEMA = "DEFAULT";
     public static final String CC_SPLITTER = "'##CC_PUSH_DOWN_TOKEN##'";
     private static final String UNDER_LINE = "_";
@@ -203,7 +199,6 @@ public class PushDownUtil {
 
         String sql = queryParams.getSql();
         sql = QueryUtil.trimRightSemiColon(sql);
-        sql = SQL_HINT_PATTERN.matcher(sql).replaceAll("");
 
         List<IPushDownConverter> pushDownConverters = fetchConverters(queryParams.getKylinConfig());
         if (logger.isDebugEnabled()) {

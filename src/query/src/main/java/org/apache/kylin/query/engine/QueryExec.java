@@ -185,7 +185,7 @@ public class QueryExec {
             beforeQuery();
 
             // process cache hint like -- select * from xxx /*+ ACCEPT_CACHE_TIME(158176387682000) */
-            sql = processAcceptCacheTimeInSql(sql);
+            processAcceptCacheTime(queryContext.getFirstHintStr());
 
             QueryContext.currentTrace().startSpan(QueryTrace.SQL_PARSE_AND_OPTIMIZE);
             RelRoot relRoot = sqlConverter.convertSqlToRelNode(sql);
@@ -550,12 +550,11 @@ public class QueryExec {
         return new SQLException("Error while executing SQL \"" + sql + "\": " + msg, e);
     }
 
-    private String processAcceptCacheTimeInSql(String sql) {
+    private void processAcceptCacheTime(String hintStr) {
         if (kylinConfig.isKylinLocalCacheEnabled() && kylinConfig.isKylinFileStatusCacheEnabled()
                 && SparkSession.getDefaultSession().isDefined()) {
-            return KylinCacheFileSystem.processAcceptCacheTimeInSql(sql);
+            KylinCacheFileSystem.processAcceptCacheTimeInHintStr(hintStr);
         }
-        return sql;
     }
 
     private void clearAcceptCacheTimeLocally() {

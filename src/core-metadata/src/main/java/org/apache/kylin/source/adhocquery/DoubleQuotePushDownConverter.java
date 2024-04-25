@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.calcite.avatica.util.Quoting;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlHint;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
@@ -76,25 +78,33 @@ public class DoubleQuotePushDownConverter implements IPushDownConverter {
             return CalciteParser.parse(this.sql, this.project);
         }
 
-        private Collection<SqlIdentifier> getAllSqlIdentifiers() throws SqlParseException {
-            Set<SqlIdentifier> allSqlIdentifier = Sets.newHashSet();
+        private Collection<SqlIdentifier> getAllNonHintSqlIdentifiers() throws SqlParseException {
+            Set<SqlIdentifier> identifiers = Sets.newHashSet();
             SqlVisitor<Void> sqlVisitor = new SqlBasicVisitor<Void>() {
                 @Override
                 public Void visit(SqlIdentifier id) {
                     if (!isFunctionWithoutParentheses(id)) {
-                        allSqlIdentifier.add(id);
+                        identifiers.add(id);
                     }
                     return null;
                 }
-            };
-            parse().accept(sqlVisitor);
 
-            return allSqlIdentifier;
+                @Override
+                public Void visit(SqlCall call) {
+                    if (call instanceof SqlHint) {
+                        return null;
+                    }
+                    return super.visit(call);
+                }
+            };
+
+            parse().accept(sqlVisitor);
+            return identifiers;
         }
 
         public String convert() throws SqlParseException {
             final StringBuilder sqlConvertedStringBuilder = new StringBuilder(sql);
-            List<SqlIdentifier> sqlIdentifierList = Lists.newArrayList(getAllSqlIdentifiers());
+            List<SqlIdentifier> sqlIdentifierList = Lists.newArrayList(getAllNonHintSqlIdentifiers());
             CalciteParser.descSortByPosition(sqlIdentifierList);
             sqlIdentifierList.forEach(sqlIdentifier -> {
                 Pair<Integer, Integer> replacePos = CalciteParser.getReplacePos(sqlIdentifier, sql);

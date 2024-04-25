@@ -88,6 +88,14 @@ public class RawSql {
         return fullTextStringCache;
     }
 
+    public String getFirstHintString() {
+        RawSqlBlock firstHintBlock = stmtBlockList.stream()
+                .filter(stmtBlock -> RawSqlBlock.Type.HINT == stmtBlock.getType())
+                .findFirst()
+                .orElse(null);
+        return firstHintBlock == null ? null : firstHintBlock.getText();
+    }
+
     public void autoAppendLimit(KylinConfig kylinConfig, int limit) {
         autoAppendLimit(kylinConfig, limit, 0);
     }
