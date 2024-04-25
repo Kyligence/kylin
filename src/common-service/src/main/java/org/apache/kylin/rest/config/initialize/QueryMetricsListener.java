@@ -88,8 +88,7 @@ public class QueryMetricsListener {
                         MetricsTag.SUCCEED.getVal(), queryMetric.isSucceed() + "", MetricsTag.HIT_SNAPSHOT.getVal(),
                         queryMetric.isTableSnapshotUsed() + "", MetricsTag.PROJECT.getVal(),
                         queryMetric.getProjectName(), MetricsTag.CONSTANTS.getVal(),
-                        MetricsTag.CONSTANTS.getVal().equalsIgnoreCase(queryMetric.getEngineType()) + "",
-                        MetricsTag.HIT_SECOND_STORAGE.getVal(), queryMetric.isSecondStorage() + "")
+                        MetricsTag.CONSTANTS.getVal().equalsIgnoreCase(queryMetric.getEngineType()) + "")
                 .distributionStatisticExpiry(Duration.ofDays(1))
                 .sla(KylinConfig.getInstanceFromEnv().getMetricsQuerySlaSeconds()).register(meterRegistry)
                 .record(queryMetric.getQueryDuration() * 1.0 / 1000);

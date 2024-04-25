@@ -640,7 +640,7 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
                 projectService.dropProject(project);
             } catch (Exception e) {
                 Assert.assertTrue(e instanceof KylinException);
-                Assert.assertEquals("KE-010037009", ((KylinException) e).getErrorCode().getCodeString());
+                Assert.assertEquals("KE-010001008", ((KylinException) e).getErrorCode().getCodeString());
             }
             return null;
         }, project);
@@ -654,7 +654,7 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
                 projectService.dropProject(project);
             } catch (Exception e) {
                 Assert.assertTrue(e instanceof KylinException);
-                Assert.assertEquals("KE-010037009", ((KylinException) e).getErrorCode().getCodeString());
+                Assert.assertEquals("KE-010001008", ((KylinException) e).getErrorCode().getCodeString());
             }
             return null;
         }, project);
@@ -668,7 +668,7 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
                 projectService.dropProject(project);
             } catch (Exception e) {
                 Assert.assertTrue(e instanceof KylinException);
-                Assert.assertEquals("KE-010037009", ((KylinException) e).getErrorCode().getCodeString());
+                Assert.assertEquals("KE-010001008", ((KylinException) e).getErrorCode().getCodeString());
             }
             return null;
         }, project);

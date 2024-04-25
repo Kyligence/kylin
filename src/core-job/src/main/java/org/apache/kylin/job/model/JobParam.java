@@ -94,8 +94,6 @@ public class JobParam {
      */
     private boolean layoutsDeletableAfterBuild = false;
 
-    private Set<Long> secondStorageDeleteLayoutIds;
-
     public JobParam addExtParams(String key, String value) {
         Map<String, String> params = getExtParams();
         params.put(key, value);
@@ -209,12 +207,6 @@ public class JobParam {
     public void setCondition(Map<String, Object> condition) {
         if (Objects.nonNull(condition)) {
             this.condition = condition;
-        }
-    }
-
-    public void setSecondStorageDeleteLayoutIds(Set<Long> secondStorageDeleteLayoutIds) {
-        if (Objects.nonNull(secondStorageDeleteLayoutIds)) {
-            this.secondStorageDeleteLayoutIds = secondStorageDeleteLayoutIds;
         }
     }
 

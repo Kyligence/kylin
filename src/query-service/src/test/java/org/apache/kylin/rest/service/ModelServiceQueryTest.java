@@ -241,7 +241,7 @@ public class ModelServiceQueryTest extends SourceTestCase {
         getTestConfig().setProperty("kylin.metadata.semi-automatic-mode", "true");
         ModelQueryParams request6 = new ModelQueryParams(null, null, true, project, "ADMIN", Lists.newArrayList(), "",
                 1, 6, "", true, null, Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING,
-                        ModelAttributeEnum.HYBRID, ModelAttributeEnum.SECOND_STORAGE),
+                        ModelAttributeEnum.HYBRID),
                 null, null, false, false);
         val modelList6 = modelService.getModels(request6);
         Assert.assertEquals(5, modelList6.getValue().size());
@@ -306,8 +306,7 @@ public class ModelServiceQueryTest extends SourceTestCase {
         String modelName2 = "model_streaming";
         ModelQueryParams liteRequest = new ModelQueryParams("4965c827-fbb4-4ea1-a744-3f341a3b030d", modelName2, true,
                 project, "ADMIN", Lists.newArrayList(), "", 0, 10, "last_modify", true, null,
-                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID,
-                        ModelAttributeEnum.SECOND_STORAGE),
+                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID),
                 null, null, true, true);
 
         DataResult<List<NDataModel>> modelResult2 = modelService.getModels(liteRequest);
@@ -320,8 +319,7 @@ public class ModelServiceQueryTest extends SourceTestCase {
 
         ModelQueryParams request = new ModelQueryParams("4965c827-fbb4-4ea1-a744-3f341a3b030d", modelName2, true,
                 project, "ADMIN", Lists.newArrayList(), "", 0, 10, "last_modify", true, null,
-                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID,
-                        ModelAttributeEnum.SECOND_STORAGE),
+                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID),
                 null, null, true, false);
         DataResult<List<NDataModel>> modelResult3 = modelService.getModels(request);
         List<NDataModel> models3 = modelResult3.getValue();

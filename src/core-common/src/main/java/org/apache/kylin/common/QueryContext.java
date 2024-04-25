@@ -19,8 +19,6 @@
 package org.apache.kylin.common;
 
 import java.io.Closeable;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +50,6 @@ public class QueryContext implements Closeable {
     public static final String PUSHDOWN_OBJECT_STORAGE = "OBJECT STORAGE";
 
     public static final long DEFAULT_NULL_SCANNED_DATA = -1L;
-    public static final String ROUTE_USE_FORCEDTOTIEREDSTORAGE = "should route use forcedToTieredStorage";
 
     private static final TransmittableThreadLocal<QueryContext> contexts //
             = new TransmittableThreadLocal<QueryContext>() {
@@ -114,36 +111,7 @@ public class QueryContext implements Closeable {
 
     @Getter
     @Setter
-    private ForceToTieredStorage forcedToTieredStorage;
-    /**
-     * mark table index use second storage, key is layout id
-     */
-    @Getter
-    @Setter
-    private Map<Long, Boolean> secondStorageUsageMap = new HashMap<>();
-
-    @Getter
-    @Setter
     private boolean forceTableIndex = false;
-
-    // record second storage partition which used
-    @Getter
-    private final List<Integer> usedPartitionIndexes = new ArrayList<>();
-
-    // record second storage partition which used
-    @Getter
-    @Setter
-    private List<String> secondStorageUrls;
-
-    // record last partition status
-    @Getter
-    @Setter
-    private boolean lastFailed = false;
-
-    @Getter
-    @Setter
-    private boolean retrySecondStorage = true;
-
     @Getter
     @Setter
     private Map<String, Boolean> unmatchedJoinDigest = new ConcurrentHashMap<>();

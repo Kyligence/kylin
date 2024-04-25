@@ -43,7 +43,6 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
-import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -58,7 +57,6 @@ import org.apache.kylin.util.CalciteSystemProperty;
 import org.slf4j.Logger;
 
 import io.kyligence.kap.fileseg.FileSegments;
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.val;
 
 public class ContextUtil {
@@ -234,8 +232,6 @@ public class ContextUtil {
         NativeQueryRealization streamingRealization = new NativeQueryRealization(modelId, modelAlias,
                 storageContext.getStreamingLayoutId(), realizationType, storageContext.isPartialMatchModel(),
                 snapshots);
-        streamingRealization.setSecondStorage(QueryContext.current().getSecondStorageUsageMap()
-                .getOrDefault(streamingRealization.getLayoutId(), false));
         streamingRealization.setStreamingLayout(true);
         return streamingRealization;
     }
@@ -244,10 +240,6 @@ public class ContextUtil {
             String modelId, String modelAlias, List<String> snapshots) {
         val realization = new NativeQueryRealization(modelId, modelAlias, ctx.getStorageContext().getLayoutId(),
                 realizationType, ctx.getStorageContext().isPartialMatchModel(), snapshots);
-        realization.setSecondStorage(
-                QueryContext.current().getSecondStorageUsageMap().getOrDefault(realization.getLayoutId(), false));
-        realization.setRecommendSecondStorage(
-                recommendSecondStorage(ctx.getRealization().getProject(), modelId, realizationType));
 
         // lastDataLoadTime & isLoadingData
         if (ctx.getRealization() instanceof NDataflow) {
@@ -266,11 +258,6 @@ public class ContextUtil {
 
     private static void addTableSnapshots(Set<String> tableSets, OlapContext ctx) {
         tableSets.addAll(ctx.getStorageContext().getCandidate().getDerivedTableSnapshots());
-    }
-
-    private static boolean recommendSecondStorage(String project, String modelId, String realizationType) {
-        return QueryMetrics.TABLE_INDEX.equals(realizationType) && SecondStorageUtil.isProjectEnable(project)
-                && !SecondStorageUtil.isModelEnable(project, modelId);
     }
 
     public static RexInputRef createUniqueInputRefAmongTables(OlapTableScan table, int columnIdx,

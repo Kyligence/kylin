@@ -359,7 +359,6 @@ public class ModelBuildService extends AbstractModelService implements ModelBuil
             request.setProject(params.getProject());
             request.setMultiPartitionDesc(params.getMultiPartitionDesc());
             modelService.updateDataModelSemantic(params.getProject(), request);
-            modelService.updateSecondStorageModel(params.getProject(), request.getId());
             params.getSegmentHoles().clear();
         }
         List<JobParam> res = Lists.newArrayListWithCapacity(params.getSegmentHoles().size() + 2);

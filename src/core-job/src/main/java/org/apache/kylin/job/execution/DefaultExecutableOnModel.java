@@ -27,7 +27,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.StringHelper;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -172,21 +171,6 @@ public class DefaultExecutableOnModel extends DefaultExecutable {
     protected void onExecuteSuicidalHook(String jobId) {
         if (handler != null) {
             handler.handleDiscardOrSuicidal();
-        }
-    }
-
-    protected static void initResourceDetectDagNode(AbstractExecutable resourceDetect, AbstractExecutable indexStep,
-            AbstractExecutable secondStorage) {
-        if (resourceDetect != null) {
-            val indexStepId = indexStep.getId();
-            indexStep.setPreviousStep(resourceDetect.getId());
-            if (secondStorage != null) {
-                val secondStorageId = secondStorage.getId();
-                resourceDetect.setNextSteps(Sets.newHashSet(indexStepId, secondStorageId));
-                secondStorage.setPreviousStep(resourceDetect.getId());
-            } else {
-                resourceDetect.setNextSteps(Sets.newHashSet(indexStepId));
-            }
         }
     }
 

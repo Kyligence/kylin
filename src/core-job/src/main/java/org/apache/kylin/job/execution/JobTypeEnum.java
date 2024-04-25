@@ -40,13 +40,6 @@ public enum JobTypeEnum {
 
     ASYNC_QUERY(Category.ASYNC_QUERY), //
 
-    EXPORT_TO_SECOND_STORAGE(Category.SECOND_STORAGE), //
-    SECOND_STORAGE_MODEL_CLEAN(Category.SECOND_STORAGE), //
-    SECOND_STORAGE_NODE_CLEAN(Category.SECOND_STORAGE), //
-    SECOND_STORAGE_SEGMENT_CLEAN(Category.SECOND_STORAGE), //
-    SECOND_STORAGE_INDEX_CLEAN(Category.SECOND_STORAGE), //
-    SECOND_STORAGE_REFRESH_SECONDARY_INDEXES(Category.SECOND_STORAGE), //
-
     TABLE_SAMPLING(Category.OTHER), STAGE(Category.OTHER);
 
     @Getter
@@ -60,7 +53,6 @@ public enum JobTypeEnum {
         public static final String BUILD = "BUILD";
         public static final String SNAPSHOT = "SNAPSHOT";
         public static final String STREAMING = "STREAMING";
-        public static final String SECOND_STORAGE = "SECOND_STORAGE";
         public static final String ASYNC_QUERY = "ASYNC_QUERY";
         public static final String OTHER = "OTHER";
 

@@ -21,7 +21,6 @@ import static org.apache.kylin.common.exception.code.ErrorCodeTool.PARAMETER_TIM
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -179,9 +178,6 @@ public class DiagClientToolTest extends NLocalFileMetadataTestCase {
         val properties = org.apache.kylin.common.util.FileUtils
                 .readFromPropertiesFile(new File(baseDiagFile, "conf/kylin.properties"));
         Assert.assertFalse(properties.get("kylin.metadata.url").contains(SensitiveConfigKeysConstant.HIDDEN + ":3306"));
-        Assert.assertFalse(new File(baseDiagFile, "conf/clickhouse01_<hidden>_8080.zip").exists());
-        Assert.assertTrue(new File(baseDiagFile, "conf/clickhouse01_192.1.2.1_8080.zip").exists());
-
     }
     
     @Test
@@ -248,19 +244,6 @@ public class DiagClientToolTest extends NLocalFileMetadataTestCase {
 
         val logIp = FileUtils.readFileToString(new File(baseDiagFile, "conf/a.log"));
         Assert.assertTrue(logIp.contains(SensitiveConfigKeysConstant.HIDDEN));
-
-        Arrays.stream(baseDiagFile.listFiles()).filter(file->file.getName().contains("conf")).forEach(s-> Arrays.stream(s.listFiles()).forEach(System.out::println));
-
-        Assert.assertTrue(new File(baseDiagFile, "conf/clickhouse01_<hidden>_8080.zip").exists());
-
-        ZipFileUtils.decompressZipFile(baseDiagFile + "/conf/clickhouse01_<hidden>_8080.zip",
-                baseDiagFile + "/conf/");
-
-        Arrays.stream(new File(baseDiagFile + "/conf/clickhouse01_<hidden>_8080").listFiles()).forEach(System.out::println);
-        Assert.assertTrue(new File(baseDiagFile + "/conf/clickhouse01_<hidden>_8080", "c1_<hidden>.txt").exists());
-        String unzipTxt = FileUtils
-                .readFileToString(new File(baseDiagFile + "/conf/clickhouse01_<hidden>_8080", "c1_<hidden>.txt"));
-        Assert.assertTrue(unzipTxt.contains(SensitiveConfigKeysConstant.HIDDEN));
     }
 
     @Test

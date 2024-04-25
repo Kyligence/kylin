@@ -359,8 +359,6 @@ public class AsyncQueryJobTest extends NLocalFileMetadataTestCase {
         val properties = new Properties();
         properties.setProperty("kylin.extension.info.factory",
                 "org.apache.kylin.common.extension.KylinInfoExtension$Factory");
-        properties.setProperty("kylin.second-storage.class",
-                "org.apache.kylin.common.extension.KylinInfoExtension$Factory");
         properties.setProperty("kylin.streaming.enabled", "true");
 
         val kylinInfoExtensionFactory = Mockito.mock(KylinInfoExtension.Factory.class);
@@ -372,7 +370,6 @@ public class AsyncQueryJobTest extends NLocalFileMetadataTestCase {
         properties1.putAll(properties);
         asyncQueryJob.modifyDump(properties1);
         Assert.assertNull(properties1.get("kylin.extension.info.factory"));
-        Assert.assertNull(properties1.get("kylin.second-storage.class"));
         Assert.assertEquals("false", properties1.get("kylin.streaming.enabled"));
 
         Mockito.when(kylinInfoExtensionFactory.checkKylinInfo()).thenReturn(true);
@@ -380,8 +377,6 @@ public class AsyncQueryJobTest extends NLocalFileMetadataTestCase {
         properties2.putAll(properties);
         asyncQueryJob.modifyDump(properties2);
         Assert.assertNull(properties2.get("kylin.extension.info.factory"));
-        Assert.assertEquals(properties.getProperty("kylin.second-storage.class"),
-                properties2.get("kylin.second-storage.class"));
         Assert.assertEquals(properties.getProperty("kylin.streaming.enabled"),
                 properties2.get("kylin.streaming.enabled"));
     }

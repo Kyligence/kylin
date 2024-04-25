@@ -548,55 +548,6 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isMetadataCompressEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.metadata.compress.enabled", TRUE));
     }
-
-    public String getSecondStorage() {
-        return getOptional("kylin.second-storage.class", null);
-    }
-
-    public String getSecondStorageDiagLogMatcher() {
-        return getOptional("kylin.second-storage.diag-log-matcher", "*-server.log");
-    }
-
-    public int getSecondStorageDiagMaxCompressedFile() {
-        return Integer.parseInt(getOptional("kylin.second-storage.diag-max-compressed-file", "2"));
-    }
-
-    public String getSecondStorageSshIdentityPath() {
-        return getOptional("kylin.second-storage.ssh-identity-path", "~/.ssh/id_rsa");
-    }
-
-    public int getSecondStorageLoadDeduplicationWindow() {
-        return Integer.parseInt(getOptional("kylin.second-storage.load-deduplication-window", "0"));
-    }
-
-    public int getSecondStorageLoadRetry() {
-        return Integer.parseInt(getOptional("kylin.second-storage.load-retry", "3"));
-    }
-
-    public int getSecondStorageLoadRetryInterval() {
-        return Integer.parseInt(getOptional("kylin.second-storage.load-retry-interval", "30000"));
-    }
-
-    public boolean getSecondStorageQueryMetricCollect() {
-        return Boolean.parseBoolean(getOptional("kylin.second-storage.query-metric-collect", TRUE));
-    }
-
-    public int getSecondStorageQueryPushdownLimit() {
-        return Integer.parseInt(getOptional("kylin.second-storage.query-pushdown-limit", "0"));
-    }
-
-    public boolean getSecondStorageUseLowCardinality() {
-        return Boolean.parseBoolean(getOptional("kylin.second-storage.use-low-cardinality", TRUE));
-    }
-
-    public long getSecondStorageLowCardinalityNumber() {
-        return Long.parseLong(getOptional("kylin.second-storage.low-cardinality-number", "10000"));
-    }
-
-    public long getSecondStorageHighCardinalityNumber() {
-        return Long.parseLong(getOptional("kylin.second-storage.high-cardinality-number", ONE_HUNDRED_THOUSAND));
-    }
-
     public int getMetadataCacheMaxNum() {
         return Integer.parseInt(getOptional("kylin.metadata.cache.max-num", String.valueOf(Integer.MAX_VALUE)));
     }
@@ -3899,17 +3850,6 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isUnitOfWorkSimulationEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.env.unitofwork-simulation-enabled", FALSE));
     }
-
-    public ForceToTieredStorage getSystemForcedToTieredStorage() {
-        int i = Integer.parseInt(getOptional("kylin.second-storage.route-when-ch-fail", "0"));
-        return ForceToTieredStorage.values()[i];
-    }
-
-    public ForceToTieredStorage getProjectForcedToTieredStorage() {
-        int i = Integer.parseInt(getOptional("kylin.second-storage.route-when-ch-fail"));
-        return ForceToTieredStorage.values()[i];
-    }
-
     public long getClusterManagerHealthCheckMaxTimes() {
         return Long.parseLong(getOptional("kylin.engine.cluster-manager-health-check-max-times", "10"));
     }
@@ -4033,47 +3973,6 @@ public abstract class KylinConfigBase implements Serializable {
     public int getJobTagMaxSize() {
         return Integer.parseInt(this.getOptional("kylin.job.tag-max-size", "1024"));
     }
-
-    public String getJobSchedulerMode() {
-        return getOptional("kylin.engine.job-scheduler-mode", "DAG");
-    }
-
-    public String getKylinEngineSegmentOnlineMode() {
-        return getOptional("kylin.engine.segment-online-mode", SegmentOnlineMode.DFS.toString());
-    }
-
-    public int getSecondStorageLoadThreadsPerJob() {
-        int process = Integer.parseInt(getOptional("kylin.second-storage.load-threads-per-job", "3"));
-        if (process <= 0) {
-            process = 1;
-        }
-        return process;
-    }
-
-    public int getSecondStorageCommitThreadsPerJob() {
-        int process = Integer.parseInt(getOptional("kylin.second-storage.commit-threads-per-job", "10"));
-        if (process <= 0) {
-            process = 1;
-        }
-        return process;
-    }
-
-    public long getSecondStorageWaitIndexBuildSecond() {
-        return Long.parseLong(getOptional("kylin.second-storage.wait-index-build-second", "10"));
-    }
-
-    public String getSecondStorageJDBCKeepAliveTimeout() {
-        return getOptional("kylin.second-storage.jdbc-keep-alive-timeout", "600000");
-    }
-
-    public String getSecondStorageJDBCSocketTimeout() {
-        return getOptional("kylin.second-storage.jdbc-socket-timeout", "600000");
-    }
-
-    public String getSecondStorageJDBCExtConfig() {
-        return getOptional("kylin.second-storage.jdbc-ext-config", "connect_timeout=3");
-    }
-
     public long getRoutineOpsTaskTimeOut() {
         return TimeUtil.timeStringAs(getOptional("kylin.metadata.ops-cron-timeout", "4h"), TimeUnit.MILLISECONDS);
     }
@@ -4118,7 +4017,6 @@ public abstract class KylinConfigBase implements Serializable {
         return TimeUtil.timeStringAs(getOptional("kylin.metrics.hdfs-periodic-calculation-interval", "5m"),
                 TimeUnit.MILLISECONDS);
     }
-
     public String getKubernetesUploadPath() {
         return getOptional(getKubernetesUploadPathKey());
     }
@@ -4134,29 +4032,6 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isSkipResourceCheck() {
         return Boolean.parseBoolean(getOptional("kylin.build.resource.skip-resource-check", FALSE));
     }
-
-    public int getSecondStorageSkippingIndexGranularity() {
-        int granularity = Integer.parseInt(getOptional("kylin.second-storage.skipping-index.granularity", "3"));
-        return granularity <= 0 ? 3 : granularity;
-    }
-
-    public String getSecondStorageSkippingIndexBloomFilter() {
-        return getOptional("kylin.second-storage.skipping-index.bloom-filter", "0.025");
-    }
-
-    public int getSecondStorageSkippingIndexSet() {
-        int size = Integer.parseInt(getOptional("kylin.second-storage.skipping-index.set", "100"));
-        return size <= 0 ? 100 : size;
-    }
-
-    public boolean getSecondStorageIndexAllowNullableKey() {
-        return Boolean.parseBoolean(getOptional("kylin.second-storage.allow-nullable-skipping-index", TRUE));
-    }
-
-    public int getSecondStorageWaitLockTimeout() {
-        return Integer.parseInt(getOptional("kylin.second-storage.wait-lock-timeout", "180"));
-    }
-
     public boolean isBuildSegmentOverlapEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.build.segment-overlap-enabled", FALSE));
     }

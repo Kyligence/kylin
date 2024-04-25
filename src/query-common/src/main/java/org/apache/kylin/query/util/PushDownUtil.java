@@ -165,9 +165,7 @@ public class PushDownUtil {
     }
 
     private static void checkPushDownIncapable(QueryParams queryParams) {
-        SQLException sqlException = queryParams.getSqlException();
-        if (queryParams.isForcedToPushDown() || (sqlException != null
-                && sqlException.getMessage().contains(QueryContext.ROUTE_USE_FORCEDTOTIEREDSTORAGE))) {
+        if (queryParams.isForcedToPushDown()) {
             throw new KylinException(QueryErrorCode.INVALID_PARAMETER_PUSH_DOWN,
                     MsgPicker.getMsg().getDisablePushDownPrompt());
         }

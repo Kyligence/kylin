@@ -169,8 +169,6 @@ public class DiagClientTool extends AbstractInfoExtractorTool {
 
         exportKgLogs(exportDir, startTime, endTime, recordTime);
 
-        exportTieredStorage(null, exportDir, startTime, endTime, recordTime);
-
         exportSystemUsageInfo(recordTime, DateTime.now().minusDays(useInfoBeforeDay).withTimeAtStartOfDay().getMillis(),
                 Long.MAX_VALUE);
 

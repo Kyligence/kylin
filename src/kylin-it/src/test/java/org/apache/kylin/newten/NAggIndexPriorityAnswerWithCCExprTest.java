@@ -82,7 +82,7 @@ public class NAggIndexPriorityAnswerWithCCExprTest extends NLocalWithSparkSessio
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), context);
         context.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
-                dataflow.getQueryableSegments(), context.getSQLDigest(), null);
+                dataflow.getQueryableSegments(), context.getSQLDigest());
         assert layoutCandidate != null;
         Assert.assertTrue(layoutCandidate.getCapabilityResult().isCapable());
 

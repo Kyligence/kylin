@@ -64,17 +64,6 @@
         <!-- test -->
         <dependency>
             <groupId>org.apache.kylin</groupId>
-            <artifactId>kap-second-storage-clickhouse</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kap-second-storage-clickhouse</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-core-metadata</artifactId>
             <type>test-jar</type>
             <scope>test</scope>

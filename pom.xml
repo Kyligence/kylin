@@ -325,12 +325,6 @@
         <!-- Apache POI -->
         <poi.version>4.1.2</poi.version>
 
-        <!-- clickhouse -->
-        <clickhouse-native-jdbc.version>2.6.5</clickhouse-native-jdbc.version>
-        <clickhouse-jdbc.version>0.2.4</clickhouse-jdbc.version>
-        <clickhouse.group>ru.yandex.clickhouse</clickhouse.group>
-        <clickhouse.artifact>clickhouse-jdbc</clickhouse.artifact>
-
         <external.version>5.0.0</external.version>
         <iam-user-manager.version>2.1.0</iam-user-manager.version>
 
@@ -382,10 +376,6 @@
         <module>src/tool</module>
         <module>src/datasource-sdk</module>
         <module>src/streaming-sdk</module>
-        <module>src/second-storage/core</module>
-        <module>src/second-storage/core-ui</module>
-        <module>src/second-storage/clickhouse</module>
-        <module>src/second-storage/clickhouse-it</module>
         <module>src/modeling-service</module>
         <module>src/query-service</module>
         <module>src/datasource-service</module>
@@ -498,22 +488,6 @@
             <dependency>
                 <groupId>org.apache.kylin</groupId>
                 <artifactId>kylin-metadata-feign-api</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <!-- second storage -->
-            <dependency>
-                <groupId>org.apache.kylin</groupId>
-                <artifactId>kap-second-storage-clickhouse</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.kylin</groupId>
-                <artifactId>kap-second-storage-core</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.kylin</groupId>
-                <artifactId>kap-second-storage-ui</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -664,37 +638,6 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>com.github.housepower</groupId>
-                <artifactId>clickhouse-native-jdbc</artifactId>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.lz4</groupId>
-                        <artifactId>lz4-java</artifactId>
-                    </exclusion>
-                </exclusions>
-                <version>${clickhouse-native-jdbc.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ru.yandex.clickhouse</groupId>
-                <artifactId>clickhouse-jdbc</artifactId>
-                <exclusions>
-                    <exclusion>
-                        <artifactId>jackson-databind</artifactId>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>net.jpountz.lz4</groupId>
-                        <artifactId>lz4</artifactId>
-                    </exclusion>
-                </exclusions>
-                <version>${clickhouse-jdbc.version}</version>
-            </dependency>
-
-            <dependency>
                 <groupId>org.apache.kylin</groupId>
                 <artifactId>kylin-core-common</artifactId>
                 <version>${project.version}</version>
@@ -801,12 +744,6 @@
             <dependency>
                 <groupId>org.apache.kylin</groupId>
                 <artifactId>kylin-modeling-service</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.kylin</groupId>
-                <artifactId>kap-second-storage-clickhouse</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
             </dependency>
@@ -3000,56 +2937,6 @@
                 <version>${transmittable-thread-local.version}</version>
             </dependency>
 
-            <!-- Introduced for clickhouse test  -->
-            <dependency>
-                <groupId>org.eclipse.jetty.toolchain</groupId>
-                <artifactId>jetty-test-helper</artifactId>
-                <version>${jetty.toolchain.test-helper.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>junit</groupId>
-                        <artifactId>junit</artifactId>
-                    </exclusion>
-                </exclusions>
-                <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>junit-jupiter</artifactId>
-                <version>${test.container.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.junit.jupiter</groupId>
-                        <artifactId>junit-jupiter-api</artifactId>
-                    </exclusion>
-                </exclusions>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>jdbc</artifactId>
-                <version>${test.container.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>clickhouse</artifactId>
-                <version>${test.container.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>junit</groupId>
-                        <artifactId>junit</artifactId>
-                    </exclusion>
-                </exclusions>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>nginx</artifactId>
-                <version>${test.container.version}</version>
-                <scope>test</scope>
-            </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-s3</artifactId>
@@ -3687,16 +3574,6 @@
             <modules>
                 <module>src/spark-project/kylin-soft-affinity-cache-hadoop3</module>
             </modules>
-        </profile>
-        <profile>
-            <id>clickhouse.native.jdbc</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <clickhouse.group>com.github.housepower</clickhouse.group>
-                <clickhouse.artifact>clickhouse-native-jdbc</clickhouse.artifact>
-            </properties>
         </profile>
     </profiles>
 </project>

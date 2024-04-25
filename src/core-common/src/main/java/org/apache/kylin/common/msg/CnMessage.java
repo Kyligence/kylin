@@ -280,11 +280,6 @@ public class CnMessage extends Message {
     }
 
     @Override
-    public String getProjectDropFailedSecondStorageEnabled() {
-        return "无法删除项目 \"%s\"，请先关闭分层存储。";
-    }
-
-    @Override
     public String getProjectDropFailedJobsNotKilled() {
         return "无法删除项目 \"%s\"，请终止相关任务后再试。";
     }
@@ -642,7 +637,7 @@ public class CnMessage extends Message {
 
     @Override
     public String getLowLevelLicenseMessage() {
-        return "无法使用分层存储，如需使用请先升级为 Kyligence 高级版";
+        return "如需使用该功能请先升级为 Kyligence 高级版";
     }
 
     @Override
@@ -1383,80 +1378,9 @@ public class CnMessage extends Message {
     public String getQueryHistoryColumnMeta() {
         return "查询开始时间,查询耗时,查询 ID,SQL 语句,查询对象,查询状态,查询节点,查询用户,查询信息\n";
     }
-
-    @Override
-    public String getSecondStorageJobExists() {
-        return "当前无法关闭分层存储。模型 “%s” 存在正在运行的任务，请检查后再试。\n";
-    }
-
-    @Override
-    public String getSecondStorageConcurrentOperate() {
-        return "存在相关的分层存储的任务正在运行，请稍后重试。";
-    }
-
-    @Override
-    public String getSecondStorageProjectJobExists() {
-        return "当前无法关闭分层存储。项目 “%s” 存在正在运行的任务，请检查后再试。\n";
-    }
-
-    @Override
-    public String getSecondStorageProjectEnabled() {
-        return "项目 %s 未开启分层存储。";
-    }
-
-    @Override
-    public String getSecondStorageModelEnabled() {
-        return "模型 %s 未开启分层存储。";
-    }
-
-    @Override
-    public String getSecondStorageLayoutNotExist() {
-        return "不存在 Layout id %s。";
-    }
-
-    @Override
-    public String getSecondStorageLayoutNotBaseTableIndex() {
-        return "Layout id %s 不是和分层存储一致的基础明细索引。";
-    }
-
-    @Override
-    public String getSecondStorageNotSupportType(String dataType) {
-        return String.format(Locale.ROOT, "Skipping Index不支持'%s'列类型。", dataType);
-    }
-
-    @Override
-    public String getSecondStorageSegmentWithoutBaseIndex() {
-        return "Segment 中缺少基础明细索引，请添加后重试。";
-    }
-
-    @Override
-    public String getSecondStorageDeleteNodeFailed() {
-        return "节点%s存在数据，大小为%d bytes";
-    }
-
-    @Override
-    public String getInvalidLowCardinalityDataType() {
-        return "无效的数据类型，当前仅支持 LowCardinality(Nullable(String)) 或 Nullable(String) 的数据类型。";
-    }
-
-    @Override
-    public String getJobRestartFailed() {
-        return "分层存储任务不支持重启操作。\n";
-    }
-
-    @Override
-    public String getJobResumeFailed() {
-        return "分层存储任务暂时不能恢复，请稍后再试。\n";
-    }
-
     @Override
     public String getJobPauseFailed() {
         return "该类型任务不支持暂停操作";
-    }
-
-    @Override
-    public String getSegmentDropFailed() {
-        return "Segment 正在导入分层存储中。请稍后重试。\n";
     }
 
     @Override
@@ -1523,22 +1447,6 @@ public class CnMessage extends Message {
     public String getStreamingIndexesConvert() {
         return "流数据模型暂无法转换为优化建议。";
     }
-
-    @Override
-    public String getForcedToTieredstorageAndForceToIndex() {
-        return "“force_to_index=ture“ 时，查询使用分层存储失败时不能下压，“forcedToTieredStorage“=1 或者 conf=1 无效，请修改后重试";
-    }
-
-    @Override
-    public String getForcedToTieredstorageReturnError() {
-        return "查询失败。分层存储不可用，请修复后重试查询";
-    }
-
-    @Override
-    public String getForcedToTieredstorageInvalidParameter() {
-        return "无效的参数值，请修改后重试";
-    }
-
     @Override
     public String getParameterEmpty() {
         return PARAMETER_EMPTY;
@@ -1547,26 +1455,6 @@ public class CnMessage extends Message {
     @Override
     public String getCannotForceToBothPushdodwnAndIndex() {
         return "不能同时强制下推和击中模型，参数 “forcedToPushDown” 和 “forced_to_index” 不能同时使用。请检查后重试。";
-    }
-
-    @Override
-    public String getSecondStorageNodeNotAvailable() {
-        return "无法添加节点。节点不存在或被其他项目占用，请修改后重试";
-    }
-
-    @Override
-    public String getBaseTableIndexNotAvailable() {
-        return "当前无法开启分层存储。请先创建基础所明细索引。";
-    }
-
-    @Override
-    public String getPartitionColumnNotAvailable() {
-        return "当前无法开启分层存储。请将时间分区列添加到维度，并更新基础明细索引。";
-    }
-
-    @Override
-    public String getProjectLocked() {
-        return "当前项目的分层存储中正在进行数据迁移，请稍后重试。";
     }
 
     @Override
@@ -1748,26 +1636,6 @@ public class CnMessage extends Message {
     @Override
     public String getProfilingCollectTimeout() {
         return "构建火焰图任务" + TASK_TIMEOUT;
-    }
-
-    @Override
-    public String getSecondStorageIndexNotSupport() {
-        return "Order by列和Skipping Index列不支持使用分区列";
-    }
-
-    @Override
-    public String getSecondStorageIndexNotAllowNullable() {
-        return "Order by和Skipping Index不允许列类型为Nullable。";
-    }
-
-    @Override
-    public String getSecondStorageOrderByHasData() {
-        return "在线索引已加载分层存储数据，不支持修改Order by列。如必须修改，请先清空分层存储数据";
-    }
-
-    @Override
-    public String getSecondStorageNodeNotAvailable(String nodeName) {
-        return String.format(Locale.ROOT, "分层存储节点'%s'不可用。", nodeName);
     }
 
     @Override

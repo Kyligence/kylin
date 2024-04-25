@@ -1274,7 +1274,7 @@ public class IndexPlanServiceTest extends SourceTestCase {
 
         // mark a layout tobedelete
         indexManager.updateIndexPlan(modelId, copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId,
-                Sets.newHashSet(tobeDeleteLayoutId), Collections.emptyMap()));
+                Sets.newHashSet(tobeDeleteLayoutId)));
 
         //remove tobedelete layout from seg1
         val newDf = dfManager.getDataflow(modelId);

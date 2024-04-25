@@ -18,9 +18,6 @@
 package org.apache.kylin.rest.util;
 
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARTITION_COLUMN;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_SECOND_STORAGE_PARTITION_INVALID;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.PARTITION_SECOND_STORAGE_PARTITION_INVALID;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_SECOND_STORAGE_PARTITION_INVALID;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -38,9 +35,7 @@ import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.rest.constant.ModelAttributeEnum;
-import org.apache.kylin.rest.response.NDataModelResponse;
 
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.val;
 
 public class ModelUtils {
@@ -90,71 +85,15 @@ public class ModelUtils {
 
     }
 
-    public static Set<NDataModel> getFilteredModels(String project, List<ModelAttributeEnum> modelAttributes,
+    public static Set<NDataModel> getFilteredModels(List<ModelAttributeEnum> modelAttributes,
             List<NDataModel> models) {
         Set<ModelAttributeEnum> modelAttributeSet = Sets
                 .newHashSet(modelAttributes == null ? Collections.emptyList() : modelAttributes);
         Set<NDataModel> filteredModels = new HashSet<>();
-        if (SecondStorageUtil.isProjectEnable(project)) {
-            val secondStorageInfos = SecondStorageUtil.setSecondStorageSizeInfo(models);
-            val it = models.listIterator();
-            while (it.hasNext()) {
-                val secondStorageInfo = secondStorageInfos.get(it.nextIndex());
-                NDataModelResponse modelResponse = (NDataModelResponse) it.next();
-                modelResponse.setSecondStorageNodes(secondStorageInfo.getSecondStorageNodes());
-                modelResponse.setSecondStorageSize(secondStorageInfo.getSecondStorageSize());
-                modelResponse.setSecondStorageEnabled(secondStorageInfo.isSecondStorageEnabled());
-            }
-            if (modelAttributeSet.contains(ModelAttributeEnum.SECOND_STORAGE)) {
-                filteredModels.addAll(ModelAttributeEnum.SECOND_STORAGE.filter(models));
-                modelAttributeSet.remove(ModelAttributeEnum.SECOND_STORAGE);
-            }
-        }
         for (val attr : modelAttributeSet) {
             filteredModels.addAll(attr.filter(models));
         }
         return filteredModels;
-    }
-
-    public static void addSecondStorageInfo(String project, List<NDataModel> models) {
-        if (SecondStorageUtil.isProjectEnable(project)) {
-            val secondStorageInfos = SecondStorageUtil.setSecondStorageSizeInfo(models);
-            val it = models.listIterator();
-            while (it.hasNext()) {
-                val secondStorageInfo = secondStorageInfos.get(it.nextIndex());
-                NDataModelResponse modelResponse = (NDataModelResponse) it.next();
-                modelResponse.setSecondStorageNodes(secondStorageInfo.getSecondStorageNodes());
-                modelResponse.setSecondStorageSize(secondStorageInfo.getSecondStorageSize());
-                modelResponse.setSecondStorageEnabled(secondStorageInfo.isSecondStorageEnabled());
-            }
-        }
-    }
-
-    public static void checkSecondStoragePartition(String project, String modelId, PartitionDesc partitionDesc,
-            MessageType type) {
-        if (partitionDesc == null || partitionDesc.getPartitionDateColumn() == null) {
-            return;
-        }
-
-        if (!SecondStorageUtil.isModelEnable(project, modelId)) {
-            return;
-        }
-
-        val model = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getDataModelDesc(modelId);
-        String partitionColumn = partitionDesc.getPartitionDateColumn();
-        if (model.getAllNamedColumns().stream()
-                .noneMatch(col -> col.isDimension() && col.getAliasDotColumn().equalsIgnoreCase(partitionColumn))) {
-            switch (type) {
-            case MODEL:
-                throw new KylinException(MODEL_SECOND_STORAGE_PARTITION_INVALID);
-            case SEGMENT:
-                throw new KylinException(SEGMENT_SECOND_STORAGE_PARTITION_INVALID);
-            case PARTITION:
-                throw new KylinException(PARTITION_SECOND_STORAGE_PARTITION_INVALID);
-            default:
-                throw new IllegalStateException("this should not happen");
-            }
-        }
     }
 
     public enum MessageType {

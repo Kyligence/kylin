@@ -66,18 +66,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kylin</groupId>
-            <artifactId>kap-second-storage-clickhouse</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kap-second-storage-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kap-second-storage-ui</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
             <artifactId>distributed-lock-ext</artifactId>
         </dependency>
         <dependency>
@@ -271,12 +259,6 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <scope>provided</scope>
-        </dependency>
-
-        <!-- clickhouse jdbc -->
-        <dependency>
-            <groupId>${clickhouse.group}</groupId>
-            <artifactId>${clickhouse.artifact}</artifactId>
         </dependency>
 
         <dependency>

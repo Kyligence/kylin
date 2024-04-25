@@ -257,7 +257,6 @@ public class RealizationChooser {
             Set<FunctionDesc> metrics = Sets.newHashSet();
             buildDimensionsAndMetrics(context, dimensions, metrics);
             buildStorageContext(context, dimensions, metrics, candidate);
-            buildSecondStorageEnabled(context.getSQLDigest());
             if (!QueryContext.current().isForModeling()) {
                 fixContextForTableIndexAnswerNonRawQuery(context);
             }
@@ -490,16 +489,6 @@ public class RealizationChooser {
                 TblColRef col = func.getColRefs().get(1);
                 context.getGroupByColumns().add(col);
             }
-        }
-    }
-
-    private static void buildSecondStorageEnabled(SQLDigest sqlDigest) {
-        KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
-        if (kylinConfig.getSecondStorageQueryPushdownLimit() <= 0)
-            return;
-
-        if (sqlDigest.isRawQuery && sqlDigest.getLimit() > kylinConfig.getSecondStorageQueryPushdownLimit()) {
-            QueryContext.current().setRetrySecondStorage(false);
         }
     }
 

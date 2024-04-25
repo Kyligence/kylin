@@ -20,20 +20,17 @@ package org.apache.kylin.rest.response;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.kylin.job.common.SegmentUtil;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
-import org.apache.kylin.metadata.model.SegmentSecondStorageStatusEnum;
 import org.apache.kylin.metadata.model.SegmentStatusEnumToDisplay;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
-import io.kyligence.kap.secondstorage.response.SecondStorageNode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.val;
@@ -58,9 +55,6 @@ public class NDataSegmentResponse extends NDataSegment {
     @JsonProperty("status_to_display")
     private SegmentStatusEnumToDisplay statusToDisplay;
 
-    @JsonProperty("status_second_storage_to_display")
-    private SegmentSecondStorageStatusEnum statusSecondStorageToDisplay;
-
     @JsonProperty("index_count")
     private long indexCount;
 
@@ -81,13 +75,6 @@ public class NDataSegmentResponse extends NDataSegment {
 
     @JsonProperty("row_count")
     private long rowCount;
-
-    @JsonProperty("second_storage_nodes")
-    private Map<String, List<SecondStorageNode>> secondStorageNodes;
-
-    // byte
-    @JsonProperty("second_storage_size")
-    private long secondStorageSize;
 
     private long createTime;
 

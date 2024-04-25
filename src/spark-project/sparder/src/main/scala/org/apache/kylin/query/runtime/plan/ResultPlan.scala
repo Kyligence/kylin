@@ -17,7 +17,6 @@
  */
 package org.apache.kylin.query.runtime.plan
 
-import io.kyligence.kap.secondstorage.SecondStorageUtil
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.fs.Path
@@ -33,7 +32,6 @@ import org.apache.kylin.metadata.state.QueryShareStateManager
 import org.apache.kylin.query.engine.RelColumnMetaDataExtractor
 import org.apache.kylin.query.engine.exec.ExecuteResult
 import org.apache.kylin.query.pushdown.SparkSqlClient.readPushDownResultRow
-import org.apache.kylin.query.relnode.ContextUtil
 import org.apache.kylin.query.util.{AsyncQueryUtil, QueryInterruptChecker, SparkJobTrace, SparkQueryJobManager}
 import org.apache.poi.xssf.usermodel.{XSSFSheet, XSSFWorkbook}
 import org.apache.spark.SparkConf
@@ -134,15 +132,6 @@ object ResultPlan extends LogEx {
       QueryContext.current().getMetrics.setQueryJobCount(jobCount)
       QueryContext.current().getMetrics.setQueryStageCount(stageCount)
       QueryContext.current().getMetrics.setQueryTaskCount(taskCount)
-
-      if (!QueryContext.current().getSecondStorageUsageMap.isEmpty &&
-        KylinConfig.getInstanceFromEnv.getSecondStorageQueryMetricCollect &&
-        ContextUtil.getNativeRealizations.size() < 2) {
-        val executedPlan = SecondStorageUtil.collectExecutedPlan(getNormalizedExplain(df))
-        val pushedPlan = SecondStorageUtil.convertExecutedPlan(executedPlan,
-          QueryContext.current.getProject, ContextUtil.getNativeRealizations)
-        QueryContext.current().getMetrics.setQueryExecutedPlan(pushedPlan)
-      }
 
       logInfo(s"Actual total scan count: $scanRows, " +
         s"file scan row count: ${QueryContext.current.getMetrics.getAccumSourceScanRows}, " +

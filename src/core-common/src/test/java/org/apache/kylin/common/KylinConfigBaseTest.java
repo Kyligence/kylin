@@ -1183,17 +1183,6 @@ class KylinConfigBaseTest {
     }
 
     @Test
-    void testJobSchedulerMode() {
-        KylinConfig config = KylinConfig.getInstanceFromEnv();
-
-        Assertions.assertEquals("DAG", config.getJobSchedulerMode());
-        config.setProperty("kylin.engine.job-scheduler-mode", "CHAIN");
-        Assertions.assertEquals("CHAIN", config.getJobSchedulerMode());
-        config.setProperty("kylin.engine.job-scheduler-mode", "DAG");
-        Assertions.assertEquals("DAG", config.getJobSchedulerMode());
-    }
-
-    @Test
     void testGetRoutineOpsTaskTimeOut() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         Assertions.assertEquals(4 * 60 * 60 * 1000, config.getRoutineOpsTaskTimeOut());

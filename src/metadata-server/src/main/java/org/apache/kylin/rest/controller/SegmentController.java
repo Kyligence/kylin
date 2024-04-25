@@ -61,7 +61,6 @@ import org.apache.kylin.rest.service.params.IncrementBuildSegmentParams;
 import org.apache.kylin.rest.service.params.IndexBuildParams;
 import org.apache.kylin.rest.service.params.MergeSegmentParams;
 import org.apache.kylin.rest.service.params.RefreshSegmentParams;
-import org.apache.kylin.rest.util.ModelUtils;
 import org.apache.kylin.util.DataRangeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -134,14 +133,11 @@ public class SegmentController extends NBasicController {
             @RequestParam(value = "all_to_complement", required = false, defaultValue = "false") Boolean allToComplement,
             @RequestParam(value = "sort_by", required = false, defaultValue = "last_modified_time") String sortBy,
             @RequestParam(value = "reverse", required = false, defaultValue = "false") Boolean reverse,
-            @RequestParam(value = "statuses", required = false, defaultValue = "") List<String> statuses,
-            @RequestParam(value = "statuses_second_storage", required = false, defaultValue = "") List<String> statusesSecondStorage) {
+            @RequestParam(value = "statuses", required = false, defaultValue = "") List<String> statuses) {
         checkProjectName(project);
         DataRangeUtils.validateRange(start, end);
-        modelService.checkSegmentStatus(statuses);
-        modelService.checkSegmentSecondStorageStatus(statusesSecondStorage);
         List<NDataSegmentResponse> segments = modelService.getSegmentsResponse(dataflowId, project, start, end, status,
-                withAllIndexes, withoutAnyIndexes, allToComplement, sortBy, reverse, statuses, statusesSecondStorage);
+                withAllIndexes, withoutAnyIndexes, allToComplement, sortBy, reverse, statuses);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, DataResult.get(segments, offset, limit), "");
     }
 
@@ -311,8 +307,6 @@ public class SegmentController extends NBasicController {
         DataRangeUtils.validateDataRange(buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(),
                 partitionColumnFormat);
         modelService.validateCCType(modelId, buildSegmentsRequest.getProject());
-        ModelUtils.checkSecondStoragePartition(buildSegmentsRequest.getProject(), modelId,
-                buildSegmentsRequest.getPartitionDesc(), ModelUtils.MessageType.SEGMENT);
 
         IncrementBuildSegmentParams incrParams = new IncrementBuildSegmentParams(buildSegmentsRequest.getProject(),
                 modelId, buildSegmentsRequest.getStart(), buildSegmentsRequest.getEnd(),

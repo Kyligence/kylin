@@ -670,8 +670,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         return getIndexesMap(toBeDeletedIndexes);
     }
 
-    public void markIndexesToBeDeleted(String indexPlanId, final Set<LayoutEntity> toBeDeletedSet,
-            Map<Long, Boolean> secondStorageLayoutStatus) {
+    public void markIndexesToBeDeleted(String indexPlanId, final Set<LayoutEntity> toBeDeletedSet) {
         Preconditions.checkNotNull(indexPlanId);
         Preconditions.checkNotNull(toBeDeletedSet);
         checkIsNotCachedAndShared();
@@ -690,8 +689,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
                 .collect(Collectors.toSet());
         val toBeDeletedMap = getToBeDeletedIndexesMap();
         for (LayoutEntity layoutEntity : toBeDeletedSet) {
-            if (!effectiveLayouts.contains(layoutEntity.getId())
-                    && !secondStorageLayoutStatus.getOrDefault(layoutEntity.getId(), false)) {
+            if (!effectiveLayouts.contains(layoutEntity.getId())) {
                 continue;
             }
 
@@ -709,13 +707,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         }
     }
 
-    @VisibleForTesting
-    public void markIndexesToBeDeleted(String indexPlanId, final Set<LayoutEntity> toBeDeletedSet) {
-        markIndexesToBeDeleted(indexPlanId, toBeDeletedSet, Collections.emptyMap());
-    }
-
-    public void markWhiteIndexToBeDelete(String indexPlanId, final Set<Long> layoutIds,
-            Map<Long, Boolean> secondStorageLayoutStatus) {
+    public void markWhiteIndexToBeDelete(String indexPlanId, final Set<Long> layoutIds) {
         Preconditions.checkNotNull(indexPlanId);
         Preconditions.checkNotNull(layoutIds);
         checkIsNotCachedAndShared();
@@ -729,7 +721,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
             }
         }
 
-        markIndexesToBeDeleted(indexPlanId, toBeDeletedLayouts, secondStorageLayoutStatus);
+        markIndexesToBeDeleted(indexPlanId, toBeDeletedLayouts);
 
         for (LayoutEntity layoutEntity : toBeDeletedLayouts) {
             // delete layouts from indexes.

@@ -207,7 +207,6 @@ public class AsyncQueryJob extends NSparkExecutable {
         super.modifyDump(props);
         if (!KylinInfoExtension.getFactory().checkKylinInfo()) {
             props.setProperty("kylin.streaming.enabled", KylinConfig.FALSE);
-            props.remove("kylin.second-storage.class");
         }
     }
 }

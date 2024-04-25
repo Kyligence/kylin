@@ -394,11 +394,7 @@ public class JobInfoServiceTest extends LogOutputTestCase {
 
         for (JobInfo jobInfo : mockJobs) {
             jobInfoDao.updateJob(jobInfo.getJobId(), executablePO -> {
-                if (!jobInfo.getJobId().equals("sparkjob1")) {
-                    executablePO.setJobType(JobTypeEnum.SECOND_STORAGE_NODE_CLEAN);
-                } else {
-                    executablePO.setJobType(JobTypeEnum.TABLE_SAMPLING);
-                }
+                executablePO.setJobType(JobTypeEnum.TABLE_SAMPLING);
                 return true;
             });
         }
@@ -406,7 +402,7 @@ public class JobInfoServiceTest extends LogOutputTestCase {
         JobFilter jobFilter = new JobFilter(Lists.newArrayList(), jobNames, 0, "", "default", false, "default", "",
                 false);
         List<ExecutableResponse> jobs = jobInfoService.listJobs(jobFilter);
-        Assert.assertEquals(2, jobs.size());
+        Assert.assertEquals(0, jobs.size());
     }
 
     @Test
@@ -520,18 +516,14 @@ public class JobInfoServiceTest extends LogOutputTestCase {
         for (int i = 0; i < 3; i++) {
             int j = i;
             jobInfoDao.updateJob(mockJobs.get(j).getUuid(), job -> {
-                if (j < 2) {
-                    job.setJobType(JobTypeEnum.SECOND_STORAGE_NODE_CLEAN);
-                } else {
-                    job.setJobType(JobTypeEnum.TABLE_SAMPLING);
-                }
+                job.setJobType(JobTypeEnum.TABLE_SAMPLING);
                 return true;
             });
         }
         List<String> jobNames = Lists.newArrayList();
         JobFilter jobFilter = new JobFilter(Lists.newArrayList(), jobNames, 0, "", "def", false, "default", "", false);
         List<ExecutableResponse> jobs = jobInfoService.listJobs(jobFilter);
-        Assert.assertEquals(2, jobs.size());
+        Assert.assertEquals(0, jobs.size());
 
         JobFilter jobFilter2 = new JobFilter(Lists.newArrayList(), jobNames, 0, "", "def", true, "default", "", false);
         List<ExecutableResponse> jobs2 = jobInfoService.listJobs(jobFilter2);

@@ -49,7 +49,6 @@ import org.apache.kylin.rest.util.ModelUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
@@ -108,41 +107,26 @@ public class ModelQueryService extends BasicService implements ModelQuerySupport
                 .collect(Collectors.toList());
 
         if (!modelAttributeSet.isEmpty()) {
-            val isProjectEnable = SecondStorageUtil.isProjectEnable(elem.getProjectName());
             modelTripleList = modelTripleList.parallelStream()
-                    .filter(t -> filterModelAttribute(t, modelAttributeSet, isProjectEnable))
+                    .filter(t -> filterModelAttribute(t, modelAttributeSet))
                     .collect(Collectors.toList());
         }
 
         return modelTripleList;
     }
 
-    public boolean filterModelAttribute(ModelTriple modelTriple, Set<ModelAttributeEnum> modelAttributeSet,
-            boolean isProjectEnable) {
+    public boolean filterModelAttribute(ModelTriple modelTriple, Set<ModelAttributeEnum> modelAttributeSet) {
         val modelType = modelTriple.getDataModel().getModelType();
         switch (modelType) {
         case BATCH:
-            return modelAttributeSet.contains(ModelAttributeEnum.BATCH)
-                    || isMatchSecondStorage(modelTriple, isProjectEnable, modelAttributeSet);
+            return modelAttributeSet.contains(ModelAttributeEnum.BATCH);
         case HYBRID:
-            return modelAttributeSet.contains(ModelAttributeEnum.HYBRID)
-                    || isMatchSecondStorage(modelTriple, isProjectEnable, modelAttributeSet);
+            return modelAttributeSet.contains(ModelAttributeEnum.HYBRID);
         case STREAMING:
-            return modelAttributeSet.contains(ModelAttributeEnum.STREAMING)
-                    || isMatchSecondStorage(modelTriple, isProjectEnable, modelAttributeSet);
+            return modelAttributeSet.contains(ModelAttributeEnum.STREAMING);
         default:
             return false;
         }
-    }
-
-    private boolean isMatchSecondStorage(ModelTriple modelTriple, boolean isProjectEnable,
-            Set<ModelAttributeEnum> modelAttributeSet) {
-        boolean secondStorageMatched = false;
-        if (isProjectEnable && modelAttributeSet.contains(ModelAttributeEnum.SECOND_STORAGE)) {
-            secondStorageMatched = SecondStorageUtil.isModelEnable(modelTriple.getDataModel().getProject(),
-                    modelTriple.getDataModel().getId());
-        }
-        return secondStorageMatched;
     }
 
     public List<ModelTriple> sortModels(List<ModelTriple> modelTripleList, String projectName, String sortBy,

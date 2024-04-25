@@ -26,14 +26,6 @@ import org.apache.kylin.common.annotation.Clarification;
 
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Part message is for enterprise.")
 public class Message {
-    private static final String SECOND_STORAGE_PROJECT_ENABLED = "The project %s does not have tiered storage enabled.";
-    private static final String SECOND_STORAGE_MODEL_ENABLED = "The model %s does not have tiered storage enabled.";
-    private static final String SECOND_STORAGE_SEGMENT_WITHOUT_BASE_INDEX = "The base table index is missing in the segments, please add and try again.";
-    private static final String SECOND_STORAGE_DELETE_NODE_FAILED = "Node %s has data, size is %d bytes";
-    private static final String SECOND_STORAGE_CARDINALITY_DATATYPE_INVALID = "The datatype is invalid. Only support LowCardinality(Nullable(String)) or Nullable(String) at the moment.";
-    private static final String FORCED_TO_TIEREDSTORAGE_AND_FORCETO_INDEX = "When force_to_index=ture, the query cannot pushdown when using tiered storage fails, forcedToTieredStorage=1 or conf=1 is invalid, please modify and try again";
-    private static final String FORCED_TO_TIEREDSTORAGE_RETURN_ERROR = "Query failed. Tiered storage is unavailable, please fix and try again.";
-    private static final String FORCED_TO_TIEREDSTORAGE_INVALID_PRARAMETER = "invalid parameters, please fix and try again.";
     private static final String DISABLE_PUSHDOWN_PROMPT = "You should turn on pushdown button if you want to pushdown.";
     private static final String NON_EXISTEN_MODEL = "Model %s doesn't exist. Please confirm and try again later.";
     private static final String LACK_PROJECT = "Please fill in the project parameters.";
@@ -406,10 +398,6 @@ public class Message {
         return "The project name \"%s\" already exists. Please rename it.";
     }
 
-    public String getProjectDropFailedSecondStorageEnabled() {
-        return "Can't delete project \"%s\", please disable tiered storage firstly.";
-    }
-
     public String getProjectDropFailedJobsNotKilled() {
         return "Can't delete project \"%s\", please discard the related job and try again.";
     }
@@ -669,7 +657,7 @@ public class Message {
     }
 
     public String getLowLevelLicenseMessage() {
-        return "Tiered Storage cannot be used. Please upgrade to Kyligence Premium version if you want to use the function.";
+        return "Please upgrade to Kyligence Premium version if you want to use the function.";
     }
 
     public String getRestartNoticeMessage() {
@@ -1304,50 +1292,6 @@ public class Message {
         return "Start Time,Duration,Query ID,SQL Statement,Answered by,Query Status,Query Node,Submitter,Query Message\n";
     }
 
-    public String getSecondStorageJobExists() {
-        return "Can’t turn off the tiered storage at the moment. Model “%s” has an ongoing job, Please try again later.\\n";
-    }
-
-    public String getSecondStorageConcurrentOperate() {
-        return "Another tiered storage task is running. Please try again later.";
-    }
-
-    public String getSecondStorageProjectJobExists() {
-        return "Can’t turn off the tiered storage at the moment. Project “%s” has an ongoing job, Please try again later.\\n";
-    }
-
-    public String getSecondStorageProjectEnabled() {
-        return SECOND_STORAGE_PROJECT_ENABLED;
-    }
-
-    public String getSecondStorageModelEnabled() {
-        return SECOND_STORAGE_MODEL_ENABLED;
-    }
-
-    public String getSecondStorageSegmentWithoutBaseIndex() {
-        return SECOND_STORAGE_SEGMENT_WITHOUT_BASE_INDEX;
-    }
-
-    public String getSecondStorageDeleteNodeFailed() {
-        return SECOND_STORAGE_DELETE_NODE_FAILED;
-    }
-
-    public String getInvalidLowCardinalityDataType() {
-        return SECOND_STORAGE_CARDINALITY_DATATYPE_INVALID;
-    }
-
-    public String getJobRestartFailed() {
-        return "Tiered storage task doesn't support restart.\n";
-    }
-
-    public String getSegmentDropFailed() {
-        return "Segment can't remove. There is an ongoing load data job of tiered storage. Please try again later.\n";
-    }
-
-    public String getJobResumeFailed() {
-        return "Tiered storage task can't resume. Please try again later.\n";
-    }
-
     public String getJobPauseFailed() {
         return "This type of task does not support pause operation.";
     }
@@ -1407,37 +1351,8 @@ public class Message {
     public String getCannotForceToBothPushdodwnAndIndex() {
         return "Cannot force the query to pushdown and index at the same time. Only one of the parameter “forcedToPushDown“ and “forced_to_index” could be used. Please check and try again.";
     }
-
-    public String getForcedToTieredstorageAndForceToIndex() {
-        return FORCED_TO_TIEREDSTORAGE_AND_FORCETO_INDEX;
-    }
-
-    public String getForcedToTieredstorageReturnError() {
-        return FORCED_TO_TIEREDSTORAGE_RETURN_ERROR;
-    }
-
-    public String getForcedToTieredstorageInvalidParameter() {
-        return FORCED_TO_TIEREDSTORAGE_INVALID_PRARAMETER;
-    }
-
     public String getParameterEmpty() {
         return PARAMETER_EMPTY;
-    }
-
-    public String getSecondStorageNodeNotAvailable() {
-        return "Can't add node. The node does not exist or has been used by other project, please modify and try again.";
-    }
-
-    public String getBaseTableIndexNotAvailable() {
-        return "Can’t turn on the tiered storage at the moment. Please add base table index first.";
-    }
-
-    public String getPartitionColumnNotAvailable() {
-        return "Can’t turn on the tiered storage at the moment. Please add the time partition column as dimension, and update the base table index.";
-    }
-
-    public String getProjectLocked() {
-        return "Data migration is in progress in the current project's tiered storage, please try again later.";
     }
 
     public String getFixStreamingSegment() {
@@ -1588,34 +1503,6 @@ public class Message {
 
     public String getTargetSegmentNotFoundError(String missingSegIds) {
         return String.format(Locale.ROOT, "Cannot find target segment, and missing segment id: %s", missingSegIds);
-    }
-
-    public String getSecondStorageIndexNotSupport() {
-        return "Partitioning columns are not supported for Order by and Skipping Index columns";
-    }
-
-    public String getSecondStorageIndexNotAllowNullable() {
-        return "Order by / Skipping Index doesn't support nullable column type.";
-    }
-
-    public String getSecondStorageOrderByHasData() {
-        return "The index has already loaded the tiered storage data, and does not support modifying the Order by column. If the change is necessary ,please clear the tiered storage data first.";
-    }
-
-    public String getSecondStorageLayoutNotExist() {
-        return "Layout id %s is not exist";
-    }
-
-    public String getSecondStorageLayoutNotBaseTableIndex() {
-        return "Layout id %s is not base table index which is equal to tiered storage.";
-    }
-
-    public String getSecondStorageNotSupportType(String dataType) {
-        return String.format(Locale.ROOT, "Skipping Index doesn‘t support column type '%s'.", dataType);
-    }
-
-    public String getSecondStorageNodeNotAvailable(String nodeName) {
-        return String.format(Locale.ROOT, "Tiered storage node '%s' not available.", nodeName);
     }
 
     public String getDDLUnSupported() {

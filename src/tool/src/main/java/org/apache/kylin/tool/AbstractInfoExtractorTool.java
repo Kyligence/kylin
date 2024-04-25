@@ -43,7 +43,6 @@ import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SPARK_LOGS;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SPARK_STREAMING_LOGS;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SYSTEM_METRICS;
 import static org.apache.kylin.tool.constant.DiagSubTaskEnum.SYSTEM_USAGE;
-import static org.apache.kylin.tool.constant.DiagSubTaskEnum.TIERED_STORAGE_LOGS;
 
 import java.io.File;
 import java.io.IOException;
@@ -794,16 +793,6 @@ public abstract class AbstractInfoExtractorTool extends ExecutableApplication {
         });
 
         scheduleTimeoutTask(queryHistoryOffsetTask, QUERY_HISTORY_OFFSET);
-    }
-
-    protected void exportTieredStorage(String project, File exportDir, long startTime, long endTime, File recordTime) {
-        Future kgLogTask = executorService.submit(() -> {
-            recordTaskStartTime(TIERED_STORAGE_LOGS);
-            new ClickhouseDiagTool(project).dumpClickHouseServerLog(exportDir, startTime, endTime);
-            recordTaskExecutorTimeToFile(TIERED_STORAGE_LOGS, recordTime);
-        });
-
-        scheduleTimeoutTask(kgLogTask, TIERED_STORAGE_LOGS);
     }
 
     protected void exportKgLogs(File exportDir, long startTime, long endTime, File recordTime) {

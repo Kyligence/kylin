@@ -176,7 +176,7 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
             Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
             olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelName);
             NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
-                    dataflow.getQueryableSegments(), olapContext.getSQLDigest(), null);
+                    dataflow.getQueryableSegments(), olapContext.getSQLDigest());
             Assert.assertNotNull(layoutCandidate);
             Assert.assertEquals(20000010001L, layoutCandidate.getLayoutEntity().getId());
         }
@@ -213,7 +213,7 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
-                dataflow.getQueryableSegments(), olapContext.getSQLDigest(), null);
+                dataflow.getQueryableSegments(), olapContext.getSQLDigest());
         Assert.assertNotNull(layoutCandidate);
         Assert.assertEquals(1L, layoutCandidate.getLayoutEntity().getId());
     }

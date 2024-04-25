@@ -18,21 +18,15 @@
 
 package org.apache.kylin.query.engine.exec;
 
-import java.sql.SQLException;
 import java.util.List;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.kylin.common.ForceToTieredStorage;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.debug.BackdoorToggles;
-import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.exception.QueryErrorCode;
-import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
@@ -46,7 +40,6 @@ import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.relnode.OlapRel;
 import org.apache.kylin.query.runtime.SparkEngine;
 import org.apache.kylin.query.util.QueryContextCutter;
-import org.apache.spark.SparkException;
 
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
@@ -116,49 +109,11 @@ public class SparderPlanExec implements QueryPlanExec {
         return internalCompute(new SparkEngine(), dataContext, rel.getInput(0));
     }
 
-    private static boolean forceTableIndexAtException(Exception e) {
-        return !QueryContext.current().isForceTableIndex() && e instanceof SparkException
-                && !QueryContext.current().getSecondStorageUsageMap().isEmpty();
-    }
-
-    private static boolean shouldRetryOnSecondStorage(Exception e) {
-        return QueryContext.current().isRetrySecondStorage() && e instanceof SparkException
-                && !QueryContext.current().getSecondStorageUsageMap().isEmpty();
-    }
-
     private static boolean hasEmptyRealization(OlapContext context) {
         return context.getRealization() == null && context.isConstantQueryWithAggregations();
     }
 
     protected ExecuteResult internalCompute(QueryEngine queryEngine, DataContext dataContext, RelNode rel) {
-        try {
-            return queryEngine.computeToIterable(dataContext, rel);
-        } catch (final Exception e) {
-            Exception cause = e;
-            while (shouldRetryOnSecondStorage(cause)) {
-                try {
-                    return queryEngine.computeToIterable(dataContext, rel);
-                } catch (final Exception retryException) {
-                    if (log.isInfoEnabled()) {
-                        log.info("Failed to use second storage table-index", e);
-                    }
-                    QueryContext.current().setLastFailed(true);
-                    cause = retryException;
-                    checkOnlyTsAnswer();
-                }
-            }
-            if (forceTableIndexAtException(e)) {
-                if (log.isInfoEnabled()) {
-                    log.info("Failed to use second storage table-index", e);
-                }
-                QueryContext.current().setForceTableIndex(true);
-                QueryContext.current().getSecondStorageUsageMap().clear();
-            } else if (e instanceof SQLException) {
-                handleForceToTieredStorage(e);
-            } else {
-                return ExceptionUtils.rethrow(e);
-            }
-        }
         return queryEngine.computeToIterable(dataContext, rel);
     }
 
@@ -192,35 +147,5 @@ public class SparderPlanExec implements QueryPlanExec {
         long layoutId = candidate.getLayoutEntity().getId();
         return IndexEntity.isAggIndex(layoutId) && !ctx.isExactlyAggregate()
                 || IndexEntity.isTableIndex(layoutId) && ctx.isHasAgg();
-    }
-
-    private void handleForceToTieredStorage(final Exception e) {
-        if (e.getMessage().equals(QueryContext.ROUTE_USE_FORCEDTOTIEREDSTORAGE)) {
-            ForceToTieredStorage forcedToTieredStorage = QueryContext.current().getForcedToTieredStorage();
-            boolean forceTableIndex = QueryContext.current().isForceTableIndex();
-            QueryContext.current().setLastFailed(true);
-            QueryContext.current().setRetrySecondStorage(false);
-            if (forcedToTieredStorage == ForceToTieredStorage.CH_FAIL_TO_PUSH_DOWN && !forceTableIndex) {
-                /* pushDown */
-                ExceptionUtils.rethrow(e);
-            } else if (forcedToTieredStorage == ForceToTieredStorage.CH_FAIL_TO_RETURN) {
-                /* return error */
-                throw new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_RETURN_ERROR,
-                        MsgPicker.getMsg().getForcedToTieredstorageReturnError());
-            } else if (forcedToTieredStorage == ForceToTieredStorage.CH_FAIL_TO_PUSH_DOWN) {
-                throw new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_RETURN_ERROR,
-                        MsgPicker.getMsg().getForcedToTieredstorageAndForceToIndex());
-            } else {
-                throw new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_INVALID_PARAMETER,
-                        MsgPicker.getMsg().getForcedToTieredstorageInvalidParameter());
-            }
-        }
-    }
-
-    private void checkOnlyTsAnswer() {
-        if (QueryContext.current().getForcedToTieredStorage() == ForceToTieredStorage.CH_FAIL_TO_RETURN) {
-            throw new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_RETURN_ERROR,
-                    MsgPicker.getMsg().getForcedToTieredstorageReturnError());
-        }
     }
 }

@@ -150,7 +150,6 @@ import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
 import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.SneakyThrows;
 import lombok.val;
 
@@ -650,11 +649,6 @@ public class ProjectService extends BasicService {
 
         response.setOverrideKylinProps(projectInstance.getOverrideKylinProps());
 
-        if (SecondStorageUtil.isGlobalEnable()) {
-            response.setSecondStorageEnabled(SecondStorageUtil.isProjectEnable(project));
-            response.setSecondStorageNodes(SecondStorageUtil.listProjectNodes(project));
-        }
-
         return response;
     }
 
@@ -938,11 +932,6 @@ public class ProjectService extends BasicService {
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN)
     @Transaction(project = 0)
     public void dropProject(String project, HttpHeaders headers) {
-        if (SecondStorageUtil.isProjectEnable(project)) {
-            throw new KylinException(PROJECT_DROP_FAILED,
-                    String.format(Locale.ROOT, MsgPicker.getMsg().getProjectDropFailedSecondStorageEnabled(), project));
-        }
-
         ExecutableManager executableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         List<String> jobIds = executableManager
                 .getExecutablePOsByStatus(Lists.newArrayList(ExecutableState.RUNNING, ExecutableState.PENDING,

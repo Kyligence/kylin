@@ -57,7 +57,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
-import io.kyligence.kap.secondstorage.response.SecondStorageNode;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -124,15 +123,6 @@ public class NDataModelResponse extends NDataModel {
 
     @JsonProperty("has_segments")
     private boolean hasSegments;
-
-    @JsonProperty("second_storage_size")
-    private long secondStorageSize;
-
-    @JsonProperty("second_storage_nodes")
-    private Map<String, List<SecondStorageNode>> secondStorageNodes;
-
-    @JsonProperty("second_storage_enabled")
-    private boolean secondStorageEnabled;
 
     @JsonProperty("model_update_enabled")
     private boolean modelUpdateEnabled = true;

@@ -34,7 +34,6 @@ import static org.apache.kylin.job.execution.stage.StageType.WAITE_FOR_RESOURCE;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.job.SecondStorageStepFactory;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.DefaultExecutableOnModel;
@@ -152,63 +151,6 @@ public enum JobStepType {
 
         @Override
         protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
-        }
-    },
-
-    SECOND_STORAGE_EXPORT {
-        @Override
-        protected AbstractExecutable create(DefaultExecutable parent, KylinConfig config) {
-            return SecondStorageStepFactory.create(SecondStorageStepFactory.SecondStorageLoadStep.class, step -> {
-                step.setProject(parent.getProject());
-                step.setParams(parent.getParams());
-            });
-        }
-
-        @Override
-        protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
-        }
-    },
-
-    SECOND_STORAGE_REFRESH {
-        @Override
-        protected AbstractExecutable create(DefaultExecutable parent, KylinConfig config) {
-            return SecondStorageStepFactory.create(SecondStorageStepFactory.SecondStorageRefreshStep.class, step -> {
-                step.setProject(parent.getProject());
-                step.setParams(parent.getParams());
-            });
-        }
-
-        @Override
-        protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
-        }
-    },
-
-    SECOND_STORAGE_MERGE {
-        @Override
-        protected AbstractExecutable create(DefaultExecutable parent, KylinConfig config) {
-            return SecondStorageStepFactory.create(SecondStorageStepFactory.SecondStorageMergeStep.class, step -> {
-                step.setProject(parent.getProject());
-                step.setParams(parent.getParams());
-            });
-        }
-
-        @Override
-        protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
-        }
-    },
-
-    SECOND_STORAGE_INDEX_CLEAN {
-        @Override
-        protected AbstractExecutable create(DefaultExecutable parent, KylinConfig config) {
-            return SecondStorageStepFactory.create(SecondStorageStepFactory.SecondStorageIndexClean.class, step -> {
-                step.setProject(parent.getProject());
-                step.setParams(parent.getParams());
-            });
-        }
-
-        @Override
-        protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
-            // not have sub stage
         }
     },
 

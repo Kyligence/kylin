@@ -20,7 +20,6 @@ package org.apache.kylin.query.routing;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -74,14 +73,13 @@ public class DataflowCapabilityChecker {
             // for query-on-fact-table
             log.trace("Normal dataflow matching");
             List<NDataSegment> prunedSegments = candidate.getPrunedSegments(dataflow);
-            Map<String, Set<Long>> secondStorageSegmentLayoutMap = candidate.getChSegToLayoutsMap(dataflow);
             NLayoutCandidate candidateAndInfluence = QueryLayoutChooser.selectLayoutCandidate(dataflow, prunedSegments,
-                    digest, secondStorageSegmentLayoutMap);
+                    digest);
             if (candidateAndInfluence == null && QueryContext.current().isPartialMatchIndex()) {
                 // This branch is customized requirements
                 log.trace("Partial dataflow matching");
                 candidateAndInfluence = QueryLayoutChooser.selectPartialLayoutCandidate(dataflow, prunedSegments,
-                        digest, secondStorageSegmentLayoutMap);
+                        digest);
             } else if (candidateAndInfluence == null) {
                 log.debug("select the layout candidate with high data integrity.");
                 candidateAndInfluence = QueryLayoutChooser.selectHighIntegrityCandidate(dataflow, candidate, digest);

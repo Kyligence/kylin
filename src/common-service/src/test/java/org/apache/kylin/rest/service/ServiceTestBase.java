@@ -30,11 +30,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportResource;
@@ -50,7 +48,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.secondstorage.SecondStorageUpdater;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = ServiceTestBase.SpringConfig.class)
@@ -123,9 +120,5 @@ public class ServiceTestBase extends NLocalFileMetadataTestCase {
     @ImportResource(locations = { "classpath:applicationContext.xml", "classpath:kylinSecurity.xml" })
     @EnableAsync
     public static class SpringConfig {
-        @Bean
-        public SecondStorageUpdater getSecondStorageUpdater() {
-            return Mockito.mock(SecondStorageUpdater.class, invocationOnMock -> "");
-        }
     }
 }

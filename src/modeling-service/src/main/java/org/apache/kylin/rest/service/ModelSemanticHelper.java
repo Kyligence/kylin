@@ -109,13 +109,10 @@ import org.apache.kylin.rest.response.BuildIndexResponse;
 import org.apache.kylin.rest.response.SimplifiedMeasure;
 import org.apache.kylin.rest.util.AclPermissionUtil;
 import org.apache.kylin.rest.util.SCD2SimplificationConvertUtil;
-import org.apache.kylin.rest.util.SpringContext;
 import org.apache.kylin.source.SourceFactory;
 import org.springframework.stereotype.Service;
 
 import io.kyligence.kap.metadata.recommendation.ref.OptRecManagerV2;
-import io.kyligence.kap.secondstorage.SecondStorageUpdater;
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;
@@ -1021,8 +1018,6 @@ public class ModelSemanticHelper extends BasicService {
             copyForWrite.setSegments(new Segments<>());
         });
 
-        cleanModelWithSecondStorage(newModel.getUuid(), project);
-
         String modelId = newModel.getUuid();
         NDataModelManager modelManager = NDataModelManager.getInstance(config, project);
         if (newModel.isMultiPartitionModel() || oriModel.isMultiPartitionModel()) {
@@ -1047,13 +1042,6 @@ public class ModelSemanticHelper extends BasicService {
                 segments.forEach(segment -> segmentRanges.add(segment.getSegRange()));
                 dataflowManager.fillDfManually(df, segmentRanges);
             }
-        }
-    }
-
-    private void cleanModelWithSecondStorage(String modelId, String project) {
-        if (SecondStorageUtil.isModelEnable(project, modelId)) {
-            SecondStorageUpdater updater = SpringContext.getBean(SecondStorageUpdater.class);
-            updater.cleanModel(project, modelId);
         }
     }
 

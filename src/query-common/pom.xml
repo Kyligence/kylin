@@ -22,6 +22,14 @@
             <artifactId>kylin-core-metadata</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.kylin</groupId>
+            <artifactId>kylin-spark-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kylin</groupId>
+            <artifactId>kylin-soft-affinity-cache</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
@@ -36,10 +44,6 @@
         <dependency>
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-core-storage</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kylin</groupId>
-            <artifactId>kap-second-storage-core</artifactId>
         </dependency>
     </dependencies>
     <build>

@@ -60,7 +60,6 @@ import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.kylin.common.ForceToTieredStorage;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
@@ -230,49 +229,6 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         return "/" + project + QUERY_STORE_PATH_PREFIX + creator + MetadataConstants.FILE_SURFIX;
     }
 
-    public ForceToTieredStorage getForcedToTieredStorage(String project, ForceToTieredStorage api) {
-        switch (api) {
-        case CH_FAIL_TO_DFS:
-        case CH_FAIL_TO_PUSH_DOWN:
-        case CH_FAIL_TO_RETURN:
-            return api;
-        case CH_FAIL_TAIL:
-            break;
-        default:
-            // Do nothing
-        }
-
-        try {
-            //project level config
-            api = NProjectManager.getProjectConfig(project).getProjectForcedToTieredStorage();
-            switch (api) {
-            case CH_FAIL_TO_DFS:
-            case CH_FAIL_TO_PUSH_DOWN:
-            case CH_FAIL_TO_RETURN:
-                return api;
-            default:
-                // Do nothing
-            }
-        } catch (Exception e) {
-            // no define or invalid do nothing
-        }
-
-        try {
-            //system
-            api = KylinConfig.getInstanceFromEnv().getSystemForcedToTieredStorage();
-            switch (api) {
-            case CH_FAIL_TO_DFS:
-            case CH_FAIL_TO_PUSH_DOWN:
-            case CH_FAIL_TO_RETURN:
-                return api;
-            default:
-                return ForceToTieredStorage.CH_FAIL_TO_DFS;
-            }
-        } catch (Exception e) {
-            return ForceToTieredStorage.CH_FAIL_TO_DFS;
-        }
-    }
-
     public SQLResponse query(SQLRequest sqlRequest) throws Exception {
         try {
             slowQueryDetector.queryStart(sqlRequest.getStopId());
@@ -295,19 +251,6 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             }
             queryParams.setAclInfo(getExecuteAclInfo(queryParams.getProject(), queryParams.getExecuteAs()));
             queryParams.setACLDisabledOrAdmin(isACLDisabledOrAdmin(queryParams.getProject(), queryParams.getAclInfo()));
-            int forcedToTieredStorage;
-            ForceToTieredStorage enumForcedToTieredStorage;
-            try {
-                forcedToTieredStorage = sqlRequest.getForcedToTieredStorage();
-                enumForcedToTieredStorage = getForcedToTieredStorage(sqlRequest.getProject(),
-                        ForceToTieredStorage.values()[forcedToTieredStorage]);
-            } catch (NullPointerException e) {
-                enumForcedToTieredStorage = getForcedToTieredStorage(sqlRequest.getProject(),
-                        ForceToTieredStorage.CH_FAIL_TAIL);
-            }
-            logger.debug("forcedToTieredStorage={}", enumForcedToTieredStorage);
-            queryParams.setForcedToTieredStorage(enumForcedToTieredStorage);
-            QueryContext.current().setForcedToTieredStorage(enumForcedToTieredStorage);
             QueryContext.current().setForceTableIndex(queryParams.isForcedToIndex());
 
             if (QueryContext.current().getQueryTagInfo().isAsyncQuery()

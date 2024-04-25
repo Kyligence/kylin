@@ -168,8 +168,6 @@ public class JobManager {
             case SNAPSHOT_REFRESH:
                 handler = new SnapshotJobHandler();
                 break;
-            case EXPORT_TO_SECOND_STORAGE:
-                throw new UnsupportedOperationException();
             default:
                 log.error("jobParam doesn't have matched job: {}", jobParam.getJobTypeEnum());
                 return null;

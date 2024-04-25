@@ -19,7 +19,6 @@
 package org.apache.kylin.query.routing;
 
 import java.lang.reflect.Field;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -108,7 +107,7 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), context);
         context.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
-                dataflow.getQueryableSegments(), context.getSQLDigest(), null);
+                dataflow.getQueryableSegments(), context.getSQLDigest());
         Assert.assertNotNull(layoutCandidate);
         Assert.assertEquals(20000000001L, layoutCandidate.getLayoutEntity().getId());
     }
@@ -124,7 +123,7 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), context);
         context.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
-                dataflow.getQueryableSegments(), context.getSQLDigest(), null);
+                dataflow.getQueryableSegments(), context.getSQLDigest());
         Assert.assertNotNull(layoutCandidate);
         Assert.assertEquals(20000010001L, layoutCandidate.getLayoutEntity().getId());
     }
@@ -162,7 +161,7 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(modelId);
         Long oldBaseAggLayout = indexPlan.getBaseAggLayoutId();
         indexPlanManager.updateIndexPlan(indexPlan.getUuid(), copyForWrite -> copyForWrite
-                .markWhiteIndexToBeDelete(indexPlan.getUuid(), Sets.newHashSet(oldBaseAggLayout), new HashMap<>()));
+                .markWhiteIndexToBeDelete(indexPlan.getUuid(), Sets.newHashSet(oldBaseAggLayout)));
         NDataModel model = modelManager.getDataModelDesc(modelId);
         LayoutEntity newBaseAggLayout = indexPlan.createBaseAggIndex(model);
         indexPlanManager.updateIndexPlan(indexPlan.getUuid(),
@@ -192,7 +191,7 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), context);
         context.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
-                dataflow.getQueryableSegments(), context.getSQLDigest(), null);
+                dataflow.getQueryableSegments(), context.getSQLDigest());
         Assert.assertNotNull(layoutCandidate);
         Assert.assertEquals(20000010001L, layoutCandidate.getLayoutEntity().getId());
     }
@@ -212,7 +211,7 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
         Map<String, String> sqlAlias2ModelName = OlapContextTestUtil.matchJoins(dataflow.getModel(), context);
         context.fixModel(dataflow.getModel(), sqlAlias2ModelName);
         NLayoutCandidate layoutCandidate = QueryLayoutChooser.selectLayoutCandidate(dataflow,
-                dataflow.getQueryableSegments(), context.getSQLDigest(), null);
+                dataflow.getQueryableSegments(), context.getSQLDigest());
         Assert.assertNotNull(layoutCandidate);
         Assert.assertEquals(20000010001L, layoutCandidate.getLayoutEntity().getId());
 

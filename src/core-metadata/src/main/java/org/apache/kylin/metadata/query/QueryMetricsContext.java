@@ -146,7 +146,6 @@ public class QueryMetricsContext extends QueryMetrics {
         collectErrorType(context);
         List<RealizationMetrics> realizationMetricList = collectRealizationMetrics(
                 QueryContext.current().getNativeQueryRealizationList());
-        updateSecondStorageStatus(context, realizationMetricList);
 
         QueryHistoryInfo queryHistoryInfo = new QueryHistoryInfo(context.getMetrics().isExactlyMatch(),
                 context.getMetrics().getSegCount(),
@@ -180,19 +179,6 @@ public class QueryMetricsContext extends QueryMetrics {
                 return new QueryHistoryInfo.QueryTraceSpan(span.getName(), span.getGroup(), span.getDuration());
             }
         }).collect(Collectors.toList());
-    }
-
-    public static void updateSecondStorageStatus(final QueryContext context,
-            final List<RealizationMetrics> realizationMetricList) {
-        realizationMetricList.forEach(metric -> {
-            if (Objects.isNull(metric.getLayoutId())) {
-                // When query conditions don't meet segment range, layout id will be null.
-                metric.setSecondStorage(false);
-            } else {
-                metric.setSecondStorage(
-                        context.getSecondStorageUsageMap().getOrDefault(Long.parseLong(metric.getLayoutId()), false));
-            }
-        });
     }
 
     private void collectErrorType(final QueryContext context) {

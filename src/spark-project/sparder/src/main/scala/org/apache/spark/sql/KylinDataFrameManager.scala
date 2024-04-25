@@ -83,29 +83,22 @@ class KylinDataFrameManager(sparkSession: SparkSession) {
       val batchModelId = fusionModel.getBatchModel.getUuid
       val batchDataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, dataflow.getProject).getDataflow(batchModelId)
       val end = batchDataflow.getDateRangeEnd
-
       val partition = dataflow.getModel.getPartitionDesc.getPartitionDateColumnRef
       val id = layout.getOrderedDimensions.inverse().get(partition)
-      var plan = read(dataflow, layout, pruningInfo)
+      var plan = read(dataflow, layout)
       if (id != null && end != Long.MinValue) {
         val filterPlan = Filter(col(id.toString).geq(new Timestamp(end)).expr, plan)
         plan = SparkOperation.project(filterPlan.output.map(c => col(c.name)), filterPlan)
       }
       return plan
     }
-    read(dataflow, layout, pruningInfo)
+    read(dataflow, layout)
   }
 
-  def read(dataflow: NDataflow, layout: LayoutEntity, pruningInfo: String): LogicalPlan = {
-    import io.kyligence.kap.secondstorage.SecondStorage
-    val df = SecondStorage.trySecondStorage(sparkSession, dataflow, layout, pruningInfo)
-    if (df.isEmpty) {
+  def read(dataflow: NDataflow, layout: LayoutEntity): LogicalPlan = {
       import org.apache.spark.sql.datasource.storage.StorageStoreFactory
       StorageStoreFactory.create(dataflow.getModel.getStorageType)
         .read(dataflow, layout, sparkSession, extraOptions.toMap)
-    } else {
-      df.get.queryExecution.analyzed
-    }
   }
 
   /**

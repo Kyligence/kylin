@@ -18,7 +18,6 @@
 
 package org.apache.kylin.rest.service;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,13 +35,10 @@ import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.rest.config.initialize.QueryMetricsListener;
-import org.apache.kylin.rest.util.AclEvaluate;
-import org.apache.kylin.rest.util.AclUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import io.micrometer.core.instrument.Meter;
@@ -52,10 +48,6 @@ import lombok.val;
 
 public class QueryMetricsListenerTest extends NLocalFileMetadataTestCase {
 
-    @Mock
-    private final AclUtil aclUtil = Mockito.spy(AclUtil.class);
-    @Mock
-    private final AclEvaluate aclEvaluate = Mockito.spy(AclEvaluate.class);
     @InjectMocks
     private QueryMetricsListener queryMetricsListener;
     @InjectMocks
@@ -214,26 +206,7 @@ public class QueryMetricsListenerTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(1, meters5.size());
         Assert.assertEquals(1, meters6.size());
         Assert.assertEquals(1, meters7.size());
-
-        Mockito.when(queryMetrics.isSecondStorage()).thenReturn(true);
-        queryMetricsListener.recordQueryPrometheusMetric(queryMetrics, modelManager, meterRegistry);
         Collection<Meter> meters8 = meterRegistry.find(PrometheusMetrics.QUERY_SECONDS.getValue()).meters();
         Assert.assertNotEquals(0, meters8.size());
-    }
-
-    @Test
-    public void testSecondStorageQueryPrometheusMetric() {
-        QueryMetrics queryMetrics = new QueryMetrics("111111");
-        List<QueryMetrics.RealizationMetrics> realizationList = new ArrayList<>();
-        QueryHistoryInfo queryHistoryInfo1 = new QueryHistoryInfo(true, 3, true);
-        queryHistoryInfo1.setRealizationMetrics(realizationList);
-        queryMetrics.setQueryHistoryInfo(queryHistoryInfo1);
-        Assert.assertFalse(queryMetrics.isSecondStorage());
-
-        QueryMetrics.RealizationMetrics realization = new QueryMetrics.RealizationMetrics("20000001", "TABLE_INDEX",
-                "111111", null);
-        realization.setSecondStorage(true);
-        realizationList.add(realization);
-        Assert.assertTrue(queryMetrics.isSecondStorage());
     }
 }

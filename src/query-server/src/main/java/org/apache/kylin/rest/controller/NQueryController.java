@@ -51,7 +51,6 @@ import javax.validation.Valid;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.ForceToTieredStorage;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.debug.BackdoorToggles;
@@ -689,16 +688,6 @@ public class NQueryController extends NBasicController {
         if (sqlRequest.isForcedToIndex() && sqlRequest.isForcedToPushDown()) {
             throw new KylinException(QueryErrorCode.INVALID_QUERY_PARAMS,
                     MsgPicker.getMsg().getCannotForceToBothPushdodwnAndIndex());
-        }
-        try {
-            int forcedToTieredStorage = sqlRequest.getForcedToTieredStorage();
-            if (forcedToTieredStorage > ForceToTieredStorage.CH_FAIL_TO_RETURN.ordinal()
-                    || forcedToTieredStorage < ForceToTieredStorage.CH_FAIL_TO_DFS.ordinal()) {
-                throw new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_INVALID_PARAMETER,
-                        MsgPicker.getMsg().getForcedToTieredstorageInvalidParameter());
-            }
-        } catch (NullPointerException e) {
-            //do nothing
         }
     }
 

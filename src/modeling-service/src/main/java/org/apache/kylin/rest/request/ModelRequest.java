@@ -94,9 +94,6 @@ public class ModelRequest extends NDataModel implements ModelInsensitiveRequest 
     @JsonProperty("base_index_type")
     private Set<IndexEntity.Source> baseIndexType;
 
-    @JsonProperty("with_second_storage")
-    private boolean withSecondStorage = false;
-
     @JsonProperty("computed_column_name_auto_adjust")
     private boolean computedColumnNameAutoAdjust = false;
 

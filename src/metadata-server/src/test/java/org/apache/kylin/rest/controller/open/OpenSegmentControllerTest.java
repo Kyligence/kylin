@@ -206,21 +206,21 @@ public class OpenSegmentControllerTest extends NLocalFileMetadataTestCase {
                 .contentType(MediaType.APPLICATION_JSON).param("page_offset", "1").param("project", project)
                 .param("page_size", "5").param("start", "432").param("end", "2234").param("sort_by", "end_time")
                 .param("reverse", "true").param("status", "")
-                .param("statuses", "").param("statuses_second_storage", "")
+                .param("statuses", "")
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
         mockMvc.perform(MockMvcRequestBuilders.get("/api/models/{model_name}/segments", modelName)
                 .contentType(MediaType.APPLICATION_JSON).param("page_offset", "1").param("project", project)
                 .param("page_size", "-5").param("start", "432").param("end", "2234").param("sort_by", "end_time")
                 .param("reverse", "true").param("status", "")
-                .param("statuses", "").param("statuses_second_storage", "")
+                .param("statuses", "")
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().is5xxServerError());
         mockMvc.perform(MockMvcRequestBuilders.get("/api/models/{model_name}/segments", modelName)
                 .contentType(MediaType.APPLICATION_JSON).param("page_offset", "1").param("project", project)
                 .param("page_size", "a").param("start", "432").param("end", "2234").param("sort_by", "end_time")
                 .param("reverse", "true").param("status", "")
-                .param("statuses", "").param("statuses_second_storage", "")
+                .param("statuses", "")
                 .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON)))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }

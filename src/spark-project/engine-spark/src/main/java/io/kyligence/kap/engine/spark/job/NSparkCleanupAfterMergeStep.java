@@ -34,8 +34,6 @@ import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.kyligence.kap.secondstorage.SecondStorageUtil;
 public class NSparkCleanupAfterMergeStep extends NSparkExecutable {
 
     private static final Logger logger = LoggerFactory.getLogger(NSparkCleanupAfterMergeStep.class);
@@ -60,7 +58,6 @@ public class NSparkCleanupAfterMergeStep extends NSparkExecutable {
 
         for (String segmentId : segmentIds) {
             String path = dataflow.getSegmentHdfsPath(segmentId);
-            if (!SecondStorageUtil.isModelEnable(dataflow.getProject(), dataflow.getModel().getUuid())) {
                 if (!timeMachineEnabled) {
                     try {
                         HadoopUtil.deletePath(HadoopUtil.getCurrentConfiguration(), new Path(path));
@@ -71,10 +68,6 @@ public class NSparkCleanupAfterMergeStep extends NSparkExecutable {
                                 + " Please try workaround thru garbage clean manually.", segmentId, name, e);
                     }
                 }
-            } else {
-                logger.info("ClickHouse is enabled for the model, please delete segments {} in dataflow {} manually.", //
-                        segmentIds, name);
-            }
         }
 
         return ExecuteResult.createSucceed();

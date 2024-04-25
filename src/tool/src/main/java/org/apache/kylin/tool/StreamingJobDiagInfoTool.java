@@ -157,8 +157,6 @@ public class StreamingJobDiagInfoTool extends AbstractInfoExtractorTool {
 
         exportKgLogs(exportDir, createTime, endTime, recordTimeFile);
 
-        exportTieredStorage(project, exportDir, createTime, endTime, recordTimeFile);
-
         exportInfluxDBMetrics(exportDir, recordTimeFile);
 
         executeTimeoutTask(taskQueue);

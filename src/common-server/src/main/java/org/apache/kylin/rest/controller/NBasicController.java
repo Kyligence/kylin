@@ -27,7 +27,6 @@ import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_DOWNLOAD_
 import static org.apache.kylin.common.exception.ServerErrorCode.INCORRECT_PROJECT_MODE;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_DATA_BINDER_AUTO_GROW_COLLECTION_LIMIT;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_PARAMETER;
-import static org.apache.kylin.common.exception.ServerErrorCode.LOW_LEVEL_LICENSE;
 import static org.apache.kylin.common.exception.ServerErrorCode.UNSUPPORTED_STREAMING_OPERATION;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.ARGS_TYPE_CHECK;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.DATETIME_FORMAT_EMPTY;
@@ -83,7 +82,6 @@ import org.apache.kylin.common.exception.FeignErrorResponse;
 import org.apache.kylin.common.exception.FeignRpcException;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
-import org.apache.kylin.common.extension.KylinInfoExtension;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.TransactionException;
@@ -708,16 +706,6 @@ public class NBasicController {
             logger.error("Failed to encode host, will use the original host name");
         }
         return host;
-    }
-
-    public void checkKylinInfo(boolean enableSecondStorage) {
-        if (enableSecondStorage) {
-            boolean checkKylinInfo = KylinInfoExtension.getFactory().checkKylinInfo();
-            if (!checkKylinInfo) {
-                Message msg = MsgPicker.getMsg();
-                throw new KylinException(LOW_LEVEL_LICENSE, msg.getLowLevelLicenseMessage());
-            }
-        }
     }
 
     @InitBinder

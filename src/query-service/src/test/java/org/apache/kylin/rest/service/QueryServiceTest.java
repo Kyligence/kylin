@@ -60,7 +60,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.kylin.common.ForceToTieredStorage;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
@@ -69,7 +68,6 @@ import org.apache.kylin.common.exception.BigQueryException;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.exception.KylinTimeoutException;
-import org.apache.kylin.common.exception.QueryErrorCode;
 import org.apache.kylin.common.exception.ResourceLimitExceededException;
 import org.apache.kylin.common.hystrix.NCircuitBreaker;
 import org.apache.kylin.common.msg.Message;
@@ -315,30 +313,6 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testQueryPushDownWhenForceToTieredStorageEqualsOne() throws Throwable {
-        final String sql = "select * from abc";
-        final String project = "default";
-        final QueryExec queryExec = Mockito.mock(QueryExec.class);
-        SQLRequest sqlRequest = new SQLRequest();
-        sqlRequest.setSql(sql);
-        sqlRequest.setProject(project);
-        sqlRequest.setForcedToPushDown(false);
-        sqlRequest.setForcedToTieredStorage(1);
-
-        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
-                sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
-                queryExec.getDefaultSchemaName(), true);
-        QueryUtil.massageSql(queryParams);
-
-        overwriteSystemProp("kylin.query.pushdown-enabled", "false");
-        Mockito.doThrow(new SQLException(new SQLException(QueryContext.ROUTE_USE_FORCEDTOTIEREDSTORAGE)))
-                .when(queryService.queryRoutingEngine).execute(Mockito.anyString(), Mockito.any());
-
-        final SQLResponse response = queryService.queryWithCache(sqlRequest);
-        Assert.assertEquals(MsgPicker.getMsg().getDisablePushDownPrompt(), response.getExceptionMessage());
-    }
-
-    @Test
     public void testQueryPushDownWhenNormalDisable() throws Throwable {
         final String sql = "select * from abc";
         final String project = "default";
@@ -346,7 +320,6 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         SQLRequest sqlRequest = new SQLRequest();
         sqlRequest.setSql(sql);
         sqlRequest.setProject(project);
-        sqlRequest.setForcedToTieredStorage(1);
 
         QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
                 sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
@@ -2425,166 +2398,6 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         queryService.putIntoExceptionCache(request, sqlResponse, new RuntimeException("foo"));
         val ret2 = queryService.doQueryWithCache(request);
         Assert.assertTrue(ret2.isException());
-    }
-
-    @Test
-    public void testGetForcedToTieredStorageValueInvalid() {
-        try {
-            ForceToTieredStorage f = ForceToTieredStorage.values()[-1];
-        } catch (Exception e) {
-            Assert.assertTrue(e instanceof ArrayIndexOutOfBoundsException);
-        }
-        ForceToTieredStorage f = ForceToTieredStorage.values()[0];
-        assert ForceToTieredStorage.CH_FAIL_TO_DFS == f;
-        f = ForceToTieredStorage.values()[1];
-        assert ForceToTieredStorage.CH_FAIL_TO_PUSH_DOWN == f;
-        f = ForceToTieredStorage.values()[2];
-        assert ForceToTieredStorage.CH_FAIL_TO_RETURN == f;
-        f = ForceToTieredStorage.values()[3];
-        assert ForceToTieredStorage.CH_FAIL_TAIL == f;
-    }
-
-    @Test
-    public void testGetForcedToTieredStorageForProject() {
-        for (ForceToTieredStorage j : ForceToTieredStorage.values()) {
-            String project = Integer.toString(j.ordinal());
-            overwriteSystemProp("kylin.second-storage.route-when-ch-fail", project);
-            ForceToTieredStorage ret = queryService.getForcedToTieredStorage("default", j);
-            if (j != ForceToTieredStorage.CH_FAIL_TAIL) {
-                assert j == ret;
-            } else {
-                assert ForceToTieredStorage.CH_FAIL_TO_DFS == ret;
-            }
-        }
-    }
-
-    @Test
-    public void testGetForcedToTieredStorageForSystem() {
-        for (ForceToTieredStorage j : ForceToTieredStorage.values()) {
-            String project = Integer.toString(j.ordinal());
-            overwriteSystemProp("kylin.second-storage.route-when-ch-fail", project);
-            ForceToTieredStorage ret = queryService.getForcedToTieredStorage("default", j);
-            if (j != ForceToTieredStorage.CH_FAIL_TAIL) {
-                assert j == ret;
-            } else {
-                assert ForceToTieredStorage.CH_FAIL_TO_DFS == ret;
-            }
-        }
-    }
-
-    @Test
-    public void testGetForcedToTieredStorageForMismatch() {
-        overwriteSystemProp("kylin.second-storage.route-when-ch-fail", "1");
-        ForceToTieredStorage ret = queryService.getForcedToTieredStorage("default", ForceToTieredStorage.CH_FAIL_TAIL);
-        assert ForceToTieredStorage.CH_FAIL_TO_PUSH_DOWN == ret;
-        ret = queryService.getForcedToTieredStorage("default", ForceToTieredStorage.CH_FAIL_TO_DFS);
-        assert ForceToTieredStorage.CH_FAIL_TO_DFS == ret;
-    }
-
-    @Test
-    public void testForceToTieredStorageOK() throws Throwable {
-        final String sql = "select * from abc";
-        final String project = "default";
-        final QueryExec queryExec = Mockito.mock(QueryExec.class);
-        SQLRequest sqlRequest = new SQLRequest();
-        sqlRequest.setSql(sql);
-        sqlRequest.setProject(project);
-        sqlRequest.setForcedToTieredStorage(0);
-
-        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
-                sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
-                queryExec.getDefaultSchemaName(), true);
-        queryParams.setForcedToTieredStorage(ForceToTieredStorage.CH_FAIL_TO_DFS);
-        String correctedSql = QueryUtil.massageSql(queryParams);
-
-        Mockito.when(queryExec.executeQuery(correctedSql)).thenReturn(new QueryResult());
-        Mockito.doReturn(new QueryResult()).when(queryService.queryRoutingEngine).execute(Mockito.any(), Mockito.any());
-
-        final SQLResponse response = queryService.queryWithCache(sqlRequest);
-        Assert.assertNull(response.getExceptionMessage());
-    }
-
-    @Test
-    public void testForceToTieredStoragePushDown() throws Throwable {
-        final String sql = "select * from abc";
-        final String project = "default";
-        final QueryExec queryExec = Mockito.mock(QueryExec.class);
-        SQLRequest sqlRequest = new SQLRequest();
-        sqlRequest.setSql(sql);
-        sqlRequest.setProject(project);
-        sqlRequest.setForcedToTieredStorage(1);
-
-        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
-                sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
-                queryExec.getDefaultSchemaName(), true);
-        String correctedSql = QueryUtil.massageSql(queryParams);
-
-        Throwable cause = new SQLException(QueryContext.ROUTE_USE_FORCEDTOTIEREDSTORAGE);
-        Mockito.doThrow(
-                new SQLException("Error while executing SQL \"" + correctedSql + "\": " + cause.getMessage(), cause))
-                .when(queryService.queryRoutingEngine).execute(Mockito.any(), Mockito.any());
-
-        Mockito.doAnswer(invocation -> PushdownResult.emptyResult()).when(queryService.queryRoutingEngine)
-                .tryPushDownSelectQuery(Mockito.any(), Mockito.any(), Mockito.anyBoolean());
-
-        final SQLResponse response = queryService.queryWithCache(sqlRequest);
-        Assert.assertTrue(response.isQueryPushDown());
-    }
-
-    @Test
-    public void testForceToTieredStorageInvalidParameters() throws Throwable {
-        final String sql = "select * from abc";
-        final String project = "default";
-        final QueryExec queryExec = Mockito.mock(QueryExec.class);
-        SQLRequest sqlRequest = new SQLRequest();
-        sqlRequest.setSql(sql);
-        sqlRequest.setProject(project);
-        sqlRequest.setForcedToTieredStorage(1);
-        sqlRequest.setForcedToIndex(true);
-        sqlRequest.setForcedToPushDown(false);
-
-        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
-                sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
-                queryExec.getDefaultSchemaName(), true);
-        String correctedSql = QueryUtil.massageSql(queryParams);
-
-        Throwable cause = new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_AND_FORCE_TO_INDEX,
-                MsgPicker.getMsg().getForcedToTieredstorageAndForceToIndex());
-        Mockito.doThrow(
-                new SQLException("Error while executing SQL \"" + correctedSql + "\": " + cause.getMessage(), cause))
-                .when(queryService.queryRoutingEngine).execute(Mockito.any(), Mockito.any());
-
-        final SQLResponse response = queryService.queryWithCache(sqlRequest);
-        Assert.assertTrue(
-                response.getExceptionMessage().contains(MsgPicker.getMsg().getForcedToTieredstorageAndForceToIndex()));
-    }
-
-    @Test
-    public void testForceToTieredStorageReturnError() throws Throwable {
-        final String sql = "select * from abc";
-        final String project = "default";
-        final QueryExec queryExec = PowerMockito.mock(QueryExec.class);
-        PowerMockito.whenNew(QueryExec.class).withAnyArguments().thenReturn(queryExec);
-
-        SQLRequest sqlRequest = new SQLRequest();
-        sqlRequest.setSql(sql);
-        sqlRequest.setProject(project);
-        sqlRequest.setForcedToTieredStorage(2);
-
-        QueryParams queryParams = new QueryParams(NProjectManager.getProjectConfig(sqlRequest.getProject()),
-                sqlRequest.getSql(), sqlRequest.getProject(), sqlRequest.getLimit(), sqlRequest.getOffset(),
-                "queryExec.getDefaultSchemaName()", true);
-        String correctedSql = QueryUtil.massageSql(queryParams);
-
-        Throwable cause = new KylinException(QueryErrorCode.FORCED_TO_TIEREDSTORAGE_RETURN_ERROR,
-                MsgPicker.getMsg().getForcedToTieredstorageReturnError());
-        Mockito.doThrow(
-                new SQLException("Error while executing SQL \"" + correctedSql + "\": " + cause.getMessage(), cause))
-                .when(queryService.queryRoutingEngine).execute(Mockito.any(), Mockito.any());
-
-        final SQLResponse response = queryService.queryWithCache(sqlRequest);
-        Assert.assertTrue(
-                response.getExceptionMessage().contains(MsgPicker.getMsg().getForcedToTieredstorageReturnError()));
     }
 
     @Test
