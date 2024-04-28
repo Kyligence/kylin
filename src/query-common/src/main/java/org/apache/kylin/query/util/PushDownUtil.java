@@ -199,6 +199,7 @@ public class PushDownUtil {
 
         String sql = queryParams.getSql();
         sql = QueryUtil.trimRightSemiColon(sql);
+        sql = removeSqlHints(sql, queryParams.getKylinConfig());
 
         List<IPushDownConverter> pushDownConverters = fetchConverters(queryParams.getKylinConfig());
         if (logger.isDebugEnabled()) {
@@ -212,6 +213,18 @@ public class PushDownUtil {
             sql = converter.convert(sql, queryParams.getProject(), queryParams.getDefaultSchema());
         }
         sql = replaceEscapedQuote(sql);
+        return sql;
+    }
+
+    static String removeSqlHints(String sql, KylinConfig kylinConfig) {
+        if (kylinConfig.isPushdownSqlHintsErasingEnabled()) {
+            try {
+                RawSql rawSql = new RawSqlParser(sql).parse();
+                return rawSql.getStatementStringWithoutHints();
+            } catch (ParseException e) {
+                logger.error("Error on remove push-down sql hints", e);
+            }
+        }
         return sql;
     }
 

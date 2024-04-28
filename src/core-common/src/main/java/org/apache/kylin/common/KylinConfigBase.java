@@ -4353,4 +4353,8 @@ public abstract class KylinConfigBase implements Serializable {
     public String getSourceJDBCExtend() {
         return getOptional("kylin.source.jdbc.extend", "");
     }
+
+    public boolean isPushdownSqlHintsErasingEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.query.pushdown.sql-hints-erasing.enabled", TRUE));
+    }
 }

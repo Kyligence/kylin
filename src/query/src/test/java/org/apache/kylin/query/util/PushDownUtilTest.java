@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.kylin.common.AbstractTestCase;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.KylinException;
@@ -49,7 +50,7 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @MetadataInfo
-class PushDownUtilTest {
+class PushDownUtilTest extends AbstractTestCase {
 
     private static void setAdminAuthentication() {
         TestingAuthenticationToken auth = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
@@ -339,6 +340,22 @@ class PushDownUtilTest {
                     + " AND (TIMESTAMPADD(day, 1, current_date) = '2012-01-01' and cc1 = 'china')";
             NDataModel updatedModel = modelManager.getDataModelDesc(model.getUuid());
             Assertions.assertEquals(expected, PushDownUtil.generateFlatTableSql(updatedModel, false));
+        }
+    }
+
+    @Test
+    public void testRemoveSqlHints() {
+        {
+            overwriteSystemProp("kylin.query.pushdown.sql-hints-erasing.enabled", "true");
+            String sql = "select /*+ AABB, MODEL_PRIORITY(m1,m2), ACCEPT_CACHE_TIME(123123), DEF */ col1, col2 from tb";
+            String ret = PushDownUtil.removeSqlHints(sql, KylinConfig.getInstanceFromEnv());
+            Assertions.assertEquals("select col1, col2 from tb", ret);
+        }
+        {
+            overwriteSystemProp("kylin.query.pushdown.sql-hints-erasing.enabled", "false");
+            String sql = "select /*+ AABB, MODEL_PRIORITY(m1,m2), ACCEPT_CACHE_TIME(123123), DEF */ col1, col2 from tb";
+            String ret = PushDownUtil.removeSqlHints(sql, KylinConfig.getInstanceFromEnv());
+            Assertions.assertEquals(sql, ret);
         }
     }
 
