@@ -152,7 +152,7 @@ public class SegmentPruningRule extends PruningRule {
 
         // When the expression node of filter condition is too complex, Calcite takes too long to simplify,
         // do not prune segments here, hand it over to Spark
-        if (RelOptUtil.conjunctions(RexUtil.toCnf(rexSimplify.rexBuilder, simplifiedFilter)).size() > dataflow
+        if (RelOptUtil.conjunctions(RexUtil.toCnf(rexSimplify.rexBuilder, 100, simplifiedFilter)).size() > dataflow
                 .getConfig().getMaxFilterConditionCnt()) {
             return dataflow.getQueryableSegments();
         }
