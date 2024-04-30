@@ -4347,7 +4347,7 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     public int getMaxFilterConditionCnt() {
-        return Integer.parseInt(getOptional("kylin.query.filter-condition-count", "20"));
+        return Integer.parseInt(getOptional("kylin.query.filter-condition-count", "300"));
     }
 
     public String getSourceJDBCExtend() {

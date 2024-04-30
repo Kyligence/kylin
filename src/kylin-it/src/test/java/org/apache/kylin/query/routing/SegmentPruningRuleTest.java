@@ -232,7 +232,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
     public void testCancelAndInterruptPruning() throws SqlParseException {
         val dataflowId = "3718b614-5191-2254-77e9-f4c5ca64e312";
         KylinConfig kylinConfig = getTestConfig();
-        overwriteSystemProp("kylin.query.filter-condition-count", "999");
+        overwriteSystemProp("kylin.query.filter-condition-count", "99999");
 
         String sql = "SELECT * FROM TEST_DB.DATE_TIMESTAMP_TABLE WHERE id = '121' AND (\n"
                 + "(TIMESTAMP_10 >= '2021-11-03')\n" + "AND (TIMESTAMP_10 <= '2021-11-04')\n" + ")\n" + "OR (\n"
@@ -663,6 +663,27 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
                 + "NAME4 = 14 AND TIME1 = '2014-04-03' AND TIME2 = '2012-04-02' AND FLAG = FALSE";
         selectSegmentList = startRealizationPruner(dataflowManager, dataflowId, sql, project, kylinConfig);
         Assert.assertEquals(0, selectSegmentList.size());
+    }
+
+    @Test
+    public void testPruningWithDifferentConjunctions() throws Exception {
+        KylinConfig kylinConfig = getTestConfig();
+        String project = getProject();
+        val dataflowId = "1e12e297-ae63-4019-5e05-f571174ea157";
+        NDataflowManager dataflowManager = NDataflowManager.getInstance(kylinConfig, project);
+
+        // < MaxFilterConditionCnt
+        overwriteSystemProp("kylin.query.filter-condition-count", "15");
+        String sql = "SELECT NAME1 from TEST_DB.TEST_MEASURE where NAME1 in ('1137', '1153', '1173')";
+        List<NDataSegment> selectSegmentList = startRealizationPruner(dataflowManager, dataflowId, sql, project,
+                kylinConfig);
+        Assert.assertEquals(5, selectSegmentList.size());
+
+        // > MaxFilterConditionCnt
+        overwriteSystemProp("kylin.query.filter-condition-count", "5");
+        sql = "SELECT NAME1 from TEST_DB.TEST_MEASURE where NAME1 in ('1137', '1153', '1173', '999999902') and NAME2 in ('Anhui', 'Jiangsu', 'Shanghai')";
+        selectSegmentList = startRealizationPruner(dataflowManager, dataflowId, sql, project, kylinConfig);
+        Assert.assertEquals(5, selectSegmentList.size());
     }
 
     @Override

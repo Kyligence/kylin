@@ -27,12 +27,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.calcite.plan.RelOptPredicateList;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSimplify;
-import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.commons.collections.CollectionUtils;
@@ -152,8 +150,7 @@ public class SegmentPruningRule extends PruningRule {
 
         // When the expression node of filter condition is too complex, Calcite takes too long to simplify,
         // do not prune segments here, hand it over to Spark
-        if (RelOptUtil.conjunctions(RexUtil.toCnf(rexSimplify.rexBuilder, 100, simplifiedFilter)).size() > dataflow
-                .getConfig().getMaxFilterConditionCnt()) {
+        if (simplifiedFilter.nodeCount() > dataflow.getConfig().getMaxFilterConditionCnt()) {
             return dataflow.getQueryableSegments();
         }
 
