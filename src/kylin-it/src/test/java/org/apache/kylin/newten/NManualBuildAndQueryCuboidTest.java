@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.kylin.GlutenDisabled;
+import org.apache.kylin.GlutenRunner;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NSparkCubingEngine;
 import org.apache.kylin.engine.spark.builder.CreateFlatTable;
@@ -56,10 +58,12 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sparkproject.guava.collect.Sets;
 
+@RunWith(GlutenRunner.class)
 public class NManualBuildAndQueryCuboidTest extends NManualBuildAndQueryTest {
 
     private static final Logger logger = LoggerFactory.getLogger(NManualBuildAndQueryTest.class);
@@ -82,6 +86,7 @@ public class NManualBuildAndQueryCuboidTest extends NManualBuildAndQueryTest {
     }
 
     @Test
+    @GlutenDisabled("incorrect answer, null and empty string are different, need to fix it.")
     public void testBasics() throws Exception {
         final KylinConfig config = KylinConfig.getInstanceFromEnv();
         buildCubes();

@@ -140,7 +140,7 @@ public class ExecAndComp {
         SparkSession ss = SparkSession.active();
         ss.sparkContext().setLocalProperty("gluten.enabledForCurrentThread", "false");
         QueryResult result = queryWithSpark(prj, originSql, joinType, sqlPath);
-        ss.sparkContext().setLocalProperty("gluten.enabledForCurrentThread", "");
+        ss.sparkContext().setLocalProperty("gluten.enabledForCurrentThread", null);
         return result;
     }
 

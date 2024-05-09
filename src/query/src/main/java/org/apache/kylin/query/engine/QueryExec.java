@@ -348,10 +348,6 @@ public class QueryExec {
     private void beforeQuery() {
         Prepare.CatalogReader.THREAD_LOCAL.set(catalogReader);
         KylinConnectionConfig.THREAD_LOCAL.set(connectionConfig);
-        if (SparkSession.getDefaultSession().isDefined()) {
-            SparkContext sparkContext = SparkSession.getDefaultSession().get().sparkContext();
-            sparkContext.setLocalProperty("gluten.enabledForCurrentThread", null);
-        }
     }
 
     private void afterQuery() {

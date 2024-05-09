@@ -305,7 +305,6 @@ object ResultPlan extends LogEx {
   }
 
   def getResult(df: DataFrame, rowType: RelDataType): ExecuteResult = withScope(df) {
-    df.sparkSession.sparkContext.setLocalProperty(QueryPlanSelector.GLUTEN_ENABLE_FOR_THREAD_KEY, null)
     if (!ContextUtil.getNativeRealizations.isEmpty) {
       if (!KylinConfig.getInstanceFromEnv.queryIndexUseGluten()) {
         df.sparkSession.sparkContext.setLocalProperty(QueryPlanSelector.GLUTEN_ENABLE_FOR_THREAD_KEY, "false")

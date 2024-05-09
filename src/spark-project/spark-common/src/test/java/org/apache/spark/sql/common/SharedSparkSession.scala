@@ -167,8 +167,6 @@ object SharedSparkSession extends Logging {
       return // skip
     }
     conf.set("spark.gluten.enabled", "true")
-    // FIXME, enable this after we fix the issue of AutoSinaiPocTest and AutoTpchTest
-    conf.set("spark.sql.adaptive.enabled", "false")
     conf.set("spark.plugins", "org.apache.gluten.GlutenPlugin")
     conf.set("spark.gluten.sql.columnar.libpath", chLibPath)
     conf.set(
@@ -180,7 +178,7 @@ object SharedSparkSession extends Logging {
 
     conf.set("spark.sql.columnVector.offheap.enabled", "true")
     conf.set("spark.memory.offHeap.enabled", "true")
-    conf.set("spark.memory.offHeap.size", "1g")
+    conf.set("spark.memory.offHeap.size", "2g")
     conf.set("spark.gluten.sql.enable.native.validation", "false")
     conf.set("spark.shuffle.manager", "org.apache.spark.shuffle.sort.ColumnarShuffleManager")
     conf.set("spark.gluten.sql.columnar.iterator", "true")
