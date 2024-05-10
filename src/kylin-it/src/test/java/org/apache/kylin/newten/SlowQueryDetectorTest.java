@@ -61,7 +61,8 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
 
     @Override
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
+        super.setUp();
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         createTestMetadata();
         slowQueryDetector = new SlowQueryDetector(100, TIMEOUT_MS);

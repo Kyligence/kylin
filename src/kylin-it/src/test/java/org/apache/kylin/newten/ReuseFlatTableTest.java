@@ -41,14 +41,19 @@ public class ReuseFlatTableTest extends NLocalWithSparkSessionTest {
     @Override
     @Before
     public void setUp() throws Exception {
-        JobContextUtil.cleanUp();
+        super.setUp();
         overwriteSystemProp("kylin.engine.persist-flattable-enabled", "true");
         setOverlay("src/test/resources/ut_meta/reuse_flattable");
-        super.setUp();
 
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
 
         populateSSWithCSVData(getTestConfig(), getProject(), ss);
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/reuse_flattable" };
     }
 
     @Override

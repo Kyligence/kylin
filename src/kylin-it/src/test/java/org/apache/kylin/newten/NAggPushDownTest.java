@@ -44,13 +44,19 @@ public class NAggPushDownTest extends NLocalWithSparkSessionTest {
     @Override
     @Before
     public void setUp() throws Exception {
-        JobContextUtil.cleanUp();
+        super.setUp();
         overwriteSystemProp("kylin.query.match-partial-inner-join-model", "true");
         overwriteSystemProp("kylin.query.calcite.aggregate-pushdown-enabled", "true");
         setOverlay("src/test/resources/ut_meta/agg_push_down");
         super.setUp();
 
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/agg_push_down" };
     }
 
     @Override

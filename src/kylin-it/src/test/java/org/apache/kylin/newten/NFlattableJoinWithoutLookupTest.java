@@ -48,13 +48,19 @@ public class NFlattableJoinWithoutLookupTest extends NLocalWithSparkSessionTest 
     @Override
     @Before
     public void setUp() throws Exception {
-        JobContextUtil.cleanUp();
+        super.setUp();
         overwriteSystemProp("kylin.job.flat-table-join-without-lookup", "true");
         overwriteSystemProp("kylin.engine.persist-flattable-enabled", "false");
         this.createTestMetadata("src/test/resources/ut_meta/flattable_without_join_lookup");
         dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
 
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/flattable_without_join_lookup" };
     }
 
     @Override

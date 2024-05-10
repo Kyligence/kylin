@@ -103,7 +103,7 @@ public class KylinGlutenTest extends NLocalWithSparkSessionTest implements Adapt
     }
 
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/file_pruning");
         NDefaultScheduler scheduler = NDefaultScheduler.getInstance(getProject());

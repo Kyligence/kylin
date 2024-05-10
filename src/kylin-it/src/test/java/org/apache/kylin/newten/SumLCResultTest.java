@@ -43,13 +43,19 @@ public class SumLCResultTest extends NLocalWithSparkSessionTest {
     @Override
     @Before
     public void setUp() throws Exception {
-        JobContextUtil.cleanUp();
+        super.setUp();
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/sum_lc");
         dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
 
         getTestConfig().setProperty("kylin.query.heterogeneous-segment-enabled", "false");
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/sum_lc" };
     }
 
     @Override

@@ -45,11 +45,17 @@ public class LogicalViewTest extends NLocalWithSparkSessionTest {
     public void setUp() throws Exception {
         JobContextUtil.cleanUp();
         // kylin.source.ddl.logical-view.enabled=true
+        super.setUp();
         overwriteSystemProp("kylin.source.ddl.logical-view.enabled", "true");
         this.createTestMetadata("src/test/resources/ut_meta/logical_view");
         dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
 
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/logical_view" };
     }
 
     @Override

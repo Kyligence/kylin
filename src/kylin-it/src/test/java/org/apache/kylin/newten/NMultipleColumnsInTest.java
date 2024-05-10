@@ -40,10 +40,16 @@ public class NMultipleColumnsInTest extends NLocalWithSparkSessionTest {
     @Override
     @Before
     public void setUp() throws Exception {
-        JobContextUtil.cleanUp();
+        super.setUp();
         this.createTestMetadata("src/test/resources/ut_meta/multiple_columns_in");
 
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/multiple_columns_in" };
     }
 
     @Override

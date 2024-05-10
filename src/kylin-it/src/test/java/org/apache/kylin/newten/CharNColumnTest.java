@@ -44,6 +44,11 @@ public class CharNColumnTest extends NLocalWithSparkSessionTest {
     }
 
     @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/test_char_n_column" };
+    }
+
+    @Override
     @After
     public void tearDown() throws Exception {
         JobContextUtil.cleanUp();

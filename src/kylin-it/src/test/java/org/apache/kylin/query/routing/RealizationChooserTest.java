@@ -46,6 +46,11 @@ public class RealizationChooserTest extends NLocalWithSparkSessionTest {
     }
 
     @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/joins_graph_left_or_inner" };
+    }
+
+    @Override
     @After
     public void tearDown() throws Exception {
         super.tearDown();

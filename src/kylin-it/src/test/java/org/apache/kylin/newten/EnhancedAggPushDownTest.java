@@ -39,10 +39,15 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
     @Before
     public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        super.setUp();
         overwriteSystemProp("kylin.query.enhanced-agg-pushdown-enabled", "true");
         this.createTestMetadata("src/test/resources/ut_meta/enhanced_agg_pushdown");
 
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    public String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/enhanced_agg_pushdown" };
     }
 
     @Override

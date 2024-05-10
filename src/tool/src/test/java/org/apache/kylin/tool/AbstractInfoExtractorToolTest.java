@@ -61,10 +61,9 @@ public class AbstractInfoExtractorToolTest extends NLocalFileMetadataTestCase {
 
     @Before
     public void setup() throws Exception {
+        JobContextUtil.cleanUp();
         createTestMetadata();
         jdbcTemplate = JdbcUtil.getJdbcTemplate(getTestConfig());
-
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobInfoDao(getTestConfig());
     }
 

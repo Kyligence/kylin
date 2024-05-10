@@ -41,11 +41,16 @@ public class NCountDistinctWithoutEncodeTest extends NLocalWithSparkSessionTest 
     @Override
     @Before
     public void setUp() throws Exception {
+        super.setUp();
         JobContextUtil.cleanUp();
         setOverlay("src/test/resources/ut_meta/count_distinct_no_encode");
-        super.setUp();
 
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/count_distinct_no_encode" };
     }
 
     @Override

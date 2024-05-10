@@ -98,10 +98,16 @@ public class NFilePruningTest extends NLocalWithSparkSessionTest implements Adap
     @Override
     @Before
     public void setUp() throws Exception {
-        JobContextUtil.cleanUp();
+        super.setUp();
         this.createTestMetadata("src/test/resources/ut_meta/file_pruning");
 
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    public String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/file_pruning" };
     }
 
     @Override

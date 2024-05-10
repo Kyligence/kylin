@@ -20,6 +20,7 @@
 package org.apache.kylin.newten;
 
 import static org.apache.kylin.engine.spark.filter.QueryFiltersCollector.SERVER_HOST;
+import static org.apache.kylin.engine.spark.filter.QueryFiltersCollector.currentQueryFilters;
 import static org.apache.kylin.engine.spark.filter.QueryFiltersCollector.getProjectFiltersFile;
 import static org.awaitility.Awaitility.await;
 
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
@@ -88,6 +90,7 @@ public class BloomFilterTest extends NLocalWithSparkSessionTest implements Adapt
     @Override
     @Before
     public void setUp() throws Exception {
+        super.setUp();
         JobContextUtil.cleanUp();
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         overwriteSystemProp("kylin.bloom.collect-filter.enabled", "true");
@@ -99,6 +102,11 @@ public class BloomFilterTest extends NLocalWithSparkSessionTest implements Adapt
         dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
 
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/bloomfilter" };
     }
 
     @Override
@@ -142,10 +150,15 @@ public class BloomFilterTest extends NLocalWithSparkSessionTest implements Adapt
         String sql1 = "select * from SSB.P_LINEORDER where LO_CUSTKEY in (13,8) and LO_SHIPPRIOTITY = 0 ";
         query.add(Pair.newPair("bloomfilter", sql1));
         ExecAndComp.execAndCompare(query, getProject(), ExecAndComp.CompareLevel.NONE, "inner");
+
         // wait until `QueryFiltersCollector` record filter info
-        await().atMost(120, TimeUnit.SECONDS).until(() -> {
+        int collectInterval = KylinConfig.getInstanceFromEnv().getQueryFilterCollectInterval();
+        await().timeout(collectInterval + 1, TimeUnit.SECONDS)
+                .pollDelay(collectInterval, TimeUnit.SECONDS).untilAsserted(() -> Assert.assertTrue(true));
+        await().atMost(10L * collectInterval, TimeUnit.SECONDS).until(() -> {
             try {
-                if (!fs.exists(projectFilterPath)) {
+                if (!fs.exists(projectFilterPath)
+                        || currentQueryFilters.containsKey(StringUtils.upperCase(getProject()))) {
                     return false;
                 }
             } catch (Exception e) {

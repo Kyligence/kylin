@@ -44,10 +44,16 @@ public class NComputedColumnTest extends NLocalWithSparkSessionTest {
     @Override
     @Before
     public void setUp() throws Exception {
+        super.setUp();
         JobContextUtil.cleanUp();
         this.createTestMetadata("src/test/resources/ut_meta/comput_column");
 
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/comput_column" };
     }
 
     @Override

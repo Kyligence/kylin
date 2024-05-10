@@ -46,7 +46,13 @@ public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
     @Override
     @Before
     public void setUp() throws Exception {
+        super.setUp();
         this.createTestMetadata("src/test/resources/ut_meta/partial_match_index");
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/partial_match_index" };
     }
 
     @Override

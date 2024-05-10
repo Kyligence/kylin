@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.kylin.newten;
+package org.apache.kylin.query.routing;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,11 +81,17 @@ public class MultiPartitionPruningTest extends NLocalWithSparkSessionTest implem
     @Override
     @Before
     public void setUp() throws Exception {
+        super.setUp();
         JobContextUtil.cleanUp();
         this.createTestMetadata("src/test/resources/ut_meta/multi_partition_pruning");
         overwriteSystemProp("kylin.model.multi-partition-enabled", "true");
 
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/multi_partition_pruning" };
     }
 
     @Override

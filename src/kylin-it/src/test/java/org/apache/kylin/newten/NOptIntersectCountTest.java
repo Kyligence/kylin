@@ -49,12 +49,17 @@ public class NOptIntersectCountTest extends NLocalWithSparkSessionTest {
     @Override
     @Before
     public void setUp() throws Exception {
-        JobContextUtil.cleanUp();
+        super.setUp();
         overwriteSystemProp("kylin.engine.persist-flattable-enabled", "false");
         setOverlay("src/test/resources/ut_meta/opt_intersect_count");
-        super.setUp();
 
+        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/opt_intersect_count" };
     }
 
     @Override

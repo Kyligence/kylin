@@ -43,7 +43,7 @@ public class QueryFiltersCollector {
 
     // To reduce HDFS storage, only use map to record it.
     // schema: <project, <modelId, <columnId, filter_hit_number>>
-    protected static final ConcurrentMap<String, Map<String, Map<String, Integer>>> currentQueryFilters = Maps
+    public static final ConcurrentMap<String, Map<String, Map<String, Integer>>> currentQueryFilters = Maps
             .newConcurrentMap();
 
     public static final ScheduledExecutorService executor = Executors

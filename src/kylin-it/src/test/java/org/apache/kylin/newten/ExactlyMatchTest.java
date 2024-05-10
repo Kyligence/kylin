@@ -56,6 +56,11 @@ public class ExactlyMatchTest extends NLocalWithSparkSessionTest {
     }
 
     @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/agg_exact_match" };
+    }
+
+    @Override
     @After
     public void tearDown() throws Exception {
         JobContextUtil.cleanUp();

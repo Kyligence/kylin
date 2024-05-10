@@ -39,11 +39,18 @@ public class NSpanningTreeCubingJobTest extends NLocalWithSparkSessionTest {
 
     @Override
     @Before
-    public void setUp() {
-        this.createTestMetadata("src/test/resources/ut_meta/spanning_tree_build");
+    public void setUp() throws Exception {
+        super.setUp();
         ss.sparkContext().setLogLevel("ERROR");
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         overwriteSystemProp("kylin.engine.spark.cache-threshold", "2");
+
+        this.createTestMetadata("src/test/resources/ut_meta/spanning_tree_build");
+    }
+
+    @Override
+    protected String[] getOverlay() {
+        return new String[] { "src/test/resources/ut_meta/spanning_tree_build" };
     }
 
     @Override
