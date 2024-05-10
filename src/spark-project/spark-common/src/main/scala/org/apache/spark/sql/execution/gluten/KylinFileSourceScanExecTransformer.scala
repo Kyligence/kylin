@@ -66,7 +66,8 @@ class KylinFileSourceScanExecTransformer(@transient relation: HadoopFsRelation,
       bucketedScan,
       optionalBucketSet,
       optionalNumCoalescedBuckets,
-      disableBucketedScan)
+      disableBucketedScan,
+      filterExprs())
 
   // Copy from KylinFileSourceScanExec
   @transient override lazy val selectedPartitions: Array[PartitionDirectory] = {

@@ -16,11 +16,12 @@
  */
 package org.apache.spark.sql.catalyst.expressions.gluten
 
+import com.google.common.collect.Lists
 import org.apache.gluten.backendsapi.clickhouse.CHBackendSettings
+import org.apache.gluten.exception.GlutenNotSupportException
 import org.apache.gluten.expression._
 import org.apache.gluten.extension.ExpressionExtensionTrait
 import org.apache.gluten.substrait.expression.{ExpressionBuilder, ExpressionNode}
-
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -28,9 +29,6 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{BinaryType, DataType, LongType, StringType}
 import org.apache.spark.sql.udaf._
 import org.apache.spark.unsafe.types.UTF8String
-
-import com.google.common.collect.Lists
-import org.roaringbitmap.longlong.Roaring64NavigableMap
 
 import java.util.Locale
 import scala.collection.mutable.ListBuffer
@@ -194,31 +192,22 @@ case class CustomerExpressionTransformer() extends ExpressionExtensionTrait {
       aggregateAttributeList: Seq[Attribute],
       aggregateAttr: ListBuffer[Attribute],
       resIndex: Int): Int = {
-    var reIndex = resIndex
-    aggregateFunc match {
-      case bitmap
-        if bitmap.getClass.getSimpleName.equals("ReusePreciseCountDistinct") ||
-          bitmap.getClass.getSimpleName.equals("PreciseCountDistinctAndValue") ||
-          bitmap.getClass.getSimpleName.equals("PreciseCountDistinctAndArray") ||
-          bitmap.getClass.getSimpleName.equals("PreciseCountDistinct") =>
-        mode match {
-          case Partial =>
-            val bitmapFunc = aggregateFunc
-              .asInstanceOf[TypedImperativeAggregate[Roaring64NavigableMap]]
-            val aggBufferAttr = bitmapFunc.inputAggBufferAttributes
-            for (index <- aggBufferAttr.indices) {
-              val attr = ConverterUtils.getAttrFromExpr(aggBufferAttr(index))
-              aggregateAttr += attr
-            }
-            reIndex += aggBufferAttr.size
-            reIndex
-          case Final =>
-            aggregateAttr += aggregateAttributeList(resIndex)
-            reIndex += 1
-            reIndex
-          case other =>
-            throw new UnsupportedOperationException(s"Unsupported aggregate mode: $other.")
+    var resIdx = resIndex
+    exp.mode match {
+      case Partial | PartialMerge =>
+        val aggBufferAttr = aggregateFunc.inputAggBufferAttributes
+        for (index <- aggBufferAttr.indices) {
+          val attr = ConverterUtils.getAttrFromExpr(aggBufferAttr(index))
+          aggregateAttr += attr
         }
+        resIdx += aggBufferAttr.size
+        resIdx
+      case Final | Complete =>
+        aggregateAttr += aggregateAttributeList(resIdx)
+        resIdx += 1
+        resIdx
+      case other =>
+        throw new GlutenNotSupportException(s"Unsupported aggregate mode: $other.")
     }
   }
 
