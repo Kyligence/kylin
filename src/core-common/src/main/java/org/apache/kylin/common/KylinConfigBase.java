@@ -4357,4 +4357,8 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isPushdownSqlHintsErasingEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.query.pushdown.sql-hints-erasing.enabled", TRUE));
     }
+
+    public boolean isGlobalStackInterceptionEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.server.stack-interception-enabled", FALSE));
+    }
 }
