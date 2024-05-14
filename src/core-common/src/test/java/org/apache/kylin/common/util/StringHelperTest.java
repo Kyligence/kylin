@@ -46,11 +46,29 @@ class StringHelperTest {
     @Test
     void testBacktickToDoubleQuote() {
         Assertions.assertEquals("\"a\".\"b\" + 1", StringHelper.backtickToDoubleQuote("`a`.`b` + 1"));
+        Assertions.assertEquals("concat(ifnull(\"a\".\"b\", '-'), '\\\\', ifnull(\"c\".\"d\", '-'))",
+                StringHelper.backtickToDoubleQuote("concat(ifnull(`a`.`b`, '-'), '\\\\', ifnull(`c`.`d`, '-'))"));
+        Assertions.assertEquals("concat('\\'', ifnull(\"c\".\"d\", '-'))",
+                StringHelper.backtickToDoubleQuote("concat('\\'', ifnull(`c`.`d`, '-'))"));
+        Assertions.assertEquals("concat('\\\\\\\\', ifnull(\"c\".\"d\", '-'))",
+                StringHelper.backtickToDoubleQuote("concat('\\\\\\\\', ifnull(`c`.`d`, '-'))"));
+        // It's correct.
+        Assertions.assertEquals("concat('\\', ifnull(`c`.`d`, 1)', '-')",
+                StringHelper.backtickToDoubleQuote("concat('\\', ifnull(`c`.`d`, 1)', '-')"));
     }
 
     @Test
     void testDoubleQuoteToBackTick() {
         Assertions.assertEquals("`a`.`b` + '''1'", StringHelper.doubleQuoteToBacktick("\"a\".\"b\" + '''1'"));
+        Assertions.assertEquals("concat(ifnull(`a`.`b`, '-'), '\\\\', ifnull(`c`.`d`, '-'))", StringHelper
+                .doubleQuoteToBacktick("concat(ifnull(\"a\".\"b\", '-'), '\\\\', ifnull(\"c\".\"d\", '-'))"));
+        Assertions.assertEquals("concat('\\'', ifnull(`c`.`d`, '-'))",
+                StringHelper.doubleQuoteToBacktick("concat('\\'', ifnull(\"c\".\"d\", '-'))"));
+        Assertions.assertEquals("concat('\\\\\\\\', ifnull(`c`.`d`, '-'))",
+                StringHelper.doubleQuoteToBacktick("concat('\\\\\\\\', ifnull(\"c\".\"d\", '-'))"));
+        // It's correct.
+        Assertions.assertEquals("concat('\\', ifnull(\"c\".\"d\", 1)', '-')",
+                StringHelper.doubleQuoteToBacktick("concat('\\', ifnull(\"c\".\"d\", 1)', '-')"));
     }
 
     @Test

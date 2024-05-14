@@ -33,6 +33,7 @@ public class StringHelper {
 
     public static final char QUOTE = '\'';
     public static final char DOUBLE_QUOTE = '"';
+    public static final char SLASH = '\\';
     public static final char BACKTICK = '`';
 
     private StringHelper() {
@@ -128,7 +129,7 @@ public class StringHelper {
     public static boolean validateShellArgument(String s) {
         return Pattern.compile("^[a-zA-Z0-9_./-]+$").matcher(s).matches();
     }
-    
+
     public static String escapeShellArguments(String args) {
         String[] expandArgs = Arrays.stream(args.split(" ")).filter(arg -> !arg.isEmpty()).toArray(String[]::new);
         return String.join(" ", escapeShellArguments(expandArgs));
@@ -243,13 +244,28 @@ public class StringHelper {
                 // One kind has two successive single quote '', we need to clear the toMatchTokens.
                 // Another kind has a form of \', just ignore it and go on match the next char.
                 Preconditions.checkState(toMatchTokens.size() == 1);
-                if (chars[i - 1] != '\\') {
+                if (chars[i - 1] != SLASH || isQuoteDelimiter(i, chars)) {
                     toMatchTokens.clear();
                 }
             }
         }
         Preconditions.checkState(indexList.size() % 2 == 0);
         return indexList;
+    }
+
+    /**
+     * Determines if the i-th character is a common quote(') character or delimiter.
+     */
+    private static boolean isQuoteDelimiter(int i, char[] chars) {
+        int num = 0;
+        for (int j = i - 1; j > 0; j--) {
+            if (chars[j] == SLASH) {
+                num++;
+            } else {
+                break;
+            }
+        }
+        return num % 2 == 0;
     }
 
 }
