@@ -4361,4 +4361,8 @@ public abstract class KylinConfigBase implements Serializable {
     public boolean isGlobalStackInterceptionEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.server.stack-interception-enabled", FALSE));
     }
+
+    public int getLoadTableBatchSize() {
+        return Integer.parseInt(getOptional("kylin.table.load-batch-size", "200"));
+    }
 }

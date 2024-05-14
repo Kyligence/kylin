@@ -358,10 +358,26 @@ public class TableExtService extends BasicService {
 
     private LoadTableResponse innerLoadTables(String project, LoadTableResponse tableResponse,
             List<Pair<TableDesc, TableExtDesc>> loadTables) {
+        int batchSize = NProjectManager.getProjectConfig(project).getLoadTableBatchSize();
+        List<List<Pair<TableDesc, TableExtDesc>>> batches = splitIntoBatches(loadTables, batchSize);
+        for (List<Pair<TableDesc, TableExtDesc>> batch : batches) {
+            try {
+                microBatchLoadTable(project, tableResponse, batch);
+            } catch (Exception e) {
+                logger.error("Load table transaction failure : ", e);
+                tableResponse.getFailed()
+                        .addAll(batch.stream().map(pair -> pair.getFirst().getIdentity()).collect(Collectors.toSet()));
+            }
+        }
+        return tableResponse;
+    }
+
+    private LoadTableResponse microBatchLoadTable(String project, LoadTableResponse tableResponse,
+            List<Pair<TableDesc, TableExtDesc>> batch) {
         return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> { //
             NTableMetadataManager tableManager = NTableMetadataManager.getInstance(KylinConfig.readSystemKylinConfig(),
                     project);
-            loadTables.forEach(pair -> {
+            batch.forEach(pair -> {
                 String tableName = pair.getFirst().getIdentity();
                 boolean success = true;
                 boolean realLoaded = false;
@@ -382,6 +398,16 @@ public class TableExtService extends BasicService {
             });
             return tableResponse;
         }, project, 2);
+    }
+
+    private List<List<Pair<TableDesc, TableExtDesc>>> splitIntoBatches(List<Pair<TableDesc, TableExtDesc>> loadTables,
+            int batchSize) {
+        List<List<Pair<TableDesc, TableExtDesc>>> batches = new ArrayList<>();
+        for (int i = 0; i < loadTables.size(); i += batchSize) {
+            batches.add(new ArrayList<>(loadTables.subList(i, Math.min(i + batchSize, loadTables.size()))));
+        }
+        logger.info("Split all {} table into {} batches", loadTables.size(), batches.size());
+        return batches;
     }
 
     private List<Pair<TableDesc, TableExtDesc>> extractTableMeta(String[] tables, String project,
