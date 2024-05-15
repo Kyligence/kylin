@@ -304,8 +304,12 @@ public abstract class SparkApplication implements Application {
             monitorSparkMaster();
 
             HadoopUtil.setCurrentConfiguration(HadoopUtil.getCurrentConfiguration());
-            ////////
-            exchangeSparkConf(buildEnv.sparkConf());
+            //////// Do not need to reset the build conf if in retry phase
+            if (infos.getRetryTimes() == 0) {
+                exchangeSparkConf(buildEnv.sparkConf());
+            } else {
+                atomicSparkConf.set(buildEnv.sparkConf());
+            }
 
             TimeZoneUtils.setDefaultTimeZone(config);
 
