@@ -41,6 +41,7 @@ import org.apache.spark.sql.util.{SparderConstants, SparderTypeUtil}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparderEnv}
 import org.apache.spark.sql.execution.gluten.KylinFileSourceScanExecTransformer
 import org.apache.gluten.utils.{FallbackUtil, QueryPlanSelector}
+import org.apache.kylin.query.relnode.ContextUtil
 
 import java.io.{File, FileOutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
@@ -49,7 +50,6 @@ import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`iterator asScala`
 import scala.collection.mutable
-import org.apache.kylin.query.relnode.ContextUtil
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, AttributeSet}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -294,7 +294,7 @@ object ResultPlan extends LogEx {
       }
 
       val partitionColumns = l.resolve(
-        fsRelation.partitionSchema, fsRelation.sparkSession.sessionState.analyzer.resolver)
+        fsRelation.partitionSchema, fsRelation.sqlContext.sparkSession.sessionState.analyzer.resolver)
       val partitionSet = AttributeSet(partitionColumns)
       val dataFilters = normalizedFilters.filter(_.references.intersect(partitionSet).isEmpty)
       val names = fsRelation.dataSchema.map(schema => schema.name)

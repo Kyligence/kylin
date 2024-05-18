@@ -179,6 +179,14 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.celeborn</groupId>
+            <artifactId>celeborn-client-spark-3-shaded_2.12</artifactId>
+            <version>${celeborn.version}</version>
+            <scope>${gluten.deps.scope}</scope>
+        </dependency>
+
+
+        <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.12</artifactId>
             <scope>test</scope>

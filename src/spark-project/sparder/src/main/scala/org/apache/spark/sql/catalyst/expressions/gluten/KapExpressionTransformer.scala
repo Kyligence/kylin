@@ -33,12 +33,12 @@ import org.apache.spark.unsafe.types.UTF8String
 import java.util.Locale
 import scala.collection.mutable.ListBuffer
 
-class FloorDateTimeExpressionTransformer(
+case class FloorDateTimeExpressionTransformer(
   substraitExprName: String,
   format: ExpressionTransformer,
   timestamp: ExpressionTransformer,
   timeZoneId: Option[String] = None,
-  original: FloorDateTime) extends ExpressionTransformer with Logging {
+  original: FloorDateTime) extends ExpressionTransformerWithOrigin with Logging {
 
   override def doTransform(args: java.lang.Object): ExpressionNode = {
     // The format must be constant string in the fucntion date_trunc of ch.
@@ -108,10 +108,10 @@ class FloorDateTimeExpressionTransformer(
   }
 }
 
-class KeBitmapFunctionTransformer(
+case class KeBitmapFunctionTransformer(
   substraitExprName: String,
   child: ExpressionTransformer,
-  original: Expression) extends ExpressionTransformer with Logging {
+  original: Expression) extends ExpressionTransformerWithOrigin with Logging {
 
   override def doTransform(args: java.lang.Object): ExpressionNode = {
     val childNode = child.doTransform(args)
@@ -149,7 +149,7 @@ case class CustomerExpressionTransformer() extends ExpressionExtensionTrait {
     expr: Expression,
     attributeSeq: Seq[Attribute]): ExpressionTransformer = expr match {
     case floorDateTime: FloorDateTime =>
-      new FloorDateTimeExpressionTransformer(
+      FloorDateTimeExpressionTransformer(
         substraitExprName,
         ExpressionConverter.replaceWithExpressionTransformer(floorDateTime.format, attributeSeq),
         ExpressionConverter.replaceWithExpressionTransformer(floorDateTime.timestamp, attributeSeq),
@@ -157,14 +157,14 @@ case class CustomerExpressionTransformer() extends ExpressionExtensionTrait {
         floorDateTime
       )
     case preciseCardinality: PreciseCardinality =>
-      new KeBitmapFunctionTransformer(
+      KeBitmapFunctionTransformer(
         substraitExprName,
         ExpressionConverter
           .replaceWithExpressionTransformer(preciseCardinality.child, attributeSeq),
         preciseCardinality
       )
     case preciseCountDistinctDecode: PreciseCountDistinctDecode =>
-      new KeBitmapFunctionTransformer(
+      KeBitmapFunctionTransformer(
         substraitExprName,
         ExpressionConverter
           .replaceWithExpressionTransformer(preciseCountDistinctDecode.child, attributeSeq),
