@@ -68,8 +68,11 @@ public class UnitOfWork {
 
     private static EventBusFactory factory;
 
-    static {
-        factory = EventBusFactory.getInstance();
+    private static EventBusFactory getFactory() {
+        if (factory == null) {
+            factory = EventBusFactory.getInstance();
+        }
+        return factory;
     }
 
     static ThreadLocal<Boolean> replaying = new ThreadLocal<>();
@@ -277,8 +280,8 @@ public class UnitOfWork {
             work.cleanResource();
         }
 
-        if (entitiesSize != 0 && !params.isReadonly() && !params.isSkipAuditLog() && !isUT) {
-            factory.postAsync(new AuditLogBroadcastEventNotifier());
+        if (entitiesSize != 0 && !params.isReadonly() && !params.isSkipAuditLog() && !config.isUTEnv()) {
+            getFactory().postAsync(new AuditLogBroadcastEventNotifier());
         }
 
         long startTime = System.currentTimeMillis();

@@ -88,12 +88,11 @@ public class JobManagerTest extends NLocalFileMetadataTestCase {
 
     @Before
     public void setup() throws Exception {
-
+        JobContextUtil.cleanUp();
         this.createTestMetadata();
         config = getTestConfig();
 
         config.setProperty("kylin.job.check-quota-storage-enabled", "false");
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(config);
 
         jobManager = JobManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT);

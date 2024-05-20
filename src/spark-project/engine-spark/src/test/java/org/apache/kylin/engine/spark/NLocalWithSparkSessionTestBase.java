@@ -44,7 +44,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparderEnv;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.optimizer.ConvertInnerJoinToSemiJoin;
-import org.apache.spark.sql.common.SharedSparkSession;
+import org.apache.spark.sql.common.GlutenTestConfig;
 import org.apache.spark.sql.internal.StaticSQLConf;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -113,11 +113,7 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
         sparkConf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false");
         sparkConf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true");
 
-        SharedSparkSession.configGluten(sparkConf);
-        // sparkConf.set("spark.eventLog.enabled", "true");
-        // sparkConf.set("spark.eventLog.dir", "file:///tmp/spark-events");
-        // sparkConf.set("spark.eventLog.compress", "true");
-        // sparkConf.set("spark.eventLog.compression.codec", "snappy");
+        GlutenTestConfig.configGluten(sparkConf);
 
         ss = SparkSession.builder().withExtensions(ext -> {
             ext.injectOptimizerRule(ss -> new ConvertInnerJoinToSemiJoin());

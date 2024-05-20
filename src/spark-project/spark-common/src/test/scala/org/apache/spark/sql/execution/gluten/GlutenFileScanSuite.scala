@@ -41,7 +41,8 @@ class GlutenFileScanSuite extends SparkFunSuite
     clearSparkSession()
   }
 
-  test("Test with Gluten") {
+  // use kylin-it and kap-it to test with gluten
+  ignore("Test with Gluten") {
     withTempPath { path =>
       SparkSession.cleanupAnyExistingSession()
       val tempDir = path.getCanonicalPath
