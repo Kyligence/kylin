@@ -17,11 +17,11 @@
  */
 package org.apache.kylin.common.persistence.metadata;
 
-import static org.apache.kylin.common.persistence.metadata.JdbcMetadataStore.SELECT_TERM;
 import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.datasourceParameters;
 import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.isIndexExists;
 import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.isTableExists;
 import static org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil.withTransaction;
+import static org.apache.kylin.common.persistence.metadata.mapper.BasicSqlTable.PROJECT_FIELD;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +40,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.AuditLog;
-import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.UnitMessages;
 import org.apache.kylin.common.persistence.event.ResourceCreateOrUpdateEvent;
 import org.apache.kylin.common.persistence.event.ResourceDeleteEvent;
@@ -55,6 +54,7 @@ import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.base.Joiner;
 import org.apache.kylin.guava30.shaded.common.base.Strings;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -70,6 +70,8 @@ public class JdbcAuditLogStore implements AuditLogStore {
 
     static final String AUDIT_LOG_SUFFIX = "_audit_log";
 
+    public static final String SELECT_TERM = "select ";
+
     static final String AUDIT_LOG_TABLE_ID = "id";
     static final String AUDIT_LOG_TABLE_KEY = "meta_key";
     static final String AUDIT_LOG_TABLE_CONTENT = "meta_content";
@@ -78,6 +80,7 @@ public class JdbcAuditLogStore implements AuditLogStore {
     static final String AUDIT_LOG_TABLE_UNIT = "unit_id";
     static final String AUDIT_LOG_TABLE_OPERATOR = "operator";
     static final String AUDIT_LOG_TABLE_INSTANCE = "instance";
+    static final String AUDIT_LOG_DIFF_FLAG = "diff_flag";
     static final String CREATE_TABLE = "create.auditlog.store.table";
     static final String META_KEY_META_MVCC_INDEX = "meta_key_meta_mvcc_index";
     static final String META_TS_INDEX = "meta_ts_index";
@@ -85,46 +88,48 @@ public class JdbcAuditLogStore implements AuditLogStore {
 
     static final String META_INDEX_KEY_PREFIX = "create.auditlog.store.tableindex.";
 
-    static final String INSERT_SQL = "insert into %s ("
-            + Joiner.on(",").join(AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS,
-                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE)
-            + ") values (?, ?, ?, ?, ?, ?, ?)";
+    static final String INSERT_SQL = "insert into %s (" + Joiner.on(",").join(AUDIT_LOG_TABLE_KEY,
+            AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS, AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT,
+            AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE, PROJECT_FIELD, AUDIT_LOG_DIFF_FLAG)
+            + ") values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     static final String SELECT_BY_RANGE_SQL = SELECT_TERM
             + Joiner.on(",").join(AUDIT_LOG_TABLE_ID, AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS,
-                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE)
+                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE, PROJECT_FIELD, AUDIT_LOG_DIFF_FLAG)
             + " from %s where id > %d and id <= %d order by id";
     static final String SELECT_BY_ID_SQL = SELECT_TERM
             + Joiner.on(",").join(AUDIT_LOG_TABLE_ID, AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS,
-                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE)
+                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE, PROJECT_FIELD, AUDIT_LOG_DIFF_FLAG)
             + " from %s where id in(%s) order by id";
 
     static final String SELECT_BY_PROJECT_RANGE_SQL = SELECT_TERM
             + Joiner.on(",").join(AUDIT_LOG_TABLE_ID, AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS,
-                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE)
+                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE, PROJECT_FIELD, AUDIT_LOG_DIFF_FLAG)
             + " from %s where meta_key like '/%s/%%' and id > %d and id <= %d order by id";
 
     static final String SELECT_MAX_ID_SQL = "select max(id) from %s";
     static final String SELECT_MIN_ID_SQL = "select min(id) from %s";
     static final String SELECT_COUNT_ID_RANGE = "select count(id) from %s where id > %d and id <= %d";
     static final String DELETE_ID_LESSTHAN_SQL = "delete from %s where id < ?";
-    static final String SELECT_TS_RANGE = SELECT_TERM
-            + Joiner.on(",").join(AUDIT_LOG_TABLE_ID, AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS,
-                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE)
+
+    static final String SELECT_LIST_TERM = SELECT_TERM + Joiner.on(",").join(AUDIT_LOG_TABLE_ID, AUDIT_LOG_TABLE_KEY,
+            AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS, AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT,
+            AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE, PROJECT_FIELD, AUDIT_LOG_DIFF_FLAG);
+    static final String SELECT_TS_RANGE = SELECT_LIST_TERM
             + " from %s where id < %d and meta_ts between %d and %d order by id desc limit %d";
 
-    static final String SELECT_BY_META_KET_AND_MVCC = SELECT_TERM
-            + Joiner.on(",").join(AUDIT_LOG_TABLE_ID, AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT, AUDIT_LOG_TABLE_TS,
-                    AUDIT_LOG_TABLE_MVCC, AUDIT_LOG_TABLE_UNIT, AUDIT_LOG_TABLE_OPERATOR, AUDIT_LOG_TABLE_INSTANCE)
+    static final String SELECT_BY_META_KET_AND_MVCC = SELECT_LIST_TERM
             + " from %s where meta_key = '%s' and meta_mvcc = %s";
     static final String SELECT_COUNT_ID_ALL = "select count(id) from %s";
     static final String SELECT_MAX_ID_WITH_OFFSET = "select id from %s order by id limit 1 offset %s ";
 
+    @Getter
     private final KylinConfig config;
     @Getter
     private final JdbcTemplate jdbcTemplate;
     @Getter
     private final String table;
 
+    @Getter
     protected final AbstractAuditLogReplayWorker replayWorker;
 
     private String instance;
@@ -191,16 +196,18 @@ public class JdbcAuditLogStore implements AuditLogStore {
                                 try {
                                     return new Object[] { createEvent.getResPath(),
                                             CompressionUtils
-                                                    .compress(createEvent.getCreatedOrUpdated().getByteSource().read()),
-                                            createEvent.getCreatedOrUpdated().getTimestamp(),
-                                            createEvent.getCreatedOrUpdated().getMvcc(), unitId, operator, instance };
+                                                    .compress(ByteSource.wrap(createEvent.getMetaContent()).read()),
+                                            createEvent.getCreatedOrUpdated().getTs(),
+                                            createEvent.getCreatedOrUpdated().getMvcc(), unitId, operator, instance,
+                                            createEvent.getCreatedOrUpdated().getProject(),
+                                            createEvent.getCreatedOrUpdated().getContentDiff() != null };
                                 } catch (IOException ignore) {
                                     return null;
                                 }
                             } else if (e instanceof ResourceDeleteEvent) {
                                 ResourceDeleteEvent deleteEvent = (ResourceDeleteEvent) e;
                                 return new Object[] { deleteEvent.getResPath(), null, System.currentTimeMillis(), null,
-                                        unitId, operator, instance };
+                                        unitId, operator, instance, deleteEvent.getKey(), false };
                             }
                             return null;
                         }).filter(Objects::nonNull).collect(Collectors.toList())),
@@ -213,7 +220,8 @@ public class JdbcAuditLogStore implements AuditLogStore {
                     try {
                         val bs = Objects.isNull(x.getByteSource()) ? null : x.getByteSource().read();
                         return new Object[] { x.getResPath(), CompressionUtils.compress(bs), x.getTimestamp(),
-                                x.getMvcc(), x.getUnitId(), x.getOperator(), x.getInstance() };
+                                x.getMvcc(), x.getUnitId(), x.getOperator(), x.getInstance(), x.getProject(),
+                                x.isDiffFlag() };
                     } catch (IOException e) {
                         return null;
                     }
@@ -296,25 +304,6 @@ public class JdbcAuditLogStore implements AuditLogStore {
     }
 
     @Override
-    public void catchupWithTimeout() throws Exception {
-        val store = ResourceStore.getKylinMetaStore(config);
-        replayWorker.catchupFrom(store.getOffset());
-        replayWorker.waitForCatchup(getMaxId(), config.getCatchUpTimeout());
-    }
-
-    public void catchupWithMaxTimeout() throws Exception {
-        val store = ResourceStore.getKylinMetaStore(config);
-        replayWorker.catchupFrom(store.getOffset());
-        replayWorker.waitForCatchup(getMaxId(), config.getCatchUpMaxTimeout());
-    }
-
-    @Override
-    public void catchup() {
-        val store = ResourceStore.getKylinMetaStore(config);
-        replayWorker.catchupFrom(store.getOffset());
-    }
-
-    @Override
     public void setInstance(String instance) {
         this.instance = instance;
     }
@@ -330,17 +319,6 @@ public class JdbcAuditLogStore implements AuditLogStore {
             }
             return null;
         });
-    }
-
-    @Override
-    public void pause() {
-        replayWorker.close(true);
-    }
-
-    @Override
-    public void reInit() {
-        val store = ResourceStore.getKylinMetaStore(config);
-        replayWorker.reStartSchedule(store.getOffset());
     }
 
     @Override
@@ -394,7 +372,7 @@ public class JdbcAuditLogStore implements AuditLogStore {
         var sql = properties.getProperty(CREATE_TABLE);
 
         jdbcTemplate.execute(String.format(Locale.ROOT, sql, table, AUDIT_LOG_TABLE_KEY, AUDIT_LOG_TABLE_CONTENT,
-                AUDIT_LOG_TABLE_TS, AUDIT_LOG_TABLE_MVCC));
+                AUDIT_LOG_TABLE_TS, AUDIT_LOG_TABLE_MVCC, PROJECT_FIELD, AUDIT_LOG_DIFF_FLAG));
         log.info("Succeed to create table: {}", table);
     }
 
@@ -423,11 +401,6 @@ public class JdbcAuditLogStore implements AuditLogStore {
     void createIfNotExist() throws SQLException, IOException {
         createTableIfNotExist();
         createIndexIfNotExist();
-    }
-
-    @Override
-    public void close() throws IOException {
-        replayWorker.close(false);
     }
 
     @VisibleForTesting

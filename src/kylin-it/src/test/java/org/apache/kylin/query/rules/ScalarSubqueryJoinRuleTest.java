@@ -50,7 +50,7 @@ public class ScalarSubqueryJoinRuleTest extends CalciteRuleTestBase {
     private final DiffRepository diff = DiffRepository.lookup(ScalarSubqueryJoinRuleTest.class);
 
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata();
     }
 

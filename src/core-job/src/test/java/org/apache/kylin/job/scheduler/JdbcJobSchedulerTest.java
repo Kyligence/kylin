@@ -121,7 +121,7 @@ class JdbcJobSchedulerTest extends AbstractTestCase {
     @Test
     void testLockExpiredAndJobNotFinal() {
         String jobId = mockJob();
-        JobLock lock = new JobLock(jobId, PROJECT, 1);
+        JobLock lock = new JobLock(jobId, PROJECT, 1, JobLock.JobTypeEnum.OFFLINE);
         lock.setLockNode("mock_node");
         lock.setLockExpireTime(new Date());
         int expect = jobContext.getJobLockMapper().insert(lock);
@@ -237,7 +237,7 @@ class JdbcJobSchedulerTest extends AbstractTestCase {
         AbstractExecutable job = mockExecutable();
         // insert job lock, without lock node
         String jobId = job.getJobId();
-        JobLock lock = new JobLock(jobId, PROJECT, 1);
+        JobLock lock = new JobLock(jobId, PROJECT, 1, JobLock.JobTypeEnum.OFFLINE);
         int expect = jobContext.getJobLockMapper().insert(lock);
         Assertions.assertEquals(1, expect);
         await().atMost(60, TimeUnit.SECONDS).until(() -> jobContext.getJobLockMapper().selectByJobId(jobId) == null);
@@ -247,7 +247,7 @@ class JdbcJobSchedulerTest extends AbstractTestCase {
     void testResumeRunningJobs() {
         KylinConfig config = getTestConfig();
         // Stop schedule
-        JobContextUtil.cleanUp();
+        JobContextUtil.stopScheduler();
         // Init job mappers without schedule
         JobInfoDao dao = JobContextUtil.getJobInfoDao(config);
         JobLockMapper mapper = (JobLockMapper) ReflectionTestUtils.getField(dao, "jobLockMapper");
@@ -260,7 +260,7 @@ class JdbcJobSchedulerTest extends AbstractTestCase {
             job.getTasks().forEach(task -> task.getOutput().setStatus(ExecutableState.PENDING.name()));
             return true;
         });
-        mapper.insertSelective(new JobLock(jobId, PROJECT, 3));
+        mapper.insertSelective(new JobLock(jobId, PROJECT, 3, JobLock.JobTypeEnum.OFFLINE));
         // init schedule
         JobContextUtil.getJobContext(config);
 

@@ -47,22 +47,10 @@ import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.util.MetadataTestUtils;
 import org.apache.kylin.util.OlapContextTestUtil;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 public class QueryLayoutChooserTest extends NLocalWithSparkSessionTest {
-
-    @Before
-    public void setUp() throws Exception {
-        super.setUp();
-    }
-
-    @After
-    public void teardown() throws Exception {
-        super.tearDown();
-    }
 
     @Test
     public void testCCNullChecking() throws SqlParseException {

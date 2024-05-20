@@ -19,8 +19,6 @@
 
 package org.apache.kylin.server;
 
-import java.io.IOException;
-
 import org.apache.curator.test.TestingServer;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
@@ -80,7 +78,7 @@ public abstract class AbstractMVCIntegrationTestCase extends NLocalFileMetadataT
     }
 
     @After
-    public void tearDown() throws IOException {
+    public void tearDown() throws Exception {
         if (jdbcTemplate != null) {
             jdbcTemplate.batchUpdate("DROP ALL OBJECTS");
         }

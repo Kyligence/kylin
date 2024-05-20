@@ -49,6 +49,8 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.util.LRUMap;
@@ -74,6 +76,10 @@ public class JsonUtil {
                 .setConfig(indentMapper.getSerializationConfig().withView(PersistenceView.class));
         indentMapper.setFilterProvider(simpleFilterProvider);
         indentMapper.setTypeFactory(customTypeFactory);
+    }
+
+    public static ArrayNode createArrayNode() {
+        return mapper.createArrayNode();
     }
 
     public static <T> T readValue(File src, Class<T> valueType) throws IOException {
@@ -110,6 +116,10 @@ public class JsonUtil {
 
     public static <T> T readValue(byte[] src, Class<T> valueType) throws IOException {
         return mapper.readValue(src, valueType);
+    }
+
+    public static <T> ObjectNode valueToTree(T value) {
+        return mapper.valueToTree(value);
     }
 
     public static <T> T readValue(String content, TypeReference<T> valueTypeRef) throws IOException {

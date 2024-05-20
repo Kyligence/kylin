@@ -26,7 +26,10 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigExt;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore;
+import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
@@ -65,11 +68,12 @@ public abstract class MetadataMerger {
     }
 
     public KylinConfig getProjectConfig(ResourceStore remoteStore) throws IOException {
-        val globalConfig = KylinConfig.createKylinConfig(
-                KylinConfig.streamToProps(remoteStore.getResource("/kylin.properties").getByteSource().openStream()));
+        MetadataStore metaStore = remoteStore.getMetadataStore();
+        assert metaStore instanceof FileSystemMetadataStore;
+        val globalConfig = ((FileSystemMetadataStore) metaStore).getKylinConfigFromFile();
         val projectConfig = JsonUtil
-                .readValue(remoteStore.getResource("/_global/project/" + project + ".json").getByteSource().read(),
-                        ProjectInstance.class)
+                .readValue(remoteStore.getResource(MetadataType.mergeKeyWithType(project, MetadataType.PROJECT))
+                        .getByteSource().read(), ProjectInstance.class)
                 .getLegalOverrideKylinProps();
         return KylinConfigExt.createInstance(globalConfig, projectConfig);
     }

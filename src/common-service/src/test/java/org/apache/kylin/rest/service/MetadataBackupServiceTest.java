@@ -17,10 +17,14 @@
  */
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.common.persistence.ResourceStore.METASTORE_IMAGE;
+import static org.apache.kylin.common.persistence.ResourceStore.METASTORE_UUID_TAG;
+
 import java.io.File;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.StringEntity;
 import org.apache.kylin.common.util.HadoopUtil;
@@ -66,8 +70,8 @@ public class MetadataBackupServiceTest extends NLocalFileMetadataTestCase {
         kylinConfig.setMetadataUrl("metadata_backup_ut_test");
         val resourceStore = ResourceStore.getKylinMetaStore(kylinConfig);
 
-        if (!resourceStore.exists("/UUID")) {
-            resourceStore.checkAndPutResource("/UUID", new StringEntity(RandomUtil.randomUUIDStr()),
+        if (!resourceStore.exists(METASTORE_UUID_TAG)) {
+            resourceStore.checkAndPutResource(METASTORE_UUID_TAG, new StringEntity(RandomUtil.randomUUIDStr()),
                     StringEntity.serializer);
         }
 
@@ -91,9 +95,16 @@ public class MetadataBackupServiceTest extends NLocalFileMetadataTestCase {
         Assertions.assertThat(rootMetadataChildrenPath.getName()).isEqualTo(backupFolder.getSecond());
         val coreMetadataPath = new Path(rootMetadataChildrenPath, "core_meta");
         Assertions.assertThat(rootMetadataFS.listStatus(coreMetadataPath)).hasSize(2).contains(
-                rootMetadataFS.getFileStatus(new Path(coreMetadataPath.toString() + File.separator + "UUID")),
                 rootMetadataFS
-                        .getFileStatus(new Path(coreMetadataPath.toString() + File.separator + "_image")));
+                        .getFileStatus(new Path(coreMetadataPath + File.separator + MetadataType.SYSTEM)),
+                rootMetadataFS.getFileStatus(new Path(coreMetadataPath + File.separator + "kylin.properties")));
+
+        Assertions.assertThat(rootMetadataFS.listStatus(new Path(coreMetadataPath, MetadataType.SYSTEM.name())))
+                .hasSize(2).contains(
+                        rootMetadataFS.getFileStatus(
+                                new Path(coreMetadataPath + File.separator + METASTORE_UUID_TAG + ".json")),
+                        rootMetadataFS.getFileStatus(
+                                new Path(coreMetadataPath + File.separator + METASTORE_IMAGE + ".json")));
 
     }
 

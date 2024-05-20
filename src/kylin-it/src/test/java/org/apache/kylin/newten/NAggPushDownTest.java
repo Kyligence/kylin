@@ -41,20 +41,23 @@ public class NAggPushDownTest extends NLocalWithSparkSessionTest {
     private static final String SQL_FOLDER_AGG_NOT_PUSHDOWN = "sql_agg_not_pushdown";
     private static final String JOIN_TYPE = "inner"; // only support inner join
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         overwriteSystemProp("kylin.query.match-partial-inner-join-model", "true");
         overwriteSystemProp("kylin.query.calcite.aggregate-pushdown-enabled", "true");
-        this.createTestMetadata("src/test/resources/ut_meta/agg_push_down");
+        setOverlay("src/test/resources/ut_meta/agg_push_down");
+        super.setUp();
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Override

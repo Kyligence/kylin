@@ -24,6 +24,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_STATE_T
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_UPDATE_STATUS_FAILED;
 import static org.apache.kylin.job.constant.ExecutableConstants.YARN_APP_IDS;
 import static org.apache.kylin.job.constant.ExecutableConstants.YARN_APP_IDS_DELIMITER;
+import static org.apache.kylin.job.dao.ExecutablePO.HIGHEST_PRIORITY;
 import static org.apache.kylin.job.execution.AbstractExecutable.RUNTIME_INFO;
 
 import java.io.BufferedReader;
@@ -89,6 +90,7 @@ import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.ExecutablePO;
 import org.apache.kylin.job.dao.JobInfoDao;
 import org.apache.kylin.job.domain.JobInfo;
+import org.apache.kylin.job.factory.JobFactory;
 import org.apache.kylin.job.rest.JobMapperFilter;
 import org.apache.kylin.job.runners.JobCheckUtil;
 import org.apache.kylin.job.scheduler.JdbcJobScheduler;
@@ -96,6 +98,7 @@ import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.job.util.JobInfoUtil;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -196,6 +199,34 @@ public class ExecutableManager {
         // No need to copy, just return the origin object
         // This will be rewrite after metadata is refactored
         return po;
+    }
+
+    public void checkAndSubmitCronJob(String factory, JobTypeEnum jobType) {
+        List<JobInfo> processingJobs = fetchJobsByFilter(
+                JobMapperFilter.builder().jobNames(Collections.singletonList(jobType.name())).project(project)
+                        .statuses(Arrays.asList(ExecutableState.PENDING, ExecutableState.READY, ExecutableState.RUNNING,
+                                ExecutableState.PAUSED))
+                        .build());
+        if (processingJobs.size() > 1) {
+            log.warn(
+                    "There are too many jobs in pending/ready/running/paused state, skip submitting job:{} for project:{}",
+                    jobType, project);
+            return;
+        } else if (processingJobs.size() == 1) {
+            log.info("The last job has not finished, skip submitting job:{} for project:{}", jobType, project);
+            return;
+        }
+
+        AbstractExecutable cronJob = JobFactory.createJobWithDefaultParams(factory, jobType);
+        if (cronJob != null) {
+            cronJob.setPriority(HIGHEST_PRIORITY);
+            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+                ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project).addJob(cronJob);
+                return null;
+            }, project);
+        } else {
+            log.warn("Cannot create cron job:{} for project:{}", jobType, project);
+        }
     }
 
     // only for test

@@ -20,7 +20,7 @@ package org.apache.kylin.rest.delegate;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.metadata.HDFSMetadataStore;
+import org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.rest.request.DataFlowUpdateRequest;
@@ -32,7 +32,7 @@ public class ModelMetadataBaseInvoker {
     public static ModelMetadataBaseInvoker getInstance() {
         MetadataStore metadataStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
                 .getMetadataStore();
-        if (metadataStore instanceof HDFSMetadataStore) {
+        if (metadataStore instanceof FileSystemMetadataStore) {
             throw new KylinRuntimeException("This request cannot be route to metadata server");
         }
         if (SpringContext.getApplicationContext() == null) {

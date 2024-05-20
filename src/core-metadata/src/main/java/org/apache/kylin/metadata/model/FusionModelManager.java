@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
@@ -55,8 +56,7 @@ public class FusionModelManager {
     private FusionModelManager(KylinConfig config, String project) {
         this.config = config;
         this.project = project;
-        String resourceRootPath = "/" + project + ResourceStore.FUSION_MODEL_RESOURCE_ROOT;
-        this.crud = new CachedCrudAssist<FusionModel>(getStore(), resourceRootPath, FusionModel.class) {
+        this.crud = new CachedCrudAssist<FusionModel>(getStore(), MetadataType.FUSION_MODEL, project, FusionModel.class) {
             @Override
             protected FusionModel initEntityAfterReload(FusionModel t, String resourceName) {
                 t.init(config, project);

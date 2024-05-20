@@ -21,7 +21,6 @@ package org.apache.kylin.rest.service;
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -34,12 +33,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -58,7 +55,6 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.dao.ExecutableOutputPO;
 import org.apache.kylin.job.dao.ExecutablePO;
-import org.apache.kylin.job.dao.NExecutableDao;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ChainedExecutable;
 import org.apache.kylin.job.execution.ChainedStageExecutable;
@@ -121,9 +117,6 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
     private final ModelService modelService = Mockito.spy(ModelService.class);
 
     @Mock
-    private final NExecutableDao executableDao = mock(NExecutableDao.class);
-
-    @Mock
     private final TableExtService tableExtService = Mockito.spy(TableExtService.class);
 
     @Mock
@@ -145,7 +138,7 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Before
-    public void setup() {
+    public void setUp() {
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         overwriteSystemProp("kylin.engine.async-profiler-enabled", "true");
         createTestMetadata();
@@ -675,76 +668,6 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
         }
 
         Mockito.when(executableManager.getAllJobs(Mockito.anyLong(), Mockito.anyLong())).thenReturn(jobs);
-    }
-
-    private List<ExecutablePO> mockDetailJobs(boolean random) throws Exception {
-        List<ExecutablePO> jobs = new ArrayList<>();
-        for (int i = 1; i < 4; i++) {
-            jobs.add(mockExecutablePO(random, i + ""));
-        }
-        return jobs;
-    }
-
-    private ExecutablePO mockExecutablePO(boolean random, String name) {
-        ExecutablePO mockJob = new ExecutablePO();
-        mockJob.setType("org.apache.kylin.job.execution.SucceedChainedTestExecutable");
-        mockJob.setProject(getProject());
-        mockJob.setName("sparkjob" + name);
-        mockJob.setTargetModel("model" + name);
-        val jobOutput = mockJob.getOutput();
-        if ("1".equals(name))
-            jobOutput.setStatus(ExecutableState.SUCCEED.name());
-
-        val startTime = getCreateTime(name);
-        mockJob.setCreateTime(startTime);
-        jobOutput.setCreateTime(startTime);
-        jobOutput.setStartTime(startTime);
-        var lastEndTime = startTime;
-        List<ExecutablePO> tasks = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            val childExecutable = new ExecutablePO();
-            childExecutable.setUuid(mockJob.getId() + "_0" + i);
-            childExecutable.setType("org.apache.kylin.job.execution.SucceedSubTaskTestExecutable");
-            childExecutable.setProject(getProject());
-            val jobChildOutput = childExecutable.getOutput();
-            mockOutputTime(random, lastEndTime, jobChildOutput, i);
-            lastEndTime = jobChildOutput.getEndTime();
-            tasks.add(childExecutable);
-        }
-        mockJob.setTasks(tasks);
-
-        jobOutput.setEndTime(lastEndTime);
-        Mockito.when(executableDao.getJobByUuid(eq(mockJob.getId()))).thenReturn(mockJob);
-        return mockJob;
-    }
-
-    private long getCreateTime(String name) {
-        switch (name) {
-        case "1":
-            return 1560324101000L;
-        case "2":
-            return 1560324102000L;
-        case "3":
-            return 1560324103000L;
-        default:
-            return 0L;
-        }
-    }
-
-    private void mockOutputTime(boolean random, long baseTime, ExecutableOutputPO output, int index) {
-        long createTime = baseTime + (index + 1) * 2000L;
-        long startTime = createTime + (index + 1) * 2000L;
-        long endTime = startTime + (index + 1) * 2000L;
-        if (random) {
-            val randomObj = new Random();
-            Supplier<Long> randomSupplier = () -> (long) randomObj.nextInt(100);
-            endTime += randomSupplier.get();
-        }
-
-        output.setStartTime(startTime);
-        output.setCreateTime(createTime);
-        output.setEndTime(endTime);
-
     }
 
     @Test

@@ -19,6 +19,7 @@
 package org.apache.kylin.metadata.cube.model;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -32,14 +33,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigExt;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.MissingRootPersistentEntity;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.cube.optimization.FrequencyMap;
+import org.apache.kylin.metadata.model.ComputedColumnDesc;
 import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.model.IStorageAware;
 import org.apache.kylin.metadata.model.MeasureDesc;
@@ -56,7 +58,6 @@ import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Getter;
@@ -117,13 +118,12 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
     @JsonProperty("layout_query_hit_count")
     private Map<Long, FrequencyMap> layoutHitCount = Maps.newHashMap();
 
-    @JsonManagedReference
-    @JsonProperty("segments")
-    private Segments<NDataSegment> segments = new Segments<>();
-
     @Getter
     @Setter
-    private String project;
+    @JsonProperty("segment_uuids")
+    private List<String> segmentUuids = new ArrayList<>();
+
+    private Segments<NDataSegment> segments = new Segments<>();
 
     // ================================================================
 
@@ -131,10 +131,12 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
         long start = System.currentTimeMillis();
         this.project = project;
         this.config = config;
-        for (NDataSegment seg : segments) {
-            seg.initAfterReload();
-        }
-
+        NDataSegmentManager manager = config.getManager(project, NDataSegmentManager.class);
+        this.segments = new Segments<>(segmentUuids.stream()
+                .map(uuid -> manager.getWithoutInitDataflow(uuid)
+                        .orElseThrow(() -> new IllegalStateException("Cannot get segment for uuid: " + uuid)))
+                .collect(Collectors.toList()));
+        this.segments.forEach(segment -> segment.setDataflow(this));
         this.setDependencies(calcDependencies());
         long time = System.currentTimeMillis() - start;
         if (time > EXPENSIVE_DATAFLOW_INITIALIZATION) {
@@ -147,8 +149,10 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
         val indexPlanManager = NIndexPlanManager.getInstance(config, project);
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(getId());
 
-        return Lists.newArrayList(indexPlan != null ? indexPlan
-                : new MissingRootPersistentEntity(IndexPlan.concatResourcePath(getId(), project)));
+        List<RootPersistentEntity> dependencies = Lists.newArrayList(indexPlan != null ? indexPlan
+                : new MissingRootPersistentEntity(MetadataType.mergeKeyWithType(getId(), MetadataType.INDEX_PLAN)));
+        dependencies.addAll(this.segments);
+        return dependencies;
     }
 
     public KylinConfigExt getConfig() {
@@ -165,12 +169,8 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
     }
 
     @Override
-    public String getResourcePath() {
-        return concatResourcePath(getUuid(), project);
-    }
-
-    public static String concatResourcePath(String name, String project) {
-        return "/" + project + DATAFLOW_RESOURCE_ROOT + "/" + name + MetadataConstants.FILE_SURFIX;
+    public MetadataType resourceType() {
+        return MetadataType.DATAFLOW;
     }
 
     public Set<String> collectPrecalculationResource() {
@@ -179,6 +179,7 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
         // dataflow & segments
         r.add(this.getResourcePath());
         for (NDataSegment seg : segments) {
+            r.add(seg.getResourcePath());
             r.add(seg.getSegDetails().getResourcePath());
         }
 
@@ -199,6 +200,11 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
             if (tableExtDesc != null) {
                 r.add(tableExtDesc.getResourcePath());
             }
+        }
+
+        // computed column
+        for (ComputedColumnDesc cc : getModel().getComputedColumnDescs()) {
+            r.add(cc.getResourcePath());
         }
 
         return r;
@@ -453,6 +459,7 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
         segments.validate();
 
         this.segments = segments;
+        this.segmentUuids = segments.stream().map(RootPersistentEntity::getUuid).collect(Collectors.toList());
         // need to offline model to avoid answering query
         if (segments.isEmpty() && RealizationStatusEnum.ONLINE == this.getStatus()) {
             this.setStatus(RealizationStatusEnum.OFFLINE);

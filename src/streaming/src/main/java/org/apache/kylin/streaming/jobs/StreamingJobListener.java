@@ -101,9 +101,11 @@ public class StreamingJobListener implements SparkAppHandle.Listener {
     @Subscribe
     public void onStreamingJobKill(StreamingJobKillEvent streamingJobKillEvent) {
         val modelId = streamingJobKillEvent.getModelId();
-        StreamingScheduler scheduler = StreamingScheduler.getInstance(streamingJobKillEvent.getProject());
-        scheduler.killJob(modelId, JobTypeEnum.STREAMING_MERGE, JobStatusEnum.STOPPED);
-        scheduler.killJob(modelId, JobTypeEnum.STREAMING_BUILD, JobStatusEnum.STOPPED);
+        StreamingScheduler scheduler = StreamingScheduler.getInstance();
+        scheduler.killJob(streamingJobKillEvent.getProject(), modelId, JobTypeEnum.STREAMING_MERGE,
+                JobStatusEnum.STOPPED);
+        scheduler.killJob(streamingJobKillEvent.getProject(), modelId, JobTypeEnum.STREAMING_BUILD,
+                JobStatusEnum.STOPPED);
     }
 
     @Subscribe

@@ -37,10 +37,15 @@ public class SourceUsageMailUtilTest extends NLocalFileMetadataTestCase {
 
             sourceUsageRecord.setCurrentCapacity(10000L);
             sourceUsageRecord.setLicenseCapacity(10L);
+            long mvcc = sourceUsageRecord.getMvcc();
+            sourceUsageRecord.setMvcc(++mvcc);
+            System.out.println("mvcc: " + mvcc);
+            sourceUsageManager.updateSourceUsage(sourceUsageRecord);
+            overwriteSystemProp("kylin.capacity.notification-enabled", "true");
+            sourceUsageRecord.setMvcc(++mvcc);
+            System.out.println("mvcc: " + mvcc);
             sourceUsageManager.updateSourceUsage(sourceUsageRecord);
 
-            overwriteSystemProp("kylin.capacity.notification-enabled", "true");
-            sourceUsageManager.updateSourceUsage(sourceUsageRecord);
             Assert.assertTrue(sourceUsageRecord.isCapacityNotification());
 
             return null;

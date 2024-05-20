@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.StringHelper;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.job.model.JobParam;
@@ -34,9 +33,6 @@ import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.cube.model.SegmentPartition;
-import org.apache.kylin.metadata.model.ManagementType;
-import org.apache.kylin.metadata.realization.RealizationStatusEnum;
-import org.apache.kylin.rest.delegate.ModelMetadataBaseInvoker;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -58,36 +54,6 @@ public class DefaultExecutableOnModel extends DefaultExecutable {
 
     private String getTargetModel() {
         return getTargetSubject();
-    }
-
-    @Override
-    public void onExecuteErrorHook(String jobId) {
-        markDFLagBehindIfNecessary(jobId);
-    }
-
-    private void markDFLagBehindIfNecessary(String jobId) {
-        if (JobTypeEnum.INC_BUILD != this.getJobType()) {
-            return;
-        }
-        val dataflow = getDataflow(jobId);
-        if (dataflow == null || RealizationStatusEnum.LAG_BEHIND == dataflow.getStatus()) {
-            return;
-        }
-        val model = dataflow.getModel();
-        if (ManagementType.MODEL_BASED == model.getManagementType()) {
-            return;
-        }
-
-        ModelMetadataBaseInvoker.getInstance().updateDataflowStatus(project, dataflow.getId(),
-                RealizationStatusEnum.LAG_BEHIND);
-    }
-
-    private NDataflow getDataflow(String jobId) {
-        val execManager = getExecutableManager(getProject());
-        val executable = (DefaultExecutableOnModel) execManager.getJob(jobId);
-        val modelId = executable.getTargetModel();
-        val dfManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
-        return dfManager.getDataflow(modelId);
     }
 
     @Override

@@ -45,9 +45,11 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.AclEntity;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.constant.Constant;
@@ -470,7 +472,11 @@ public class AccessServiceTest extends NLocalFileMetadataTestCase {
         sidToPerm.put(new PrincipalSid("ANALYST"), AclPermission.ADMINISTRATION);
         sidToPerm.put(new GrantedAuthoritySid("ROLE_ADMIN"), AclPermission.ADMINISTRATION);
         sidToPerm.put(new GrantedAuthoritySid("role_ADMIN"), AclPermission.ADMINISTRATION);
-        accessService.batchGrant(ae, sidToPerm);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            accessService.batchGrant(ae, sidToPerm);
+            return null;
+        }, UnitOfWork.GLOBAL_UNIT);
+
         projectService.cleanupAcl();
         List<AccessEntryResponse> result = accessService.generateAceResponsesByFuzzMatching(ae, "", false);
         assertEquals(0, result.size());

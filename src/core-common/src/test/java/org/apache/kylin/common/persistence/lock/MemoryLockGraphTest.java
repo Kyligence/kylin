@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.InMemResourceStore;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.ThreadViewResourceStore;
+import org.apache.kylin.common.persistence.TransparentResourceStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.junit.jupiter.api.Assertions;
@@ -48,7 +48,7 @@ class MemoryLockGraphTest {
     void deadLockWithParallelThreadTest() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         InMemResourceStore inMemResourceStore = (InMemResourceStore) ResourceStore.getKylinMetaStore(config);
-        ThreadViewResourceStore store = new ThreadViewResourceStore(inMemResourceStore, config);
+        TransparentResourceStore store = new TransparentResourceStore(inMemResourceStore.getMetadataStore(), config);
         AtomicBoolean shouldContinue = new AtomicBoolean(true);
         Runnable suggest = () -> {
             while (shouldContinue.get()) {

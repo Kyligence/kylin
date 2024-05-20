@@ -411,8 +411,9 @@ public class QueryMetricsContextTest extends NLocalFileMetadataTestCase {
         ccDesc.setTableAlias("TEST_KYLIN_FACT");
         ccDesc.setTableIdentity("DEFAULT.TEST_KYLIN_FACT");
         ccDesc.setColumnName("DEAL_AMOUNT");
-        ccDesc.setDatatype("decimal(30,4)");
+        ccDesc.setDatatype("DECIMAL(30,4)");
         ccDesc.setExpression("TEST_KYLIN_FACT.PRICE * TEST_KYLIN_FACT.ITEM_COUNT");
+        ccDesc.setInnerExpression("`TEST_KYLIN_FACT`.`PRICE` * `TEST_KYLIN_FACT`.`ITEM_COUNT`");
 
         val basicModel = NDataModelManager.getInstance(getTestConfig(), "default")
                 .getDataModelDescByAlias("nmodel_basic");

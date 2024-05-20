@@ -80,8 +80,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import lombok.experimental.Delegate;
-
 @Component("tableExtService")
 public class TableExtService extends BasicService {
     private static final Logger logger = LoggerFactory.getLogger(TableExtService.class);
@@ -96,9 +94,6 @@ public class TableExtService extends BasicService {
 
     @Autowired
     private AclEvaluate aclEvaluate;
-
-    @Delegate
-    private final TableMetadataBaseService tableMetadataBaseServer = new TableMetadataBaseService();
 
     @Autowired
     private ProjectService projectService;

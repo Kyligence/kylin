@@ -110,8 +110,8 @@ public class AysncQueryServiceTest extends ServiceTestBase {
     final String fileNameDefault = "result";
 
     @Before
-    public void setup() {
-        super.setup();
+    public void setUp() {
+        super.setUp();
         TEST_BASE_DIR = KapConfig.getInstanceFromEnv().getAsyncResultBaseDir(PROJECT);
         BASE = new File(TEST_BASE_DIR);
         FileUtil.setWritable(BASE, true);
@@ -710,7 +710,7 @@ public class AysncQueryServiceTest extends ServiceTestBase {
             try {
                 boolean hasRunning = false;
                 for (int i = 0; i < 10; i++) {
-                    await().atMost(Duration.ONE_SECOND);
+                    await().pollDelay(Duration.ONE_SECOND).until(() -> true);
                     AsyncQueryService.QueryStatus queryStatus = asyncQueryService.queryStatus(PROJECT, queryId);
                     if (queryStatus == RUNNING) {
                         hasRunning = true;
@@ -724,7 +724,7 @@ public class AysncQueryServiceTest extends ServiceTestBase {
         client.start();
         Boolean hasRunning = exchanger.exchange(false);
         Assert.assertTrue(hasRunning);
-        await().atMost(Duration.ONE_SECOND);
+        await().pollDelay(Duration.ONE_SECOND).until(() -> true);
         AsyncQueryService.QueryStatus queryStatus = asyncQueryService.queryStatus(PROJECT, queryId);
         Assert.assertEquals(AsyncQueryService.QueryStatus.SUCCESS, queryStatus);
         long l = asyncQueryService.fileStatus(PROJECT, queryId);
@@ -955,11 +955,12 @@ public class AysncQueryServiceTest extends ServiceTestBase {
         List<String> row2 = Lists.newArrayList("a2", "b2", "c2");
         FileSystem fileSystem = AsyncQueryUtil.getFileSystem();
         Path asyncQueryResultDir = asyncQueryService.getAsyncQueryResultDir(PROJECT, queryId);
-        if (!fileSystem.exists(asyncQueryResultDir)) {
-            fileSystem.mkdirs(asyncQueryResultDir);
+        if (fileSystem.exists(asyncQueryResultDir)) {
+            fileSystem.delete(asyncQueryResultDir, true);
         }
+        fileSystem.mkdirs(asyncQueryResultDir);
         if (block) {
-            await().atMost(Duration.FIVE_SECONDS);
+            await().pollDelay(Duration.FIVE_SECONDS).until(() -> true);
         }
 
         try (FSDataOutputStream os = fileSystem.create(new Path(asyncQueryResultDir, "m00")); //

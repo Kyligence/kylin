@@ -323,11 +323,6 @@
         </scr:http>
     </beans>
 
-    <beans profile="case-insensitive-service">
-        <bean id="userService" class="org.apache.kylin.rest.service.CaseInsensitiveKylinUserService"/>
-        <bean id="userGroupService" class="org.apache.kylin.rest.service.CaseInsensitiveUserGroupService"/>
-    </beans>
-
     <beans profile="testing">
         <util:list id="adminAuthorities"
                    value-type="org.springframework.security.core.authority.SimpleGrantedAuthority">

@@ -17,11 +17,14 @@
  */
 package org.apache.kylin.common.util;
 
+import static org.apache.kylin.common.persistence.MetadataType.ALL_TYPE_STR;
+
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -33,7 +36,6 @@ public class MetadataChecker {
 
     private final MetadataStore metadataStore;
 
-    private static final String JSON_SUFFIX = ".json";
     private static final String LINE_BREAK = "\n";
 
     public MetadataChecker(MetadataStore metadataStore) {
@@ -52,11 +54,11 @@ public class MetadataChecker {
         boolean existIndexPlanFile = false;
         boolean existTable = false;
         boolean existVersionFile = false;
-        private final Set<String> illegalProjects = Sets.newHashSet();
+        private final Set<String> illegalTables = Sets.newHashSet();
         private final Set<String> illegalFiles = Sets.newHashSet();
 
         public boolean isQualified() {
-            return illegalProjects.isEmpty() && illegalFiles.isEmpty();
+            return illegalTables.isEmpty() && illegalFiles.isEmpty();
         }
 
         public boolean isModelMetadataQualified() {
@@ -72,10 +74,10 @@ public class MetadataChecker {
             resultMessage.append("the user dir exist : ").append(existUserDir).append(LINE_BREAK);
             resultMessage.append("the acl dir exist : ").append(existACLDir).append(LINE_BREAK);
 
-            if (!illegalProjects.isEmpty()) {
+            if (!illegalTables.isEmpty()) {
                 resultMessage.append("illegal projects : ").append(LINE_BREAK);
-                for (String illegalProject : illegalProjects) {
-                    resultMessage.append("\t").append(illegalProject).append(LINE_BREAK);
+                for (String illegalTable : illegalTables) {
+                    resultMessage.append("\t").append(illegalTable).append(LINE_BREAK);
                 }
             }
 
@@ -91,6 +93,11 @@ public class MetadataChecker {
 
     }
 
+    public static boolean verifyNonMetadataFile(String resourcePath) {
+        return resourcePath.endsWith(".DS_Store") || resourcePath.endsWith("kylin.properties")
+                || resourcePath.endsWith("_image");
+    }
+
     public VerifyResult verify() {
         VerifyResult verifyResult = new VerifyResult();
 
@@ -99,9 +106,9 @@ public class MetadataChecker {
         //     2.may have one _global dir which may have one user_group file or one user dir or one acl dir
         //     3.all other subdir as a project and must have only one project.json file
 
-        val allFiles = metadataStore.list(File.separator);
+        val allFiles = metadataStore.listAll();
         for (final String file : allFiles) {
-            if (file.endsWith(".DS_Store")) {
+            if (verifyNonMetadataFile(file)) {
                 continue;
             }
             //check uuid file
@@ -117,24 +124,24 @@ public class MetadataChecker {
             }
 
             //check user_group file
-            if (file.equals(ResourceStore.USER_GROUP_ROOT)) {
+            if (file.startsWith(MetadataType.USER_GROUP.name())) {
                 verifyResult.existUserGroupFile = true;
                 continue;
             }
 
             //check user dir
-            if (file.startsWith(ResourceStore.USER_ROOT)) {
+            if (file.startsWith(MetadataType.USER_INFO.name())) {
                 verifyResult.existUserDir = true;
                 continue;
             }
 
             //check acl dir
-            if (file.startsWith(ResourceStore.ACL_ROOT)) {
+            if (file.startsWith(MetadataType.OBJECT_ACL.name())) {
                 verifyResult.existACLDir = true;
                 continue;
             }
 
-            if (file.startsWith(ResourceStore.METASTORE_IMAGE)) {
+            if (file.equals(ResourceStore.METASTORE_IMAGE)) {
                 verifyResult.existImageFile = true;
                 continue;
             }
@@ -150,14 +157,10 @@ public class MetadataChecker {
                 continue;
             }
 
-            //check project dir
-            final String project = Paths.get(file).getName(0).toString();
-            if (Paths.get(ResourceStore.GLOBAL_PROJECT).getName(0).toString().equals(project)) {
-                continue;
-            }
-            if (!allFiles
-                    .contains(Paths.get(File.separator + "_global", "project", project + JSON_SUFFIX).toString())) {
-                verifyResult.illegalProjects.add(project);
+            //check metadata table dir
+            final String tableName = Paths.get(file).getName(0).toString();
+            if (!ALL_TYPE_STR.contains(tableName)) {
+                verifyResult.illegalTables.add(tableName);
                 verifyResult.illegalFiles.add(file);
             }
         }
@@ -182,35 +185,26 @@ public class MetadataChecker {
                 continue;
             }
 
-            // start with project name except uuid file
-            if (resoucePath.startsWith(ResourceStore.DATA_MODEL_DESC_RESOURCE_ROOT)
-                    || resoucePath.startsWith(ResourceStore.INDEX_PLAN_RESOURCE_ROOT)
-                    || resoucePath.startsWith(ResourceStore.TABLE_RESOURCE_ROOT)
-                    || !resoucePath.endsWith(JSON_SUFFIX)) {
-                verifyResult.illegalFiles.add(resoucePath);
-            }
-
             // check model desc
-            if (resoucePath.contains(ResourceStore.DATA_MODEL_DESC_RESOURCE_ROOT)
-                    && resoucePath.endsWith(JSON_SUFFIX)) {
+            if (resoucePath.startsWith(MetadataType.MODEL.name())) {
                 verifyResult.existModelDescFile = true;
                 continue;
             }
 
             // check index plan
-            if (resoucePath.contains(ResourceStore.INDEX_PLAN_RESOURCE_ROOT) && resoucePath.endsWith(JSON_SUFFIX)) {
+            if (resoucePath.contains(MetadataType.INDEX_PLAN.name())) {
                 verifyResult.existIndexPlanFile = true;
                 continue;
             }
 
             // check table
-            if (resoucePath.contains(ResourceStore.TABLE_RESOURCE_ROOT) && resoucePath.endsWith(JSON_SUFFIX)) {
+            if (resoucePath.contains(MetadataType.TABLE_INFO.name())) {
                 verifyResult.existTable = true;
                 continue;
             }
 
             //check illegal file which locates in metadata dir
-            if (File.separator.equals(Paths.get(resoucePath).toFile().getParent())) {
+            if (!resoucePath.contains("/")) {
                 verifyResult.illegalFiles.add(resoucePath);
             }
         }

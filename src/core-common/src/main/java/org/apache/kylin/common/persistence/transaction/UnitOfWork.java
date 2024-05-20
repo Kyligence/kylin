@@ -19,23 +19,21 @@ package org.apache.kylin.common.persistence.transaction;
 
 import static org.apache.kylin.common.persistence.lock.TransactionDeadLockHandler.THREAD_NAME_PREFIX;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.code.ErrorCodeSystem;
 import org.apache.kylin.common.logging.SetLogCategory;
-import org.apache.kylin.common.persistence.InMemResourceStore;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.ThreadViewResourceStore;
 import org.apache.kylin.common.persistence.TombRawResource;
+import org.apache.kylin.common.persistence.TransparentResourceStore;
 import org.apache.kylin.common.persistence.UnitMessages;
 import org.apache.kylin.common.persistence.event.EndUnit;
 import org.apache.kylin.common.persistence.event.Event;
@@ -45,17 +43,15 @@ import org.apache.kylin.common.persistence.event.ResourceRelatedEvent;
 import org.apache.kylin.common.persistence.event.StartUnit;
 import org.apache.kylin.common.persistence.lock.DeadLockException;
 import org.apache.kylin.common.persistence.lock.LockInterruptException;
-import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
-import org.apache.kylin.common.persistence.lock.TempLock;
 import org.apache.kylin.common.persistence.lock.TransactionLock;
-import org.apache.kylin.common.persistence.metadata.JdbcMetadataStore;
+import org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore;
+import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.common.util.SetThreadName;
-import org.apache.kylin.common.util.Unsafe;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.springframework.transaction.TransactionStatus;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -112,6 +108,10 @@ public class UnitOfWork {
                 KylinConfig config = KylinConfig.getInstanceFromEnv();
                 params.setRetryUntil(System.currentTimeMillis() + config.getMaxSecondsForDeadLockRetry() * 1000);
             }
+            if (ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
+                    .getMetadataStore() instanceof FileSystemMetadataStore) {
+                params.setMaxRetry(1);
+            }
             while (retry++ < params.getMaxRetry()) {
 
                 val ret = doTransaction(params, retry, traceId);
@@ -161,15 +161,7 @@ public class UnitOfWork {
             if (isAlreadyInTransaction()) {
                 try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
                     val unitOfWork = UnitOfWork.get();
-                    MemoryLockUtils.removeThreadFromGraph();
-                    List<TransactionLock> lockInOrder = Arrays
-                            .asList(unitOfWork.getCurrentLock().toArray(new TransactionLock[0]));
-                    Lists.reverse(lockInOrder).stream().filter(TransactionLock::isHeldByCurrentThread)
-                            .forEach(TransactionLock::unlock);
                     unitOfWork.cleanResource();
-                    val curLock = UnitOfWork.threadLocals.get().getCurrentLock();
-                    curLock.stream().filter(TempLock.class::isInstance)
-                            .forEach(l -> TransactionManagerInstance.INSTANCE.removeLock(l.transactionUnit()));
                 } catch (IllegalStateException e) {
                     //has not hold the lock yet, it's ok
                     log.warn(e.getMessage());
@@ -201,66 +193,35 @@ public class UnitOfWork {
 
     static <T> UnitOfWorkContext startTransaction(UnitOfWorkParams<T> params) throws Exception {
         val unitName = params.getUnitName();
-        val readonly = params.isReadonly();
         checkEpoch(params);
 
-        final UnitOfWorkContext unitOfWork = initUnitOfContext(params, unitName, readonly);
+        val unitOfWork = new UnitOfWorkContext(unitName);
+        unitOfWork.setParams(params);
+        threadLocals.set(unitOfWork);
 
-        if (readonly || !params.isUseSandbox() || params.isTransparent()) {
-            unitOfWork.setLocalConfig(null);
-            return unitOfWork;
-        }
-
-        //put a sandbox meta store on top of base meta store for isolation
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         ResourceStore underlying = ResourceStore.getKylinMetaStore(config);
+        MetadataStore metadataStore = underlying.getMetadataStore();
+
         KylinConfig configCopy = KylinConfig.createKylinConfig(config);
-        //TODO check underlying rs is never changed since here
-        ThreadViewResourceStore rs = new ThreadViewResourceStore((InMemResourceStore) underlying, configCopy);
+        TransparentResourceStore rs = new TransparentResourceStore(metadataStore, configCopy);
         ResourceStore.setRS(configCopy, rs);
         unitOfWork.setLocalConfig(KylinConfig.setAndUnsetThreadLocalConfig(configCopy));
 
         try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
-            log.trace("sandbox RS {} now takes place for main RS {}", rs, underlying);
+            log.trace("Transparent RS {} now takes place for main RS {}", rs, underlying);
         }
 
-        return unitOfWork;
-    }
-
-    private static <T> UnitOfWorkContext initUnitOfContext(UnitOfWorkParams<T> params, String unitName,
-            boolean readonly) {
-        val unitOfWork = new UnitOfWorkContext(unitName);
-        if (!params.isTransparent()) {
-            TransactionLock lock;
-            if (params.isUseProjectLock()) {
-                lock = TransactionManagerInstance.INSTANCE.getProjectLock(unitName);
-            } else if (params.getTempLockName() != null) {
-                lock = TransactionManagerInstance.INSTANCE.getTempLock(params.getTempLockName(), readonly);
-            } else {
-                lock = TransactionManagerInstance.INSTANCE.getLock(unitName, readonly);
-                if (lock.transactionUnit().equals(unitName)) {
-                    params.setUseProjectLock(true);
-                }
-            }
-            try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
-                log.info("get lock for project {}, lock is held by current thread: {}", unitName,
-                        lock.isHeldByCurrentThread());
-            }
-            // re-entry is not encouraged (because it indicates complex handling logic, bad smell),
-            // let's abandon it first
-            Preconditions.checkState(!lock.isHeldByCurrentThread());
-            lock.lock();
-            unitOfWork.getCurrentLock().add(lock);
-        }
-
-        unitOfWork.setParams(params);
-        threadLocals.set(unitOfWork);
+        // start transaction via metadata store.
+        TransactionStatus status = metadataStore.getTransaction();
+        assert status != null;
+        unitOfWork.setTransactionStatus(status);
         return unitOfWork;
     }
 
     private static <T> void checkEpoch(UnitOfWorkParams<T> params) throws Exception {
         val checker = params.getEpochChecker();
-        if (checker != null && !params.isReadonly() && !params.isTransparent()) {
+        if (checker != null && !params.isReadonly()) {
             checker.process();
         }
     }
@@ -275,63 +236,58 @@ public class UnitOfWork {
     static <T> void endTransaction(String traceId, UnitOfWorkParams<T> params) throws Exception {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         val work = get();
-        if (work.isReadonly() || !work.isUseSandbox() || work.isTransparent()) {
-            work.cleanResource();
-            return;
-        }
-        val threadViewRS = (ThreadViewResourceStore) ResourceStore.getKylinMetaStore(config);
-        List<RawResource> data = threadViewRS.getResources();
-        if (!params.isUseProjectLock()
-                && (threadViewRS.getMetadataStore() instanceof JdbcMetadataStore || config.isUTEnv())) {
-            data.forEach(rawResource -> {
-                if (!UnitOfWork.checkWriteLock(rawResource.getResPath())) {
-                    throw new IllegalStateException(
-                            "Transaction does not hold a write lock for resPath: " + rawResource.getResPath());
-                }
-            });
-        }
-
+        val transparentRS = (TransparentResourceStore) ResourceStore.getKylinMetaStore(config);
+        List<RawResource> data = transparentRS.getResources();
+        Set<String> copyForWriteResources = UnitOfWork.get().getCopyForWriteItems();
         val eventList = data.stream().map(x -> {
+            String resPath = x.generateKeyWithType();
+            if (x.getContent() != null && !copyForWriteResources.contains(resPath)) {
+                throw new IllegalStateException(
+                        "Transaction try to modify a resource without copyForWrite: " + x.getMetaKey());
+            }
             if (x instanceof TombRawResource) {
-                return new ResourceDeleteEvent(x.getResPath());
+                return new ResourceDeleteEvent(resPath);
             } else {
-                return new ResourceCreateOrUpdateEvent(x);
+                return new ResourceCreateOrUpdateEvent(resPath, x);
             }
         }).collect(Collectors.<Event> toList());
 
         UnitMessages unitMessages = null;
         long entitiesSize = 0;
         KylinConfig originConfig = work.getOriginConfig();
+        boolean isUT = config.isUTEnv();
+        val metadataStore = ResourceStore.getKylinMetaStore(originConfig).getMetadataStore();
         try {
             // publish events here
-            val metadataStore = ResourceStore.getKylinMetaStore(originConfig).getMetadataStore();
             val writeInterceptor = params.getWriteInterceptor();
-            unitMessages = packageEvents(eventList, get().getProject(), traceId, writeInterceptor,
-                    params.getProjectId());
+            unitMessages = packageEvents(eventList, traceId, writeInterceptor);
             entitiesSize = unitMessages.getMessages().stream().filter(event -> event instanceof ResourceRelatedEvent)
                     .count();
             try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
                 log.debug("transaction {} updates {} metadata items", traceId, entitiesSize);
             }
-            checkEpoch(params);
-            val unitName = params.getUnitName();
-            metadataStore.batchUpdate(unitMessages, get().getParams().isSkipAuditLog(), unitName, params.getEpochId());
+            if (!get().getParams().isSkipAuditLog()) {
+                metadataStore.getAuditLogStore().save(unitMessages);
+            }
+            UnitOfWork.get().onUnitUpdated();
+            transparentRS.getMetadataStore().commit(threadLocals.get().getTransactionStatus());
+            threadLocals.get().setTransactionStatus(null);
         } finally {
             //clean rs and config
             work.cleanResource();
         }
 
-        if (entitiesSize != 0 && !params.isReadonly() && !params.isSkipAuditLog() && !config.isUTEnv()) {
+        if (entitiesSize != 0 && !params.isReadonly() && !params.isSkipAuditLog() && !isUT) {
             factory.postAsync(new AuditLogBroadcastEventNotifier());
         }
+
+        long startTime = System.currentTimeMillis();
         try (SetLogCategory ignored = new SetLogCategory(LogConstant.METADATA_CATEGORY)) {
-            // replayInTransaction in leader before release lock
-            val replayer = MessageSynchronization.getInstance(originConfig);
-            replayer.replayInTransaction(unitMessages);
-        } catch (Exception e) {
-            // in theory, this should not happen
-            log.error("Unexpected error happened! Aborting right now.", e);
-            Unsafe.systemExit(1);
+            transparentRS.getAuditLogStore().catchupWithMaxTimeout();
+            long endTime = System.currentTimeMillis();
+            if (endTime - startTime > 1500) {
+                log.warn("UnitOfWork {} takes too long time {}ms to catchup audit log", traceId, endTime - startTime);
+            }
         }
     }
 
@@ -341,15 +297,17 @@ public class UnitOfWork {
         if (readOnly) {
             UnitOfWork.get().getReadLockPath().add(resPath);
         } else {
-            UnitOfWork.get().getWriteLockPath().add(resPath);
+            UnitOfWork.get().getCopyForWriteItems().add(resPath);
         }
     }
 
-    public static boolean checkWriteLock(String resPath) {
-        return UnitOfWork.get().getWriteLockPath().contains(resPath);
-    }
-
     private static void handleError(Throwable throwable, UnitOfWorkParams<?> params, int retry, String traceId) {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        TransactionStatus status = threadLocals.get().getTransactionStatus();
+        if (status != null) {
+            ResourceStore.getKylinMetaStore(config).getMetadataStore().rollback(status);
+            threadLocals.get().setTransactionStatus(null);
+        }
         if (throwable instanceof KylinException && Objects.nonNull(((KylinException) throwable).getErrorCodeProducer())
                 && ((KylinException) throwable).getErrorCodeProducer().getErrorCode()
                         .equals(ErrorCodeSystem.MAINTENANCE_MODE_WRITE_FAILED.getErrorCode())) {
@@ -384,19 +342,13 @@ public class UnitOfWork {
         }
     }
 
-    private static UnitMessages packageEvents(List<Event> events, String project, String uuid,
-            Consumer<ResourceRelatedEvent> writeInterceptor, String projectId) {
+    private static UnitMessages packageEvents(List<Event> events, String uuid,
+            Consumer<ResourceRelatedEvent> writeInterceptor) {
         for (Event e : events) {
             if (!(e instanceof ResourceRelatedEvent)) {
                 continue;
             }
             val event = (ResourceRelatedEvent) e;
-            val endWithProjectId = event.getResPath().startsWith("/" + UnitOfWork.GLOBAL_UNIT)
-                    && StringUtils.isNotBlank(projectId) && event.getResPath().endsWith(projectId);
-            if (!(event.getResPath().startsWith("/" + project) || event.getResPath().endsWith("/" + project + ".json")
-                    || get().getParams().isAll() || endWithProjectId)) {
-                throw new IllegalStateException("some event are not in project " + project);
-            }
             if (writeInterceptor != null) {
                 writeInterceptor.accept(event);
             }
@@ -408,7 +360,7 @@ public class UnitOfWork {
     }
 
     public static boolean isAlreadyInTransaction() {
-        return threadLocals.get() != null && !threadLocals.get().isTransparent();
+        return threadLocals.get() != null;
     }
 
     public static void doAfterUpdate(UnitOfWorkContext.UnitTask task) {

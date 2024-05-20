@@ -42,9 +42,11 @@ public class SubtractBitmapTest extends NLocalWithSparkSessionTest {
 
     private List subtract;
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        super.setUp();
         JobContextUtil.getJobContext(getTestConfig());
 
         populateSSWithCSVData(getTestConfig(), getProject(), ss);
@@ -63,10 +65,11 @@ public class SubtractBitmapTest extends NLocalWithSparkSessionTest {
         Collections.sort(subtract);
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
         FileUtils.deleteQuietly(new File("../kylin-it/metastore_db"));
     }
 

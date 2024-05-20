@@ -19,12 +19,16 @@ package org.apache.kylin.engine.spark;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.StorageURL;
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.persistence.transaction.TransactionException;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -36,6 +40,7 @@ import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.cube.model.NDataSegmentManager;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
@@ -43,6 +48,7 @@ import org.apache.kylin.metadata.job.JobBucket;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.rest.service.merger.AfterBuildResourceMerger;
 import org.junit.Assert;
 
@@ -99,7 +105,9 @@ public class IndexDataConstructor {
         // cleanup all segments first
         NDataflowUpdate update = new NDataflowUpdate(df.getUuid());
         update.setToRemoveSegs(df.getSegments().toArray(new NDataSegment[0]));
-        dsMgr.updateDataflow(update);
+        UnitOfWork.doInTransactionWithRetry(
+                () -> NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project).updateDataflow(update),
+                project);
         df = dsMgr.getDataflow(dfName);
         List<LayoutEntity> layouts = df.getIndexPlan().getAllLayouts();
         List<LayoutEntity> round1 = Lists.newArrayList(layouts);
@@ -118,7 +126,10 @@ public class IndexDataConstructor {
         long start = SegmentRange.dateToLong(segStart);
         long end = SegmentRange.dateToLong(segEnd);
         val segmentRange = new SegmentRange.TimePartitionedSegmentRange(start, end);
-        val dataSegment = dfManager.appendSegment(df, segmentRange, SegmentStatusEnum.NEW, partitionValues);
+        val dataSegment = EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                () -> NDataflowManager.getInstance(NLocalFileMetadataTestCase.getTestConfig(), project)
+                        .appendSegment(df, segmentRange, SegmentStatusEnum.NEW, partitionValues),
+                project);
 
         Set<LayoutEntity> layouts = Sets.newHashSet();
         IndexPlan indexPlan = df.getIndexPlan();
@@ -135,12 +146,12 @@ public class IndexDataConstructor {
 
     // return segment id
     public String buildIndex(String dfName, SegmentRange segmentRange, Set<LayoutEntity> toBuildLayouts,
-                             boolean isAppend, List<String[]> partitionValues) throws Exception {
+            boolean isAppend, List<String[]> partitionValues) throws Exception {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         NDataflowManager dsMgr = NDataflowManager.getInstance(config, project);
         NDataflow df = dsMgr.getDataflow(dfName);
         // ready dataflow, segment, cuboid layout
-        NDataSegment oneSeg = dsMgr.appendSegment(df, segmentRange, SegmentStatusEnum.NEW, partitionValues);
+        NDataSegment oneSeg = addSegment(dfName, segmentRange, SegmentStatusEnum.NEW, partitionValues);
         // If cached, will not build target segment, and return the cached segment
         buildSegment(dfName, oneSeg, toBuildLayouts, isAppend, partitionValues);
         Set<NDataSegment> segmentInCache = dsMgr.getDataflow(df.getId()).getSegments().stream()
@@ -150,6 +161,48 @@ public class IndexDataConstructor {
                     + "Please manually delete the cache on the cloud.");
         }
         return segmentInCache.iterator().next().getId();
+    }
+
+    public NDataSegment addSegment(String dfName, SegmentRange segmentRange, List<String[]> partitionValues) {
+        return addSegment(dfName, segmentRange, SegmentStatusEnum.NEW, partitionValues);
+    }
+
+    public NDataSegment addSegment(String dfName, SegmentRange segmentRange, SegmentStatusEnum status,
+            List<String[]> partitionValues) {
+        return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NDataflowManager dsMgr = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            NDataflow df = dsMgr.getDataflow(dfName);
+            return dsMgr.appendSegment(df, segmentRange, status, partitionValues);
+        }, project);
+    }
+
+    public void cleanSegments(String dfUuid) {
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NDataflowManager dsMgr = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            NDataflow df = dsMgr.getDataflow(dfUuid);
+            NDataflowUpdate update = new NDataflowUpdate(df.getUuid());
+            update.setToRemoveSegs(df.getSegments().toArray(new NDataSegment[0]));
+            return dsMgr.updateDataflow(update);
+        }, project);
+    }
+
+    public NDataSegment mergeSegment(String dfName, SegmentRange segmentRange, boolean force) {
+        return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NDataflowManager dsMgr = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+            NDataflow df = dsMgr.getDataflow(dfName);
+            return dsMgr.mergeSegments(df, segmentRange, force);
+        }, project);
+    }
+
+    public <T> T transactionWrap(String project, Callable<T> call) {
+        try {
+            return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(call::call, project);
+        } catch (TransactionException e) {
+            if (e.getCause() instanceof KylinException) {
+                throw (KylinException) e.getCause();
+            }
+            throw e;
+        }
     }
 
     public void buildSegment(String dfName, NDataSegment segment, Set<LayoutEntity> toBuildLayouts, boolean isAppend,
@@ -164,7 +217,6 @@ public class IndexDataConstructor {
             buildCount++;
             return;
         }
-        NDataflowManager dsMgr = NDataflowManager.getInstance(config, project);
         ExecutableManager execMgr = ExecutableManager.getInstance(config, project);
 
         List<NSparkCubingJob> jobs = Lists.newArrayList();
@@ -173,7 +225,6 @@ public class IndexDataConstructor {
             val partitionValues = buildInfo.partitionValues;
             val segment = buildInfo.segment;
             val toBuildLayouts = buildInfo.toBuildLayouts;
-            NDataflow df = dsMgr.getDataflow(dfName);
             Set<JobBucket> buckets = Sets.newHashSet();
             if (CollectionUtils.isNotEmpty(partitionValues)) {
                 NDataModelManager modelManager = NDataModelManager.getInstance(config, project);
@@ -182,12 +233,14 @@ public class IndexDataConstructor {
                 val bucketStart = new AtomicLong(segment.getMaxBucketId());
                 toBuildLayouts.forEach(layout -> {
                     targetPartitions.forEach(partition -> {
-                        buckets.add(new JobBucket(segment.getId(), layout.getId(), bucketStart.incrementAndGet(),
+                        buckets.add(new JobBucket(segment.getUuid(), layout.getId(), bucketStart.incrementAndGet(),
                                 partition));
                     });
                 });
-                dsMgr.updateDataflow(df.getId(),
-                        copyForWrite -> copyForWrite.getSegment(segment.getId()).setMaxBucketId(bucketStart.get()));
+                EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                        () -> NDataSegmentManager.getInstance(KylinConfig.getInstanceFromEnv(), project).update(
+                                segment.getUuid(), copyForWrite -> copyForWrite.setMaxBucketId(bucketStart.get())),
+                        project);
             }
             NSparkCubingJob job = NSparkCubingJob.create(Sets.newHashSet(segment), toBuildLayouts, "ADMIN", buckets);
             if (buildInfo.isAppend) {
@@ -208,10 +261,14 @@ public class IndexDataConstructor {
             throw new IllegalStateException(firstFailedJobErrorMessage(execMgr, jobs.get(0)));
         }
         for (val job : jobs) {
-            val merger = new AfterBuildResourceMerger(config, project);
-            val sparkStep = job.getSparkCubingStep();
-            merger.merge(job.getTargetModelId(), job.getSegmentIds(), ExecutableUtils.getLayoutIds(sparkStep),
-                    ExecutableUtils.getRemoteStore(config, sparkStep), job.getJobType(), job.getTargetPartitions());
+            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+                KylinConfig conf = KylinConfig.getInstanceFromEnv();
+                val merger = new AfterBuildResourceMerger(conf, project);
+                val sparkStep = job.getSparkCubingStep();
+                return merger.merge(job.getTargetModelId(), job.getSegmentIds(),
+                        ExecutableUtils.getLayoutIds(sparkStep), ExecutableUtils.getRemoteStore(conf, sparkStep),
+                        job.getJobType(), job.getTargetPartitions());
+            }, project);
         }
         indexDataRepo.persistBuildData();
         buildCount++;
@@ -224,7 +281,6 @@ public class IndexDataConstructor {
             buildCount++;
             return;
         }
-        NDataflowManager dsMgr = NDataflowManager.getInstance(config, project);
         ExecutableManager execMgr = ExecutableManager.getInstance(config, project);
 
         List<NSparkCubingJob> jobs = Lists.newArrayList();
@@ -233,7 +289,6 @@ public class IndexDataConstructor {
             val partitionValues = buildInfo.partitionValues;
             val segment = buildInfo.segment;
             val toBuildLayouts = buildInfo.toBuildLayouts;
-            NDataflow df = dsMgr.getDataflow(dfName);
             Set<JobBucket> buckets = Sets.newHashSet();
             if (CollectionUtils.isNotEmpty(partitionValues)) {
                 NDataModelManager modelManager = NDataModelManager.getInstance(config, project);
@@ -242,12 +297,14 @@ public class IndexDataConstructor {
                 val bucketStart = new AtomicLong(segment.getMaxBucketId());
                 toBuildLayouts.forEach(layout -> {
                     targetPartitions.forEach(partition -> {
-                        buckets.add(new JobBucket(segment.getId(), layout.getId(), bucketStart.incrementAndGet(),
+                        buckets.add(new JobBucket(segment.getUuid(), layout.getId(), bucketStart.incrementAndGet(),
                                 partition));
                     });
                 });
-                dsMgr.updateDataflow(df.getId(),
-                        copyForWrite -> copyForWrite.getSegment(segment.getId()).setMaxBucketId(bucketStart.get()));
+                EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(
+                        () -> NDataSegmentManager.getInstance(KylinConfig.getInstanceFromEnv(), project).update(
+                                segment.getUuid(), copyForWrite -> copyForWrite.setMaxBucketId(bucketStart.get())),
+                        project);
             }
             NSparkCubingJob job = NSparkCubingJob.create(Sets.newHashSet(segment), toBuildLayouts, "ADMIN", buckets);
             job.setJobType(JobTypeEnum.SUB_PARTITION_BUILD);
@@ -264,10 +321,14 @@ public class IndexDataConstructor {
             throw new IllegalStateException(firstFailedJobErrorMessage(execMgr, jobs.get(0)));
         }
         for (val job : jobs) {
-            val merger = new AfterBuildResourceMerger(config, project);
+            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+                KylinConfig conf = KylinConfig.getInstanceFromEnv();
+                val merger = new AfterBuildResourceMerger(conf, project);
             val sparkStep = job.getSparkCubingStep();
-            merger.merge(job.getTargetModelId(), job.getSegmentIds(), ExecutableUtils.getLayoutIds(sparkStep),
-                    ExecutableUtils.getRemoteStore(config, sparkStep), job.getJobType(), job.getTargetPartitions());
+                return merger.merge(job.getTargetModelId(), job.getSegmentIds(),
+                        ExecutableUtils.getLayoutIds(sparkStep), ExecutableUtils.getRemoteStore(conf, sparkStep),
+                        job.getJobType(), job.getTargetPartitions());
+            }, project);
         }
         indexDataRepo.persistBuildData();
         buildCount++;
@@ -278,8 +339,13 @@ public class IndexDataConstructor {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         NDataflowManager dsMgr = NDataflowManager.getInstance(config, project);
         NDataflow df = dsMgr.getDataflow(dfName);
-        // ready dataflow, segment, cuboid layout
-        dsMgr.appendPartitions(df.getId(), segmentId, partitionValues);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            // ready dataflow, segment, cuboid layout
+            NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project).appendPartitions(df.getId(),
+                    segmentId, partitionValues);
+            return null;
+        }, project);
+
         NDataSegment segment = df.getSegment(segmentId);
         buildMultiPartition(
                 Lists.newArrayList(new BuildInfo(dfName, segment, toBuildLayouts, isAppend, partitionValues)));

@@ -31,14 +31,13 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.StringSplitter;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
@@ -179,7 +178,6 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
     @JsonProperty("snapshot_has_broken")
     private boolean snapshotHasBroken;
 
-    protected String project;
     private final DatabaseDesc database = new DatabaseDesc();
     private String identity = null;
     private KafkaConfig kafkaConfig;
@@ -252,7 +250,16 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
 
     @Override
     public String resourceName() {
-        return getIdentity();
+        return generateResourceName(getProject(), getIdentity());
+    }
+
+    public static String generateResourceName(String project, String identity) {
+        return project + "." + identity;
+    }
+
+    @Override
+    public MetadataType resourceType() {
+        return MetadataType.TABLE_INFO;
     }
 
     public TableDesc appendColumns(ColumnDesc[] computedColumns, boolean makeCopy) {
@@ -310,17 +317,6 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
             }
         }
         return null;
-    }
-
-    @Override
-    public String getResourcePath() {
-        return concatResourcePath(getIdentity(), project);
-
-    }
-
-    public static String concatResourcePath(String name, String project) {
-        return new StringBuilder().append("/").append(project).append(ResourceStore.TABLE_RESOURCE_ROOT).append("/")
-                .append(name).append(MetadataConstants.FILE_SURFIX).toString();
     }
 
     public String getIdentity() {

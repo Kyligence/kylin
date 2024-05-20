@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -121,16 +120,6 @@ public class ExecutablePO extends RootPersistentEntity {
 
     public void setPriority(int p) {
         priority = isPriorityValid(p) ? p : DEFAULT_PRIORITY;
-    }
-
-    @Override
-    public String getResourcePath() {
-        return concatResourcePath(getUuid(), project);
-    }
-
-    public static String concatResourcePath(String name, String project) {
-        return new StringBuilder().append("/").append(project).append(ResourceStore.EXECUTABLE_JOB).append("/")
-                .append(name).toString();
     }
 
     public static boolean isPriorityValid(int priority) {

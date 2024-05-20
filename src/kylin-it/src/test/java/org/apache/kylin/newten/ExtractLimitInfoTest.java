@@ -65,16 +65,18 @@ public class ExtractLimitInfoTest extends NLocalWithSparkSessionTest {
         SparderEnv.setSparkSession(ss);
     }
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/join_opt");
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }

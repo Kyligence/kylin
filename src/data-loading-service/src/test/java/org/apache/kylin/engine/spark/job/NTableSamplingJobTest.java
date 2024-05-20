@@ -40,6 +40,7 @@ import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.source.SourceFactory;
 import org.apache.spark.sql.Dataset;
@@ -64,10 +65,9 @@ public class NTableSamplingJobTest extends NLocalWithSparkSessionTestBase {
 
     @After
     public void after() throws IOException {
+        JobContextUtil.cleanUp();
         super.cleanupTestMetadata();
         FileUtils.deleteQuietly(new File("../kap-it/metastore_db"));
-
-        JobContextUtil.cleanUp();
     }
 
     @Test
@@ -174,12 +174,17 @@ public class NTableSamplingJobTest extends NLocalWithSparkSessionTestBase {
         final TableExtDesc tableExtBefore = tableMgr.getTableExtIfExists(tableDesc);
         Assert.assertNotNull(tableDesc);
         Assert.assertNull(tableExtBefore);
-        TableExtDesc tableExtWithS3Role = tableMgr.getOrCreateTableExt(tableDesc);
-        tableExtWithS3Role.addDataSourceProp(TableExtDesc.LOCATION_PROPERTY_KEY, "s3://test/a");
-        tableExtWithS3Role.addDataSourceProp(TableExtDesc.S3_ROLE_PROPERTY_KEY, "s3Role");
-        tableExtWithS3Role.addDataSourceProp(TableExtDesc.S3_ENDPOINT_KEY, "us-west-1.amazonaws.com");
 
-        tableMgr.saveTableExt(tableExtWithS3Role);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT).updateTableExt(tableName,
+                    copyForWrite -> {
+                        copyForWrite.addDataSourceProp(TableExtDesc.LOCATION_PROPERTY_KEY, "s3://test/a");
+                        copyForWrite.addDataSourceProp(TableExtDesc.S3_ROLE_PROPERTY_KEY, "s3Role");
+                        copyForWrite.addDataSourceProp(TableExtDesc.S3_ENDPOINT_KEY, "us-west-1.amazonaws.com");
+                    });
+            return null;
+        }, PROJECT);
+
         ExecutableManager execMgr = ExecutableManager.getInstance(config, PROJECT);
         val samplingJob = NTableSamplingJob.internalCreate(tableDesc, PROJECT, "ADMIN", 20_000_000);
         execMgr.addJob(samplingJob);

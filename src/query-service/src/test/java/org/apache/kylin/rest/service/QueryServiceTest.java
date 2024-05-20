@@ -106,6 +106,7 @@ import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.QueryMetricsContext;
+import org.apache.kylin.metadata.query.QueryRecord;
 import org.apache.kylin.metadata.querymeta.ColumnMeta;
 import org.apache.kylin.metadata.querymeta.ColumnMetaWithType;
 import org.apache.kylin.metadata.querymeta.TableMeta;
@@ -218,7 +219,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     protected AclTCRService aclTCRService = Mockito.spy(AclTCRService.class);
 
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         PowerMockito.mockStatic(SpringContext.class);
         PowerMockito.mockStatic(UserGroupInformation.class);
         UserGroupInformation userGroupInformation = Mockito.mock(UserGroupInformation.class);
@@ -258,7 +259,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @After
-    public void cleanup() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 
@@ -613,9 +614,9 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         // mock agg index realization
         OlapContext aggMock = new OlapContext(1);
         NDataModel mockModel1 = Mockito.spy(new NDataModel());
-        Mockito.when(mockModel1.getUuid()).thenReturn("4965c827-fbb4-4ea1-a744-3f341a3b030d");
+        Mockito.when(mockModel1.getUuid()).thenReturn("4965c827-fbb4-4ea1-a744-3f341a3b030e");
         Mockito.when(mockModel1.getAlias()).thenReturn("model_streaming");
-        Mockito.doReturn(mockModel1).when(modelManager).getDataModelDesc("4965c827-fbb4-4ea1-a744-3f341a3b030d");
+        Mockito.doReturn(mockModel1).when(modelManager).getDataModelDesc("4965c827-fbb4-4ea1-a744-3f341a3b030e");
         IRealization realization = Mockito.mock(IRealization.class);
         Mockito.when(realization.getModel()).thenReturn(mockModel1);
         aggMock.setRealization(realization);
@@ -705,33 +706,6 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             Assert.assertEquals(expectedQueryID, response.getQueryId());
         } catch (InternalErrorException ex) {
             // ignore
-        }
-    }
-
-    @Test
-    public void testCreateTableToWith() {
-        String create_table1 = " create table tableId as select * from some_table1;";
-        String create_table2 = "CREATE TABLE tableId2 AS select * FROM some_table2;";
-        String select_table = "select * from tableId join tableId2 on tableId.a = tableId2.b;";
-
-        KylinConfig config = KylinConfig.getInstanceFromEnv();
-        config.setProperty("kylin.query.convert-create-table-to-with", "true");
-        try (KylinConfig.SetAndUnsetThreadLocalConfig ignored = KylinConfig.setAndUnsetThreadLocalConfig(config)) {
-
-            SQLRequest request = new SQLRequest();
-            request.setProject("default");
-            request.setSql(create_table1);
-            queryService.queryWithCache(request);
-
-            request.setSql(create_table2);
-            queryService.queryWithCache(request);
-
-            request.setSql(select_table);
-            SQLResponse response = queryService.queryWithCache(request);
-
-            Assert.assertEquals("From line 1, column 32 to line 1, column 42: Object 'SOME_TABLE1' not found\n"
-                    + "while executing SQL: \"WITH tableId as (select * from some_table1), tableId2 AS (select * FROM some_table2) select * from tableId join tableId2 on tableId.a = tableId2.b\"",
-                    response.getExceptionMessage());
         }
     }
 
@@ -884,7 +858,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             nDataflowUpdate.setStatus(RealizationStatusEnum.OFFLINE);
             dataflowManager.updateDataflow(nDataflowUpdate);
 
-            await().atLeast(1000, TimeUnit.MILLISECONDS);
+            await().pollDelay(1000, TimeUnit.MILLISECONDS).until(() -> true);
 
             final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", null);
 
@@ -911,7 +885,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             nDataflowUpdate.setStatus(RealizationStatusEnum.ONLINE);
             dataflowManager.updateDataflow(nDataflowUpdate);
 
-            await().atLeast(1000, TimeUnit.MILLISECONDS);
+            await().pollDelay(1000, TimeUnit.MILLISECONDS).until(() -> true);
 
             //check the default project
             final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", null);
@@ -974,7 +948,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             nDataflowUpdate.setStatus(RealizationStatusEnum.OFFLINE);
             dataflowManager.updateDataflow(nDataflowUpdate);
 
-            await().atLeast(1000, TimeUnit.MILLISECONDS);
+            await().pollDelay(1000, TimeUnit.MILLISECONDS).until(() -> true);
 
             final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", "nmodel_basic_inner");
 
@@ -1000,7 +974,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             nDataflowUpdate.setStatus(RealizationStatusEnum.ONLINE);
             dataflowManager.updateDataflow(nDataflowUpdate);
 
-            await().atLeast(1000, TimeUnit.MILLISECONDS);
+            await().pollDelay(1000, TimeUnit.MILLISECONDS).until(() -> true);
 
             //check the default project
             final List<TableMetaWithType> tableMetas = queryService.getMetadataV2("default", "nmodel_basic_inner");
@@ -1103,8 +1077,11 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
         NDataModel dKapModel = dataModelSerializer.deserialize(new DataInputStream(bais));
         dKapModel.setProject("default");
-
+        dKapModel.getComputedColumnDescs().addAll(model.getComputedColumnDescs());
+        ComputedColumnDesc computedColumnDesc = dKapModel.getComputedColumnDescs()
+                .get(dKapModel.getComputedColumnDescs().size() - 1);
         dKapModel.getComputedColumnDescs().remove(dKapModel.getComputedColumnDescs().size() - 1);
+        dKapModel.getComputedColumnUuids().removeIf(uuid -> uuid.equals(computedColumnDesc.getUuid()));
         dKapModel.setMvcc(model.getMvcc());
         return dKapModel;
     }
@@ -1130,7 +1107,9 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
                 + "      \"comment\": \"test use\"\n" //
                 + "    }";
         ComputedColumnDesc computedColumnDesc = JsonUtil.readValue(newCCStr, ComputedColumnDesc.class);
+        dKapModel.getComputedColumnDescs().addAll(model.getComputedColumnDescs());
         dKapModel.getComputedColumnDescs().add(computedColumnDesc);
+        dKapModel.getComputedColumnUuids().add(computedColumnDesc.getUuid());
         dKapModel.setMvcc(model.getMvcc());
         return dKapModel;
     }
@@ -1191,7 +1170,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     public void testSaveQuery() throws IOException {
         Query query = new Query("test", "default", "test_sql", "test_description");
         queryService.saveQuery("admin", "default", query);
-        QueryService.QueryRecord queryRecord = queryService.getSavedQueries("admin", "default");
+        QueryRecord queryRecord = queryService.getSavedQueries("admin", "default");
         Assert.assertEquals(1, queryRecord.getQueries().size());
         Assert.assertEquals("test", queryRecord.getQueries().get(0).getName());
 
@@ -1215,7 +1194,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             Query query = new Query("test-" + i, "default", StringUtils.repeat("abc", 10000), "test_description");
             queryService.saveQuery("admin", "default", query);
         }
-        QueryService.QueryRecord queryRecord = queryService.getSavedQueries("admin", "default");
+        QueryRecord queryRecord = queryService.getSavedQueries("admin", "default");
         Assert.assertEquals(10, queryRecord.getQueries().size());
         for (Query query : queryRecord.getQueries()) {
             Assert.assertEquals(StringUtils.repeat("abc", 10000), query.getSql());
@@ -1230,7 +1209,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
             return null;
         }, "default", 1);
 
-        QueryService.QueryRecord queryRecord = queryService.getSavedQueries("admin", "default");
+        QueryRecord queryRecord = queryService.getSavedQueries("admin", "default");
         Assert.assertEquals(1, queryRecord.getQueries().size());
         Assert.assertEquals("test", queryRecord.getQueries().get(0).getName());
 
@@ -2129,17 +2108,19 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         final String sql = "select count(*) from SSB_STREAMING";
 
         stubQueryConnection(sql, project);
+        //Will mock a non-existent model 4965c827-fbb4-4ea1-a744-3f341a3b030e
         mockOlapContextWithStreaming();
 
         final SQLRequest request = new SQLRequest();
         request.setProject(project);
         request.setSql(sql);
         Mockito.when(SpringContext.getBean(QueryService.class)).thenReturn(queryService);
+        //It will log an NPE exception because the model of project "demo" does not exist
         SQLResponse sqlResponse = queryService.doQueryWithCache(request);
 
         Assert.assertEquals(1, sqlResponse.getNativeRealizations().size());
 
-        Assert.assertEquals("4965c827-fbb4-4ea1-a744-3f341a3b030d",
+        Assert.assertEquals("4965c827-fbb4-4ea1-a744-3f341a3b030e",
                 sqlResponse.getNativeRealizations().get(0).getModelId());
         Assert.assertEquals((Long) 10001L, sqlResponse.getNativeRealizations().get(0).getLayoutId());
 
@@ -2319,6 +2300,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         SQLResponse sqlResponse = spiedQueryService.doQueryWithCache(request);
         Assert.assertFalse(sqlResponse.isException());
 
+        // add blacklist item
         SQLBlacklistManager sqlBlacklistManager = SQLBlacklistManager.getInstance(KylinConfig.getInstanceFromEnv());
         SQLBlacklistItem sqlBlacklistItem = new SQLBlacklistItem();
         sqlBlacklistItem.setId("1");

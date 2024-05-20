@@ -40,10 +40,19 @@ public enum JobTypeEnum {
 
     ASYNC_QUERY(Category.ASYNC_QUERY), //
 
-    TABLE_SAMPLING(Category.OTHER), STAGE(Category.OTHER);
+    TABLE_SAMPLING(Category.OTHER), STAGE(Category.OTHER), //
+
+    ROUTINE(Category.CRON), //
+    META(Category.CRON), //
+    SOURCE_USAGE(Category.CRON), //
+    AUTO_REFRESH(Category.CRON);
 
     @Getter
     private final String category;
+
+    public static final List<String> BUILD_JOB_TYPES = Arrays.stream(JobTypeEnum.values())
+            .filter(e -> !e.getCategory().equals(Category.CRON) && !e.getCategory().equals(Category.ASYNC_QUERY))
+            .map(Enum::name).collect(Collectors.toList());
 
     JobTypeEnum(String category) {
         this.category = category;
@@ -54,6 +63,7 @@ public enum JobTypeEnum {
         public static final String SNAPSHOT = "SNAPSHOT";
         public static final String STREAMING = "STREAMING";
         public static final String ASYNC_QUERY = "ASYNC_QUERY";
+        public static final String CRON = "CRON";
         public static final String OTHER = "OTHER";
 
         private Category() {

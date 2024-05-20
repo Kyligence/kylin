@@ -32,8 +32,6 @@ import org.apache.kylin.metadata.project.ProjectInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
-
 public class KylinTableCCCleanupCLI extends ExecutableApplication {
     private static final Logger logger = LoggerFactory.getLogger(KylinTableCCCleanupCLI.class);
 
@@ -51,13 +49,7 @@ public class KylinTableCCCleanupCLI extends ExecutableApplication {
 
     public static void main(String[] args) {
         int exit = 0;
-        MaintainModeTool maintainModeTool = new MaintainModeTool("cleanup table cc");
-        maintainModeTool.init();
         try {
-            maintainModeTool.markEpochs();
-            if (EpochManager.getInstance().isMaintenanceMode()) {
-                Runtime.getRuntime().addShutdownHook(new Thread(maintainModeTool::releaseEpochs));
-            }
             new KylinTableCCCleanupCLI().execute(args);
         } catch (Throwable e) {
             exit = 1;

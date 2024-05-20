@@ -22,10 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
-import org.apache.kylin.metadata.model.SegmentRange;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -437,31 +434,6 @@ public class FilterPushDownUtilTest extends NLocalFileMetadataTestCase {
         checkFail(sql, "db.t1", "select t1.a from db.t1", parseErrPtn);
 
         // case 5, Malformed query
-    }
-
-    @Test
-    public void testApplyDataLoadingRange() throws SqlParseException {
-        String sql = "select ks.price as price, ks.part_dt as dt from kylin_sales as ks "
-                + "where ks.price > 50 and ks.part_dt > '2012-02-05'";
-
-        NDataLoadingRange range = new NDataLoadingRange();
-        range.setColumnName("kylin_sales.part_dt");
-        range.setTableName("default.kylin_sales");
-        SegmentRange.TimePartitionedSegmentRange timePartitionedSegmentRange //
-                = new SegmentRange.TimePartitionedSegmentRange();
-        timePartitionedSegmentRange.setStart(DateFormat.stringToMillis("2012-07-08"));
-        timePartitionedSegmentRange.setEnd(DateFormat.stringToMillis("2015-09-23"));
-
-        range.setCoveredRange(timePartitionedSegmentRange);
-        final String actual = FilterPushDownUtil.applyDataLoadingRange(sql, range);
-        String expected = "SELECT KS.PRICE PRICE, KS.PART_DT DT\n" //
-                + "FROM KYLIN_SALES KS\n" //
-                + "WHERE KS.PRICE > 50 AND KS.PART_DT > '2012-02-05' " //
-                + "AND (KS.PART_DT >= '2012-07-08' AND KS.PART_DT <= '2015-09-23')";
-        if (DEV_MODE) {
-            System.out.println(actual);
-        }
-        Assert.assertEquals(expected, actual);
     }
 
     private void checkExp(String sql, String expected) throws SqlParseException {

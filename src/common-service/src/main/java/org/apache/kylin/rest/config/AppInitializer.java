@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FsUrlStreamHandlerFactory;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.constant.Constant;
+import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.hystrix.NCircuitBreaker;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.lock.TransactionDeadLockHandler;
@@ -39,7 +40,7 @@ import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.HostInfoFetcher;
 import org.apache.kylin.engine.spark.filter.QueryFiltersCollector;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
-import org.apache.kylin.metadata.epoch.EpochOrchestrator;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectLoader;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
@@ -48,7 +49,6 @@ import org.apache.kylin.query.util.ComputedColumnRewriter;
 import org.apache.kylin.rest.config.initialize.AclTCRListener;
 import org.apache.kylin.rest.config.initialize.AfterMetadataReadyEvent;
 import org.apache.kylin.rest.config.initialize.CacheCleanListener;
-import org.apache.kylin.rest.config.initialize.EpochChangedListener;
 import org.apache.kylin.rest.config.initialize.JobSchedulerListener;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.config.initialize.ProcessStatusListener;
@@ -57,10 +57,13 @@ import org.apache.kylin.rest.config.initialize.SparderStartEvent;
 import org.apache.kylin.rest.config.initialize.TableSchemaChangeListener;
 import org.apache.kylin.rest.config.initialize.UserAclListener;
 import org.apache.kylin.rest.service.CommonQueryCacheSupporter;
+import org.apache.kylin.rest.service.task.QueryHistoryMetaUpdateScheduler;
 import org.apache.kylin.rest.util.GCLogUploadTask;
+import org.apache.kylin.rest.util.InitResourceGroupUtils;
 import org.apache.kylin.rest.util.JStackDumpTask;
 import org.apache.kylin.rest.util.QueryHistoryOffsetUtil;
 import org.apache.kylin.streaming.jobs.StreamingJobListener;
+import org.apache.kylin.streaming.jobs.scheduler.StreamingScheduler;
 import org.apache.kylin.tool.daemon.KapGuardianHATask;
 import org.apache.kylin.tool.garbage.CleanTaskExecutorService;
 import org.apache.kylin.tool.garbage.PriorityExecutor;
@@ -78,7 +81,6 @@ import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.session.web.http.CookieSerializer;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
@@ -93,9 +95,6 @@ public class AppInitializer {
 
     @Autowired(required = false)
     CommonQueryCacheSupporter queryCacheManager;
-
-    @Autowired(required = false)
-    EpochChangedListener epochChangedListener;
 
     @Autowired(required = false)
     HostInfoFetcher hostInfoFetcher;
@@ -132,14 +131,14 @@ public class AppInitializer {
         if (!isQueryOnly) {
             // restore from metadata, should not delete
             val resourceStore = ResourceStore.getKylinMetaStore(kylinConfig);
-            resourceStore.setChecker(e -> {
-                String instance = e.getInstance();
-                String localIdentify = EpochOrchestrator.getOwnerIdentity().split("\\|")[0];
-                return localIdentify.equalsIgnoreCase(instance);
-            });
+            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+                ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv()).createMetaStoreUuidIfNotExist();
+                return true;
+            }, ResourceStore.GLOBAL_PROJECT);
             if (!isResource) {
                 resourceStore.catchup();
             }
+            InitResourceGroupUtils.initResourceGroup();
             if (isJob || isDataLoading) {
                 // register scheduler listener
                 EventBusFactory.getInstance().register(new JobSchedulerListener(), false);
@@ -150,7 +149,6 @@ public class AppInitializer {
             }
             if (isJob || isMetadata) {
                 EventBusFactory.getInstance().register(new ModelBrokenListener(), false);
-                EventBusFactory.getInstance().register(epochChangedListener, false);
             }
 
             SparkJobFactoryUtils.initJobFactory();
@@ -248,12 +246,7 @@ public class AppInitializer {
     private void resetProjectOffsetId() {
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         List<ProjectInstance> prjInstances = NProjectManager.getInstance(kylinConfig).listAllProjects();
-        EpochManager epochManager = EpochManager.getInstance();
-        prjInstances.forEach(project -> {
-            if (epochManager.checkEpochOwner(project.getName())) {
-                QueryHistoryOffsetUtil.resetOffsetId(project.getName());
-            }
-        });
+        prjInstances.forEach(project -> QueryHistoryOffsetUtil.resetOffsetId(project.getName()));
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -261,7 +254,6 @@ public class AppInitializer {
         val kylinConfig = KylinConfig.getInstanceFromEnv();
         setFsUrlStreamHandlerFactory();
         if (kylinConfig.isJobNode() || kylinConfig.isMetadataNode()) {
-            new EpochOrchestrator(kylinConfig);
             resetProjectOffsetId();
         }
         if (kylinConfig.getJStackDumpTaskEnabled()) {
@@ -282,6 +274,29 @@ public class AppInitializer {
         taskScheduler.scheduleAtFixedRate(new ProjectSerialEventBus.TimingDispatcher(),
                 ProjectSerialEventBus.TimingDispatcher.INTERVAL);
 
+        initSchedule();
+
+    }
+
+    private void initSchedule() {
+        KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+        if (kylinConfig.isJobNode() || kylinConfig.isDataLoadingNode()) {
+            StreamingScheduler ss = StreamingScheduler.getInstance();
+            ss.init();
+            if (!ss.getHasStarted().get()) {
+                throw new KylinRuntimeException("Streaming Scheduler has not been started");
+            }
+        }
+
+        if (kylinConfig.getQueryHistoryAccelerateInterval() > 0) {
+            QueryHistoryMetaUpdateScheduler qhMetaUpdateScheduler = QueryHistoryMetaUpdateScheduler
+                    .getInstance();
+            qhMetaUpdateScheduler.init();
+            if (!qhMetaUpdateScheduler.hasStarted()) {
+                throw new KylinRuntimeException(
+                        "Query history accelerate scheduler has not been started");
+            }
+        }
     }
 
     private void postInit() {

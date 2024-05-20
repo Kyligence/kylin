@@ -26,11 +26,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.MissingRootPersistentEntity;
-import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.metadata.MetadataConstants;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -93,13 +92,19 @@ public class FusionModel extends RootPersistentEntity implements Serializable {
         NDataModelManager modelManager = NDataModelManager.getInstance(config, project);
         return this.modelMapping.keySet().stream().filter(Objects::nonNull).map(id -> {
             NDataModel model = modelManager.getDataModelDesc(id);
-            return model != null ? model : new MissingRootPersistentEntity(TableDesc.concatResourcePath(id, project));
+            return model != null ? model
+                    : new MissingRootPersistentEntity(MetadataType.mergeKeyWithType(id, MetadataType.TABLE_INFO));
         }).collect(Collectors.toList());
     }
 
     @Override
     public String resourceName() {
         return uuid;
+    }
+
+    @Override
+    public MetadataType resourceType() {
+        return MetadataType.FUSION_MODEL;
     }
 
     public Set<String> getModelsId() {
@@ -127,11 +132,5 @@ public class FusionModel extends RootPersistentEntity implements Serializable {
             }
         }
         return null;
-    }
-
-    @Override
-    public String getResourcePath() {
-        return "/" + project + ResourceStore.FUSION_MODEL_RESOURCE_ROOT + "/" + resourceName()
-                + MetadataConstants.FILE_SURFIX;
     }
 }

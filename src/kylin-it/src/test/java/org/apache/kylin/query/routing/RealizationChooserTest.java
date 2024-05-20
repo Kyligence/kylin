@@ -38,14 +38,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class RealizationChooserTest extends NLocalWithSparkSessionTest {
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
         this.createTestMetadata("src/test/resources/ut_meta/joins_graph_left_or_inner");
     }
 
+    @Override
     @After
-    public void teardown() throws Exception {
+    public void tearDown() throws Exception {
         super.tearDown();
     }
 

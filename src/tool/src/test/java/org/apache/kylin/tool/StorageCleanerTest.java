@@ -123,7 +123,7 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
 
             int fileSize = new File(currentSparderEventLogDir).listFiles().length;
             Assert.assertEquals(3, fileSize);
-            var cleaner = new StorageCleaner.EventLogCleaner(false);
+            var cleaner = new StorageCleaner.EventLogCleaner();
             cleaner.cleanCurrentSparderEventLog();
             fileSize = new File(currentSparderEventLogDir).listFiles().length;
             Assert.assertEquals(2, fileSize);
@@ -133,11 +133,8 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
 
             int sparkEventLogFileSize = new File(sparkEventLogDir).listFiles().length;
             Assert.assertEquals(5, sparkEventLogFileSize);
-            cleaner.execute();
-            Assert.assertEquals(5, sparkEventLogFileSize);
 
-            cleaner = new StorageCleaner.EventLogCleaner(true);
-            cleaner.execute();
+            cleaner.cleanSparkEventLogs("default");
             sparkEventLogFileSize = new File(sparkEventLogDir).listFiles().length;
             Assert.assertEquals(4, sparkEventLogFileSize);
             Assert.assertFalse(new File(sparkEventLogDir + "/application_1677899901295_8243").exists());
@@ -183,36 +180,6 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
                 + "/default" + HadoopUtil.GLOBAL_DICT_STORAGE_ROOT), null, true);
         Assert.assertEquals(0, files.size());
 
-    }
-
-    @Test
-    public void testTrashRecord() throws Exception {
-        val config = getTestConfig();
-        val kapConfig = KapConfig.getInstanceFromEnv();
-        config.setProperty("kylin.storage.time-machine-enabled", "true");
-        val cleaner = new StorageCleaner();
-        val workingDir = config.getHdfsWorkingDirectory();
-        val beforeProtectionTime = System.currentTimeMillis() - config.getStorageResourceSurvivalTimeThreshold();
-        val keys = cleaner.getTrashRecord().keySet().stream().collect(Collectors.toSet());
-
-        keys.forEach(k -> {
-            cleaner.getTrashRecord().remove(k);
-            // default/dict/global_dict/DEFAULT.TEST_KYLIN_FACT -> 1584689333538
-            if (k.equals("default/dict/global_dict/DEFAULT.TEST_KYLIN_FACT/invalid")) {
-                cleaner.getTrashRecord().put(new Path(workingDir, k).toString(), String.valueOf(beforeProtectionTime));
-            } else {
-                cleaner.getTrashRecord().put(new Path(workingDir, k).toString(),
-                        String.valueOf(System.currentTimeMillis()));
-            }
-        });
-        NTableMetadataManager.getInstance(config, "default").removeSourceTable("DEFAULT.TEST_KYLIN_FACT");
-        for (NDataflow dataflow : NDataflowManager.getInstance(config, "default").listAllDataflows()) {
-            NDataflowManager.getInstance(config, "default").dropDataflow(dataflow.getId());
-        }
-        cleaner.execute();
-        val files = FileUtils.listFiles(new File(config.getHdfsWorkingDirectory().replace("file://", "") + "/default"
-                + HadoopUtil.GLOBAL_DICT_STORAGE_ROOT), null, true);
-        Assert.assertEquals(2, files.size());
     }
 
     @Test

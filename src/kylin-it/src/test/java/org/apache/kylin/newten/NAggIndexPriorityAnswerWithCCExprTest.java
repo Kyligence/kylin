@@ -48,18 +48,20 @@ public class NAggIndexPriorityAnswerWithCCExprTest extends NLocalWithSparkSessio
         return "aggindex_priority_answer_withccexpr";
     }
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         overwriteSystemProp("kylin.query.use-tableindex-answer-non-raw-query", "true");
         overwriteSystemProp("kylin.query.layout.prefer-aggindex", "true");
         this.createTestMetadata("src/test/resources/ut_meta/aggindex_priority_answer_withccexpr");
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }

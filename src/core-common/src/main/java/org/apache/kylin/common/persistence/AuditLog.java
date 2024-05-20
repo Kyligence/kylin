@@ -59,6 +59,10 @@ public class AuditLog {
 
     private String instance;
 
+    private String project;
+
+    private boolean diffFlag;
+
     public static class ByteSourceSerializer extends JsonSerializer<ByteSource> {
 
         @Override

@@ -51,11 +51,18 @@ public class JobLock {
 
     private String database;
 
-    public JobLock(String lockId, String project, int priority) {
+    private String jobType = JobTypeEnum.OFFLINE.name();
+
+    public JobLock(String lockId, String project, int priority, JobTypeEnum type) {
         this.lockId = lockId;
         this.project = project;
         this.priority = priority;
         this.createTime = System.currentTimeMillis();
         this.updateTime = System.currentTimeMillis();
+        this.jobType = type.name();
+    }
+
+    public enum JobTypeEnum {
+        STREAMING, OFFLINE, MASTER, OTHER
     }
 }

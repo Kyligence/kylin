@@ -24,8 +24,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.RawResource;
-import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.transaction.EventListenerRegistry;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
@@ -37,16 +37,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CacheCleanListener implements EventListenerRegistry.ResourceEventListener {
 
+    private static final String FOLDER_PATTERN = "/([^/]+)";
     private static final List<Pattern> PROJECT_RESOURCE_PATTERN = Lists
-            .newArrayList(Pattern.compile(ResourceStore.PROJECT_ROOT + "/([^/]+)$"));
+            .newArrayList(Pattern.compile(MetadataType.PROJECT + FOLDER_PATTERN + "$"));
 
     private static final List<Pattern> TABLE_RESOURCE_PATTERN = Lists.newArrayList(
-            Pattern.compile("/([^/]+)" + ResourceStore.TABLE_RESOURCE_ROOT + "/([^/]+)"),
-            Pattern.compile("/([^/]+)" + ResourceStore.TABLE_EXD_RESOURCE_ROOT + "/([^/]+)"),
-            Pattern.compile("/([^/]+)" + ResourceStore.EXTERNAL_FILTER_RESOURCE_ROOT + "/([^/]+)"));
+            Pattern.compile(FOLDER_PATTERN + MetadataType.TABLE_INFO + FOLDER_PATTERN),
+            Pattern.compile(FOLDER_PATTERN + MetadataType.TABLE_EXD + FOLDER_PATTERN));
 
     private static final List<Pattern> KAFKA_RESOURCE_PATTERN = Lists
-            .newArrayList(Pattern.compile("/([^/]+)" + ResourceStore.KAFKA_RESOURCE_ROOT + "/([^/]+)"));
+            .newArrayList(Pattern.compile(FOLDER_PATTERN + MetadataType.KAFKA_CONFIG + FOLDER_PATTERN));
 
     @Override
     public void onUpdate(KylinConfig config, RawResource rawResource) {

@@ -45,18 +45,21 @@ import scala.runtime.AbstractFunction1;
 
 public class ExactlyMatchTest extends NLocalWithSparkSessionTest {
 
+    @Override
     @Before
-    public void setup() throws Exception {
-        this.createTestMetadata("src/test/resources/ut_meta/agg_exact_match");
-
+    public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        setOverlay("src/test/resources/ut_meta/agg_exact_match");
+        super.setUp();
+
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Override

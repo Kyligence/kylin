@@ -79,7 +79,6 @@ import org.apache.kylin.rest.response.StorageVolumeInfoResponse;
 import org.apache.kylin.rest.response.UserProjectPermissionResponse;
 import org.apache.kylin.rest.security.AclPermissionEnum;
 import org.apache.kylin.rest.security.AclPermissionFactory;
-import org.apache.kylin.rest.service.EpochService;
 import org.apache.kylin.rest.service.ModelService;
 import org.apache.kylin.rest.service.ProjectService;
 import org.apache.kylin.rest.util.AclEvaluate;
@@ -123,10 +122,6 @@ public class NProjectController extends NBasicController {
     @Autowired
     @Qualifier("modelService")
     private ModelService modelService;
-
-    @Autowired
-    @Qualifier("epochService")
-    private EpochService epochService;
 
     @ApiOperation(value = "getProjects", tags = {
             "SM" }, notes = "Update Param: page_offset, page_size; Update Response: total_size")
@@ -183,12 +178,6 @@ public class NProjectController extends NBasicController {
         }
 
         ProjectInstance createdProj = projectService.createProject(projectDesc.getName(), projectDesc);
-        try {
-            epochService.updateEpoch(Collections.singletonList(projectDesc.getName()), false, false);
-        } catch (Exception e) {
-            logger.warn("Transfer update epoch {} request failed, wait for schedule worker to update epoch.",
-                    projectDesc.getName(), e);
-        }
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, createdProj, "");
     }
 

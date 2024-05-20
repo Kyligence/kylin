@@ -18,6 +18,8 @@
 
 package org.apache.kylin.common.util;
 
+import static org.apache.kylin.common.util.MetadataChecker.verifyNonMetadataFile;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -82,7 +84,7 @@ public class TempMetadataBuilder {
                         }
                         try {
                             val name = pathname.getCanonicalPath();
-                            return project == null || name.contains(project) || name.endsWith(".properties");
+                            return project == null || name.endsWith(".properties") || !verifyNonMetadataFile(name);
                         } catch (IOException ignore) {
                             // ignore it
                         }

@@ -18,16 +18,25 @@
 package org.apache.kylin.common.persistence.metadata;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.AuditLog;
+import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.UnitMessages;
+import org.apache.kylin.common.persistence.transaction.AbstractAuditLogReplayWorker;
+
+import lombok.val;
 
 public interface AuditLogStore extends Closeable {
 
     void save(UnitMessages unitMessages);
 
     List<AuditLog> fetch(long currentId, long size);
+
+    List<AuditLog> fetch(List<Long> auditIdList);
 
     long getMaxId();
 
@@ -39,15 +48,44 @@ public interface AuditLogStore extends Closeable {
 
     void rotate();
 
-    void catchupWithTimeout() throws Exception;
+    default void catchupWithTimeout() throws TimeoutException {
+        val store = ResourceStore.getKylinMetaStore(getConfig());
+        getReplayWorker().catchupFrom(store.getOffset());
+        getReplayWorker().waitForCatchup(getMaxId(), getConfig().getCatchUpTimeout());
+    }
 
-    void catchup();
+    default void catchupWithMaxTimeout() throws TimeoutException {
+        val store = ResourceStore.getKylinMetaStore(getConfig());
+        getReplayWorker().catchupFrom(store.getOffset());
+        getReplayWorker().waitForCatchup(getMaxId(), getConfig().getCatchUpMaxTimeout());
+    }
+
+    default void catchup() {
+        val store = ResourceStore.getKylinMetaStore(getConfig());
+        getReplayWorker().catchupFrom(store.getOffset());
+    }
 
     void setInstance(String instance);
 
     AuditLog get(String resPath, long mvcc);
 
-    void pause();
+    default void pause() {
+        getReplayWorker().close(true);
+    }
 
-    void reInit();
+    default void reInit() {
+        val store = ResourceStore.getKylinMetaStore(getConfig());
+        getReplayWorker().reStartSchedule(store.getOffset());
+    }
+
+    long count(long startId, long endId);
+
+    AbstractAuditLogReplayWorker getReplayWorker();
+
+    KylinConfig getConfig();
+
+    @Override
+    default void close() throws IOException {
+        getReplayWorker().close(false);
+    }
 }

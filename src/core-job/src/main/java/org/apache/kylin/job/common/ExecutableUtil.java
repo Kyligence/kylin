@@ -37,6 +37,7 @@ import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.cube.model.NDataSegmentManager;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.job.JobBucket;
@@ -89,8 +90,10 @@ public abstract class ExecutableUtil {
             throw new KylinException(JOB_CREATE_CHECK_MULTI_PARTITION_EMPTY);
         }
         Set<JobBucket> buckets = Sets.newHashSet();
-        NDataflowManager dfm = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), jobParam.getProject());
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        NDataflowManager dfm = NDataflowManager.getInstance(config, jobParam.getProject());
         NDataflow df = dfm.getDataflow(jobParam.getModel());
+        NDataSegmentManager segmentManager = config.getManager(jobParam.getProject(), NDataSegmentManager.class);
 
         for (String targetSegment : jobParam.getTargetSegments()) {
             NDataSegment segment = df.getSegment(targetSegment);
@@ -104,8 +107,7 @@ public abstract class ExecutableUtil {
             }
             jobParam.getProcessLayouts().forEach(layout -> partitions.forEach(partition -> buckets
                     .add(new JobBucket(segment.getId(), layout.getId(), bucketStart.incrementAndGet(), partition))));
-            dfm.updateDataflow(df.getId(),
-                    copyForWrite -> copyForWrite.getSegment(targetSegment).setMaxBucketId(bucketStart.get()));
+            segmentManager.update(segment.getUuid(), copyForWrite -> copyForWrite.setMaxBucketId(bucketStart.get()));
         }
         jobParam.setTargetBuckets(buckets);
     }

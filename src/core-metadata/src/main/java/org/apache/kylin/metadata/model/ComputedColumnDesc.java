@@ -37,6 +37,8 @@ import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.persistence.MetadataType;
+import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
@@ -54,9 +56,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode(callSuper = false)
 @Data
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
-public class ComputedColumnDesc implements Serializable {
+public class ComputedColumnDesc extends RootPersistentEntity implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(ComputedColumnDesc.class);
 
     private static final String CC_PREFIX = "_CC_";
@@ -80,9 +83,6 @@ public class ComputedColumnDesc implements Serializable {
     @JsonProperty
     @EqualsAndHashCode.Exclude
     private String comment;
-    @JsonProperty("rec_uuid")
-    @EqualsAndHashCode.Exclude
-    private String uuid;
 
     public void init(NDataModel model, String rootFactTableName) {
         Map<String, TableRef> aliasMap = model.getAliasMap();
@@ -129,6 +129,11 @@ public class ComputedColumnDesc implements Serializable {
                 }
             }
         }
+    }
+
+    @Override
+    public MetadataType resourceType() {
+        return MetadataType.COMPUTE_COLUMN;
     }
 
     @VisibleForTesting

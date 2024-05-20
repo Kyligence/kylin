@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -32,20 +33,13 @@ import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.SegmentRange;
-import org.junit.Before;
 import org.sparkproject.guava.collect.Sets;
 
 import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 
 public class NLocalWithSparkSessionTest extends NLocalWithSparkSessionTestBase {
 
-    protected IndexDataConstructor indexDataConstructor;
-
-    @Before
-    public void setUp() throws Exception {
-        super.setUp();
-        indexDataConstructor = new IndexDataConstructor(getProject());
-    }
+    protected IndexDataConstructor indexDataConstructor = new IndexDataConstructor(getProject());
 
     protected void fullBuild(String dfName) throws Exception {
         indexDataConstructor.buildDataflow(dfName);
@@ -96,10 +90,14 @@ public class NLocalWithSparkSessionTest extends NLocalWithSparkSessionTestBase {
     }
 
     public void mergeSegments(String dfName, Set<LayoutEntity> toBuildLayouts) throws Exception {
-        NDataflowManager dsMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
-        NDataflow df = dsMgr.getDataflow(dfName);
-        NDataSegment firstMergeSeg = dsMgr.mergeSegments(df, new SegmentRange.TimePartitionedSegmentRange(
-                SegmentRange.dateToLong("2011-01-01 00:00:00"), SegmentRange.dateToLong("2015-01-01 00:00:00")), false);
+        NDataSegment firstMergeSeg = UnitOfWork.doInTransactionWithRetry(() -> {
+            NDataflowManager dsMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
+            NDataflow df = dsMgr.getDataflow(dfName);
+            return dsMgr.mergeSegments(df,
+                    new SegmentRange.TimePartitionedSegmentRange(SegmentRange.dateToLong("2011-01-01 00:00:00"),
+                            SegmentRange.dateToLong("2015-01-01 00:00:00")),
+                    false);
+        }, getProject());
         NSparkMergingJob job = NSparkMergingJob.merge(firstMergeSeg, Sets.newLinkedHashSet(toBuildLayouts), "ADMIN",
                 RandomUtil.randomUUIDStr());
 

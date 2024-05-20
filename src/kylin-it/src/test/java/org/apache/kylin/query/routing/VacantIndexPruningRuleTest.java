@@ -48,13 +48,15 @@ import org.junit.jupiter.api.Test;
 @MetadataInfo
 class VacantIndexPruningRuleTest extends NLocalWithSparkSessionTest {
 
+    @Override
     @BeforeEach
     public void setUp() throws Exception {
         super.setUp();
     }
 
+    @Override
     @AfterEach
-    public void teardown() throws Exception {
+    public void tearDown() throws Exception {
         super.tearDown();
     }
 

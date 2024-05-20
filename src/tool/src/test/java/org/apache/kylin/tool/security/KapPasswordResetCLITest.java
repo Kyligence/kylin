@@ -109,7 +109,7 @@ public class KapPasswordResetCLITest extends LogOutputTestCase {
         val url = getTestConfig().getMetadataUrl();
         val jdbcTemplate = getJdbcTemplate();
         val all = jdbcTemplate.query("select * from " + url.getIdentifier() + "_audit_log", new AuditLogRowMapper());
-        Assert.assertTrue(all.stream().anyMatch(auditLog -> auditLog.getResPath().equals("/_global/user/ADMIN")));
+        Assert.assertTrue(all.stream().anyMatch(auditLog -> auditLog.getResPath().equals("USER_INFO/ADMIN")));
 
         System.setOut(System.out);
     }

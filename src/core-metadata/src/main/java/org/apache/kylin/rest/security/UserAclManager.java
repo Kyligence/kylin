@@ -18,8 +18,6 @@
 
 package org.apache.kylin.rest.security;
 
-import static org.apache.kylin.common.persistence.ResourceStore.ACL_GLOBAL_ROOT;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +26,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
@@ -58,7 +57,7 @@ public class UserAclManager {
         if (!UnitOfWork.isAlreadyInTransaction())
             logger.info("Initializing UserAclManager with KylinConfig Id: {}", System.identityHashCode(config));
         this.config = config;
-        this.crud = new CachedCrudAssist<UserAcl>(getStore(), ACL_GLOBAL_ROOT, "", UserAcl.class) {
+        this.crud = new CachedCrudAssist<UserAcl>(getStore(), MetadataType.USER_GLOBAL_ACL, null, UserAcl.class) {
             @Override
             protected UserAcl initEntityAfterReload(UserAcl userAcl, String resourceName) {
                 return userAcl;

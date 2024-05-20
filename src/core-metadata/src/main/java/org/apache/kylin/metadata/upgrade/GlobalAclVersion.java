@@ -17,9 +17,8 @@
  */
 package org.apache.kylin.metadata.upgrade;
 
-import org.apache.kylin.common.persistence.ResourceStore;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
-import org.apache.kylin.metadata.MetadataConstants;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -45,8 +44,8 @@ public class GlobalAclVersion extends RootPersistentEntity {
     }
 
     @Override
-    public String getResourcePath() {
-        return ResourceStore.UPGRADE + "/" + VERSION_KEY_NAME + MetadataConstants.FILE_SURFIX;
+    public MetadataType resourceType() {
+        return MetadataType.SYSTEM;
     }
 
 }

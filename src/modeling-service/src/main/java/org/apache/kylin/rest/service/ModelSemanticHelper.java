@@ -145,6 +145,7 @@ public class ModelSemanticHelper extends BasicService {
         NDataModel dataModel;
         try {
             dataModel = JsonUtil.deepCopy(modelRequest, NDataModel.class);
+            dataModel.setComputedColumnDescs(ComputedColumnUtil.deepCopy(modelRequest.getComputedColumnDescs()));
         } catch (IOException e) {
             ThreadUtil.warnKylinStackTrace("Parse json failed...\n");
             throw new KylinException(CommonErrorCode.FAILED_PARSE_JSON, e);
@@ -1127,10 +1128,13 @@ public class ModelSemanticHelper extends BasicService {
         });
 
         // check if CC-used column exists in tableDesc. If not, remove computed column desc
+        model.bindComputedColumns();
         List<ComputedColumnDesc> computedColumnDescs = model.getComputedColumnDescs();
         List<ComputedColumnDesc> validCCDescs = discardInvalidComputedColumnsForBrokenModel(aliasDotColSet,
                 computedColumnDescs);
         model.setComputedColumnDescs(validCCDescs);
+        model.setComputedColumnUuids(
+                validCCDescs.stream().map(ComputedColumnDesc::getUuid).collect(Collectors.toList()));
 
         //check all named columns, rule out invalid model columns and CCs
         List<NDataModel.NamedColumn> allNamedColumns = model.getAllNamedColumns();

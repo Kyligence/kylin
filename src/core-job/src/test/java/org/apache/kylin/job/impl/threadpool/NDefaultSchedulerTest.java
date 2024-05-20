@@ -79,6 +79,7 @@ import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -104,11 +105,12 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
     }
 
     @Override
-    public void setup() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         overwriteSystemProp("kylin.job.auto-set-concurrent-jobs", "true");
         overwriteSystemProp("kylin.env", "UT");
         overwriteSystemProp("kylin.storage.check-quota-enabled", "true");
-        super.setup();
+        super.setUp();
     }
 
     public ExpectedException thrown = ExpectedException.none();
@@ -778,7 +780,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
     }
 
     private void changeSchedulerInterval(int second) {
-        JobContextUtil.cleanUp();
+        JobContextUtil.stopScheduler();
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", String.valueOf(second));
         startScheduler();
     }
@@ -914,30 +916,6 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
         val currMem = ResourceAcquirer.currentAvailableMem();
         val dfMgr = NDataflowManager.getInstance(getTestConfig(), project);
         val job = testDataflowStatusWhenJobError(ManagementType.MODEL_BASED, JobTypeEnum.INC_BUILD);
-
-        waitForJobFinish(job.getId());
-        assertMemoryRestore(currMem);
-        val updateDf = dfMgr.getDataflow(job.getTargetSubject());
-        Assert.assertEquals(RealizationStatusEnum.ONLINE, updateDf.getStatus());
-    }
-
-    @Test
-    public void testIncBuildJobError_TableOrientedDataFlowLagBehind() {
-        val currMem = ResourceAcquirer.currentAvailableMem();
-        val dfMgr = NDataflowManager.getInstance(getTestConfig(), project);
-        val job = testDataflowStatusWhenJobError(ManagementType.TABLE_ORIENTED, JobTypeEnum.INC_BUILD);
-
-        waitForJobFinish(job.getId());
-        assertMemoryRestore(currMem);
-        val updateDf = dfMgr.getDataflow(job.getTargetSubject());
-        Assert.assertEquals(RealizationStatusEnum.LAG_BEHIND, updateDf.getStatus());
-    }
-
-    @Test
-    public void testIndexBuildJobError_TableOrientedDataFlowOnline() {
-        val currMem = ResourceAcquirer.currentAvailableMem();
-        val dfMgr = NDataflowManager.getInstance(getTestConfig(), project);
-        val job = testDataflowStatusWhenJobError(ManagementType.TABLE_ORIENTED, JobTypeEnum.INDEX_BUILD);
 
         waitForJobFinish(job.getId());
         assertMemoryRestore(currMem);
@@ -1295,7 +1273,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
     @Test
     public void testConcurrentJobLimit() {
         String project = "heterogeneous_segment";
-        String modelId = "747f864b-9721-4b97-acde-0aa8e8656cba";
+        String modelId = "24b720ff-8701-d141-3c03-3f60377418a5";
         val origiExecutableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val executableManager = Mockito.spy(origiExecutableManager);
         executableManager.deleteAllJob();
@@ -1307,7 +1285,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
 
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         config.setProperty("kylin.job.max-concurrent-jobs", "1");
-        JobContextUtil.cleanUp();
+        JobContextUtil.stopScheduler();
         JobContextUtil.getJobContext(config);
 
         if (!JobContextUtil.hasStarted()) {
@@ -1335,7 +1313,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
         await().atMost(1, TimeUnit.SECONDS).until(() -> memory == ResourceAcquirer.availablePermits());
 
         config.setProperty("kylin.job.node-max-concurrent-jobs", "0");
-        JobContextUtil.cleanUp();
+        JobContextUtil.stopScheduler();
         JobContext jobContext = JobContextUtil.getJobContext(config);
         val df2 = NDataflowManager.getInstance(getTestConfig(), project).getDataflow(modelId);
         val job3 = generateJob(df2, project);
@@ -1352,7 +1330,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
         Assert.assertEquals(ExecutableState.SUCCEED, executableManager.getOutput(job3.getId()).getState());
         Assert.assertEquals(ExecutableState.SUCCEED, executableManager.getOutput(job4.getId()).getState());
 
-        JobContextUtil.cleanUp();
+        JobContextUtil.stopScheduler();
         await().atMost(1, TimeUnit.SECONDS).until(() -> memory == ResourceAcquirer.availablePermits());
     }
 
@@ -1360,7 +1338,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
     @Repeat(3)
     public void testConcurrentJobWithPriority() {
         String project = "heterogeneous_segment";
-        String modelId = "747f864b-9721-4b97-acde-0aa8e8656cba";
+        String modelId = "24b720ff-8701-d141-3c03-3f60377418a5";
         val origiExecutableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val executableManager = Mockito.spy(origiExecutableManager);
         Mockito.doAnswer(invocation -> {
@@ -1372,7 +1350,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         config.setProperty("kylin.job.max-concurrent-jobs", "1");
         // start schedule
-        JobContextUtil.cleanUp();
+        JobContextUtil.stopScheduler();
         ReflectionTestUtils.invokeMethod(JobContextUtil.class, "initMappers", config);
         val df = NDataflowManager.getInstance(getTestConfig(), project).getDataflow(modelId);
         val job0 = generateJob(df, project, 4);
@@ -1405,7 +1383,7 @@ public class NDefaultSchedulerTest extends BaseSchedulerTest {
         waitForJobByStatus(job0.getId(), 60000, ExecutableState.SUCCEED, executableManager);
         runningExecutables = executableManager.getRunningExecutables(project, modelId);
         Assert.assertEquals(0, runningExecutables.size());
-        JobContextUtil.cleanUp();
+        JobContextUtil.stopScheduler();
     }
 
     private DefaultExecutable generateJob(NDataflow df, String project, int priority) {

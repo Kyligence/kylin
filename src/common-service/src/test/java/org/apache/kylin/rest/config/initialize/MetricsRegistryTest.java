@@ -99,7 +99,8 @@ public class MetricsRegistryTest extends NLocalFileMetadataTestCase {
     public ExpectedException thrown = ExpectedException.none();
 
     @Before
-    public void setup() throws IOException {
+    public void setUp() throws IOException {
+        JobContextUtil.cleanUp();
         PowerMockito.mockStatic(UserGroupInformation.class);
         UserGroupInformation userGroupInformation = Mockito.mock(UserGroupInformation.class);
         PowerMockito.when(UserGroupInformation.getCurrentUser()).thenReturn(userGroupInformation);
@@ -118,7 +119,6 @@ public class MetricsRegistryTest extends NLocalFileMetadataTestCase {
         PowerMockito.mockStatic(LoadCounter.class);
         PowerMockito.mockStatic(ExecutableManager.class);
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobInfoDao(getTestConfig());
     }
 
@@ -156,6 +156,7 @@ public class MetricsRegistryTest extends NLocalFileMetadataTestCase {
         val dataSource = BasicDataSourceFactory.createDataSource(props);
         PowerMockito.mockStatic(JdbcDataSource.class);
         PowerMockito.when(JdbcDataSource.getDataSources()).thenReturn(Lists.newArrayList(dataSource));
+        PowerMockito.when(JdbcDataSource.getDataSource(Mockito.any())).thenCallRealMethod();
         PowerMockito.when(SpringContext.getBean(MeterRegistry.class)).thenReturn(meterRegistry);
         LoadCounter loadCounter = Mockito.mock(LoadCounter.class);
         PowerMockito.when(LoadCounter.getInstance()).thenReturn(loadCounter);

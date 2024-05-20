@@ -35,9 +35,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.persistence.transaction.EpochCheckBroadcastNotifier;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
@@ -55,7 +53,6 @@ import org.apache.kylin.rest.response.MaintenanceModeResponse;
 import org.apache.kylin.rest.response.ServerExtInfoResponse;
 import org.apache.kylin.rest.response.ServerInfoResponse;
 import org.apache.kylin.rest.response.ServersResponse;
-import org.apache.kylin.rest.service.MaintenanceModeService;
 import org.apache.kylin.rest.service.MetadataBackupService;
 import org.apache.kylin.rest.service.OpsService;
 import org.apache.kylin.rest.service.ScheduleService;
@@ -82,14 +79,12 @@ import io.swagger.annotations.ApiOperation;
 @Controller
 @RequestMapping(value = "/api/system", produces = { HTTP_VND_APACHE_KYLIN_JSON, HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
 public class OpsController extends NBasicController {
+    
+    private static String DEPRECATED_MAINTENANCE_MODE = "Maintenance mode has been deprecated.";
 
     @Autowired
     @Qualifier("systemService")
     private SystemService systemService;
-
-    @Autowired
-    @Qualifier("maintenanceModeService")
-    private MaintenanceModeService maintenanceModeService;
 
     @Autowired
     private ClusterManager clusterManager;
@@ -242,24 +237,22 @@ public class OpsController extends NBasicController {
     @PostMapping(value = "/maintenance_mode", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
     public EnvelopeResponse<String> setMaintenanceMode(@RequestBody MaintenanceModeRequest maintenanceModeRequest) {
-        maintenanceModeService.setMaintenanceMode(maintenanceModeRequest.getReason());
-        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
+        return new EnvelopeResponse<>(CODE_SUCCESS, "", DEPRECATED_MAINTENANCE_MODE);
     }
 
     @ApiOperation(value = "exitMaintenance", tags = { "DW" })
     @DeleteMapping(value = "/maintenance_mode", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
     public EnvelopeResponse<String> unsetReadMode(@RequestParam(value = "reason") String reason) {
-        maintenanceModeService.unsetMaintenanceMode(reason);
-        EventBusFactory.getInstance().postAsync(new EpochCheckBroadcastNotifier());
-        return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
+        return new EnvelopeResponse<>(CODE_SUCCESS, "", DEPRECATED_MAINTENANCE_MODE);
     }
 
     @ApiOperation(value = "getMaintenance", tags = { "DW" })
     @GetMapping(value = "/maintenance_mode", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
     public EnvelopeResponse<MaintenanceModeResponse> getMaintenanceMode() {
-        return new EnvelopeResponse<>(CODE_SUCCESS, maintenanceModeService.getMaintenanceMode(), "");
+        return new EnvelopeResponse<>(CODE_SUCCESS, new MaintenanceModeResponse(false, DEPRECATED_MAINTENANCE_MODE),
+                DEPRECATED_MAINTENANCE_MODE);
     }
 
     @ApiOperation(value = "servers", tags = { "DW" })
@@ -269,7 +262,7 @@ public class OpsController extends NBasicController {
             @RequestParam(value = "ext", required = false, defaultValue = "false") boolean ext) {
         ServersResponse response = new ServersResponse();
         List<ServerInfoResponse> servers = clusterManager.getServers();
-        response.setStatus(maintenanceModeService.getMaintenanceMode());
+        response.setStatus(new MaintenanceModeResponse(false, DEPRECATED_MAINTENANCE_MODE));
         if (ext) {
             response.setServers(servers.stream().map(
                     server -> new ServerExtInfoResponse().setServer(server).setSecretName(encodeHost(server.getHost())))

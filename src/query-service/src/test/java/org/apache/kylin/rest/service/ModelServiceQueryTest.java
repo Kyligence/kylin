@@ -18,11 +18,6 @@
 
 package org.apache.kylin.rest.service;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -44,7 +39,6 @@ import org.apache.kylin.rest.response.DataResult;
 import org.apache.kylin.rest.response.FusionModelResponse;
 import org.apache.kylin.rest.response.NDataModelLiteResponse;
 import org.apache.kylin.rest.response.NDataModelResponse;
-import org.apache.kylin.rest.response.RelatedModelResponse;
 import org.apache.kylin.rest.service.params.ModelQueryParams;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.AclPermissionUtil;
@@ -103,8 +97,8 @@ public class ModelServiceQueryTest extends SourceTestCase {
     }
 
     @Before
-    public void setup() {
-        super.setup();
+    public void setUp() {
+        super.setUp();
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         overwriteSystemProp("kylin.model.multi-partition-enabled", "true");
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", aclUtil);
@@ -328,21 +322,5 @@ public class ModelServiceQueryTest extends SourceTestCase {
         Assert.assertEquals(12010, model3.getOldParams().getInputRecordCnt());
         Assert.assertEquals(1505415, model3.getOldParams().getInputRecordSizeBytes());
         Assert.assertEquals(396, model3.getOldParams().getSizeKB());
-    }
-
-    @Test
-    public void testGetRelatedModels() {
-        List<RelatedModelResponse> models = modelService.getRelateModels("default", "EDW.TEST_CAL_DT", "");
-        Assert.assertEquals(0, models.size());
-        List<RelatedModelResponse> models2 = modelService.getRelateModels("default", "DEFAULT.TEST_KYLIN_FACT",
-                "nmodel_basic_inner");
-        Assert.assertEquals(1, models2.size());
-        doReturn(new ArrayList<>()).when(modelService).addOldParams(anyString(), any());
-
-        ModelQueryParams request = new ModelQueryParams("741ca86a-1f13-46da-a59f-95fb68615e3a", null, true, "default",
-                "ADMIN", Lists.newArrayList(), "DEFAULT.TEST_KYLIN_FACT", 0, 8, "last_modify", true, null, null, null,
-                null, true, false);
-        val models3 = modelService.getModels(request);
-        Assert.assertEquals(1, models3.getTotalSize());
     }
 }

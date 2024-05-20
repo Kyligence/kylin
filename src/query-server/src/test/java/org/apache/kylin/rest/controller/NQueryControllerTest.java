@@ -41,6 +41,7 @@ import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryHistoryRequest;
+import org.apache.kylin.metadata.query.QueryRecord;
 import org.apache.kylin.rest.cluster.ClusterManager;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.model.Query;
@@ -282,7 +283,7 @@ public class NQueryControllerTest extends NLocalFileMetadataTestCase {
         Mockito.verify(nQueryController).getSavedQueries("default", 2, 3);
     }
 
-    private QueryService.QueryRecord mockSavedQueries() {
+    private QueryRecord mockSavedQueries() {
         final List<Query> queries = new ArrayList<>();
         queries.add(new Query("1", PROJECT, "", ""));
         queries.add(new Query("2", PROJECT, "", ""));
@@ -295,7 +296,7 @@ public class NQueryControllerTest extends NLocalFileMetadataTestCase {
         queries.add(new Query("9", PROJECT, "", ""));
         queries.add(new Query("10", PROJECT, "", ""));
 
-        return new QueryService.QueryRecord(queries);
+        return new QueryRecord(queries, "ADMIN");
     }
 
     @Test

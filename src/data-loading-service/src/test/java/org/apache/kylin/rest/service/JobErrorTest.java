@@ -103,14 +103,14 @@ public class JobErrorTest extends NLocalFileMetadataTestCase {
     public ExpectedException thrown = ExpectedException.none();
 
     @Before
-    public void setup() {
+    public void setUp() {
+        JobContextUtil.cleanUp();
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         createTestMetadata();
         SecurityContextHolder.getContext()
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", aclUtil);
 
-        JobContextUtil.cleanUp();
         JobInfoDao jobInfoDao = JobContextUtil.getJobInfoDao(getTestConfig());
         ReflectionTestUtils.setField(jobInfoService, "jobInfoDao", jobInfoDao);
         ReflectionTestUtils.setField(jobInfoService, "aclEvaluate", aclEvaluate);

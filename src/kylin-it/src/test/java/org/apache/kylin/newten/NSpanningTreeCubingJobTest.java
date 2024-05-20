@@ -37,16 +37,18 @@ import org.junit.Test;
 
 public class NSpanningTreeCubingJobTest extends NLocalWithSparkSessionTest {
 
+    @Override
     @Before
-    public void setup() {
+    public void setUp() {
         this.createTestMetadata("src/test/resources/ut_meta/spanning_tree_build");
         ss.sparkContext().setLogLevel("ERROR");
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         overwriteSystemProp("kylin.engine.spark.cache-threshold", "2");
     }
 
+    @Override
     @After
-    public void after() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

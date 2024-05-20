@@ -37,6 +37,7 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.ColExcludedChecker;
 import org.apache.kylin.metadata.model.ColumnDesc;
+import org.apache.kylin.metadata.model.ComputedColumnDesc;
 import org.apache.kylin.metadata.model.JoinTableDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -54,6 +55,7 @@ import org.apache.kylin.rest.util.SCD2SimplificationConvertUtil;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
@@ -127,6 +129,11 @@ public class NDataModelResponse extends NDataModel {
     @JsonProperty("model_update_enabled")
     private boolean modelUpdateEnabled = true;
 
+    @EqualsAndHashCode.Include
+    @JsonProperty("computed_columns")
+    @JsonInclude(JsonInclude.Include.NON_NULL) // output to frontend
+    protected List<ComputedColumnDesc> computedColumns = Lists.newArrayList();
+
     private long lastModify;
 
     @JsonIgnore
@@ -140,11 +147,6 @@ public class NDataModelResponse extends NDataModel {
         super();
     }
 
-    @Override
-    public KylinConfig getConfig() {
-        return super.getConfig() == null ? KylinConfig.getInstanceFromEnv() : super.getConfig();
-    }
-
     public NDataModelResponse(NDataModel dataModel) {
         super(dataModel);
         this.setConfig(dataModel.getConfig());
@@ -154,6 +156,7 @@ public class NDataModelResponse extends NDataModel {
         this.lastModify = lastModified;
         this.setSimplifiedJoinTableDescs(
                 SCD2SimplificationConvertUtil.simplifiedJoinTablesConvert(dataModel.getJoinTables()));
+        this.setComputedColumns(dataModel.getComputedColumnDescs());
 
         // filter out and hide internal measures from users
         this.setAllMeasures(getAllMeasures().stream().filter(m -> m.getType() != MeasureType.INTERNAL)

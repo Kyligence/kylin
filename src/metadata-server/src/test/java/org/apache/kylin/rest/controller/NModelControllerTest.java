@@ -55,7 +55,6 @@ import org.apache.kylin.rest.request.ModelUpdateRequest;
 import org.apache.kylin.rest.request.ModelValidationRequest;
 import org.apache.kylin.rest.request.MultiPartitionMappingRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
-import org.apache.kylin.rest.request.UnlinkModelRequest;
 import org.apache.kylin.rest.request.UpdateMultiPartitionValueRequest;
 import org.apache.kylin.rest.response.IndicesResponse;
 import org.apache.kylin.rest.response.ModelConfigResponse;
@@ -247,20 +246,6 @@ public class NModelControllerTest extends NLocalFileMetadataTestCase {
                 "", 0, 10, "last_modify", true, null, Arrays.asList(ModelAttributeEnum.BATCH,
                         ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID),
                 null, null, true, false);
-    }
-
-    @Test
-    public void testGetRelatedModels() throws Exception {
-
-        when(modelService.getRelateModels("default", "TEST_KYLIN_FACT", "model1")).thenReturn(mockRelatedModels());
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/models").contentType(MediaType.APPLICATION_JSON)
-                .param("offset", "0").param("project", "default").param("model_name", "model1").param("limit", "10")
-                .param("exact", "true").param("owner", "ADMIN").param("status", "ONLINE").param("sortBy", "last_modify")
-                .param("reverse", "true").param("table", "TEST_KYLIN_FACT")
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
-        Mockito.verify(nModelController).getModels(null, "model1", true, "default", "ADMIN", Arrays.asList("ONLINE"),
-                "TEST_KYLIN_FACT", 0, 10, "last_modify", true, null, null, null, null, true, false);
     }
 
     @Test
@@ -589,20 +574,6 @@ public class NModelControllerTest extends NLocalFileMetadataTestCase {
         PartitionDesc partitionDesc = new PartitionDesc();
         partitionDesc.setPartitionDateColumn(column);
         return partitionDesc;
-    }
-
-    @Test
-    public void testUnlinkModel() throws Exception {
-        UnlinkModelRequest request = new UnlinkModelRequest();
-        request.setProject("default");
-        Mockito.doNothing().when(modelService).unlinkModel("default", "nmodel_basci");
-        mockMvc.perform(MockMvcRequestBuilders
-                .put("/api/models/{model}/management_type", "89af4ee2-2cdb-4b07-b39e-4c29856309aa")
-                .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request))
-                .accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-        Mockito.verify(nModelController).unlinkModel(eq("89af4ee2-2cdb-4b07-b39e-4c29856309aa"),
-                Mockito.any(UnlinkModelRequest.class));
     }
 
     @Test

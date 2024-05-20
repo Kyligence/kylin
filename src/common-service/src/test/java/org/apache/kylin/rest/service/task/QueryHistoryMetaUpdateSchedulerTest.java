@@ -105,7 +105,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
                 .thenReturn(PowerMockito.mock(PermissionFactory.class));
         PowerMockito.when(SpringContext.getBean(PermissionGrantingStrategy.class))
                 .thenReturn(PowerMockito.mock(PermissionGrantingStrategy.class));
-        qhMetaUpdateScheduler = Mockito.spy(new QueryHistoryMetaUpdateScheduler(PROJECT));
+        qhMetaUpdateScheduler = Mockito.spy(new QueryHistoryMetaUpdateScheduler());
         ReflectionTestUtils.setField(qhMetaUpdateScheduler, "userGroupService", userGroupService);
         jdbcTemplate = JdbcUtil.getJdbcTemplate(getTestConfig());
     }
@@ -139,7 +139,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
 
         // run update
         QueryHistoryMetaUpdateScheduler.QueryHistoryMetaUpdateRunner queryHistoryAccelerateRunner = //
-                qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
+                qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner(PROJECT);
         queryHistoryAccelerateRunner.run();
 
         // after update dataflow usage, layout usage and last query time
@@ -173,7 +173,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         Assert.assertNull(dataflow.getLayoutHitCount().get(1000001L));
         Assert.assertEquals(0L, dataflow.getLastQueryTime());
 
-        val queryHistoryAccelerateRunner = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
+        val queryHistoryAccelerateRunner = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner(PROJECT);
         Class<? extends QueryHistoryMetaUpdateRunner> clazz = queryHistoryAccelerateRunner.getClass();
         Method method = clazz.getDeclaredMethod("updateLastQueryTime", Map.class, String.class);
         method.setAccessible(true);
@@ -208,7 +208,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         Assert.assertEquals(0, idOffsetManager.get(META).getOffset());
 
         // run update
-        QueryHistoryMetaUpdateRunner qhMetaUpdater = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
+        QueryHistoryMetaUpdateRunner qhMetaUpdater = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner(PROJECT);
         qhMetaUpdater.run();
 
         // after update dataflow usage, layout usage and last query time
@@ -226,7 +226,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
 
     @Test
     public void testQueryHitSnapshotCount() {
-        QueryHistoryMetaUpdateRunner qhAccUpdater = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
+        QueryHistoryMetaUpdateRunner qhAccUpdater = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner(PROJECT);
         TableExtDesc tableExtDesc = new TableExtDesc();
         tableExtDesc.setSnapshotHitCount(10);
         tableExtDesc.setIdentity("123");
@@ -244,7 +244,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         getTestConfig().setProperty("kylin.query.query-history-stat-interval", "0m");
         // run update
         QueryHistoryMetaUpdateScheduler.QueryHistoryMetaUpdateRunner queryHistoryAccelerateRunner = //
-                qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner();
+                qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner(PROJECT);
         queryHistoryAccelerateRunner.run();
 
         QueryHistoryIdOffsetManager idOffsetManager = QueryHistoryIdOffsetManager.getInstance(PROJECT);
@@ -256,9 +256,9 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
 
     @Test
     public void testUpdateStatMeta() {
-        QueryHistoryMetaUpdateScheduler taskScheduler = new QueryHistoryMetaUpdateScheduler("streaming_test");
-        QueryHistoryMetaUpdateRunner metaUpdateRunner = taskScheduler.new QueryHistoryMetaUpdateRunner();
-        NDataflowManager manager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), "streaming_test");
+        String proj = "streaming_test";
+        QueryHistoryMetaUpdateRunner metaUpdateRunner = qhMetaUpdateScheduler.new QueryHistoryMetaUpdateRunner(proj);
+        NDataflowManager manager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), proj);
         {
             var dataflow = manager.getDataflow("334671fd-e383-4fc9-b5c2-94fce832f77a");
             Assert.assertTrue(dataflow.getLayoutHitCount().isEmpty());
@@ -273,6 +273,8 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
             Assert.assertFalse(batchDataflow.getLayoutHitCount().containsKey(Long.parseLong(LAYOUT4)));
             Assert.assertFalse(streamingDataflow.getLayoutHitCount().containsKey(Long.parseLong(LAYOUT3)));
 
+            resetOffset(proj);
+
             ReflectionTestUtils.invokeMethod(metaUpdateRunner, "updateStatMeta", fusionModelQueryHistory());
             batchDataflow = manager.getDataflow("334671fd-e383-4fc9-b5c2-94fce832f77a");
             streamingDataflow = manager.getDataflow("b05034a8-c037-416b-aa26-9e6b4a41ee40");
@@ -280,13 +282,23 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
             Assert.assertEquals(1, countDateFrequency(batchDataflow, LAYOUT4));
             Assert.assertEquals(1, countDateFrequency(streamingDataflow, LAYOUT3));
         }
+        resetOffset(proj);
         {
             var streamingDataflow = manager.getDataflow("b05034a8-c037-416b-aa26-9e6b4a41ee40");
             Assert.assertEquals(1, countDateFrequency(streamingDataflow, LAYOUT3));
+            
             ReflectionTestUtils.invokeMethod(metaUpdateRunner, "updateStatMeta", streamingModelQueryHistory());
             streamingDataflow = manager.getDataflow("b05034a8-c037-416b-aa26-9e6b4a41ee40");
             Assert.assertEquals(2, countDateFrequency(streamingDataflow, LAYOUT3));
         }
+    }
+
+    private void resetOffset(String proj) {
+        QueryHistoryIdOffsetManager offsetManager = QueryHistoryIdOffsetManager.getInstance(proj);
+        JdbcUtil.withTxAndRetry(offsetManager.getTransactionManager(), () -> {
+            offsetManager.updateOffset(META, copyForWrite -> copyForWrite.setOffset(0));
+            return null;
+        });
     }
 
     private int countDateFrequency(NDataflow dataflow, String layout) {

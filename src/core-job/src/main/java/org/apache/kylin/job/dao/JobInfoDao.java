@@ -190,6 +190,8 @@ public class JobInfoDao {
                     subject = nDataModel.getAlias();
                 }
             }
+        } else if (executablePO.getJobType().getCategory().equals(JobTypeEnum.Category.CRON)) {
+            subject = executablePO.getJobType().name();
         }
 
         jobInfo.setSubject(subject);

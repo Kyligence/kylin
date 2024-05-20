@@ -37,16 +37,18 @@ import lombok.val;
 @RunWith(TimeZoneTestRunner.class)
 public class NPartitionColumnTest extends NLocalWithSparkSessionTest {
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         this.createTestMetadata("src/test/resources/ut_meta/partition_col");
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }

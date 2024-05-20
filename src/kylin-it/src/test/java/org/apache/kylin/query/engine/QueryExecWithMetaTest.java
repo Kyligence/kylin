@@ -40,16 +40,18 @@ public class QueryExecWithMetaTest extends NLocalWithSparkSessionTest {
     String project = "min_max";
     QueryExec queryExec;
 
+    @Override
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata("src/test/resources/ut_meta/query_min_max_with_meta");
         overwriteSystemProp("kylin.query.using-metadata-answer-minmax-of-dimension", "true");
         queryExec = new QueryExec(project, getTestConfig());
 
     }
 
+    @Override
     @After
-    public void teardown() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

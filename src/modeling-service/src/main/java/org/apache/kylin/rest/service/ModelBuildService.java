@@ -85,7 +85,6 @@ import org.apache.kylin.rest.request.SegmentTimeRequest;
 import org.apache.kylin.rest.response.BuildIndexResponse;
 import org.apache.kylin.rest.response.JobInfoResponse;
 import org.apache.kylin.rest.response.JobInfoResponseWithFailure;
-import org.apache.kylin.rest.response.RefreshAffectedSegmentsResponse;
 import org.apache.kylin.rest.service.params.BasicSegmentParams;
 import org.apache.kylin.rest.service.params.FullBuildSegmentParams;
 import org.apache.kylin.rest.service.params.IncrementBuildSegmentParams;
@@ -106,9 +105,6 @@ public class ModelBuildService extends AbstractModelService implements ModelBuil
 
     @Autowired
     private ModelService modelService;
-
-    @Autowired
-    private SegmentHelper segmentHelper;
 
     private static final Logger logger = LoggerFactory.getLogger(ModelBuildService.class);
 
@@ -631,21 +627,6 @@ public class ModelBuildService extends AbstractModelService implements ModelBuil
             return config.getMaxConcurrentJobLimit();
         }
         return prjInstance.getConfig().getMaxConcurrentJobLimit();
-    }
-
-    @Override
-    @Transaction(project = 0)
-    public void refreshSegments(String project, String table, String refreshStart, String refreshEnd,
-            String affectedStart, String affectedEnd) throws IOException {
-        aclEvaluate.checkProjectOperationPermission(project);
-        RefreshAffectedSegmentsResponse response = modelService.getRefreshAffectedSegmentsResponse(project, table,
-                refreshStart, refreshEnd);
-        if (!response.getAffectedStart().equals(affectedStart) || !response.getAffectedEnd().equals(affectedEnd)) {
-            throw new KylinException(PERMISSION_DENIED, MsgPicker.getMsg().getSegmentCanNotRefreshBySegmentChange());
-        }
-        TableDesc tableDesc = getManager(NTableMetadataManager.class, project).getTableDesc(table);
-        SegmentRange segmentRange = SourceFactory.getSource(tableDesc).getSegmentRange(refreshStart, refreshEnd);
-        segmentHelper.refreshRelatedModelSegments(project, table, segmentRange);
     }
 
     public JobInfoResponse refreshSegmentPartition(PartitionsRefreshRequest param, String modelId) {

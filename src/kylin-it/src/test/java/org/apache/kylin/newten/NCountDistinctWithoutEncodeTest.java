@@ -38,18 +38,21 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class NCountDistinctWithoutEncodeTest extends NLocalWithSparkSessionTest {
+    @Override
     @Before
-    public void setup() throws Exception {
-        this.createTestMetadata("src/test/resources/ut_meta/count_distinct_no_encode");
-
+    public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        setOverlay("src/test/resources/ut_meta/count_distinct_no_encode");
+        super.setUp();
+
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Override

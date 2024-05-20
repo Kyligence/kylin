@@ -46,19 +46,22 @@ import com.esotericsoftware.kryo.io.KryoDataInput;
 
 public class NOptIntersectCountTest extends NLocalWithSparkSessionTest {
 
+    @Override
     @Before
-    public void setup() throws Exception {
-        overwriteSystemProp("kylin.engine.persist-flattable-enabled", "false");
-        this.createTestMetadata("src/test/resources/ut_meta/opt_intersect_count");
-
+    public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        overwriteSystemProp("kylin.engine.persist-flattable-enabled", "false");
+        setOverlay("src/test/resources/ut_meta/opt_intersect_count");
+        super.setUp();
+
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Override

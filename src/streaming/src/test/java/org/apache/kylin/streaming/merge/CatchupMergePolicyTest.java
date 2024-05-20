@@ -20,6 +20,7 @@ package org.apache.kylin.streaming.merge;
 import java.io.IOException;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.metadata.cube.model.NDataSegmentManager;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -130,12 +131,13 @@ public class CatchupMergePolicyTest extends StreamingTestCase {
         KylinConfig testConfig = getTestConfig();
         val copy = createIndexPlan(testConfig, PROJECT, MODEL_ID, MODEL_ALIAS);
         NDataflowManager mgr = NDataflowManager.getInstance(testConfig, PROJECT);
+        NDataSegmentManager segManager = testConfig.getManager(PROJECT, NDataSegmentManager.class);
         NDataflow df = mgr.createDataflow(copy, "test_owner");
 
         df = createSegments(mgr, df, 30, null, copyForWrite -> {
             for (int i = 0; i < 5; i++) {
-                val seg = copyForWrite.getSegments().get(i);
-                seg.getAdditionalInfo().put("file_layer", "1");
+                val segId = copyForWrite.getSegments().get(i).getUuid();
+                segManager.update(segId, seg -> seg.getAdditionalInfo().put("file_layer", "1"));
             }
         });
         df = setSegmentStorageSize(mgr, df, 1024L);

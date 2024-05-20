@@ -56,7 +56,7 @@ public class JobResourceServiceTest extends NLocalFileMetadataTestCase {
     private JobInfoDao jobInfoDao;
 
     @Before
-    public void setup() {
+    public void setUp() {
         JobContextUtil.cleanUp();
         MockitoAnnotations.initMocks(this);
         ReflectionTestUtils.setField(jobResourceService, "jobInfoService", jobInfoService);

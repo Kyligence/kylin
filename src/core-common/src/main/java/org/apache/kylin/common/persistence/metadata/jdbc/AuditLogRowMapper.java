@@ -20,11 +20,11 @@ package org.apache.kylin.common.persistence.metadata.jdbc;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.apache.kylin.common.util.CompressionUtils;
 import org.apache.kylin.common.persistence.AuditLog;
+import org.apache.kylin.common.util.CompressionUtils;
+import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.springframework.jdbc.core.RowMapper;
 
-import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import lombok.SneakyThrows;
 import lombok.val;
 
@@ -46,8 +46,10 @@ public class AuditLogRowMapper implements RowMapper<AuditLog> {
         val unitId = rs.getString(6);
         val operator = rs.getString(7);
         val instance = rs.getString(8);
+        val project = rs.getString(9);
+        val diffFlag = rs.getBoolean(10);
 
         return new AuditLog(id, resPath, content == null ? null : ByteSource.wrap(content), ts, mvcc, unitId, operator,
-                instance);
+                instance, project, diffFlag);
     }
 }

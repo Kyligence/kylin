@@ -33,19 +33,21 @@ import org.junit.Test;
 
 public class CharNColumnTest extends NLocalWithSparkSessionTest {
 
+    @Override
     @Before
-    public void setup() throws Exception {
-        overwriteSystemProp("kylin.engine.persist-flattable-enabled", "false");
-        this.createTestMetadata("src/test/resources/ut_meta/test_char_n_column");
-
+    public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        setOverlay("src/test/resources/ut_meta/test_char_n_column");
+        super.setUp();
+        overwriteSystemProp("kylin.engine.persist-flattable-enabled", "false");
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Override

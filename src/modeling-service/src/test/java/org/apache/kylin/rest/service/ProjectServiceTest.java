@@ -141,7 +141,8 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
     private JdbcRawRecStore jdbcRawRecStore;
 
     @Before
-    public void setup() {
+    public void setUp() {
+        JobContextUtil.cleanUp();
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         overwriteSystemProp("kylin.cube.low-frequency-threshold", "5");
         createTestMetadata();
@@ -165,7 +166,6 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
             log.error("initialize rec store failed.");
         }
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobInfoDao(getTestConfig());
     }
 
@@ -895,7 +895,10 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
             Assert.assertNotNull(projectInstance2);
             Assert.assertTrue(projectInstance2.getConfig().exposeComputedColumn());
             Assert.assertTrue(projectInstance2.isSemiAutoMode());
-            projectManager.dropProject("project11");
+            UnitOfWork.doInTransactionWithRetry(() -> {
+                NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).dropProject("project11");
+                return null;
+            }, projectInstance2.getName());
         }
 
         // manual
@@ -911,7 +914,10 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
             Assert.assertNotNull(projectInstance2);
             Assert.assertTrue(projectInstance2.getConfig().exposeComputedColumn());
             Assert.assertTrue(projectInstance2.isExpertMode());
-            projectManager.dropProject("project11");
+            UnitOfWork.doInTransactionWithRetry(() -> {
+                NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()).dropProject("project11");
+                return null;
+            }, projectInstance2.getName());
         }
     }
 
@@ -1040,7 +1046,7 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testCleanupGarbage() throws Exception {
-        QueryHistoryMetaUpdateScheduler qhMetaUpdateScheduler = QueryHistoryMetaUpdateScheduler.getInstance(PROJECT);
+        QueryHistoryMetaUpdateScheduler qhMetaUpdateScheduler = QueryHistoryMetaUpdateScheduler.getInstance();
         qhMetaUpdateScheduler.init();
         projectService.cleanupGarbage(PROJECT, false);
     }

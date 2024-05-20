@@ -31,12 +31,13 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.RawResource;
+import org.apache.kylin.common.persistence.RawResourceFilter;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.Serializer;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
@@ -89,8 +90,7 @@ public class NTableMetadataManager {
     // ============================================================================
 
     private void initSrcTable() {
-        String resourceRootPath = "/" + project + ResourceStore.TABLE_RESOURCE_ROOT;
-        this.srcTableCrud = new CachedCrudAssist<TableDesc>(getStore(), resourceRootPath, TableDesc.class) {
+        this.srcTableCrud = new CachedCrudAssist<TableDesc>(getStore(), MetadataType.TABLE_INFO, project, TableDesc.class) {
             @Override
             protected TableDesc initEntityAfterReload(TableDesc t, String resourceName) {
                 t.init(project);
@@ -126,31 +126,21 @@ public class NTableMetadataManager {
         return ret;
     }
 
-    public List<TableDesc> getAllIncrementalLoadTables() {
-        List<TableDesc> result = Lists.newArrayList();
-
-        for (TableDesc table : srcTableCrud.listAll()) {
-            if (table.isIncrementLoading())
-                result.add(table);
-        }
-
-        return result;
-    }
-    
     public List<String> getTableNamesByFuzzyKey(String fuzzyKey) {
-        return srcTableCrud.listAll().stream()
-                .filter(tableDesc -> StringUtils.containsIgnoreCase(tableDesc.getIdentity(), fuzzyKey))
-                .map(tableDesc -> tableDesc.getIdentity()).collect(Collectors.toList());
+        RawResourceFilter filter = RawResourceFilter.simpleFilter(RawResourceFilter.Operator.LIKE_CASE_INSENSITIVE,
+                "tableIdentity", fuzzyKey);
+        return srcTableCrud.listByFilter(filter).stream().map(tableDesc -> tableDesc.getIdentity())
+                .collect(Collectors.toList());
     }
 
     /**
      * Get TableDesc by name and project
      */
-    public TableDesc getTableDesc(String tableName) {
-        if (StringUtils.isEmpty(tableName)) {
+    public TableDesc getTableDesc(String identity) {
+        if (StringUtils.isEmpty(identity)) {
             return null;
         }
-        return srcTableCrud.get(tableName);
+        return srcTableCrud.get(TableDesc.generateResourceName(project, identity));
     }
 
     public TableDesc copy(TableDesc tableDesc) {
@@ -173,7 +163,7 @@ public class NTableMetadataManager {
      */
     @Deprecated
     public void saveSourceTable(TableDesc srcTable) {
-        if (srcTableCrud.contains(srcTable.getIdentity())) {
+        if (srcTableCrud.contains(srcTable.resourceName())) {
             updateTableDesc(srcTable.getIdentity(), srcTable::copyPropertiesTo);
         } else {
             createTableDesc(srcTable);
@@ -204,10 +194,10 @@ public class NTableMetadataManager {
         updateTableDesc(tableDesc.getIdentity(), tableDesc::copyPropertiesTo);
     }
 
-    public void updateTableDesc(String tableName, TableDescUpdater updater) {
-        TableDesc cached = getTableDesc(tableName);
+    public void updateTableDesc(String identityName, TableDescUpdater updater) {
+        TableDesc cached = getTableDesc(identityName);
         if (cached == null) {
-            throw new IllegalStateException("tableDesc " + tableName + " does not exist");
+            throw new IllegalStateException("tableDesc " + identityName + " does not exist");
         }
         TableDesc copy = copyForWrite(cached);
         updater.modify(copy);
@@ -230,8 +220,8 @@ public class NTableMetadataManager {
     // ============================================================================
 
     private void initSrcExt() {
-        this.srcExtCrud = new CachedCrudAssist<TableExtDesc>(getStore(),
-                "/" + project + ResourceStore.TABLE_EXD_RESOURCE_ROOT, TableExtDesc.class) {
+        this.srcExtCrud = new CachedCrudAssist<TableExtDesc>(getStore(), MetadataType.TABLE_EXD, project,
+                TableExtDesc.class) {
             @Override
             protected TableExtDesc initEntityAfterReload(TableExtDesc t, String resourceName) {
                 // convert old tableExt json to new one
@@ -260,7 +250,7 @@ public class NTableMetadataManager {
     }
 
     public TableExtDesc getOrCreateTableExt(TableDesc t) {
-        TableExtDesc result = srcExtCrud.get(t.getIdentity());
+        TableExtDesc result = srcExtCrud.get(TableExtDesc.generateResourceName(project, t.getIdentity()));
 
         // avoid returning null, since the TableDesc exists
         if (null == result) {
@@ -274,7 +264,7 @@ public class NTableMetadataManager {
     }
 
     public TableExtDesc getTableExtIfExists(TableDesc t) {
-        return srcExtCrud.get(t.getIdentity());
+        return srcExtCrud.get(TableDesc.generateResourceName(project, t.getIdentity()));
     }
 
     // for test mostly
@@ -287,7 +277,7 @@ public class NTableMetadataManager {
      */
     @Deprecated
     public void saveTableExt(TableExtDesc tableExt) {
-        if (srcExtCrud.contains(tableExt.getIdentity())) {
+        if (srcExtCrud.contains(tableExt.resourceName())) {
             updateTableExt(tableExt.getIdentity(), tableExt::copyPropertiesTo);
         } else {
             createTableExt(tableExt);

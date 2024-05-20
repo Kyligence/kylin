@@ -64,6 +64,7 @@ import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.cube.model.RuleBasedIndex;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
+import org.apache.kylin.metadata.model.ComputedColumnManager;
 import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.model.ManagementType;
 import org.apache.kylin.metadata.model.MeasureDesc;
@@ -148,7 +149,8 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
     }
 
     @Before
-    public void setup() {
+    public void setUp() {
+        JobContextUtil.cleanUp();
         setupResource();
         SparkJobFactoryUtils.initJobFactory();
         SecurityContextHolder.getContext()
@@ -163,8 +165,6 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         } catch (Exception e) {
             //
         }
-
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobInfoDao(getTestConfig());
     }
 
@@ -515,6 +515,12 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         ccList.add(cc1);
         ccList.add(cc2);
         ccList.add(cc3);
+        ComputedColumnManager ccManager = ComputedColumnManager.getInstance(getTestConfig(), getProject());
+        ccList.forEach(cc -> {
+            ComputedColumnDesc created = ccManager.saveCCWithCheck(cc);
+            model.getComputedColumnUuids().add(created.getUuid());
+        });
+
         List<NamedColumn> allNamedColumns = model.getAllNamedColumns();
         NamedColumn col1 = new NamedColumn();
         col1.setStatus(ColumnStatus.DIMENSION);
@@ -712,10 +718,13 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         val indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
         val LayoutList = indexPlanManager.getIndexPlan(BASIC_MODEL).getAllLayouts().stream().map(LayoutEntity::getId)
                 .collect(Collectors.toSet());
-        indexPlanService.removeIndexes(getProject(), BASIC_MODEL, LayoutList);
-        indexPlanService.updateRuleBasedCuboid(getProject(),
-                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
-                        .aggregationGroups(java.util.Collections.emptyList()).build());
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            indexPlanService.removeIndexes(getProject(), BASIC_MODEL, LayoutList);
+            indexPlanService.updateRuleBasedCuboid(getProject(),
+                    UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
+                            .aggregationGroups(java.util.Collections.emptyList()).build());
+            return true;
+        }, getProject());
 
         // modify dimensions and measures, 2 dimensions and 1 measures
         val request = JsonUtil.readValue(JsonUtil.writeValueAsString(model), ModelRequest.class);
@@ -742,9 +751,12 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         selectRule.jointDims = new Integer[0][0];
         newAggregationGroup.setSelectRule(selectRule);
 
-        indexPlanService.updateRuleBasedCuboid(getProject(),
-                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
-                        .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build());
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            indexPlanService.updateRuleBasedCuboid(getProject(),
+                    UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
+                            .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build());
+            return true;
+        }, getProject());
 
         Long bAL = indexPlanManager.getIndexPlan(BASIC_MODEL).getBaseAggLayout().getId();
         java.util.Set<Long> allLIs = indexPlanManager.getIndexPlan(BASIC_MODEL).getAllLayoutIds(false);
@@ -777,10 +789,13 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         val LayoutListBase = indexPlanManager.getIndexPlan(BASIC_MODEL).getBaseAggLayout().getId();
         HashSet<Long> toDeleteIds = new HashSet<>();
         toDeleteIds.add(LayoutListBase);
-        indexPlanService.removeIndexes(getProject(), BASIC_MODEL, toDeleteIds);
-        indexPlanService.updateRuleBasedCuboid(getProject(),
-                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
-                        .aggregationGroups(java.util.Collections.emptyList()).build());
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            indexPlanService.removeIndexes(getProject(), BASIC_MODEL, toDeleteIds);
+            indexPlanService.updateRuleBasedCuboid(getProject(),
+                    UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
+                            .aggregationGroups(java.util.Collections.emptyList()).build());
+            return true;
+        }, getProject());
 
         // add new dimenssion
         val request4 = JsonUtil.readValue(JsonUtil.writeValueAsString(model), ModelRequest.class);
@@ -887,20 +902,29 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         selectRule.hierarchyDims = new Integer[0][0];
         selectRule.jointDims = new Integer[0][0];
         newAggregationGroup.setSelectRule(selectRule);
-        indexPlanService.updateRuleBasedCuboid(getProject(),
-                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
-                        .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build());
+        UnitOfWork.doInTransactionWithRetry(//
+                () -> indexPlanService
+                        .updateRuleBasedCuboid(getProject(),
+                                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
+                                        .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build()),
+                getProject());
 
         val indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
         val indexList = indexPlanManager.getIndexPlan(BASIC_MODEL).getAllLayouts().stream().map(LayoutEntity::getId)
                 .collect(Collectors.toSet());
-        indexPlanService.removeIndexes(getProject(), BASIC_MODEL, indexList);
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            indexPlanService.removeIndexes(getProject(), BASIC_MODEL, indexList);
+            return true;
+        }, getProject());
 
         val shardReq = new AggShardByColumnsRequest();
         shardReq.setModelId(BASIC_MODEL);
         shardReq.setProject(getProject());
         shardReq.setShardByColumns(Lists.newArrayList("TEST_KYLIN_FACT.NEST5"));
-        indexPlanService.updateShardByColumns(getProject(), shardReq);
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            indexPlanService.updateShardByColumns(getProject(), shardReq);
+            return true;
+        }, getProject());
 
         var request = newSemanticRequest(BASIC_MODEL);
         request.getComputedColumnDescs().removeIf(c -> ("NEST5").equals(c.getColumnName()));
@@ -924,9 +948,12 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         selectRule.hierarchyDims = new Integer[0][0];
         selectRule.jointDims = new Integer[0][0];
         newAggregationGroup.setSelectRule(selectRule);
-        indexPlanService.updateRuleBasedCuboid(getProject(),
-                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
-                        .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build());
+        UnitOfWork.doInTransactionWithRetry(//
+                () -> indexPlanService
+                        .updateRuleBasedCuboid(getProject(),
+                                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
+                                        .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build()),
+                getProject());
 
         // remove cc TEST_KYLIN_FACT.NEST5
         var request = newSemanticRequest(BASIC_MODEL);
@@ -996,9 +1023,12 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         selectRule.hierarchyDims = new Integer[0][0];
         selectRule.jointDims = new Integer[0][0];
         newAggregationGroup.setSelectRule(selectRule);
-        indexPlanService.updateRuleBasedCuboid(getProject(),
-                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
-                        .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build());
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            indexPlanService.updateRuleBasedCuboid(getProject(),
+                    UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
+                            .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build());
+            return true;
+        }, getProject());
         // old indexes
         val indexCol = Arrays.asList(transId, nest5SumId);
         val oldIndexId = indexPlanManager.getIndexPlan(BASIC_MODEL).getAllLayouts().stream()
@@ -1046,9 +1076,12 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         selectRule.hierarchyDims = new Integer[0][0];
         selectRule.jointDims = new Integer[0][0];
         newAggregationGroup.setSelectRule(selectRule);
-        indexPlanService.updateRuleBasedCuboid(getProject(),
-                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
-                        .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build());
+        UnitOfWork.doInTransactionWithRetry(
+                () -> indexPlanService
+                        .updateRuleBasedCuboid(getProject(),
+                                UpdateRuleBasedCuboidRequest.builder().project(getProject()).modelId(BASIC_MODEL)
+                                        .aggregationGroups(Lists.newArrayList(newAggregationGroup)).build()),
+                getProject());
         // old indexes
         val indexCol = Arrays.asList(transId, nest5SumId);
         val oldLayoutId = indexPlanManager.getIndexPlan(BASIC_MODEL).getAllLayouts().stream()
@@ -1167,13 +1200,13 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         thrown.expectMessage("The dimension TEST_KYLIN_FACT.TEST_COUNT_DISTINCT_BITMAP is referenced "
                 + "by indexes or aggregate groups. Please go to the Data Asset - Model - Index page to view, delete "
                 + "referenced aggregate groups and indexes.");
-        val indePlanManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
-        indePlanManager.updateIndexPlan(BASIC_MODEL, cubeBasic -> {
-            val rule = new RuleBasedIndex();
-            rule.setDimensions(Lists.newArrayList(1, 2, 3, 4, 5, 26));
-            rule.setMeasures(Lists.newArrayList(100001, 100002, 100003));
-            cubeBasic.setRuleBasedIndex(rule);
-        });
+        UnitOfWork.doInTransactionWithRetry(() -> NIndexPlanManager.getInstance(getTestConfig(), getProject())
+                .updateIndexPlan(BASIC_MODEL, cubeBasic -> {
+                    val rule = new RuleBasedIndex();
+                    rule.setDimensions(Lists.newArrayList(1, 2, 3, 4, 5, 26));
+                    rule.setMeasures(Lists.newArrayList(100001, 100002, 100003));
+                    cubeBasic.setRuleBasedIndex(rule);
+                }), getProject());
         val request = newSemanticRequest();
         request.setSimplifiedDimensions(request.getAllNamedColumns().stream()
                 .filter(c -> c.getId() != 26 && c.isExist()).collect(Collectors.toList()));
@@ -1182,16 +1215,19 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testChangeJoinType() throws Exception {
-        val modelMgr = NDataModelManager.getInstance(getTestConfig(), getProject());
         val dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
         val originModel = getTestBasicModel();
-        modelMgr.updateDataModel(BASIC_MODEL, model -> {
-            val joins = model.getJoinTables();
-            joins.get(0).getJoin().setType("inner");
-        });
+        UnitOfWork.doInTransactionWithRetry(() -> NDataModelManager.getInstance(getTestConfig(), getProject())
+                .updateDataModel(BASIC_MODEL, model -> {
+                    val joins = model.getJoinTables();
+                    joins.get(0).getJoin().setType("inner");
+                }), getProject());
         val cube = dfMgr.getDataflow(originModel.getUuid()).getIndexPlan();
         val tableIndexCount = cube.getAllLayouts().stream().filter(l -> l.getIndex().isTableIndex()).count();
-        semanticService.handleSemanticUpdate(getProject(), BASIC_MODEL, originModel, null, null);
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            semanticService.handleSemanticUpdate(getProject(), BASIC_MODEL, originModel, null, null);
+            return true;
+        }, getProject());
         val executables = getRunningExecutables(getProject(), null);
         Assert.assertEquals(1, executables.size());
         Assert.assertTrue(((NSparkCubingJob) executables.get(0)).getHandler() instanceof ExecutableAddCuboidHandler);
@@ -1257,24 +1293,28 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testChangePartitionDesc_NullToOne() {
-        val modelMgr = NDataModelManager.getInstance(getTestConfig(), getProject());
-        val dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
-        modelMgr.updateDataModel(BASIC_MODEL, model -> model.setPartitionDesc(null));
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            val modelMgr = NDataModelManager.getInstance(getTestConfig(), getProject());
+            modelMgr.updateDataModel(BASIC_MODEL, model -> model.setPartitionDesc(null));
 
-        val originModel = modelMgr.getDataModelDesc(BASIC_MODEL);
+            val originModel = modelMgr.getDataModelDesc(BASIC_MODEL);
 
-        modelMgr.updateDataModel(BASIC_MODEL, model -> {
-            val partition = new PartitionDesc();
-            partition.setPartitionDateColumn("DEFAULT.TEST_KYLIN_FACT.CAL_DT");
-            partition.setPartitionDateFormat("yyyy-MM-dd");
-            model.setPartitionDesc(partition);
-        });
+            modelMgr.updateDataModel(BASIC_MODEL, model -> {
+                val partition = new PartitionDesc();
+                partition.setPartitionDateColumn("DEFAULT.TEST_KYLIN_FACT.CAL_DT");
+                partition.setPartitionDateFormat("yyyy-MM-dd");
+                model.setPartitionDesc(partition);
+            });
 
-        semanticService.handleSemanticUpdate(getProject(), BASIC_MODEL, originModel, "1325347200000", "1388505600000");
+            semanticService.handleSemanticUpdate(getProject(), BASIC_MODEL, originModel, "1325347200000",
+                    "1388505600000");
+            return true;
+        }, getProject());
 
         val executables = getRunningExecutables(getProject(), null);
         Assert.assertEquals(1, executables.size());
 
+        val dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
         val df = dfMgr.getDataflow(BASIC_MODEL);
 
         Assert.assertEquals(1, df.getSegments().size());
@@ -1335,21 +1375,25 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testChangePartitionDesc_ChangePartitionColumn_WithDateRange() {
-        val modelMgr = NDataModelManager.getInstance(getTestConfig(), getProject());
         val dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
         val originModel = getTestBasicModel();
 
-        modelMgr.updateDataModel(BASIC_MODEL, model -> {
-            val partition = new PartitionDesc();
-            partition.setPartitionDateColumn("DEFAULT.TEST_KYLIN_FACT.TRANS_ID");
-            partition.setPartitionDateFormat("yyyy-MM-dd");
-            model.setPartitionDesc(partition);
-        });
+        UnitOfWork.doInTransactionWithRetry(() -> NDataModelManager.getInstance(getTestConfig(), getProject())
+                .updateDataModel(BASIC_MODEL, model -> {
+                    val partition = new PartitionDesc();
+                    partition.setPartitionDateColumn("DEFAULT.TEST_KYLIN_FACT.TRANS_ID");
+                    partition.setPartitionDateFormat("yyyy-MM-dd");
+                    model.setPartitionDesc(partition);
+                }), getProject());
 
         var df = dfMgr.getDataflow(BASIC_MODEL);
         Assert.assertEquals(1, df.getSegments().size());
 
-        semanticService.handleSemanticUpdate(getProject(), BASIC_MODEL, originModel, "1325347200000", "1388505600000");
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            semanticService.handleSemanticUpdate(getProject(), BASIC_MODEL, originModel, "1325347200000",
+                    "1388505600000");
+            return true;
+        }, getProject());
 
         val executables = getRunningExecutables(getProject(), null);
         Assert.assertEquals(1, executables.size());
@@ -1445,35 +1489,38 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testAllChanged() throws Exception {
-        val modelMgr = NDataModelManager.getInstance(getTestConfig(), getProject());
-        val indePlanManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
-        val originModel = getTestInnerModel();
-        modelMgr.updateDataModel(originModel.getUuid(),
-                model -> model.setAllMeasures(model.getAllMeasures().stream().peek(m -> {
-                    if (m.getId() == 100011) {
-                        m.setId(100017);
-                    }
-                }).collect(Collectors.toList())));
-        modelMgr.updateDataModel(originModel.getUuid(), model -> {
-            val joins = model.getJoinTables();
-            joins.get(0).getJoin().setType("left");
-        });
-        modelMgr.updateDataModel(originModel.getUuid(),
-                model -> model.setAllNamedColumns(model.getAllNamedColumns().stream().peek(c -> {
-                    if (!c.isExist()) {
-                        return;
-                    }
-                    c.setStatus(NDataModel.ColumnStatus.DIMENSION);
-                    if (c.getId() == 26) {
-                        c.setStatus(NDataModel.ColumnStatus.EXIST);
-                    }
-                }).collect(Collectors.toList())));
-        semanticService.handleSemanticUpdate(getProject(), originModel.getUuid(), originModel, null, null);
-
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            val modelMgr = NDataModelManager.getInstance(getTestConfig(), getProject());
+            val originModel = getTestInnerModel();
+            modelMgr.updateDataModel(originModel.getUuid(),
+                    model -> model.setAllMeasures(model.getAllMeasures().stream().peek(m -> {
+                        if (m.getId() == 100011) {
+                            m.setId(100017);
+                        }
+                    }).collect(Collectors.toList())));
+            modelMgr.updateDataModel(originModel.getUuid(), model -> {
+                val joins = model.getJoinTables();
+                joins.get(0).getJoin().setType("left");
+            });
+            modelMgr.updateDataModel(originModel.getUuid(),
+                    model -> model.setAllNamedColumns(model.getAllNamedColumns().stream().peek(c -> {
+                        if (!c.isExist()) {
+                            return;
+                        }
+                        c.setStatus(NDataModel.ColumnStatus.DIMENSION);
+                        if (c.getId() == 26) {
+                            c.setStatus(NDataModel.ColumnStatus.EXIST);
+                        }
+                    }).collect(Collectors.toList())));
+            semanticService.handleSemanticUpdate(getProject(), originModel.getUuid(), originModel, null, null);
+            return true;
+        }, getProject());
+        
         val executables = getRunningExecutables(getProject(), null);
         Assert.assertEquals(1, executables.size());
         Assert.assertTrue(((NSparkCubingJob) executables.get(0)).getHandler() instanceof ExecutableAddCuboidHandler);
 
+        val indePlanManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
         val cube = indePlanManager.getIndexPlan(INNER_MODEL);
         for (LayoutEntity layout : cube.getWhitelistLayouts()) {
             Assert.assertFalse(layout.getColOrder().contains(100011));
@@ -1688,6 +1735,7 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
         val modelMgr = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
         val model = modelMgr.getDataModelDesc(modelId);
         val request = JsonUtil.readValue(JsonUtil.writeValueAsString(model), ModelRequest.class);
+        request.setComputedColumnDescs(model.getComputedColumnDescs());
         request.setProject(project);
         request.setUuid(modelId);
         request.setSimplifiedDimensions(model.getAllNamedColumns().stream().filter(NDataModel.NamedColumn::isDimension)
@@ -1797,19 +1845,24 @@ public class ModelServiceSemanticUpdateTest extends NLocalFileMetadataTestCase {
                 + "}", NAggregationGroup.class);
         newRule.setAggregationGroups(Lists.newArrayList(group1));
         group1.setMeasures(new Integer[] { 100000, 100008 });
-        val indexManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
-        var originIndexPlan = indexManager.getIndexPlanByModelAlias("nmodel_basic");
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            val indexManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
+            var originIndexPlan = indexManager.getIndexPlanByModelAlias("nmodel_basic");
 
-        indexManager.updateIndexPlan(originIndexPlan.getId(), copyForWrite -> {
-            copyForWrite.setRuleBasedIndex(newRule);
-        });
+            return indexManager.updateIndexPlan(originIndexPlan.getId(), copyForWrite -> {
+                copyForWrite.setRuleBasedIndex(newRule);
+            });
+        }, getProject());
 
         val indexPlanManager = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         // create measure
         val ruleBasedIndex = indexPlanManager.getIndexPlan(modelId).getRuleBasedIndex();
         val layouts = ruleBasedIndex.genCuboidLayouts();
-        indexPlanService.removeIndexes(getProject(), modelId,
-                layouts.stream().map(LayoutEntity::getId).collect(Collectors.toSet()));
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            indexPlanService.removeIndexes(getProject(), modelId,
+                    layouts.stream().map(LayoutEntity::getId).collect(Collectors.toSet()));
+            return true;
+        }, getProject());
 
         var request = newSemanticRequest(modelId);
         val newMeasure1 = new SimplifiedMeasure();

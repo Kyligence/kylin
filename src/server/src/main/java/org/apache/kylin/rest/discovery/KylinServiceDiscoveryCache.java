@@ -58,20 +58,12 @@ import org.springframework.cloud.zookeeper.ConditionalOnZookeeperEnabled;
 import org.springframework.cloud.zookeeper.discovery.ZookeeperInstance;
 import org.springframework.stereotype.Component;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 
 @ConditionalOnZookeeperEnabled
 @Component
 public class KylinServiceDiscoveryCache implements KylinServiceDiscovery {
     private static final Logger logger = LoggerFactory.getLogger(KylinServiceDiscoveryCache.class);
-    private static final Callback UPDATE_ALL_EPOCHS = () -> {
-        try {
-            EpochManager.getInstance().updateAllEpochs();
-        } catch (Exception e) {
-            logger.error("UpdateAllEpochs failed", e);
-        }
-    };
     private final Map<ServerModeEnum, ServiceCache<ZookeeperInstance>> serverModeCacheMap;
     private final List<ServerModeEnum> ALL_CHECK_MODE_LIST = ImmutableList.of(ALL, JOB, QUERY);
     @Autowired
@@ -118,10 +110,12 @@ public class KylinServiceDiscoveryCache implements KylinServiceDiscovery {
             }));
             break;
         case JOB:
-            serverModeCacheMap.put(JOB, createServiceCache(serviceDiscovery, JOB, UPDATE_ALL_EPOCHS));
+            serverModeCacheMap.put(JOB, createServiceCache(serviceDiscovery, JOB, () -> {
+            }));
             break;
         case ALL:
-            serverModeCacheMap.put(ALL, createServiceCache(serviceDiscovery, ALL, UPDATE_ALL_EPOCHS));
+            serverModeCacheMap.put(ALL, createServiceCache(serviceDiscovery, ALL, () -> {
+            }));
             break;
         default:
             break;

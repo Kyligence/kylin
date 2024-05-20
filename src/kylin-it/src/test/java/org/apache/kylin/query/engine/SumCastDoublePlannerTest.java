@@ -42,13 +42,13 @@ public class SumCastDoublePlannerTest extends CalciteRuleTestBase {
     static final DiffRepository diff = DiffRepository.lookup(SumCastDoublePlannerTest.class);
 
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata();
         KylinConfig.getInstanceFromEnv().setProperty("kylin.query.optimized-sum-cast-double-rule-enabled", "true");
     }
 
     @After
-    public void teardown() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

@@ -54,22 +54,24 @@ public class NSparkSnapshotJobTest extends NLocalWithSparkSessionTest {
 
     private KylinConfig config;
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
+        super.setUp();
         ss.sparkContext().setLogLevel("ERROR");
         overwriteSystemProp("kylin.engine.persist-flattable-threshold", "0");
         overwriteSystemProp("kylin.engine.persist-flatview", "true");
 
         config = getTestConfig();
-
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(config);
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Test

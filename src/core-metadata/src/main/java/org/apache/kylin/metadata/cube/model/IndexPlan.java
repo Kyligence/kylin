@@ -46,8 +46,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigExt;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.MissingRootPersistentEntity;
-import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
@@ -61,7 +61,6 @@ import org.apache.kylin.guava30.shaded.common.collect.ImmutableSortedSet;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.model.IEngineAware;
 import org.apache.kylin.metadata.model.JoinTableDesc;
 import org.apache.kylin.metadata.model.NDataModel;
@@ -152,10 +151,6 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     @JsonProperty("approved_removal_recs")
     private int approvedRemovalRecs;
 
-    // computed fields below
-    @Setter
-    private String project;
-
     @Setter
     private KylinConfigExt config = null;
     private long prjMvccWhenConfigInitted = -1;
@@ -221,7 +216,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         NDataModel dataModelDesc = manager.getDataModelDesc(uuid);
 
         return Lists.newArrayList(dataModelDesc != null ? dataModelDesc
-                : new MissingRootPersistentEntity(NDataModel.concatResourcePath(uuid, project)));
+                : new MissingRootPersistentEntity(MetadataType.mergeKeyWithType(uuid, MetadataType.MODEL)));
     }
 
     private void initConfig4IndexPlan(KylinConfig config) {
@@ -238,6 +233,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
         this.config = KylinConfigExt.createInstance(config, newOverrides);
         this.prjMvccWhenConfigInitted = ownerPrj.getMvcc();
+
         this.indexPlanMvccWhenConfigInitted = this.getMvcc();
     }
 
@@ -317,6 +313,11 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
         return uuid;
     }
 
+    @Override
+    public MetadataType resourceType() {
+        return MetadataType.INDEX_PLAN;
+    }
+
     public IndexPlan copy() {
         return NIndexPlanManager.getInstance(config, project).copy(this);
     }
@@ -352,16 +353,6 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
 
     String getErrorMsg() {
         return Joiner.on(" ").join(errors);
-    }
-
-    @Override
-    public String getResourcePath() {
-        return concatResourcePath(getUuid(), project);
-    }
-
-    public static String concatResourcePath(String name, String project) {
-        return new StringBuilder().append("/").append(project).append(ResourceStore.INDEX_PLAN_RESOURCE_ROOT)
-                .append("/").append(name).append(MetadataConstants.FILE_SURFIX).toString();
     }
 
     @Override

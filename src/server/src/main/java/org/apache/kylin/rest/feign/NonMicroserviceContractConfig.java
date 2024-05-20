@@ -18,8 +18,6 @@
 
 package org.apache.kylin.rest.feign;
 
-import org.apache.kylin.rest.delegate.JobStatisticsInvoker;
-import org.apache.kylin.rest.delegate.JobStatisticsLocalRPC;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -37,7 +35,6 @@ public class NonMicroserviceContractConfig implements InitializingBean, Applicat
     @Override
     public void afterPropertiesSet() {
         // metadata invoker used by 'data loading'
-        JobStatisticsInvoker.setDelegate(applicationContext.getBean(JobStatisticsLocalRPC.class));
         MetadataInvoker.setDelegate(applicationContext.getBean(MetadataLocalRPC.class));
         log.info("Set local RPC finish.");
     }

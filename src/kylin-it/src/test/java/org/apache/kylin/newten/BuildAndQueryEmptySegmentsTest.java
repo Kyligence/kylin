@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
@@ -74,8 +75,8 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
     private ExecutableManager execMgr;
 
     @Before
-    public void init() throws Exception {
-        super.init();
+    public void setUp() throws Exception {
+        super.setUp();
         config = KylinConfig.getInstanceFromEnv();
         dsMgr = NDataflowManager.getInstance(config, getProject());
         execMgr = ExecutableManager.getInstance(config, getProject());
@@ -85,10 +86,16 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
         Set<Long> tobeRemovedLayouts = cube.getAllLayouts().stream() //
                 .map(LayoutEntity::getId).filter(id -> id != 10001L).collect(Collectors.toSet());
 
-        cube = ipMgr.updateIndexPlan(dsMgr.getDataflow(DF_NAME1).getIndexPlan().getUuid(), copyForWrite -> {
-            copyForWrite.removeLayouts(tobeRemovedLayouts, true, true);
-        });
-        System.out.println(cube.getAllLayouts());
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+            IndexPlan indexPlan = NIndexPlanManager.getInstance(kylinConfig, getProject())
+                    .updateIndexPlan(
+                            NDataflowManager.getInstance(kylinConfig, getProject()).getDataflow(DF_NAME1).getIndexPlan()
+                                    .getUuid(),
+                            copyForWrite -> copyForWrite.removeLayouts(tobeRemovedLayouts, true, true));
+            System.out.println("Init success, the remaining layouts are:" + indexPlan.getAllLayouts());
+            return null;
+        }, getProject());
     }
 
     @After
@@ -99,12 +106,14 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
 
     @Test
     public void testEmptySegments() throws Exception {
-        NDataflowManager dataflowManager = NDataflowManager.getInstance(config, getProject());
-        dataflowManager.updateDataflowStatus(DF_NAME2, RealizationStatusEnum.OFFLINE);
-
-        cleanupSegments(DF_NAME1);
-
-        populateSSWithCSVData(config, getProject(), SparderEnv.getSparkSession());
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            KylinConfig testConfig = KylinConfig.getInstanceFromEnv();
+            NDataflowManager dataflowManager = NDataflowManager.getInstance(testConfig, getProject());
+            dataflowManager.updateDataflowStatus(DF_NAME2, RealizationStatusEnum.OFFLINE);
+            cleanupSegments(DF_NAME1, dataflowManager);
+            populateSSWithCSVData(testConfig, getProject(), SparderEnv.getSparkSession());
+            return null;
+        }, getProject());
 
         buildCube(DF_NAME1, SegmentRange.dateToLong("2009-01-01"), SegmentRange.dateToLong("2009-06-01"));
         Assert.assertEquals(0, dsMgr.getDataflow(DF_NAME1).getSegments().get(0).getSegDetails().getTotalRowCount());
@@ -126,11 +135,16 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
         testQuery(SQL);
         testQuery(SQL_DERIVED);
         testQuery(SQL_DERIVED_AGG);
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            NDataflowManager dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(),
+                    getProject());
+            dataflowManager.updateDataflowStatus(DF_NAME2, RealizationStatusEnum.ONLINE);
+            return null;
+        }, getProject());
 
-        dataflowManager.updateDataflowStatus(DF_NAME2, RealizationStatusEnum.ONLINE);
     }
 
-    private void cleanupSegments(String dfName) {
+    private void cleanupSegments(String dfName, NDataflowManager dsMgr) {
         NDataflow df = dsMgr.getDataflow(dfName);
         NDataflowUpdate update = new NDataflowUpdate(df.getUuid());
         update.setToRemoveSegs(df.getSegments().toArray(new NDataSegment[0]));
@@ -147,14 +161,23 @@ public class BuildAndQueryEmptySegmentsTest extends NLocalWithSparkSessionTest {
     private void mergeSegments(String start, String end, boolean force) throws Exception {
         NDataflow df = dsMgr.getDataflow(DF_NAME1);
         List<LayoutEntity> layouts = df.getIndexPlan().getAllLayouts();
-        NDataSegment emptyMergeSeg = dsMgr.mergeSegments(df, new SegmentRange.TimePartitionedSegmentRange(
-                SegmentRange.dateToLong(start), SegmentRange.dateToLong(end)), force);
+        NDataSegment emptyMergeSeg = UnitOfWork.doInTransactionWithRetry(() -> {
+            NDataflowManager manager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
+            return manager.mergeSegments(df, new SegmentRange.TimePartitionedSegmentRange(
+                    SegmentRange.dateToLong(start), SegmentRange.dateToLong(end)), force);
+        }, getProject());
+
         NSparkMergingJob emptyMergeJob = NSparkMergingJob.merge(emptyMergeSeg, Sets.newLinkedHashSet(layouts), "ADMIN",
                 RandomUtil.randomUUIDStr());
         execMgr.addJob(emptyMergeJob);
         Assert.assertEquals(ExecutableState.SUCCEED, IndexDataConstructor.wait(emptyMergeJob));
-        AfterMergeOrRefreshResourceMerger merger = new AfterMergeOrRefreshResourceMerger(config, getProject());
-        merger.merge(emptyMergeJob.getSparkMergingStep());
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            AfterMergeOrRefreshResourceMerger merger = new AfterMergeOrRefreshResourceMerger(
+                    KylinConfig.getInstanceFromEnv(), getProject());
+            merger.merge(emptyMergeJob.getSparkMergingStep());
+            return null;
+        }, getProject());
+
     }
 
     private void testQuery(String sqlStr) {

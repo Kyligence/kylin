@@ -34,12 +34,12 @@ public class ModelTripleComparatorTest extends NLocalFileMetadataTestCase {
     public ExpectedException thrown = ExpectedException.none();
 
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         createTestMetadata();
     }
 
     @After
-    public void teardown() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

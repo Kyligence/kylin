@@ -59,8 +59,8 @@ public class MonitorServiceTest extends SourceTestCase {
     private MonitorDao monitorDao = Mockito.mock(MonitorDao.class);
 
     @Before
-    public void setup() {
-        super.setup();
+    public void setUp() {
+        super.setUp();
         getTestConfig().setProperty("kylin.monitor.interval", "1");
         getTestConfig().setProperty("kylin.monitor.job-statistic-interval", "10");
         getTestConfig().setMetadataUrl(

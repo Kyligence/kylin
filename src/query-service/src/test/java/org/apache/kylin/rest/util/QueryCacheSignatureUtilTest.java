@@ -153,7 +153,7 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
         nDataSegment.setStatus(SegmentStatusEnum.READY);
         NDataLayout layout = NDataLayout.newDataLayout(dataflow, nDataSegment.getId(), layoutId);
         NDataflowUpdate update = new NDataflowUpdate(modelId);
-        update.setToAddSegs(nDataSegment);
+        update.setToUpdateSegs(nDataSegment);
         update.setToAddOrUpdateLayouts(layout);
         dataflowManager.updateDataflow(update);
         Assert.assertTrue(QueryCacheSignatureUtil.checkCacheExpired(response, project));
@@ -244,7 +244,7 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
         nDataSegment.setStatus(SegmentStatusEnum.READY);
         NDataLayout layout = NDataLayout.newDataLayout(dataflow, nDataSegment.getId(), 1000001L);
         NDataflowUpdate update = new NDataflowUpdate(modelId);
-        update.setToAddSegs(nDataSegment);
+        update.setToUpdateSegs(nDataSegment);
         update.setToAddOrUpdateLayouts(layout);
         dataflowManager.updateDataflow(update);
         Assert.assertTrue(QueryCacheSignatureUtil.checkCacheExpired(sqlResponse, project));

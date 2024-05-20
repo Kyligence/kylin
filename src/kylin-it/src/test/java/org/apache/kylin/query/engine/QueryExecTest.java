@@ -42,12 +42,12 @@ public class QueryExecTest extends NLocalFileMetadataTestCase {
     final String project = "default";
 
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata();
     }
 
     @After
-    public void teardown() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

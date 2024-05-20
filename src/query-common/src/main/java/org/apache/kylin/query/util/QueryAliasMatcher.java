@@ -18,6 +18,7 @@
 package org.apache.kylin.query.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +58,7 @@ import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.alias.ExpressionComparator;
@@ -448,10 +450,22 @@ public class QueryAliasMatcher {
         }
 
         private OlapSchema getSchema(String name) {
-            return schemaMap.computeIfAbsent(name, schemaName -> new OlapSchema(project, schemaName,
-                    NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
-                            .listTablesGroupBySchema().get(schemaName),
-                    NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project).getModelsGroupbyTable()));
+            if (schemaMap.get(name) == null) {
+                // init schemaMap
+                Map<String, List<TableDesc>> tablesGroupBySchema = NTableMetadataManager
+                        .getInstance(KylinConfig.getInstanceFromEnv(), project).listTablesGroupBySchema();
+                Map<String, List<NDataModel>> modelsGroupByTable = NDataflowManager
+                        .getInstance(KylinConfig.getInstanceFromEnv(), project).getModelsGroupbyTable();
+                for (Map.Entry<String, List<TableDesc>> entry : tablesGroupBySchema.entrySet()) {
+                    schemaMap.put(entry.getKey(),
+                            new OlapSchema(project, entry.getKey(), entry.getValue(), modelsGroupByTable));
+                }
+                // Maybe name is project name
+                if (schemaMap.get(name) == null) {
+                    schemaMap.put(name, new OlapSchema(project, name, Collections.emptyList(), modelsGroupByTable));
+                }
+            }
+            return schemaMap.get(name);
         }
 
         private Pair<String, String> getSchemaAndTable(SqlIdentifier tableIdentifier) {

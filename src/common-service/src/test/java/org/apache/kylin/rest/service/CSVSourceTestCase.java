@@ -34,10 +34,8 @@ import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.source.jdbc.H2Database;
-import org.junit.After;
 import org.junit.Before;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 
 public class CSVSourceTestCase extends ServiceTestBase {
@@ -47,8 +45,8 @@ public class CSVSourceTestCase extends ServiceTestBase {
     }
 
     @Before
-    public void setup() {
-        super.setup();
+    public void setUp() {
+        super.setUp();
         NProjectManager projectManager = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
         ProjectInstance projectInstance = projectManager.getProject(getProject());
         val overrideKylinProps = projectInstance.getOverrideKylinProps();
@@ -60,12 +58,6 @@ public class CSVSourceTestCase extends ServiceTestBase {
                 projectInstanceUpdate.getDescription(), projectInstanceUpdate.getOverrideKylinProps());
         projectManager.forceDropProject("broken_test");
         projectManager.forceDropProject("bad_query_test");
-    }
-
-    @After
-    public void cleanup() {
-        super.cleanup();
-
     }
 
     protected void setupPushdownEnv() throws Exception {
@@ -92,10 +84,6 @@ public class CSVSourceTestCase extends ServiceTestBase {
         // Load H2 Tables (inner join)
         Connection h2Connection = DriverManager.getConnection("jdbc:h2:mem:db_default", "sa", "");
         h2Connection.close();
-    }
-
-    public EpochManager spyEpochManager() throws Exception {
-        return spyManager(EpochManager.getInstance(), EpochManager.class);
     }
 
     public NDataModelManager spyNDataModelManager() throws Exception {

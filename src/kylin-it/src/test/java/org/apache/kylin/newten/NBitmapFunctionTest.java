@@ -42,16 +42,19 @@ import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
 public class NBitmapFunctionTest extends NLocalWithSparkSessionTest {
 
+    @Override
     @Before
-    public void setup() {
+    public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        super.setUp();
         JobContextUtil.getJobContext(getTestConfig());
 
         populateSSWithCSVData(getTestConfig(), getProject(), ss);
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
         FileUtils.deleteQuietly(new File("../kylin-it/metastore_db"));

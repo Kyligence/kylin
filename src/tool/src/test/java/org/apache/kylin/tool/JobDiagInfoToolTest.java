@@ -87,11 +87,6 @@ public class JobDiagInfoToolTest extends NLocalFileMetadataTestCase {
         cleanupTestMetadata();
     }
 
-    @After
-    public void teardown() {
-        cleanupTestMetadata();
-    }
-
     @Test
     public void testGetJobByJobId() {
         val job = new JobDiagInfoTool().getJobByJobId("dd5a6451-0743-4b32-b84d-2ddc8052429f");

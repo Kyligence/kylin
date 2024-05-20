@@ -198,7 +198,7 @@ public class NSystemController extends NBasicController {
         log.info("ResourceGroup[{}] broadcastMetadataBackup tmpFilePath : {}", request.getResourceGroupId(),
                 request.getTmpFilePath());
         fileService.saveBroadcastMetadataBackup(request.getBackupDir(), request.getTmpFilePath(),
-                request.getTmpFileSize(), request.getResourceGroupId());
+                request.getTmpFileSize(), request.getResourceGroupId(), request.getFromHost());
         return new EnvelopeResponse<>(CODE_SUCCESS, "", "");
     }
 

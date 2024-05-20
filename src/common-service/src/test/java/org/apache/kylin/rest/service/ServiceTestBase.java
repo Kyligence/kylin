@@ -77,7 +77,7 @@ public class ServiceTestBase extends NLocalFileMetadataTestCase {
     }
 
     @Before
-    public void setup() {
+    public void setUp() {
         // init job factory
         SparkJobFactoryUtils.initJobFactory();
         createTestMetadata();
@@ -103,7 +103,7 @@ public class ServiceTestBase extends NLocalFileMetadataTestCase {
     }
 
     @After
-    public void cleanup() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

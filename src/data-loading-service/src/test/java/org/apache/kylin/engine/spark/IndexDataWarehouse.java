@@ -25,6 +25,8 @@ import java.util.NoSuchElementException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
+import org.apache.kylin.common.persistence.RawResourceFilter;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.common.util.TestUtils;
@@ -57,10 +59,13 @@ public class IndexDataWarehouse {
         buildConfig.setMetadataUrl(outputFolder.getAbsolutePath() + "/metadata");
         val buildStore = ResourceStore.getKylinMetaStore(buildConfig);
         val store = ResourceStore.getKylinMetaStore(kylinConfig);
-        for (String key : store.listResourcesRecursively("/" + project)) {
+
+        for (String key : store.listResourcesRecursively(MetadataType.PROJECT.name(),
+                RawResourceFilter.equalFilter("project", project))) {
             store.deleteResource(key);
         }
-        for (String key : buildStore.listResourcesRecursively("/" + project)) {
+        for (String key : buildStore.listResourcesRecursively(MetadataType.PROJECT.name(),
+                RawResourceFilter.equalFilter("project", project))) {
             val raw = buildStore.getResource(key);
             store.deleteResource(key);
             store.putResourceWithoutCheck(key, raw.getByteSource(), System.currentTimeMillis(), 100);

@@ -37,16 +37,18 @@ import org.sparkproject.guava.collect.Sets;
 import lombok.val;
 
 public class NMultipleColumnsInTest extends NLocalWithSparkSessionTest {
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         this.createTestMetadata("src/test/resources/ut_meta/multiple_columns_in");
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }

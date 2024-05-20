@@ -37,12 +37,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.EncryptUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.cache.Cache;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.helper.UpdateUserAclToolHelper;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.usergroup.UserGroup;
 import org.apache.kylin.rest.response.UserGroupResponseKI;
 import org.apache.kylin.rest.security.AclPermission;
@@ -82,7 +84,6 @@ import com.unboundid.ldap.listener.InMemoryDirectoryServer;
 import com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;
 import com.unboundid.ldap.listener.InMemoryListenerConfig;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
@@ -400,8 +401,6 @@ public class LdapUserServiceTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testSyncAdminUserAcl() throws IOException {
-        EpochManager epochManager = EpochManager.getInstance();
-        epochManager.tryUpdateEpoch(EpochManager.GLOBAL, true);
         val userAclService = SpringContext.getBean(UserAclService.class);
         val userAclManager = UserAclManager.getInstance(getTestConfig());
         userAclManager.delete("jenny");
@@ -415,20 +414,33 @@ public class LdapUserServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertTrue(userAclManager.get("jenny").hasPermission(AclPermission.DATA_QUERY));
         userAclManager.add("sunny");
         userAclService.syncAdminUserAcl(Arrays.asList("jenny", "sun"), true);
-        Assert.assertFalse(userAclManager.exists("sunny"));
-        Assert.assertTrue(userAclManager.exists("sun"));
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            val manager = UserAclManager.getInstance(getTestConfig());
+            Assert.assertFalse(manager.exists("sunny"));
+            Assert.assertTrue(manager.exists("sun"));
+            return null;
+        }, UnitOfWork.GLOBAL_UNIT);
+
 
         userAclManager.delete("jenny");
         getTestConfig().setProperty("kylin.security.acl.data-permission-default-enabled", "false");
         userAclService.syncAdminUserAcl(Collections.emptyList(), false);
         Assert.assertNull(userAclManager.get("jenny"));
-        userAclService.syncAdminUserAcl(Collections.singletonList("jenny"), true);
-        Assert.assertTrue(userAclManager.get("jenny").hasPermission(AclPermission.DATA_QUERY));
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            val manager = UserAclManager.getInstance(getTestConfig());
+            userAclService.syncAdminUserAcl(Collections.singletonList("jenny"), true);
+            Assert.assertTrue(manager.get("jenny").hasPermission(AclPermission.DATA_QUERY));
+            return null;
+        }, UnitOfWork.GLOBAL_UNIT);
 
-        getTestConfig().setProperty("kylin.security.acl.super-admin-username", "");
-        userAclManager.delete("jenny");
-        userAclService.syncAdminUserAcl(Collections.singletonList("jenny"), true);
-        Assert.assertFalse(userAclManager.get("jenny").hasPermission(AclPermission.DATA_QUERY));
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            val manager = UserAclManager.getInstance(getTestConfig());
+            getTestConfig().setProperty("kylin.security.acl.super-admin-username", "");
+            manager.delete("jenny");
+            userAclService.syncAdminUserAcl(Collections.singletonList("jenny"), true);
+            Assert.assertFalse(manager.get("jenny").hasPermission(AclPermission.DATA_QUERY));
+            return null;
+        }, UnitOfWork.GLOBAL_UNIT);
     }
 
     @Test

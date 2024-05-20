@@ -30,6 +30,7 @@ import org.springframework.beans.BeanUtils;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 
@@ -88,6 +89,12 @@ public abstract class RootPersistentEntity implements AclEntity, Serializable {
     @Getter
     @Setter
     private List<RootPersistentEntity> dependencies;
+
+    @Getter
+    @Setter
+    @JsonProperty("project")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    protected String project;
 
     public List<RootPersistentEntity> calcDependencies() {
         return Lists.newArrayList();
@@ -165,6 +172,14 @@ public abstract class RootPersistentEntity implements AclEntity, Serializable {
         return uuid;
     }
 
+    public void setResourceName(String resourceName) {
+        // Ignore by default.
+    }
+
+    public MetadataType resourceType() {
+        throw new IllegalStateException("Please override this method in " + this.getClass());
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -195,7 +210,7 @@ public abstract class RootPersistentEntity implements AclEntity, Serializable {
     }
 
     public String getResourcePath() {
-        return "";
+        return MetadataType.mergeKeyWithType(resourceName(), resourceType());
     }
 
     public List<String> getLockPaths() {

@@ -42,7 +42,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 
 public class SourceTestCase extends NLocalFileMetadataTestCase {
@@ -52,7 +51,7 @@ public class SourceTestCase extends NLocalFileMetadataTestCase {
     }
 
     @Before
-    public void setup() {
+    public void setUp() {
         SparkJobFactoryUtils.initJobFactory();
         createTestMetadata();
         KylinConfig config = KylinConfig.getInstanceFromEnv();
@@ -69,11 +68,15 @@ public class SourceTestCase extends NLocalFileMetadataTestCase {
         projectManager.updateProject(projectInstance, projectInstanceUpdate.getName(),
                 projectInstanceUpdate.getDescription(), projectInstanceUpdate.getOverrideKylinProps());
         projectManager.forceDropProject("broken_test");
+        // Delete broken metadata in project broken_test
+        getStore().deleteResource("DATAFLOW/f1bb4bbd-a638-442b-a276-e301fde0d7f6");
+        getStore().deleteResource("INDEX_PLAN/039eef32-9691-4c88-93ba-d65c58a1ab7a");
+        getStore().deleteResource("MODEL/3f8941de-d01c-42b8-91b5-44646390864b");
         projectManager.forceDropProject("bad_query_test");
     }
 
     @After
-    public void cleanup() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 
@@ -101,10 +104,6 @@ public class SourceTestCase extends NLocalFileMetadataTestCase {
         // Load H2 Tables (inner join)
         Connection h2Connection = DriverManager.getConnection("jdbc:h2:mem:db_default", "sa", "");
         h2Connection.close();
-    }
-
-    public EpochManager spyEpochManager() throws Exception {
-        return spyManager(EpochManager.getInstance(), EpochManager.class);
     }
 
     public NDataModelManager spyNDataModelManager() throws Exception {

@@ -35,12 +35,10 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
-
 public class HdfsCapacityMetricsTest extends NLocalFileMetadataTestCase {
 
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata();
     }
 
@@ -70,12 +68,17 @@ public class HdfsCapacityMetricsTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testHandleNodeHdfsMetrics() {
+    public void testHandleNodeHdfsMetrics() throws InterruptedException {
+        overwriteSystemProp("kylin.metadata.distributed-lock-impl", "org.apache.kylin.common.lock.LocalLockFactory");
         overwriteSystemProp("kylin.metrics.hdfs-periodic-calculation-enabled", "true");
         HdfsCapacityMetrics hdfsCapacityMetrics = new HdfsCapacityMetrics(getTestConfig());
-        EpochManager.getInstance().tryUpdateEpoch(EpochManager.GLOBAL, true);
-        hdfsCapacityMetrics.handleNodeHdfsMetrics();
-        Assert.assertTrue(hdfsCapacityMetrics.getWorkingDirCapacity().size() > 0);
+        Thread t1 = new Thread(hdfsCapacityMetrics::handleNodeHdfsMetrics);
+        Thread t2 = new Thread(hdfsCapacityMetrics::handleNodeHdfsMetrics);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        Assert.assertFalse(hdfsCapacityMetrics.getWorkingDirCapacity().isEmpty());
     }
 
     @Test
@@ -116,7 +119,6 @@ public class HdfsCapacityMetricsTest extends NLocalFileMetadataTestCase {
         overwriteSystemProp("kylin.metrics.hdfs-periodic-calculation-enabled", "true");
         KylinConfig testConfig = getTestConfig();
         HdfsCapacityMetrics hdfsCapacityMetrics = new HdfsCapacityMetrics(testConfig);
-        EpochManager.getInstance().tryUpdateEpoch(EpochManager.GLOBAL, true);
         Path projectPath = new Path(testConfig.getWorkingDirectoryWithConfiguredFs("newten"));
         FileSystem fs = projectPath.getFileSystem(HadoopUtil.getCurrentConfiguration());
         if (!fs.exists(projectPath)) {

@@ -41,13 +41,13 @@ class SnapshotRawResourceTest {
         val mockContent = new MockMetaContent("abc", 18);
         val mockContentJson = JsonUtil.writeValueAsBytes(mockContent);
         val resourceStore = ResourceStore.getKylinMetaStore(getTestConfig());
-        resourceStore.putResourceWithoutCheck("/path/meta/abc", ByteSource.wrap(mockContentJson), 123, 101);
+        resourceStore.putResourceWithoutCheck("TABLE_INFO/abc", ByteSource.wrap(mockContentJson), 123, 101);
     }
 
     @Test
     void testRawResourceByteSourceSerializer() throws IOException {
         val resourceStore = ResourceStore.getKylinMetaStore(getTestConfig());
-        val rawSnapshotRes = new SnapshotRawResource(resourceStore.getResource("/path/meta/abc"));
+        val rawSnapshotRes = new SnapshotRawResource(resourceStore.getResource("TABLE_INFO/abc"));
         val mockContentSer = JsonUtil.readValue(rawSnapshotRes.getByteSource().read(), MockMetaContent.class);
 
         Assertions.assertEquals("abc", mockContentSer.getName());
@@ -57,7 +57,7 @@ class SnapshotRawResourceTest {
     @Test
     void testSnapShotRawResourceSerializer() throws IOException {
         val resourceStore = ResourceStore.getKylinMetaStore(getTestConfig());
-        val rawSnapshotRes = new SnapshotRawResource(resourceStore.getResource("/path/meta/abc"));
+        val rawSnapshotRes = new SnapshotRawResource(resourceStore.getResource("TABLE_INFO/abc"));
 
         val snapshotRawJson = JsonUtil.writeValueAsString(rawSnapshotRes);
         Assertions.assertEquals("{\"byte_source\":\"eyJuYW1lIjoiYWJjIiwiYWdlIjoxOH0=\",\"timestamp\":123,\"mvcc\":101}",

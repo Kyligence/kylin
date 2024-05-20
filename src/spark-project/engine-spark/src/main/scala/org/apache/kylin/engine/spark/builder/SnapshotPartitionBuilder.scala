@@ -21,9 +21,8 @@ package org.apache.kylin.engine.spark.builder
 import org.apache.kylin.common.persistence.transaction.{UnitOfWork, UnitOfWorkParams}
 import org.apache.kylin.common.{KapConfig, KylinConfig}
 import org.apache.kylin.engine.spark.utils.LogUtils
-import org.apache.kylin.metadata.model.NTableMetadataManager
 import org.apache.kylin.metadata.datatype.DataType
-import org.apache.kylin.metadata.model.TableDesc
+import org.apache.kylin.metadata.model.{NTableMetadataManager, TableDesc}
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.utils.ProxyThreadUtils
 
@@ -81,9 +80,8 @@ class SnapshotPartitionBuilder extends SnapshotBuilder {
 
     val futures = partitions.map { partition =>
       Future {
-        wrapConfigExecute[Unit](() => {
-          val result = buildSingleSnapshotWithoutMd5(ss, table, partitionCol, partition, snapshotTablePath)
-          checkPointForPartition(table.getProject, table.getIdentity, partition, result)
+        wrapConfigExecute[(String, Result)](() => {
+          (partition, buildSingleSnapshotWithoutMd5(ss, table, partitionCol, partition, snapshotTablePath))
         }, table.getIdentity + ":" + partition)
       }
     }
@@ -91,8 +89,9 @@ class SnapshotPartitionBuilder extends SnapshotBuilder {
     try {
       val eventualTuples = Future.sequence(futures.toList)
       // only throw the first exception
-      ProxyThreadUtils.awaitResult(eventualTuples, snapshotParallelBuildTimeoutSeconds seconds)
-
+      ProxyThreadUtils.awaitResult(eventualTuples, snapshotParallelBuildTimeoutSeconds seconds).foreach { p =>
+        checkPointForPartition(table.getProject, table.getIdentity, p._1, p._2)
+      }
     } finally {
       ProxyThreadUtils.shutdown(service)
     }

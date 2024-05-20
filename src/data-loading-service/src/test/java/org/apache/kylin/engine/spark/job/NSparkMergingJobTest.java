@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
@@ -56,23 +57,25 @@ public class NSparkMergingJobTest extends NLocalWithSparkSessionTest {
 
     private KylinConfig config;
 
+    @Override
     @Before
-    public void setup() {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
+        super.setUp();
         ss.sparkContext().setLogLevel("ERROR");
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         overwriteSystemProp("kylin.engine.persist-flattable-threshold", "0");
         overwriteSystemProp("kylin.engine.persist-flatview", "true");
 
         config = getTestConfig();
-
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(config);
     }
 
+    @Override
     @After
-    public void after() {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Test
@@ -95,8 +98,11 @@ public class NSparkMergingJobTest extends NLocalWithSparkSessionTest {
 
         val partitionIdList = segment1.getAllPartitionIds();
 
-        NDataSegment mergedSegment = dataflowMgr.mergeSegments(dataflow, new SegmentRange.TimePartitionedSegmentRange(
-                SegmentRange.dateToLong("2020-11-03"), SegmentRange.dateToLong("2020-11-05")), false);
+        NDataSegment mergedSegment = UnitOfWork.doInTransactionWithRetry(
+                () -> NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
+                        .mergeSegments(dataflow, new SegmentRange.TimePartitionedSegmentRange(
+                                SegmentRange.dateToLong("2020-11-03"), SegmentRange.dateToLong("2020-11-05")), false),
+                project);
 
         val segmentId = mergedSegment.getId();
         val bucketStart = new AtomicLong(0);
@@ -116,8 +122,11 @@ public class NSparkMergingJobTest extends NLocalWithSparkSessionTest {
         execMgr.addJob(mergeJob);
         // wait job done
         Assert.assertEquals(ExecutableState.SUCCEED, IndexDataConstructor.wait(mergeJob));
-        val merger = new AfterMergeOrRefreshResourceMerger(config, getProject());
-        merger.merge(mergeJob.getSparkMergingStep());
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            val merger = new AfterMergeOrRefreshResourceMerger(getTestConfig(), getProject());
+            merger.merge(mergeJob.getSparkMergingStep());
+            return true;
+        }, getProject());
 
         val dataflow1 = dataflowMgr.getDataflow(modelId);
         val dataPartitionSize = dataflow1.getSegment(segmentId).getMultiPartitions().size();

@@ -22,7 +22,6 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.USER_LOGIN_
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.service.KylinUserService;
-import org.apache.kylin.rest.service.MaintenanceModeService;
 import org.apache.kylin.rest.service.UserAclService;
 import org.junit.After;
 import org.junit.Assert;
@@ -47,7 +46,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class LimitLoginAuthenticationProviderTest extends NLocalFileMetadataTestCase {
@@ -161,9 +159,6 @@ public class LimitLoginAuthenticationProviderTest extends NLocalFileMetadataTest
 
     @Test
     public void testAuthenticate_Unlocked() {
-        EpochManager.getInstance().tryUpdateEpoch(EpochManager.GLOBAL, true);
-        ReflectionTestUtils.setField(limitLoginAuthenticationProvider, "maintenanceModeService", new MaintenanceModeService());
-
         userAdmin.setLocked(true);
         userAdmin.setLockedTime(System.currentTimeMillis() - 60 * 1000);
         userAdmin.setWrongTime(3);

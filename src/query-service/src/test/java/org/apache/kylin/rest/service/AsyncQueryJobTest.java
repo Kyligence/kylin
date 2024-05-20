@@ -232,22 +232,19 @@ public class AsyncQueryJobTest extends NLocalFileMetadataTestCase {
     }
 
     private void testMetadata(FileSystem workingFileSystem, FileStatus metaFileStatus) throws IOException {
-        val rawResourceMap = Maps.<String, RawResource> newHashMap();
+        val rawResourceMap = Maps.<String, RawResource> newTreeMap();
         FileStatus metadataFile = metaFileStatus;
         try (FSDataInputStream inputStream = workingFileSystem.open(metadataFile.getPath());
                 ZipInputStream zipIn = new ZipInputStream(inputStream)) {
             ZipEntry zipEntry = null;
             while ((zipEntry = zipIn.getNextEntry()) != null) {
-                if (!zipEntry.getName().startsWith("/")) {
-                    continue;
-                }
                 long t = zipEntry.getTime();
                 RawResource raw = new RawResource(zipEntry.getName(), ByteSource.wrap(IOUtils.toByteArray(zipIn)), t,
                         0);
                 rawResourceMap.put(zipEntry.getName(), raw);
             }
         }
-        Assert.assertEquals(89, rawResourceMap.size());
+        Assert.assertEquals(117, rawResourceMap.size());
     }
 
     private void testKylinConfig(FileSystem workingFileSystem, FileStatus metaFileStatus) throws IOException {

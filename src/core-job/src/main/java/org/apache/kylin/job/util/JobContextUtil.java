@@ -206,20 +206,25 @@ public class JobContextUtil {
 
     // for test only
     public static synchronized void cleanUp() {
-        try {
-            if (null != jobContext) {
+        stopScheduler();
+        dropUTJobTable();
+        jobInfoMapper = null;
+        jobLockMapper = null;
+        jobInfoDao = null;
+        jobContext = null;
+        sqlSessionTemplate = null;
+        transactionManager = null;
+    }
+
+    public static void stopScheduler() {
+        if (null != jobContext) {
+            try {
                 jobContext.destroy();
+                jobContext = null;
+            } catch (Exception e) {
+                log.error("JobContextUtil clean up failed.");
+                throw new RuntimeException("JobContextUtil clean up failed.", e);
             }
-            dropUTJobTable();
-            jobInfoMapper = null;
-            jobLockMapper = null;
-            jobInfoDao = null;
-            jobContext = null;
-            sqlSessionTemplate = null;
-            transactionManager = null;
-        } catch (Exception e) {
-            log.error("JobContextUtil clean up failed.");
-            throw new RuntimeException("JobContextUtil clean up failed.", e);
         }
     }
 

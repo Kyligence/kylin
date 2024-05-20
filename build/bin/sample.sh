@@ -124,20 +124,6 @@ sed -i "s/%default_version%/${kylin_version}/g" ${KYLIN_HOME}/sample_project/sam
 sed -i "s/%default_version%/${kylin_version}/g" ${KYLIN_HOME}/sample_project/sample_model/metadata/learn_kylin/table/SSB.PART.json
 sed -i "s/%default_version%/${kylin_version}/g" ${KYLIN_HOME}/sample_project/sample_model/metadata/learn_kylin/table/SSB.SUPPLIER.json
 
-function turn_on_maintain_mode() {
-  echo "enter maintenance mode."
-  ${KYLIN_HOME}/bin/kylin.sh org.apache.kylin.tool.MaintainModeTool -on -reason 'metastore tool' -hidden-output true
-  ret=$?
-  if [[ $ret != 0 ]]; then
-    exit $ret
-  fi
-}
-
-function turn_off_maintain_mode() {
-  echo "exit maintenance mode."
-  ${KYLIN_HOME}/bin/kylin.sh org.apache.kylin.tool.MaintainModeTool -off -hidden-output true
-}
-
 function printImportResult() {
   error=$1
   if [[ $error == 0 ]]; then
@@ -148,10 +134,8 @@ function printImportResult() {
 }
 
 function importProject() {
-  turn_on_maintain_mode
   ${KYLIN_HOME}/bin/kylin.sh org.apache.kylin.tool.SampleProjectTool -dir ${KYLIN_HOME}/sample_project/sample_model/metadata -project learn_kylin -model sample_ssb
   printImportResult $?
-  turn_off_maintain_mode
 }
 
 importProject

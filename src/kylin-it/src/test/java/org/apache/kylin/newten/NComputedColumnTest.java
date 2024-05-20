@@ -41,16 +41,18 @@ import org.sparkproject.guava.collect.Sets;
 import lombok.val;
 
 public class NComputedColumnTest extends NLocalWithSparkSessionTest {
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         this.createTestMetadata("src/test/resources/ut_meta/comput_column");
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() {
+    public void tearDown() {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }

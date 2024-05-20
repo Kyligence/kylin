@@ -31,6 +31,7 @@ import org.apache.kylin.metadata.resourcegroup.ResourceGroupManager;
 import org.apache.kylin.metadata.streaming.ReflectionUtils;
 import org.apache.kylin.rest.request.StorageCleanupRequest;
 import org.apache.kylin.tool.garbage.CleanTaskExecutorService;
+import org.apache.kylin.tool.garbage.PriorityExecutor;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -80,6 +81,9 @@ public class MetaStoreTenantServiceTest {
 
         ReflectionUtils.setField(metaStoreService, "routeService", routeService);
         ReflectionUtils.setField(routeService, "restTemplate", restTemplate);
+
+        CleanTaskExecutorService.getInstance()
+                .bindWorkingPool(() -> PriorityExecutor.newWorkingThreadPool("test-pool", 1));
 
         val restResult = JsonUtil.writeValueAsBytes(RestResponse.ok(true));
         val resp = new ResponseEntity<>(restResult, HttpStatus.OK);

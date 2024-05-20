@@ -97,8 +97,9 @@ public class SubtractBitmapWithoutCodeGenTest extends NLocalWithSparkSessionTest
     }
 
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        super.setUp();
         JobContextUtil.getJobContext(getTestConfig());
 
         overwriteSystemProp("spark.local", "true");
@@ -120,9 +121,9 @@ public class SubtractBitmapWithoutCodeGenTest extends NLocalWithSparkSessionTest
     }
 
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
         FileUtils.deleteQuietly(new File("../kylin-it/metastore_db"));
     }
 

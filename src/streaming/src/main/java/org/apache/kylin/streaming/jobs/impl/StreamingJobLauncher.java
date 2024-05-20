@@ -20,7 +20,7 @@ package org.apache.kylin.streaming.jobs.impl;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
-import static org.apache.kylin.common.persistence.ResourceStore.STREAMING_RESOURCE_ROOT;
+import static org.apache.kylin.common.persistence.MetadataType.STREAMING_JOB;
 import static org.apache.kylin.streaming.constants.StreamingConstants.DEFAULT_PARSER_NAME;
 import static org.apache.kylin.streaming.constants.StreamingConstants.REST_SERVER_IP;
 import static org.apache.kylin.streaming.constants.StreamingConstants.SPARK_CORES_MAX;
@@ -74,8 +74,9 @@ import org.apache.kylin.common.StorageURL;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.ServerErrorCode;
 import org.apache.kylin.common.persistence.ImageDesc;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.metadata.HDFSMetadataStore;
+import org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.AddressUtil;
@@ -188,14 +189,14 @@ public class StreamingJobLauncher extends AbstractSparkJobLauncher {
         params.put("path", String.format(Locale.ROOT, "%s/meta_%d", getJobTmpMetaStoreUrlPath(), currentTimestamp));
         params.put("zip", "true");
         params.put("snapshot", "true");
-        return new StorageURL(config.getMetadataUrlPrefix(), HDFSMetadataStore.HDFS_SCHEME, params);
+        return new StorageURL(config.getMetadataUrlPrefix(), FileSystemMetadataStore.HDFS_SCHEME, params);
     }
 
     protected Set<String> getMetadataDumpList() {
         val metaSet = NDataflowManager.getInstance(config, project).getDataflow(modelId)
                 .collectPrecalculationResource();
         metaSet.add(ResourceStore.METASTORE_IMAGE);
-        metaSet.add(String.format(Locale.ROOT, "/%s%s/%s", project, STREAMING_RESOURCE_ROOT, jobId));
+        metaSet.add(MetadataType.mergeKeyWithType(jobId, STREAMING_JOB));
         return metaSet;
     }
 
@@ -227,7 +228,7 @@ public class StreamingJobLauncher extends AbstractSparkJobLauncher {
     private void initStorageUrl() {
         // in local mode or ut env, or scheme is not hdfs
         // use origin config direct
-        if (!StreamingUtils.isJobOnCluster(config) || !StringUtils.equals(HDFSMetadataStore.HDFS_SCHEME,
+        if (!StreamingUtils.isJobOnCluster(config) || !StringUtils.equals(FileSystemMetadataStore.HDFS_SCHEME,
                 jobParams.getOrDefault(STREAMING_META_URL, STREAMING_META_URL_DEFAULT))) {
             distMetaStorageUrl = config.getMetadataUrl();
             return;

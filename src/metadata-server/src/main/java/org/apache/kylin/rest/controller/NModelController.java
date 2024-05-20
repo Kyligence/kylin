@@ -63,7 +63,6 @@ import org.apache.kylin.rest.request.ModelValidationRequest;
 import org.apache.kylin.rest.request.MultiPartitionMappingRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
 import org.apache.kylin.rest.request.PartitionColumnRequest;
-import org.apache.kylin.rest.request.UnlinkModelRequest;
 import org.apache.kylin.rest.request.UpdateMultiPartitionValueRequest;
 import org.apache.kylin.rest.response.AffectedModelsResponse;
 import org.apache.kylin.rest.response.AggShardByColumnsResponse;
@@ -406,15 +405,14 @@ public class NModelController extends NBasicController {
         checkRequiredArg("action", action);
 
         if ("TOGGLE_PARTITION".equals(action)) {
-            modelService.checkSingleIncrementingLoadingTable(project, tableName);
-            val affectedModelResponse = modelService.getAffectedModelsByToggleTableType(tableName, project);
-            return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, affectedModelResponse, "");
+            // TABLE_ORIENTED model is deprecated, just return empty response.
+            return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, new AffectedModelsResponse(), "");
         } else if ("DROP_TABLE".equals(action)) {
             val affectedModelResponse = modelService.getAffectedModelsByDeletingTable(tableName, project);
             return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, affectedModelResponse, "");
         } else if ("RELOAD_ROOT_FACT".equals(action)) {
-            val affectedModelResponse = modelService.getAffectedModelsByToggleTableType(tableName, project);
-            return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, affectedModelResponse, "");
+            // TABLE_ORIENTED model is deprecated, just return empty response.
+            return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, new AffectedModelsResponse(), "");
         } else {
             throw new IllegalArgumentException();
         }
@@ -527,11 +525,7 @@ public class NModelController extends NBasicController {
     @ApiOperation(value = "unlinkModel", tags = { "AI" }, notes = "Update Body: model_id")
     @PutMapping(value = "/{model:.+}/management_type")
     @ResponseBody
-    public EnvelopeResponse<String> unlinkModel(@PathVariable("model") String modelId,
-            @RequestBody UnlinkModelRequest unlinkModelRequest) {
-        checkProjectName(unlinkModelRequest.getProject());
-        checkRequiredArg(MODEL_ID, modelId);
-        modelService.unlinkModel(modelId, unlinkModelRequest.getProject());
+    public EnvelopeResponse<String> unlinkModel() {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
 

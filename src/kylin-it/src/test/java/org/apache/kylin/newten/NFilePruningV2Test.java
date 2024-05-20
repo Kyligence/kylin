@@ -82,11 +82,12 @@ public class NFilePruningV2Test extends NLocalWithSparkSessionTest {
         SparderEnv.setSparkSession(ss);
     }
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         this.createTestMetadata("src/test/resources/ut_meta/file_pruning");
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
 
         NDataModelManager instance = NDataModelManager.getInstance(getTestConfig(), getProject());
@@ -96,8 +97,9 @@ public class NFilePruningV2Test extends NLocalWithSparkSessionTest {
         instance.updateDataModel("9cde9d25-9334-4b92-b229-a00f49453757", write -> write.setStorageType(2));
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }

@@ -22,9 +22,11 @@
 
 package io.kyligence.kap.it
 
-import java.io.File
-
+import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
+import io.kyligence.kap.query.{QueryConstants, QueryFetcher}
+import io.netty.util.internal.ThrowableUtil
 import org.apache.kylin.common.KylinConfig
+import org.apache.kylin.common.persistence.transaction.UnitOfWork
 import org.apache.kylin.common.util.TestUtils
 import org.apache.kylin.engine.spark.IndexDataWarehouse
 import org.apache.kylin.metadata.cube.model.NDataflowManager.NDataflowUpdater
@@ -37,9 +39,7 @@ import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.apache.spark.sql.execution.{KylinFileSourceScanExec, LayoutFileSourceScanExec}
 import org.apache.spark.sql.{DataFrame, SparderEnv}
 
-import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
-import io.kyligence.kap.query.{QueryConstants, QueryFetcher}
-import io.netty.util.internal.ThrowableUtil
+import java.io.File
 
 class TestQueryAndBuildFunSuite
   extends SparderBaseFunSuite
@@ -133,8 +133,6 @@ class TestQueryAndBuildFunSuite
     overwriteSystemProp("kylin.dictionary.null-encoding-opt-threshold", "1")
     overwriteSystemProp("kylin.query.spark-job-trace-enabled", "false")
     overwriteSystemProp("kylin.web.timezone", "GMT+8")
-    NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, DEFAULT_PROJECT)
-      .updateDataflow(DF_NAME, Updater(RealizationStatusEnum.OFFLINE))
     overwriteSystemProp("kylin.query.pushdown.runner-class-name", "")
     overwriteSystemProp("kylin.query.pushdown-enabled", "false")
     overwriteSystemProp("kylin.snapshot.parallel-build-enabled", "true")
@@ -142,6 +140,12 @@ class TestQueryAndBuildFunSuite
     overwriteSystemProp("kylin.snapshot.version-ttl", "0")
     overwriteSystemProp("kylin.snapshot.max-versions", "1")
     overwriteSystemProp("kylin.engine.persist-flat-use-snapshot-enabled", "false")
+
+    UnitOfWork.doInTransactionWithRetry(() => {
+      NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, DEFAULT_PROJECT)
+        .updateDataflow(DF_NAME, Updater(RealizationStatusEnum.OFFLINE))
+    }, DEFAULT_PROJECT)
+
     build()
   }
 

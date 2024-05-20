@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 
 import org.apache.hadoop.util.Shell;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
@@ -146,7 +147,9 @@ public class SchemaChangeTest extends AbstractMVCIntegrationTestCase {
     }
 
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
+        super.setUp();
         setupPushdownEnv();
         SecurityContextHolder.getContext()
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
@@ -163,56 +166,63 @@ public class SchemaChangeTest extends AbstractMVCIntegrationTestCase {
         projectManager.forceDropProject("broken_test");
         projectManager.forceDropProject("bad_query_test");
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
 
         ExecutableManager originExecutableManager = ExecutableManager.getInstance(getTestConfig(), getProject());
         ExecutableManager executableManager = Mockito.spy(originExecutableManager);
 
-        val config = KylinConfig.getInstanceFromEnv();
+        NDataSegment oneSeg = UnitOfWork.doInTransactionWithRetry(() -> {
+            val config = KylinConfig.getInstanceFromEnv();
+            val dsMgr = NDataflowManager.getInstance(config, getProject());
+            // ready dataflow, segment, cuboid layout
+            var df = dsMgr.getDataflowByModelAlias("nmodel_basic");
+            // cleanup all segments first
+            val update = new NDataflowUpdate(df.getUuid());
+            update.setToRemoveSegsWithArray(df.getSegments().toArray(new NDataSegment[0]));
+            dsMgr.updateDataflow(update);
+            df = dsMgr.getDataflowByModelAlias("nmodel_basic");
+            val segmentRange = SegmentRange.TimePartitionedSegmentRange.createInfinite();
+            // ready dataflow, segment, cuboid layout
+            return dsMgr.appendSegment(df, segmentRange);
+        }, getProject());
+
+        val config = getTestConfig();
         val dsMgr = NDataflowManager.getInstance(config, getProject());
-        // ready dataflow, segment, cuboid layout
-        var df = dsMgr.getDataflowByModelAlias("nmodel_basic");
-        // cleanup all segments first
-        val update = new NDataflowUpdate(df.getUuid());
-        update.setToRemoveSegsWithArray(df.getSegments().toArray(new NDataSegment[0]));
-        dsMgr.updateDataflow(update);
-        df = dsMgr.getDataflowByModelAlias("nmodel_basic");
-        val layouts = df.getIndexPlan().getAllLayouts();
-        val round1 = Lists.newArrayList(layouts);
-        val segmentRange = SegmentRange.TimePartitionedSegmentRange.createInfinite();
-        val toBuildLayouts = Sets.newLinkedHashSet(round1);
-        val execMgr = ExecutableManager.getInstance(config, getProject());
-        // ready dataflow, segment, cuboid layout
-        val oneSeg = dsMgr.appendSegment(df, segmentRange);
-        val job = NSparkCubingJob.create(Sets.newHashSet(oneSeg), toBuildLayouts, "ADMIN", null);
+        val df = dsMgr.getDataflowByModelAlias("nmodel_basic");
+        val toBuildLayouts = df.getIndexPlan().getAllLayouts();
+        val job = NSparkCubingJob.create(Sets.newHashSet(oneSeg), Sets.newHashSet(toBuildLayouts), "ADMIN", null);
         // launch the job
+        val execMgr = ExecutableManager.getInstance(config, getProject());
+
         execMgr.addJob(job);
         JobFinishHelper.waitJobFinish(config, getProject(), job.getId(), 600 * 1000);
         Preconditions.checkArgument(executableManager.getJob(job.getId()).getStatus() == ExecutableState.SUCCEED);
 
         val buildStore = ExecutableUtils.getRemoteStore(config, job.getSparkCubingStep());
-        val merger = new AfterBuildResourceMerger(config, getProject());
         val layoutIds = toBuildLayouts.stream().map(LayoutEntity::getId).collect(Collectors.toSet());
-        merger.mergeAfterIncrement(df.getUuid(), oneSeg.getId(), layoutIds, buildStore);
-
-        val indexManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
-        indexManager.updateIndexPlan("abe3bf1a-c4bc-458d-8278-7ea8b00f5e96", copyForWrite -> {
-            List<IndexEntity> indexes = copyForWrite.getIndexes().stream().peek(i -> {
-                if (i.getId() == 0) {
-                    i.setLayouts(Lists.newArrayList(i.getLayouts().get(0)));
-                }
-            }).collect(Collectors.toList());
-            copyForWrite.setIndexes(indexes);
-        });
+        UnitOfWork.doInTransactionWithRetry(() -> {
+            val merger = new AfterBuildResourceMerger(getTestConfig(), getProject());
+            merger.mergeAfterIncrement(df.getUuid(), oneSeg.getId(), layoutIds, buildStore);
+            val indexManager = NIndexPlanManager.getInstance(getTestConfig(), getProject());
+            indexManager.updateIndexPlan("abe3bf1a-c4bc-458d-8278-7ea8b00f5e96", copyForWrite -> {
+                List<IndexEntity> indexes = copyForWrite.getIndexes().stream().peek(i -> {
+                    if (i.getId() == 0) {
+                        i.setLayouts(Lists.newArrayList(i.getLayouts().get(0)));
+                    }
+                }).collect(Collectors.toList());
+                copyForWrite.setIndexes(indexes);
+            });
+            return true;
+        }, getProject());
         userService.createUser(new ManagedUser("ADMIN", "KYLIN", false,
                 Collections.singletonList(new UserGrantedAuthority("ROLE_ADMIN"))));
     }
 
     @After
-    public void teardown() throws Exception {
+    public void tearDown() throws Exception {
         cleanPushdownEnv();
         JobContextUtil.cleanUp();
+        super.tearDown();
     }
 
     @Test

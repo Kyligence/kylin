@@ -18,12 +18,11 @@
 
 package org.apache.kylin.metadata.view;
 
-import static org.apache.kylin.common.persistence.ResourceStore.VIEW_ROOT;
-
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -58,7 +57,7 @@ public class LogicalViewManager {
             logger.info("Initializing LogicalView with KylinConfig Id: {}", System.identityHashCode(config));
         }
         this.config = config;
-        this.crud = new CachedCrudAssist<LogicalView>(getStore(), VIEW_ROOT, "", LogicalView.class) {
+        this.crud = new CachedCrudAssist<LogicalView>(getStore(), MetadataType.LOGICAL_VIEW, null, LogicalView.class) {
             @Override
             protected LogicalView initEntityAfterReload(LogicalView view, String resourceName) {
                 return view;

@@ -78,17 +78,19 @@ public class MultiPartitionPruningTest extends NLocalWithSparkSessionTest implem
         SparderEnv.setSparkSession(ss);
     }
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         this.createTestMetadata("src/test/resources/ut_meta/multi_partition_pruning");
         overwriteSystemProp("kylin.model.multi-partition-enabled", "true");
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }

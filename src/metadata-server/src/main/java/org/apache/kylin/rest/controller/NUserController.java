@@ -168,7 +168,7 @@ public class NUserController extends NBasicController implements ApplicationList
         if (!config.isUTEnv()) {
             return;
         }
-        CreateAdminUserUtils.createAllAdmins(userService, env);
+        CreateAdminUserUtils.createAllAdmins(userService, env, userAclService);
     }
 
     @ApiOperation(value = "createUser", tags = {

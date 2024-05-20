@@ -30,7 +30,6 @@ import org.apache.kylin.engine.spark.job.CuboidAggregator;
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.measure.bitmap.BitmapCounter;
 import org.apache.kylin.measure.bitmap.BitmapSerializer;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
@@ -54,7 +53,6 @@ import org.apache.spark.sql.common.SparderQueryTest;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -71,17 +69,11 @@ public class NManualBuildAndQueryCuboidTest extends NManualBuildAndQueryTest {
     private static StructType OUT_SCHEMA = null;
 
     @Before
-    public void setup() throws Exception {
-        super.init();
+    public void setUp() throws Exception {
+        super.setUp();
         overwriteSystemProp("spark.local", "true");
         overwriteSystemProp("noBuild", "false");
         overwriteSystemProp("isDeveloperMode", "false");
-    }
-
-    @After
-    public void after() throws Exception {
-        JobContextUtil.cleanUp();
-        super.cleanupTestMetadata();
     }
 
     @Override

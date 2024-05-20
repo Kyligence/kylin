@@ -36,9 +36,11 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.rest.util.SpringContext;
 import org.junit.Assert;
 import org.junit.Before;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationContext;
 
 import lombok.val;
 
@@ -274,6 +276,18 @@ public class NLocalFileMetadataTestCase extends AbstractTestCase {
             if (StringUtils.isNotEmpty(msg)) {
                 Assert.assertTrue(e.getMessage().contains(msg));
             }
+        }
+    }
+    
+    // provide beans without @RunWith(SpringRunner.class) or @RunWith(SpringJUnit4ClassRunner.class)
+    public void prepareBeans(Object... beans) {
+        ApplicationContext applicationContext = Mockito.spy(ApplicationContext.class);
+        SpringContext.setApplicationContextImpl(applicationContext);
+        for (Object bean : beans) {
+            Class<?> beanType = Mockito.mockingDetails(bean).isMock()
+                    ? Mockito.mockingDetails(bean).getMockCreationSettings().getTypeToMock()
+                    : bean.getClass();
+            Mockito.doReturn(bean).when(applicationContext).getBean(beanType);
         }
     }
 

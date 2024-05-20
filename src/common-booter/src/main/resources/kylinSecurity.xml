@@ -234,11 +234,6 @@
         </scr:authentication-manager>
     </beans>
 
-    <beans profile="case-insensitive-service">
-        <bean id="userService" class="org.apache.kylin.rest.service.CaseInsensitiveKylinUserService"/>
-        <bean id="userGroupService" class="org.apache.kylin.rest.service.CaseInsensitiveUserGroupService"/>
-    </beans>
-
     <beans profile="sandbox">
         <scr:http auto-config="true" use-expressions="true">
             <scr:headers>

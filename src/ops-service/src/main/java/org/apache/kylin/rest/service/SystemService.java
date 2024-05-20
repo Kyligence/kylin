@@ -407,7 +407,7 @@ public class SystemService extends BasicService {
         val config = KylinConfig.getInstanceFromEnv();
         if (config.isQueryNodeOnly()) {
             logger.info("Clean current sparder event log for RPC");
-            RoutineToolHelper.cleanEventLog(true, true, false);
+            RoutineToolHelper.cleanEventLog(RoutineToolHelper.CleanType.SPARDER, null);
         }
     }
 

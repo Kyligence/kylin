@@ -57,14 +57,11 @@ class NKylinUserManagerTest extends NLocalFileMetadataTestCase {
 
         // admin exists
         Assertions.assertTrue(manager.exists("ADMIN"));
-
-        getTestConfig().setProperty("kylin.metadata.key-case-insensitive", "true");
-        Assertions.assertTrue(manager.exists("ADMIN"));
+        Assertions.assertTrue(manager.exists("admIN"));
 
         // get
         Assertions.assertNotNull(manager.get("ADMIN"));
-        getTestConfig().setProperty("kylin.metadata.key-case-insensitive", "false");
-        Assertions.assertNotNull(manager.get("ADMIN"));
+        Assertions.assertNotNull(manager.get("admIN"));
         Assertions.assertNull(manager.get("notexist"));
         Assertions.assertNull(manager.get(null));
     }

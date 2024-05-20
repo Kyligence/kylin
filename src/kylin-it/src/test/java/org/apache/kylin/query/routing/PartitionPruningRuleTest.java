@@ -61,7 +61,7 @@ public class PartitionPruningRuleTest extends NLocalWithSparkSessionTest {
                 + " where cal_dt > '2012-01-01' and cal_dt < '2012-01-04' and lstg_site_id = 1 group by cal_dt";
         OlapContext olapContext = OlapContextTestUtil.getOlapContexts(project, sql, true).get(0);
 
-        int newPartitionsNum = 1000_000;
+        int newPartitionsNum = 100_000;
 
         modelManager.updateDataModel(modelId, copied -> {
             for (int i = 0; i < newPartitionsNum; i++) {

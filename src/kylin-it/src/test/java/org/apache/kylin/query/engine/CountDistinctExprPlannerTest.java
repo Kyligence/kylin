@@ -43,13 +43,13 @@ public class CountDistinctExprPlannerTest extends CalciteRuleTestBase {
     static final DiffRepository diff = DiffRepository.lookup(CountDistinctExprPlannerTest.class);
 
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata();
         overwriteSystemProp("kylin.query.optimized-sum-cast-double-rule-enabled", "FALSE");
     }
 
     @After
-    public void teardown() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

@@ -85,14 +85,16 @@ public class TableIndexAnswerSelectStarTest extends NLocalWithSparkSessionTest {
 
     }
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/tableindex_answer_selectstart");
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         cleanupTestMetadata();
     }
 

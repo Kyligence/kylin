@@ -113,8 +113,8 @@ public class FusionModelServiceTest extends SourceTestCase {
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Before
-    public void setup() {
-        super.setup();
+    public void setUp() {
+        super.setUp();
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         EventBusFactory.getInstance().register(modelUpdateListener, true);
         ReflectionTestUtils.setField(fusionModelService, "modelService", modelService);
@@ -336,7 +336,7 @@ public class FusionModelServiceTest extends SourceTestCase {
         // check batch segment of fusion model
         pair = fusionModelService.convertSegmentIdWithName(fusionId, "streaming_test", null,
                 new String[] { "20200518111100_20210118111100" });
-        String[] originBatchSegIds = { "86b5daaa-e295-4e8c-b877-f97bda69bee5" };
+        String[] originBatchSegIds = { "027db8f2-145d-4e6c-6a1b-7139bb1fb5bc" };
         Assert.assertEquals("cd2b9a23-699c-4699-b0dd-38c9412b3dfd", pair.getFirst());
         Assert.assertTrue(ArrayUtils.isEquals(pair.getSecond(), originBatchSegIds));
 

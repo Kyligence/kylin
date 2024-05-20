@@ -186,7 +186,7 @@ public class MetadataTool extends ExecutableApplication {
             UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().processor(() -> {
                 restoreMetadata(project, path, delete);
                 return null;
-            }).useProjectLock(true).unitName(GLOBAL_UNIT).all(true).build());
+            }).unitName(GLOBAL_UNIT).all(true).build());
         } else {
             throw new KylinException(PARAMETER_NOT_SPECIFY, "-restore");
         }

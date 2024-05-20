@@ -40,16 +40,18 @@ import lombok.val;
 
 public class NMatchingTest extends NLocalWithSparkSessionTest {
 
+    @Override
     @Before
-    public void setup() throws Exception {
-        overwriteSystemProp("kylin.engine.persist-flattable-enabled", "false");
-
+    public void setUp() throws Exception {
         JobContextUtil.cleanUp();
+        super.setUp();
+        overwriteSystemProp("kylin.engine.persist-flattable-enabled", "false");
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
     }

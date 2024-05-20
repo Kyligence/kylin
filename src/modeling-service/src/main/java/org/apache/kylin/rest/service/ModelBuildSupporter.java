@@ -33,8 +33,5 @@ public interface ModelBuildSupporter {
 
     NDataSegment createSegment(IncrementBuildSegmentParams params) throws IOException;
 
-    void refreshSegments(String project, String table, String refreshStart, String refreshEnd, String affectedStart,
-            String affectedEnd) throws IOException;
-
     JobInfoResponseWithFailure addIndexesToSegments(IndexBuildParams params);
 }

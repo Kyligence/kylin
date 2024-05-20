@@ -62,7 +62,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 
@@ -126,8 +125,6 @@ public class OpenUserServiceTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testBasic() {
-        EpochManager epochManager = EpochManager.getInstance();
-        epochManager.tryUpdateEpoch(EpochManager.GLOBAL, true);
         Assert.assertNotNull(userService);
 
         // test list users
@@ -275,8 +272,6 @@ public class OpenUserServiceTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testSyncAdminUser() {
-        EpochManager epochManager = EpochManager.getInstance();
-        epochManager.tryUpdateEpoch(EpochManager.GLOBAL, true);
         userAclService.syncAdminUserAcl();
         Assert.assertTrue(userAclService.hasUserAclPermission("admin", AclPermission.DATA_QUERY));
     }

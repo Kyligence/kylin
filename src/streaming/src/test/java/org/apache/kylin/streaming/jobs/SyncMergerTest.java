@@ -19,6 +19,7 @@ package org.apache.kylin.streaming.jobs;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -52,16 +53,18 @@ public class SyncMergerTest extends StreamingTestCase {
 
     @Test
     public void testRunSuccessful() {
-        KylinConfig testConfig = getTestConfig();
-        NDataflowManager mgr = NDataflowManager.getInstance(testConfig, PROJECT);
-        NDataflow df = mgr.getDataflowByModelAlias(MODEL_ALIAS);
         val ss = SparkSession.builder().master("local").getOrCreate();
-        val mergeJobEntry = createMergeJobEntry(mgr, df, ss, PROJECT);
+        val mergeJobEntry = UnitOfWork.doInTransactionWithRetry(() -> {
+            NDataflowManager mgr = NDataflowManager.getInstance(getTestConfig(), PROJECT);
+            NDataflow df = mgr.getDataflowByModelAlias(MODEL_ALIAS);
+            return createMergeJobEntry(mgr, df, ss, PROJECT);
+        }, PROJECT);
         val afterMergeSeg = mergeJobEntry.afterMergeSegment();
         val syncMerge = new SyncMerger(mergeJobEntry);
         val merger = new StreamingDFMergeJob();
         syncMerge.run(merger);
-        df = mgr.getDataflow(df.getId());
+        NDataflowManager mgr = NDataflowManager.getInstance(getTestConfig(), PROJECT);
+        NDataflow df = mgr.getDataflowByModelAlias(MODEL_ALIAS);
         Assert.assertEquals(1, df.getSegments().size());
         Assert.assertEquals(SegmentStatusEnum.READY, df.getSegment(afterMergeSeg.getId()).getStatus());
         ss.stop();

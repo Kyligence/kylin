@@ -122,7 +122,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
@@ -941,29 +940,33 @@ public class AccessService extends BasicService {
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#ae, 'ADMINISTRATION')")
-    public boolean remoteGrantAccess(AclEntity ae, String identifier, Boolean isPrincipal, String permission) {
+    public boolean grantAccess(AclEntity ae, String identifier, Boolean isPrincipal, String permission)
+            throws IOException {
         AccessGrantEventNotifier notifier = new AccessGrantEventNotifier(UnitOfWork.GLOBAL_UNIT, ae.getId(), identifier,
                 isPrincipal, permission);
-        return remoteRequest(notifier, null);
+        updateAccess(notifier, null, null);
+        return true;
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#ae, 'ADMINISTRATION')")
-    public boolean remoteBatchGrantAccess(List<AccessRequest> requests, AclEntity ae) throws JsonProcessingException {
+    public boolean batchGrantAccess(List<AccessRequest> requests, AclEntity ae) throws IOException {
         AccessBatchGrantEventNotifier notifier = new AccessBatchGrantEventNotifier(UnitOfWork.GLOBAL_UNIT, ae.getId(),
                 JsonUtil.writeValueAsString(requests));
-        return remoteRequest(notifier, null);
+        updateAccess(null, notifier, null);
+        return true;
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#ae, 'ADMINISTRATION')")
-    public boolean remoteRevokeAccess(AclEntity ae, String name, boolean principal) {
+    public boolean revokeAccess(AclEntity ae, String name, boolean principal) throws IOException {
         AccessRevokeEventNotifier notifier = new AccessRevokeEventNotifier(UnitOfWork.GLOBAL_UNIT, ae.getId(), name,
                 principal);
-        return remoteRequest(notifier, null);
+        updateAccess(null, null, notifier);
+        return true;
     }
 
     @Transaction
-    public void updateAccessFromRemote(AccessGrantEventNotifier grantNotifier,
-            AccessBatchGrantEventNotifier batchGrantNotifier, AccessRevokeEventNotifier revokeNotifier)
+    public void updateAccess(AccessGrantEventNotifier grantNotifier,
+                             AccessBatchGrantEventNotifier batchGrantNotifier, AccessRevokeEventNotifier revokeNotifier)
             throws IOException {
         if (grantNotifier != null) {
             AclEntity ae = getAclEntity(AclEntityType.PROJECT_INSTANCE, grantNotifier.getEntityId());

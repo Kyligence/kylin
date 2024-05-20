@@ -129,13 +129,4 @@ public class NTableMetadataManagerTest extends NLocalFileMetadataTestCase {
 
     }
 
-    @Test
-    public void testGetIncrementalLoadTables() {
-        TableDesc tableDesc = mgrDefault.getTableDesc("DEFAULT.TEST_KYLIN_FACT");
-        tableDesc.setIncrementLoading(true);
-        List<TableDesc> tables = mgrDefault.getAllIncrementalLoadTables();
-        Assert.assertEquals(1, tables.size());
-        Assert.assertTrue(tables.get(0).isIncrementLoading());
-    }
-
 }

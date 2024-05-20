@@ -55,7 +55,6 @@ import org.apache.kylin.rest.util.AclPermissionUtil;
 import org.apache.kylin.tool.CancelHook;
 import org.apache.kylin.tool.FavoriteRuleTool;
 import org.apache.kylin.tool.JobInfoTool;
-import org.apache.kylin.tool.MaintainModeTool;
 import org.apache.kylin.tool.QueryHistoryOffsetTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -451,11 +450,8 @@ public class OpsService {
                 metadataRestoreTask.setStatus(MetadataRestoreTask.MetadataRestoreStatus.IN_PROGRESS);
                 metadataRestoreTask.setProject(project);
                 asyncTaskManager.save(metadataRestoreTask);
-                MaintainModeTool maintainModeTool = new MaintainModeTool("metadata restore");
                 try {
                     log.info("start to restore metadata from {}.", path);
-                    maintainModeTool.init();
-                    maintainModeTool.markEpochs();
                     KylinConfig config = KylinConfig.getInstanceFromEnv();
                     if (UnitOfWork.GLOBAL_UNIT.equals(project)) {
                         MetadataBackupStatusInfo backupStatusInfo = OpsService.getMetadataStatusInfoWithRetry(
@@ -474,7 +470,6 @@ public class OpsService {
                     log.error(e.getMessage(), e);
                 } finally {
                     asyncTaskManager.save(metadataRestoreTask);
-                    maintainModeTool.releaseEpochs();
                     MetadataRestore.setRunningTask(null);
                 }
             }

@@ -21,7 +21,6 @@ import static org.apache.kylin.common.constant.HttpConstant.HTTP_VND_APACHE_KYLI
 import static org.apache.kylin.common.exception.ServerErrorCode.FAILED_CONNECT_CATALOG;
 import static org.apache.kylin.common.exception.ServerErrorCode.NO_ACTIVE_ALL_NODE;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.PROJECT_NOT_EXIST;
-import static org.apache.kylin.common.exception.code.ErrorCodeSystem.MAINTENANCE_MODE_WRITE_FAILED;
 import static org.apache.kylin.common.exception.code.ErrorCodeSystem.QUERY_NODE_API_INVALID;
 
 import java.io.IOException;
@@ -62,7 +61,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.web.client.RestTemplate;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
@@ -210,7 +208,7 @@ public class QueryNodeFilter extends BaseFilter {
 
                 request = projectInfo.getSecond();
 
-                if (checkServer(request, response, chain, servletRequest, kylinConfig, project, contentType))
+                if (checkServer(request, response, chain, kylinConfig, contentType))
                     return;
 
                 if (checkNeedToMultiTenantFilter(servletRequest)) {
@@ -230,17 +228,10 @@ public class QueryNodeFilter extends BaseFilter {
     }
 
     private boolean checkServer(ServletRequest request, ServletResponse response, FilterChain chain,
-            HttpServletRequest servletRequest, KylinConfig kylinConfig, String project, String contentType)
-            throws IOException, ServletException {
-        if (checkProcessLocal(kylinConfig, project, contentType)) {
+            KylinConfig kylinConfig, String contentType) throws IOException, ServletException {
+        if (checkProcessLocal(kylinConfig, contentType)) {
             log.info("process local caused by project owner");
             chain.doFilter(request, response);
-            return true;
-        }
-
-        if (EpochManager.getInstance().isMaintenanceMode()) {
-            servletRequest.setAttribute(ERROR, new KylinException(MAINTENANCE_MODE_WRITE_FAILED));
-            servletRequest.getRequestDispatcher(API_ERROR).forward(servletRequest, response);
             return true;
         }
 
@@ -288,16 +279,12 @@ public class QueryNodeFilter extends BaseFilter {
         return false;
     }
 
-    private boolean checkProcessLocal(KylinConfig kylinConfig, String project, String contentType) {
+    private boolean checkProcessLocal(KylinConfig kylinConfig, String contentType) {
         if (kylinConfig.isDevOrUT()) {
             return true;
         }
 
         if (kylinConfig.isQueryNodeOnly()) {
-            return false;
-        }
-
-        if (!EpochManager.getInstance().checkEpochOwner(project)) {
             return false;
         }
 

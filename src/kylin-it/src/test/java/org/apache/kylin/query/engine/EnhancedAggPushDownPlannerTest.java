@@ -49,7 +49,7 @@ public class EnhancedAggPushDownPlannerTest extends CalciteRuleTestBase {
     static final DiffRepository diff = DiffRepository.lookup(EnhancedAggPushDownPlannerTest.class);
 
     @Before
-    public void setup() {
+    public void setUp() {
         this.createTestMetadata("src/test/resources/ut_meta/enhanced_agg_pushdown");
         overwriteSystemProp("kylin.query.enhanced-agg-pushdown-enabled", "true");
         overwriteSystemProp("kylin.query.convert-count-distinct-expression-enabled", "true");
@@ -57,7 +57,7 @@ public class EnhancedAggPushDownPlannerTest extends CalciteRuleTestBase {
     }
 
     @After
-    public void teardown() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

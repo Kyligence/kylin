@@ -279,7 +279,7 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // segment5 [2012-01-05, 2012-01-06] layout 20000000001, 20001, 10001, 1
 
         val project = "heterogeneous_segment";
-        val dfId = "747f864b-9721-4b97-acde-0aa8e8656cba";
+        val dfId = "24b720ff-8701-d141-3c03-3f60377418a5";
         val expectedRanges = Lists.<Pair<String, String>> newArrayList();
         val segmentRange1 = Pair.newPair("2012-01-01", "2012-01-02");
         val segmentRange2 = Pair.newPair("2012-01-02", "2012-01-03");
@@ -362,18 +362,11 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // segment5 [2012-01-05, 2012-01-06] layout 20000000001, 20001, 10001, 1
 
         val project = "heterogeneous_segment";
-        val dfId = "747f864b-9721-4b97-acde-0aa8e8656cba";
+        val dfId = "24b720ff-8701-d141-3c03-3f60377418a5";
         val expectedRanges = Lists.<Pair<String, String>> newArrayList();
         val segmentRange1 = Pair.newPair("2012-01-01", "2012-01-02");
-        // val segmentRange2 = Pair.newPair("2012-01-02", "2012-01-03")
-        // val segmentRange3 = Pair.newPair("2012-01-03", "2012-01-04")
-        // val segmentRange4 = Pair.newPair("2012-01-04", "2012-01-05")
-        // val segmentRange5 = Pair.newPair("2012-01-05", "2012-01-06")
 
         val layout_20000000001 = 20000000001L;
-        // val layout_20001 = 20001L
-        // val layout_10001 = 10001L
-        // val layout_1 = 1L
 
         val sql = "select cal_dt from test_kylin_fact inner join test_account on test_kylin_fact.seller_id = test_account.account_id ";
 
@@ -457,13 +450,9 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // segment5 [2012-01-05, 2012-01-06] layout 20000000001, 20001, 10001, 1
 
         val project = "heterogeneous_segment";
-        // val dfId = "747f864b-9721-4b97-acde-0aa8e8656cba"
-        val seg1Id = "8892fa3f-f607-4eec-8159-7c5ae2f16942";
-        val seg2Id = "d75a822c-788a-4592-a500-cf20186dded1";
-        // val seg3Id = "54eaf96d-6146-45d2-b94e-d5d187f89919"
-        // val seg4Id = "411f40b9-a80a-4453-90a9-409aac6f7632"
-        // val seg5Id = "a8318597-cb75-416f-8eb8-96ea285dd2b4"
-        //
+        val seg1Id = "015868b7-7617-d3f2-8aee-4aeeabb4a17b";
+        val seg2Id = "bd934487-18bd-edee-1f74-6c0764777a0a";
+
         val sql = "with T1 as (select cal_dt, trans_id \n" + "from test_kylin_fact inner join test_account \n"
                 + "on test_kylin_fact.seller_id = test_account.account_id \n"
                 + "where cal_dt between date'2012-01-01' and date'2012-01-03'\n" + "group by cal_dt, trans_id),\n"
@@ -526,13 +515,7 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // segment5 [2012-01-05, 2012-01-06] layout 20000000001, 20001, 10001, 1
 
         val project = "heterogeneous_segment";
-        // val dfId = "747f864b-9721-4b97-acde-0aa8e8656cba"
-        // val seg1Id = "8892fa3f-f607-4eec-8159-7c5ae2f16942"
-        // val seg2Id = "d75a822c-788a-4592-a500-cf20186dded1"
-        // val seg3Id = "54eaf96d-6146-45d2-b94e-d5d187f89919"
-        // val seg4Id = "411f40b9-a80a-4453-90a9-409aac6f7632"
-        // val seg5Id = "a8318597-cb75-416f-8eb8-96ea285dd2b4"
-        //
+
         val sql = "with T1 as (select cal_dt, trans_id \n" + "from test_kylin_fact inner join test_account \n"
                 + "on test_kylin_fact.seller_id = test_account.account_id \n"
                 + "where cal_dt between date'2012-01-01' and date'2012-01-03'\n" + "group by cal_dt, trans_id)\n";
@@ -585,12 +568,8 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // segment5 [2012-01-05, 2012-01-06] layout 20000000001, 20001, 10001, 1
 
         val project = "heterogeneous_segment";
-        val dfId = "747f864b-9721-4b97-acde-0aa8e8656cba";
-        // val seg1Id = "8892fa3f-f607-4eec-8159-7c5ae2f16942"   [20120101000000_20120102000000]
-        // val seg2Id = "d75a822c-788a-4592-a500-cf20186dded1"   [20120102000000_20120103000000]
-        val seg3Id = "54eaf96d-6146-45d2-b94e-d5d187f89919"; // [20120103000000_20120104000000]
-        // val seg4Id = "411f40b9-a80a-4453-90a9-409aac6f7632"   [20120104000000_20120105000000]
-        // val seg5Id = "a8318597-cb75-416f-8eb8-96ea285dd2b4"   [20120105000000_20120106000000]
+        val dfId = "24b720ff-8701-d141-3c03-3f60377418a5";
+        val seg3Id = "0238eee1-b7f4-2aba-a9fd-af8fb8c1da00"; // [20120103000000_20120104000000]
 
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             NDataflowManager dfMgr = NDataflowManager.getInstance(getTestConfig(), project);
@@ -645,12 +624,7 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // segment5 [2012-01-05, 2012-01-06] layout 20000000001, 20001, 10001, 1
 
         val project = "heterogeneous_segment";
-        val dfId = "747f864b-9721-4b97-acde-0aa8e8656cba";
-        // val seg1Id = "8892fa3f-f607-4eec-8159-7c5ae2f16942"   [20120101000000_20120102000000]
-        // val seg2Id = "d75a822c-788a-4592-a500-cf20186dded1"   [20120102000000_20120103000000]
-        // val seg3Id = "54eaf96d-6146-45d2-b94e-d5d187f89919"   [20120103000000_20120104000000]
-        // val seg4Id = "411f40b9-a80a-4453-90a9-409aac6f7632"   [20120104000000_20120105000000]
-        // val seg5Id = "a8318597-cb75-416f-8eb8-96ea285dd2b4"   [20120105000000_20120106000000]
+        val dfId = "24b720ff-8701-d141-3c03-3f60377418a5";
 
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             NDataflowManager dfMgr = NDataflowManager.getInstance(getTestConfig(), project);

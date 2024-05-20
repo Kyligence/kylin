@@ -32,8 +32,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.RootPersistentEntity;
-import org.apache.kylin.common.persistence.ThreadViewResourceStore;
+import org.apache.kylin.common.persistence.TransparentResourceStore;
 import org.apache.kylin.common.persistence.metadata.JdbcMetadataStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 
@@ -77,45 +76,19 @@ public class MemoryLockUtils {
                 .flatMap(List::stream).distinct().collect(Collectors.toList());
     }
 
-    public static <T extends RootPersistentEntity> T doWithLock(T entity, String resPath, boolean readonly,
-            ResourceStore store, Action<T> action) {
-        if (isNoNeedToLock(readonly, store)) {
-            return action.run();
-        }
-        if (entity == null) {
-            MemoryLockUtils.lockAndRecord(resPath, null, readonly);
-            return action.run();
-        }
-
-        List<String> lockPaths = readonly? Collections.singletonList(resPath) : entity.getLockPaths(resPath);
-        MemoryLockUtils.lockAndRecord(resPath, lockPaths, readonly);
-
-        T newEntity = action.run();
-
-        if (!readonly && newEntity != null) {
-            // update locks with new entity
-            List<String> newLockPaths = newEntity.getLockPaths(resPath);
-            List<String> delta = newLockPaths.stream().filter(path -> !lockPaths.contains(path))
-                    .collect(Collectors.toList());
-            if (!delta.isEmpty()) {
-                MemoryLockUtils.lockAndRecord(resPath, delta, false);
-            }
-        }
-        return newEntity;
-    }
-
     public static boolean isNoNeedToLock(boolean readonly, ResourceStore store) {
         return !UnitOfWork.isAlreadyInTransaction()
-                || !readonly && !(store instanceof ThreadViewResourceStore)
+                || !readonly && !(store instanceof TransparentResourceStore)
                 || !(store.getMetadataStore() instanceof JdbcMetadataStore)
                         && !KylinConfig.getInstanceFromEnv().isUTEnv()
                 || UnitOfWork.get().getParams().isUseProjectLock();
     }
 
+    // UT only
     public static RawResource doWithLock(String resPath, boolean readonly, ResourceStore store,
             Action<RawResource> action) {
         if (!isNoNeedToLock(readonly, store)) {
-            lockAndRecord(resPath, null, readonly);
+            lockAndRecord(resPath);
         }
         return action.run();
     }
@@ -129,26 +102,12 @@ public class MemoryLockUtils {
         batchLock(moduleLocks.get(0).transactionUnit(), moduleLocks, false);
     }
 
-    public static void lockAndRecord(String resPath, List<String> specifiedPath, boolean readonly){
-        // Fixme https://olapio.atlassian.net/browse/KE-41639
-        if (resPath.equals("/")) {
-            log.warn("The resPath of Entity is wrong. Cannot lock this path.", new Throwable());
-            return;
+    // ut only
+    public static void lockAndRecord(String resPath) {
+        // For ut test. The path lock migrate to db lock.
+        if (UnitOfWork.isAlreadyInTransaction()) {
+            UnitOfWork.get().getCopyForWriteItems().add(resPath);
         }
-        
-        List<String> paths = specifiedPath == null ? Collections.singletonList(resPath) : specifiedPath;
-
-        if (readonly) {
-            Set<String> holdReadLocks = UnitOfWork.get().getReadLockPath();
-            paths = paths.stream().filter(path -> !holdReadLocks.contains(path)).collect(Collectors.toList());
-        }
-
-        if (paths.isEmpty()) {
-            return;
-        }
-        List<TransactionLock> locks = getPathLocks(paths, readonly);
-
-        batchLock(resPath, locks, readonly);
     }
 
     private static void batchLock(String resPath, List<TransactionLock> locks, boolean readonly) {

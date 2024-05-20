@@ -33,6 +33,7 @@ import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.insensitive.ModelInsensitiveRequest;
 import org.apache.kylin.metadata.model.ColumnDesc;
+import org.apache.kylin.metadata.model.ComputedColumnDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableRef;
@@ -41,6 +42,8 @@ import org.apache.kylin.rest.response.LayoutRecDetailResponse;
 import org.apache.kylin.rest.response.SimplifiedMeasure;
 import org.apache.kylin.rest.util.SCD2SimplificationConvertUtil;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 
@@ -98,6 +101,18 @@ public class ModelRequest extends NDataModel implements ModelInsensitiveRequest 
     private boolean computedColumnNameAutoAdjust = false;
 
     private List<SimplifiedJoinTableDesc> simplifiedJoinTableDescs;
+
+    @EqualsAndHashCode.Include
+    @JsonGetter("computed_columns")
+    @JsonInclude(JsonInclude.Include.NON_NULL) // output to frontend
+    public List<ComputedColumnDesc> getComputedColumnDescs() {
+        return this.computedColumnDescs;
+    }
+
+    @JsonSetter("computed_columns")
+    public void setComputedColumnDescs(List<ComputedColumnDesc> computedColumnDescs) {
+        this.computedColumnDescs = computedColumnDescs;
+    }
 
     @JsonProperty("join_tables")
     public void setSimplifiedJoinTableDescs(List<SimplifiedJoinTableDesc> simplifiedJoinTableDescs) {

@@ -47,19 +47,22 @@ import lombok.val;
 public class NSparkRetryCubingJobTest extends NLocalWithSparkSessionTestBase {
     private KylinConfig config;
 
+    @Override
     @Before
-    public void setup() {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
+        super.setUp();
         config = getTestConfig();
         createTestMetadata();
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
         populateSSWithCSVData(getTestConfig(), getProject(), ss);
     }
 
+    @Override
     @After
-    public void after() {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     public String getProject() {

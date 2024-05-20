@@ -118,8 +118,8 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
     private IndexPlanService indexPlanService = Mockito.spy(new IndexPlanService());
 
     @Before
-    public void setup() {
-        super.setup();
+    public void setUp() {
+        super.setUp();
         System.setProperty("HADOOP_USER_NAME", "root");
 
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", aclUtil);
@@ -141,7 +141,7 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
         getTestConfig().setProperty("kylin.metadata.semi-automatic-mode", "false");
         EventBusFactory.getInstance().unregister(modelBrokenListener);
         EventBusFactory.getInstance().restart();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Test

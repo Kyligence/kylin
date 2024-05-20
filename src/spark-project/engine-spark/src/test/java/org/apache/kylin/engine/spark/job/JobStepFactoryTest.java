@@ -25,11 +25,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.job.constant.ExecutableConstants;
-import org.apache.kylin.job.execution.AbstractExecutable;
-import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.execution.NSparkExecutable;
-import org.apache.kylin.job.factory.JobFactory;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -39,7 +36,6 @@ import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
-import org.apache.kylin.metadata.model.Segments;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.junit.After;
 import org.junit.Assert;
@@ -57,8 +53,6 @@ import io.kyligence.kap.engine.spark.job.ResourceDetectBeforeMergingJob;
 import io.kyligence.kap.engine.spark.job.ResourceDetectBeforeSampling;
 import io.kyligence.kap.engine.spark.job.SparkCleanupTransactionalTableStep;
 import io.kyligence.kap.engine.spark.stats.analyzer.TableAnalyzerJob;
-import lombok.val;
-import lombok.var;
 
 public class JobStepFactoryTest extends NLocalWithSparkSessionTestBase {
     private KylinConfig config;
@@ -141,7 +135,6 @@ public class JobStepFactoryTest extends NLocalWithSparkSessionTestBase {
     public void testAddStepInMerging() {
         NDataflowManager dsMgr = NDataflowManager.getInstance(config, getProject());
         NDataflow df = dsMgr.getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
-        NDataflow flowCopy = dsMgr.getDataflow(df.getUuid()).copy();
 
         NDataflowUpdate update = new NDataflowUpdate(df.getUuid());
         NDataSegment firstSeg = NDataSegment.empty();
@@ -156,13 +149,9 @@ public class JobStepFactoryTest extends NLocalWithSparkSessionTestBase {
         secondSeg.setStatus(SegmentStatusEnum.READY);
         secondSeg.setId(RandomUtil.randomUUIDStr());
 
-        Segments<NDataSegment> mergingSegments = new Segments<>();
-        mergingSegments.add(firstSeg);
-        mergingSegments.add(secondSeg);
-        flowCopy.setSegments(mergingSegments);
-
         update.setToRemoveSegs(df.getSegments().toArray(new NDataSegment[0]));
-        dsMgr.updateDataflow(update);
+        update.setToAddSegs(firstSeg, secondSeg);
+        NDataflow flowCopy = dsMgr.updateDataflow(update).copy();
 
         NDataSegment mergedSegment = dsMgr.mergeSegments(flowCopy, new SegmentRange.TimePartitionedSegmentRange(
                 SegmentRange.dateToLong("2010-01-02"), SegmentRange.dateToLong("2013-01-01")), true);
@@ -187,9 +176,10 @@ public class JobStepFactoryTest extends NLocalWithSparkSessionTestBase {
                 mergeStep.getDistMetaUrl());
 
         NSparkCleanupAfterMergeStep cleanStep = job.getCleanUpAfterMergeStep();
+        NDataflow dataflow = dsMgr.getDataflow(df.getUuid());
         job.getParams().forEach((key, value) -> {
             if (key.equalsIgnoreCase(NBatchConstants.P_SEGMENT_IDS)) {
-                final Set<String> needDeleteSegmentIds = df.getMergingSegments(mergedSegment).stream()
+                final Set<String> needDeleteSegmentIds = dataflow.getMergingSegments(mergedSegment).stream()
                         .map(NDataSegment::getId).collect(Collectors.toSet());
                 Assert.assertEquals(needDeleteSegmentIds, cleanStep.getSegmentIds());
             } else {
@@ -198,25 +188,5 @@ public class JobStepFactoryTest extends NLocalWithSparkSessionTestBase {
         });
         Assert.assertEquals(config.getJobTmpMetaStoreUrl(getProject(), cleanStep.getId()).toString(),
                 cleanStep.getDistMetaUrl());
-    }
-
-    private void cleanModel(String dataflowId) {
-        val dataflowManager = NDataflowManager.getInstance(getTestConfig(), "default");
-        var dataflow = dataflowManager.getDataflow(dataflowId);
-        NDataflowUpdate update = new NDataflowUpdate(dataflow.getId());
-        update.setToRemoveSegs(dataflow.getSegments().toArray(new NDataSegment[0]));
-        dataflowManager.updateDataflow(update);
-    }
-
-    private AbstractExecutable mockJob(String jobId, long start, long end) {
-        val dataflowManager = NDataflowManager.getInstance(getTestConfig(), "default");
-        var dataflow = dataflowManager.getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
-        dataflow = dataflowManager.getDataflow(dataflow.getId());
-        val layouts = dataflow.getIndexPlan().getAllLayouts();
-        val oneSeg = dataflowManager.appendSegment(dataflow, new SegmentRange.TimePartitionedSegmentRange(start, end));
-        NSparkCubingJob job = NSparkCubingJob.create(new JobFactory.JobBuildParams(Sets.newHashSet(oneSeg),
-                Sets.newLinkedHashSet(layouts), "ADMIN", JobTypeEnum.INDEX_BUILD, jobId, null, null, null, null, null));
-        ExecutableManager.getInstance(getTestConfig(), "default").addJob(job);
-        return ExecutableManager.getInstance(getTestConfig(), "default").getJob(jobId);
     }
 }

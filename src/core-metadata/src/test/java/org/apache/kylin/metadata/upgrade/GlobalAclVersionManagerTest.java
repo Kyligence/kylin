@@ -39,7 +39,7 @@ public class GlobalAclVersionManagerTest extends NLocalFileMetadataTestCase {
     public void testBasic() {
         GlobalAclVersion globalAclVersion = new GlobalAclVersion();
         globalAclVersion.setAclVersion(GlobalAclVersion.DATA_PERMISSION_SEPARATE);
-        Assert.assertEquals("/_global/upgrade/acl_version.json", globalAclVersion.getResourcePath());
+        Assert.assertEquals("SYSTEM/acl_version", globalAclVersion.getResourcePath());
         GlobalAclVersionManager manager = new GlobalAclVersionManager(getTestConfig());
         manager.delete();
         Assert.assertFalse(manager.exists());

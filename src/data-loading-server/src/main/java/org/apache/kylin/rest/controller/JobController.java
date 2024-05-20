@@ -124,6 +124,9 @@ public class JobController extends BaseController {
             throw new KylinException(JOB_TYPE_ILLEGAL);
         }
         checkRequiredArg("time_filter", timeFilter);
+        if (jobNames.isEmpty()) {
+            jobNames = JobTypeEnum.BUILD_JOB_TYPES;
+        }
         JobFilter jobFilter = new JobFilter(jobInfoService.parseJobStatus(statuses), jobNames, timeFilter, subject, key,
                 exactMatch, project, sortBy, reverse);
         // pageOffset is 1,2,3.... means pageNo

@@ -36,6 +36,7 @@ import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.service.TableSampleService;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.constant.Constant;
@@ -68,7 +69,7 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
     private AclEvaluate aclEvaluate = Mockito.spy(AclEvaluate.class);
 
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         SecurityContextHolder.getContext()
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
@@ -116,15 +117,17 @@ public class TableSamplingServiceTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testSkipResourceDetectWithProjectSettings() {
-        NProjectManager projectManager = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
-        projectManager.updateProject(PROJECT, copyForWrite -> {
-            LinkedHashMap<String, String> properties = copyForWrite.getOverrideKylinProps();
-            if (properties == null) {
-                properties = Maps.newLinkedHashMap();
-            }
-            properties.put("kylin.engine.steps.skip", NResourceDetectStep.class.getCanonicalName());
-            copyForWrite.setOverrideKylinProps(properties);
-        });
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NProjectManager projectManager = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
+            return projectManager.updateProject(PROJECT, copyForWrite -> {
+                LinkedHashMap<String, String> properties = copyForWrite.getOverrideKylinProps();
+                if (properties == null) {
+                    properties = Maps.newLinkedHashMap();
+                }
+                properties.put("kylin.engine.steps.skip", NResourceDetectStep.class.getCanonicalName());
+                copyForWrite.setOverrideKylinProps(properties);
+            });
+        }, PROJECT);
         final String table1 = "DEFAULT.TEST_KYLIN_FACT";
         Set<String> tables = Sets.newHashSet(table1);
         tableSamplingService.sampling(tables, PROJECT, SAMPLING_ROWS, 0, null, null);

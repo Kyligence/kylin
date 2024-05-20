@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.StreamingTestConstant;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -92,7 +93,8 @@ public class StreamingDFMergeJobTest extends StreamingTestCase {
         // cleanup all segments first
         var update = new NDataflowUpdate(df.getUuid());
         update.setToRemoveSegsWithArray(df.getSegments().toArray(new NDataSegment[0]));
-        dfMgr.updateDataflow(update);
+        UnitOfWork.doInTransactionWithRetry(
+                () -> NDataflowManager.getInstance(getTestConfig(), PROJECT).updateDataflow(update), PROJECT);
 
         df = dfMgr.getDataflow(df.getId());
         Assert.assertEquals(0, df.getSegments().size());

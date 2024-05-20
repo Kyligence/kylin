@@ -458,6 +458,7 @@ public class NDataflowManagerTest extends NLocalFileMetadataTestCase {
         }
 
         // Set seg1's cuboid-0's status to NEW
+        seg1.setMvcc(seg1.getMvcc() + 1);
         NDataLayout dataCuboid = NDataLayout.newDataLayout(seg1.getDataflow(), seg1.getId(),
                 df.getIndexPlan().getAllLayouts().get(0).getId());
         update = new NDataflowUpdate(df.getUuid());

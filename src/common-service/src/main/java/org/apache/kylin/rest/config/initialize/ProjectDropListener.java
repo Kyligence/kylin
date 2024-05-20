@@ -36,7 +36,6 @@ import org.apache.kylin.streaming.manager.StreamingJobManager;
 import org.apache.kylin.tool.restclient.RestClient;
 import org.springframework.http.HttpHeaders;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
 import lombok.val;
@@ -62,8 +61,6 @@ public class ProjectDropListener {
             if (KylinConfig.getInstanceFromEnv().isPrometheusMetricsEnabled()) {
                 MetricsRegistry.deletePrometheusProjectMetrics(project);
             }
-            EpochManager epochManager = EpochManager.getInstance();
-            epochManager.deleteEpoch(project);
             deleteStorage(kylinConfig, project.split("\\.")[0]);
         } catch (Exception e) {
             log.warn("error when delete " + project + " storage", e);

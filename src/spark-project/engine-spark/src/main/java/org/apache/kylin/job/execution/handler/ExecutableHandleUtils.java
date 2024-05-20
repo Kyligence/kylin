@@ -18,18 +18,20 @@
 
 package org.apache.kylin.job.execution.handler;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.TimeUtil;
+import org.apache.kylin.job.dao.JobStatisticsManager;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutableOnModel;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
-import org.apache.kylin.rest.delegate.JobStatisticsInvoker;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 
 public class ExecutableHandleUtils {
 
@@ -40,22 +42,21 @@ public class ExecutableHandleUtils {
         // get end time from current task instead of parent job，since parent job is in running state at this time
         long buildEndTime = buildTask.getEndTime();
         long duration = buildTask.getParent().getDuration();
-        long byteSize = 0;
-        for (NDataLayout dataCuboid : addOrUpdateCuboids) {
-            byteSize += dataCuboid.getByteSize();
-        }
-        Long byteSizeWrapper = byteSize;
+        long byteSize = Arrays.stream(addOrUpdateCuboids).mapToLong(NDataLayout::getByteSize).sum();
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         long startOfDay = TimeUtil.getDayStart(buildEndTime);
         JobContextUtil.withTxAndRetry(() -> {
             // update
             ExecutableManager executableManager = ExecutableManager.getInstance(kylinConfig, project);
-            executableManager.updateJobOutput(buildTask.getParentId(), null, null, null, null,
-                    byteSizeWrapper.longValue());
+            executableManager.updateJobOutput(buildTask.getParentId(), null, null, null, null, byteSize);
 
             return true;
         });
-        JobStatisticsInvoker.getInstance().updateStatistics(project, startOfDay, model, duration, byteSize, 0);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            JobStatisticsManager.getInstance(KylinConfig.getInstanceFromEnv(), project).updateStatistics(startOfDay,
+                    model, duration, byteSize, 0);
+            return true;
+        }, project);
     }
 
     public static List<AbstractExecutable> getNeedMergeTasks(DefaultExecutableOnModel parent) {

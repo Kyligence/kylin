@@ -30,8 +30,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.transaction.UnitOfWork;
-import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
@@ -108,13 +106,14 @@ public class YarnApplicationToolTest extends NLocalFileMetadataTestCase {
                     }
                 }).filter(Objects::nonNull).collect(toList());
 
-        UnitOfWork.doInTransactionWithRetry(
-                UnitOfWorkParams.builder().unitName(project).useProjectLock(true).processor(() -> {
-                    val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
-                    metadata.forEach(x -> resourceStore.checkAndPutResource(x.getResPath(), x.getByteSource(), -1));
-                    return 0;
-                }).maxRetry(1).build());
+        val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
+        metadata.forEach(x -> resourceStore.checkAndPutResource(x.getMetaKey(), x.getByteSource(), -1));
 
-        JobMetadataWriter.writeJobMetaData(getTestConfig(), metadata);
+        File jobMeta = Paths.get(DATA_DIR, jobId + ".json").toFile();
+        JsonNode jobNode = JsonUtil.readValue(jobMeta, JsonNode.class);
+        RawResource jobRaw = new RawResource(jobNode.get("meta_table_key").asText(),
+                ByteSource.wrap(JsonUtil.writeValueAsBytes(jobNode.get("meta_table_content"))),
+                jobNode.get("meta_table_ts").asLong(), jobNode.get("meta_table_mvcc").asLong());
+        JobMetadataWriter.writeJobMetaData(getTestConfig(), jobRaw, project);
     }
 }

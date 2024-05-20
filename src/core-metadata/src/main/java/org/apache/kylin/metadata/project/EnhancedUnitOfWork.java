@@ -17,18 +17,8 @@
  */
 package org.apache.kylin.metadata.project;
 
-import static org.apache.kylin.common.exception.code.ErrorCodeSystem.EPOCH_DOES_NOT_BELONG_TO_CURRENT_NODE;
-
-import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.metadata.JdbcMetadataStore;
-import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.persistence.transaction.UnitOfWorkParams;
-import org.apache.kylin.metadata.epoch.EpochNotMatchException;
-
-import io.kyligence.kap.metadata.epoch.EpochManager;
-import lombok.val;
 
 public class EnhancedUnitOfWork {
 
@@ -56,21 +46,6 @@ public class EnhancedUnitOfWork {
     }
 
     public static <T> T doInTransactionWithCheckAndRetry(UnitOfWorkParams<T> params) {
-        val config = KylinConfig.getInstanceFromEnv();
-        MetadataStore metadataStore = ResourceStore.getKylinMetaStore(config).getMetadataStore();
-        if (!config.isUTEnv() && metadataStore instanceof JdbcMetadataStore) {
-            params.setEpochChecker(() -> {
-                if (!EpochManager.getInstance().checkEpochOwner(params.getUnitName())) {
-                    throw new EpochNotMatchException(EPOCH_DOES_NOT_BELONG_TO_CURRENT_NODE, params.getUnitName());
-                }
-                return null;
-            });
-        }
-        //disable transaction for data-loading node and smart node
-        if (config.isDataLoadingNode() || config.isSmartNode()) {
-            params.setTransparent(true);
-            params.setMaxRetry(1);
-        }
         return UnitOfWork.doInTransactionWithRetry(params);
     }
 }

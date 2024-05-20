@@ -52,7 +52,7 @@ public class SqlToRelNodeTest extends CalciteRuleTestBase {
     private final String NL = System.getProperty("line.separator");
 
     @Before
-    public void setup() {
+    public void setUp() {
         staticCreateTestMetadata();
         diff = DiffRepository.lookup(SqlToRelNodeTest.class);
         config = KylinConfig.getInstanceFromEnv();

@@ -24,13 +24,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigExt;
+import org.apache.kylin.common.persistence.MetadataType;
+import org.apache.kylin.common.persistence.RawResourceFilter;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.util.StringHelper;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.model.AutoMergeTimeEnum;
 import org.apache.kylin.metadata.model.ISourceAware;
@@ -43,9 +49,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableSet;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -111,15 +114,6 @@ public class ProjectInstance extends RootPersistentEntity implements ISourceAwar
             AutoMergeTimeEnum.MONTH, AutoMergeTimeEnum.QUARTER, AutoMergeTimeEnum.YEAR), new VolatileRange(),
             new RetentionRange(), false);
 
-    @Override
-    public String getResourcePath() {
-        return concatResourcePath(resourceName());
-    }
-
-    public static String concatResourcePath(String projectName) {
-        return ResourceStore.PROJECT_ROOT + "/" + projectName + MetadataConstants.FILE_SURFIX;
-    }
-
     public static ProjectInstance create(String name, String owner, String description,
             LinkedHashMap<String, String> overrideProps) {
         ProjectInstance projectInstance = new ProjectInstance();
@@ -152,6 +146,16 @@ public class ProjectInstance extends RootPersistentEntity implements ISourceAwar
     @Override
     public String resourceName() {
         return this.name;
+    }
+
+    @Override
+    public void setResourceName(String resourceName) {
+        this.name = resourceName;
+    }
+
+    @Override
+    public MetadataType resourceType() {
+        return MetadataType.PROJECT;
     }
 
     public String getDescription() {
@@ -311,18 +315,14 @@ public class ProjectInstance extends RootPersistentEntity implements ISourceAwar
     }
 
     private List<String> getModelsFromResource(String projectName) {
-        String modeldescRootPath = getProjectRootPath(projectName) + ResourceStore.DATA_MODEL_DESC_RESOURCE_ROOT;
-        Set<String> modelResource = getStore().listResources(modeldescRootPath);
+        Set<String> modelResource = getStore().listResources(MetadataType.MODEL.name(),
+                RawResourceFilter.equalFilter("project", projectName));
         return getNameListFromResource(modelResource);
     }
 
-    private String getProjectRootPath(String prj) {
-        return "/" + prj;
-    }
-
     private List<RealizationEntry> getRealizationsFromResource(String projectName) {
-        String dataflowRootPath = getProjectRootPath(projectName) + ResourceStore.DATAFLOW_RESOURCE_ROOT;
-        Set<String> realizationResource = getStore().listResources(dataflowRootPath);
+        Set<String> realizationResource = getStore().listResources(MetadataType.DATAFLOW.name(),
+                RawResourceFilter.equalFilter("project", projectName));
 
         if (realizationResource == null)
             return new ArrayList<>();
@@ -338,12 +338,14 @@ public class ProjectInstance extends RootPersistentEntity implements ISourceAwar
     }
 
     private Set<String> getTableFromResource(String projectName) {
-        String tableRootPath = getProjectRootPath(projectName) + ResourceStore.TABLE_RESOURCE_ROOT;
-        Set<String> tableResource = getStore().listResources(tableRootPath);
+        Set<String> tableResource = getStore().listResources(MetadataType.TABLE_INFO.name(),
+                RawResourceFilter.equalFilter("project", projectName));
         if (tableResource == null)
             return new TreeSet<>();
         List<String> tables = getNameListFromResource(tableResource);
-        return new TreeSet<>(tables);
+        // translate metaKey to tableIdentity, eg: p1.SSB.LINE_ORDER -> SSB.LINE_ORDER
+        return tables.stream().map(table -> table.substring(projectName.length() + 1))
+                .collect(Collectors.toCollection(TreeSet::new));
     }
 
     //drop the path ahead name and drop suffix e.g [/default/model_desc/]nmodel_basic[.json]

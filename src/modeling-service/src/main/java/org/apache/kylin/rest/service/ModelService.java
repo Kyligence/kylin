@@ -61,9 +61,6 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_LOC
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_MERGE_CONTAINS_GAPS;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_NOT_EXIST_ID;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_NOT_EXIST_NAME;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_REFRESH_INVALID_RANGE;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_REFRESH_IN_BUILDING;
-import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_REFRESH_SELECT_RANGE_EMPTY;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.SEGMENT_STATUS;
 import static org.apache.kylin.metadata.model.FunctionDesc.PARAMETER_TYPE_COLUMN;
 
@@ -151,8 +148,6 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
-import org.apache.kylin.metadata.cube.model.NDataLoadingRange;
-import org.apache.kylin.metadata.cube.model.NDataLoadingRangeManager;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -194,6 +189,7 @@ import org.apache.kylin.metadata.model.util.ComputedColumnUtil;
 import org.apache.kylin.metadata.model.util.MultiPartitionUtil;
 import org.apache.kylin.metadata.model.util.scd2.SCD2CondChecker;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
+import org.apache.kylin.metadata.project.NProjectLoader;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
@@ -236,7 +232,6 @@ import org.apache.kylin.rest.response.NDataModelResponse;
 import org.apache.kylin.rest.response.NDataSegmentResponse;
 import org.apache.kylin.rest.response.NModelDescResponse;
 import org.apache.kylin.rest.response.PurgeModelAffectedResponse;
-import org.apache.kylin.rest.response.RefreshAffectedSegmentsResponse;
 import org.apache.kylin.rest.response.RelatedModelResponse;
 import org.apache.kylin.rest.response.SegmentCheckResponse;
 import org.apache.kylin.rest.response.SegmentPartitionResponse;
@@ -695,8 +690,7 @@ public class ModelService extends AbstractModelService
     }
 
     public List<String> getModelNonOffOnlineStatus() {
-        return Arrays.asList(ModelStatusToDisplayEnum.ONLINE.name(), ModelStatusToDisplayEnum.WARNING.name(),
-                ModelStatusToDisplayEnum.LAG_BEHIND.name());
+        return Arrays.asList(ModelStatusToDisplayEnum.ONLINE.name(), ModelStatusToDisplayEnum.WARNING.name());
     }
 
     public List<String> getMultiPartitionModelsAlias(final String projectName, final List<String> status) {
@@ -728,7 +722,6 @@ public class ModelService extends AbstractModelService
             filterModels.setValue(updateResponseAcl(filterModels.getValue(), project));
             return filterModels;
         }
-        models.addAll(getRelateModels(project, table, params.getModelAlias()));
         Set<NDataModel> filteredModels = ModelUtils.getFilteredModels(modelAttributes, models);
 
         if (CollectionUtils.isNotEmpty(modelAttributes)) {
@@ -1224,39 +1217,6 @@ public class ModelService extends AbstractModelService
         }
     }
 
-    public List<RelatedModelResponse> getRelateModels(String project, String table, String modelId) {
-        aclEvaluate.checkProjectReadPermission(project);
-        TableDesc tableDesc = getManager(NTableMetadataManager.class, project).getTableDesc(table);
-        val dataflowManager = getManager(NDataflowManager.class, project);
-        val models = dataflowManager.getTableOrientedModelsUsingRootTable(tableDesc);
-        List<RelatedModelResponse> relatedModel = new ArrayList<>();
-        ExecutableManager executableManager = getManager(ExecutableManager.class, project);
-        val errorExecutablePOs = executableManager.getExecutablePOsByStatus(Lists.newArrayList(ExecutableState.ERROR));
-
-        val errorExecutables = errorExecutablePOs.stream().map(executableManager::fromPO).collect(Collectors.toList());
-        for (var dataModelDesc : models) {
-            Map<SegmentRange, SegmentStatusEnum> segmentRanges = new HashMap<>();
-            val model = dataModelDesc.getUuid();
-            if (StringUtils.isEmpty(modelId)
-                    || dataModelDesc.getAlias().toLowerCase(Locale.ROOT).contains(modelId.toLowerCase(Locale.ROOT))) {
-                RelatedModelResponse relatedModelResponse = new RelatedModelResponse(dataModelDesc);
-                Segments<NDataSegment> segments = getSegmentsByRange(model, project, "", "");
-                for (NDataSegment segment : segments) {
-                    segmentRanges.put(segment.getSegRange(), segment.getStatus());
-                }
-                relatedModelResponse.setStatus(getModelStatus(model, project));
-                relatedModelResponse.setSegmentRanges(segmentRanges);
-                val filteredErrorExecutables = errorExecutables.stream()
-                        .filter(abstractExecutable -> StringUtils
-                                .equalsIgnoreCase(abstractExecutable.getTargetModelAlias(), dataModelDesc.getAlias()))
-                        .collect(Collectors.toList());
-                relatedModelResponse.setHasErrorJobs(CollectionUtils.isNotEmpty(filteredErrorExecutables));
-                relatedModel.add(relatedModelResponse);
-            }
-        }
-        return relatedModel;
-    }
-
     private void checkAliasIsExceededLimit(String newAlias) {
         if (newAlias.length() > Constant.MODEL_ALIAS_LEN_LIMIT) {
             throw new KylinException(MODEL_NAME_TOO_LONG);
@@ -1359,6 +1319,7 @@ public class ModelService extends AbstractModelService
             nDataModel.setRecommendationsCount(0);
             nDataModel.setMvcc(-1);
             nDataModel.setProject(project);
+            nDataModel.setComputedColumnDescs(dataModelDesc.getComputedColumnDescs());
             changeModelOwner(nDataModel);
             val newModel = dataModelManager.createDataModelDesc(nDataModel, nDataModel.getOwner());
             cloneIndexPlan(modelId, project, nDataModel.getOwner(), newModel.getUuid(), RealizationStatusEnum.OFFLINE);
@@ -1404,30 +1365,6 @@ public class ModelService extends AbstractModelService
 
         NDataModel modelUpdate = modelManager.copyForWrite(nDataModel);
         modelManager.updateDataModelDesc(modelUpdate);
-    }
-
-    @Transaction(project = 1)
-    public void unlinkModel(String modelId, String project) {
-        aclEvaluate.checkProjectWritePermission(project);
-        NDataLoadingRangeManager dataLoadingRangeManager = getManager(NDataLoadingRangeManager.class, project);
-        NDataModelManager dataModelManager = getManager(NDataModelManager.class, project);
-
-        NDataModel nDataModel = getModelById(modelId, project);
-        if (ManagementType.MODEL_BASED == nDataModel.getManagementType()) {
-            throw new IllegalStateException("Model " + nDataModel.getAlias() + " is model based, can not unlink it!");
-        } else {
-            NDataLoadingRange dataLoadingRange = dataLoadingRangeManager
-                    .getDataLoadingRange(nDataModel.getRootFactTable().getTableIdentity());
-            NDataModel modelUpdate = dataModelManager.copyForWrite(nDataModel);
-            if (dataLoadingRange != null) {
-                val segmentConfig = dataLoadingRange.getSegmentConfig();
-                if (segmentConfig != null) {
-                    modelUpdate.setSegmentConfig(segmentConfig);
-                }
-            }
-            modelUpdate.setManagementType(ManagementType.MODEL_BASED);
-            dataModelManager.updateDataModelDesc(modelUpdate);
-        }
     }
 
     @Transaction(project = 0)
@@ -1569,85 +1506,6 @@ public class ModelService extends AbstractModelService
     public List<NDataModel> getModelsUsingTable(String table, String project) {
         return getManager(NDataflowManager.class, project)
                 .getModelsUsingTable(getManager(NTableMetadataManager.class, project).getTableDesc(table));
-    }
-
-    public RefreshAffectedSegmentsResponse getRefreshAffectedSegmentsResponse(String project, String table,
-            String start, String end) {
-        aclEvaluate.checkProjectReadPermission(project);
-        val dfManager = getManager(NDataflowManager.class, project);
-        long byteSize = 0L;
-        List<RelatedModelResponse> models = getRelateModels(project, table, "").stream().filter(
-                relatedModelResponse -> ManagementType.TABLE_ORIENTED == relatedModelResponse.getManagementType())
-                .collect(Collectors.toList());
-
-        if (CollectionUtils.isEmpty(models)) {
-            logger.info("No segment to refresh, No related model.");
-            return new RefreshAffectedSegmentsResponse(0, start, end);
-        }
-
-        TableDesc tableDesc = getManager(NTableMetadataManager.class, project).getTableDesc(table);
-        SegmentRange toBeRefreshSegmentRange = SourceFactory.getSource(tableDesc).getSegmentRange(start, end);
-
-        val loadingRangeMgr = getManager(NDataLoadingRangeManager.class, project);
-        val loadingRange = loadingRangeMgr.getDataLoadingRange(table);
-
-        if (loadingRange != null) {
-            // check if toBeRefreshSegmentRange is within covered ready segment range
-            checkRefreshRangeWithinCoveredRange(loadingRange, toBeRefreshSegmentRange);
-        }
-
-        Segments<NDataSegment> affectedSegments = new Segments<>();
-
-        for (NDataModel model : models) {
-            val dataflow = dfManager.getDataflow(model.getId());
-            Segments<NDataSegment> segments = getSegmentsByRange(model.getUuid(), project, start, end);
-            if (RealizationStatusEnum.LAG_BEHIND != dataflow.getStatus()) {
-                if (CollectionUtils.isEmpty(segments.getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING))) {
-                    if (loadingRange == null) {
-                        //full build
-                        logger.info("No segment to refresh, full build.");
-                        return new RefreshAffectedSegmentsResponse(0, start, end);
-                    } else {
-                        throw new KylinException(SEGMENT_REFRESH_SELECT_RANGE_EMPTY);
-                    }
-                }
-
-                if (CollectionUtils.isNotEmpty(segments.getBuildingSegments())) {
-                    throw new KylinException(PERMISSION_DENIED, MsgPicker.getMsg().getSegmentCanNotRefresh());
-                }
-            } else {
-                checkSegRefreshingInLagBehindModel(segments);
-            }
-            affectedSegments.addAll(segments);
-        }
-        Preconditions.checkState(CollectionUtils.isNotEmpty(affectedSegments));
-        Collections.sort(affectedSegments);
-        String affectedStart = affectedSegments.getFirstSegment().getSegRange().getStart().toString();
-        String affectedEnd = affectedSegments.getLastSegment().getSegRange().getEnd().toString();
-        for (NDataSegment segment : affectedSegments) {
-            byteSize += segment.getStorageBytesSize();
-        }
-        return new RefreshAffectedSegmentsResponse(byteSize, affectedStart, affectedEnd);
-
-    }
-
-    private void checkSegRefreshingInLagBehindModel(Segments<NDataSegment> segments) {
-        Set<String> allIndexJobRunningSegments = segments.getFirstSegment() == null ? null
-                : SegmentUtil.getAllIndexJobRunningSegments(segments.getFirstSegment().getModel());
-        for (val seg : segments) {
-            if (SegmentStatusEnumToDisplay.REFRESHING == SegmentUtil.getSegmentStatusToDisplay(segments, seg, null,
-                    allIndexJobRunningSegments)) {
-                throw new KylinException(SEGMENT_REFRESH_IN_BUILDING);
-            }
-        }
-    }
-
-    private void checkRefreshRangeWithinCoveredRange(NDataLoadingRange dataLoadingRange,
-            SegmentRange toBeRefreshSegmentRange) {
-        SegmentRange coveredReadySegmentRange = dataLoadingRange.getCoveredRange();
-        if (coveredReadySegmentRange == null || !coveredReadySegmentRange.contains(toBeRefreshSegmentRange)) {
-            throw new KylinException(SEGMENT_REFRESH_INVALID_RANGE, toBeRefreshSegmentRange, coveredReadySegmentRange);
-        }
     }
 
     @VisibleForTesting
@@ -1862,41 +1720,6 @@ public class ModelService extends AbstractModelService
         } else if (RealizationStatusEnum.OFFLINE == status && !isOffline) {
             updateDataflowStatus(project, df.getId(), RealizationStatusEnum.ONLINE);
         }
-        if (handlerType == HandlerType.ADD_SEGMENT) {
-            if (RealizationStatusEnum.LAG_BEHIND == status) {
-                val model = df.getModel();
-                Preconditions.checkState(ManagementType.TABLE_ORIENTED == model.getManagementType());
-                if (checkOnline(model, errorOrPausedJobCount) && !df.getIndexPlan().isOfflineManually()) {
-                    updateDataflowStatus(project, df.getId(), RealizationStatusEnum.ONLINE);
-                }
-            }
-        }
-    }
-
-    private boolean checkOnline(NDataModel model, int errorOrPausedJobCount) {
-        // 1. check the job status of the model
-        if (errorOrPausedJobCount > 0) {
-            return false;
-        }
-        // 2. check the model aligned with data loading range
-        val dfManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), model.getProject());
-        val df = dfManager.getDataflow(model.getId());
-        val dataLoadingRangeManager = NDataLoadingRangeManager.getInstance(KylinConfig.getInstanceFromEnv(),
-                model.getProject());
-        val dataLoadingRange = dataLoadingRangeManager.getDataLoadingRange(model.getRootFactTableName());
-        // In theory, dataLoadingRange can not be null,
-        // because full load table related model will build with INDEX_BUILD job or INDEX_REFRESH job.
-        Preconditions.checkState(dataLoadingRange != null);
-        val querableSegmentRange = dataLoadingRangeManager.getQuerableSegmentRange(dataLoadingRange);
-        Preconditions.checkState(querableSegmentRange != null);
-        val segments = SegmentUtil
-                .getSegmentsExcludeRefreshingAndMerging(df.getSegments().getSegmentsByRange(querableSegmentRange));
-        for (NDataSegment segment : segments) {
-            if (SegmentStatusEnum.NEW == segment.getStatus()) {
-                return false;
-            }
-        }
-        return true;
     }
 
     public void checkAndAutoMergeSegments(String project, String modelId, String owner) {
@@ -1936,8 +1759,9 @@ public class ModelService extends AbstractModelService
             }
             // create model
             NDataModel model = JsonUtil.deepCopyQuietly(modelRequest, NDataModel.class);
-            IndexPlan indexPlan = modelRequest.getIndexPlan();
             model.setProject(project);
+            model.setComputedColumnDescs(modelRequest.getComputedColumnDescs());
+            IndexPlan indexPlan = modelRequest.getIndexPlan();
             indexPlan.setProject(project);
 
             NDataModel saved;
@@ -2125,14 +1949,15 @@ public class ModelService extends AbstractModelService
         val dataModel = semanticUpdater.convertToDataModel(modelRequest);
         preProcessBeforeModelSave(dataModel, project);
         createStreamingJob(project, dataModel, modelRequest);
-        var careted = getManager(NDataModelManager.class, project).createDataModelDesc(dataModel, dataModel.getOwner());
+        var created = getManager(NDataModelManager.class, project).createDataModelDesc(dataModel, dataModel.getOwner());
 
-        semanticUpdater.expandExpandableMeasure(careted);
-        preProcessBeforeModelSave(careted, project);
-        val model = getManager(NDataModelManager.class, project).updateDataModelDesc(careted);
+        semanticUpdater.expandExpandableMeasure(created);
+        preProcessBeforeModelSave(created, project);
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        val model = getManager(NDataModelManager.class, project).updateDataModelDesc(created);
 
-        val indexPlanManager = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), model.getProject());
-        val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), model.getProject());
+        val indexPlanManager = NIndexPlanManager.getInstance(config, model.getProject());
+        val dataflowManager = NDataflowManager.getInstance(config, model.getProject());
         val indexPlan = new IndexPlan();
         indexPlan.setUuid(model.getUuid());
         indexPlan.setLastModified(System.currentTimeMillis());
@@ -2653,27 +2478,6 @@ public class ModelService extends AbstractModelService
         }
     }
 
-    void syncPartitionDesc(String model, String project) {
-        val dataloadingManager = getManager(NDataLoadingRangeManager.class, project);
-        val datamodelManager = getManager(NDataModelManager.class, project);
-        val modelDesc = datamodelManager.getDataModelDesc(model);
-        val dataloadingRange = dataloadingManager.getDataLoadingRange(modelDesc.getRootFactTableName());
-        val modelUpdate = datamodelManager.copyForWrite(modelDesc);
-        //full load
-        if (dataloadingRange == null) {
-            modelUpdate.setPartitionDesc(null);
-        } else {
-            var partition = modelUpdate.getPartitionDesc();
-            if (partition == null) {
-                partition = new PartitionDesc();
-            }
-            partition.setPartitionDateColumn(dataloadingRange.getColumnName());
-            partition.setPartitionDateFormat(dataloadingRange.getPartitionDateFormat());
-            modelUpdate.setPartitionDesc(partition);
-        }
-        datamodelManager.updateDataModelDesc(modelUpdate);
-    }
-
     public List<NDataSegment> checkSegmentToBuildOverlapsBuilt(String project, NDataModel model,
             SegmentRange<Long> segmentRangeToBuild, boolean isBuildAllIndexes, List<Long> batchIndexIds) {
         boolean isOverlap;
@@ -2856,16 +2660,21 @@ public class ModelService extends AbstractModelService
 
         checkCCNameAmbiguity(model);
 
-        // Update CC expression from query transformers
-        QueryContext.AclInfo aclInfo = AclPermissionUtil.createAclInfo(project, getCurrentUserGroups());
-        for (ComputedColumnDesc ccDesc : model.getComputedColumnDescs()) {
-            String ccExpression = PushDownUtil.massageComputedColumn(model, project, ccDesc, aclInfo);
-            ccDesc.setInnerExpression(ccExpression);
-            TblColRef tblColRef = model.findColumn(ccDesc.getTableAlias(), ccDesc.getColumnName());
-            tblColRef.getColumnDesc().setComputedColumnExpr(ccExpression);
-        }
+        try {
+            NProjectLoader.updateCache(project);
+            // Update CC expression from query transformers
+            QueryContext.AclInfo aclInfo = AclPermissionUtil.createAclInfo(project, getCurrentUserGroups());
+            for (ComputedColumnDesc ccDesc : model.getComputedColumnDescs()) {
+                String ccExpression = PushDownUtil.massageComputedColumn(model, project, ccDesc, aclInfo);
+                ccDesc.setInnerExpression(ccExpression);
+                TblColRef tblColRef = model.findColumn(ccDesc.getTableAlias(), ccDesc.getColumnName());
+                tblColRef.getColumnDesc().setComputedColumnExpr(ccExpression);
+            }
 
-        ComputedColumnEvalUtil.evalDataTypeOfCCInBatch(model, model.getComputedColumnDescs());
+            ComputedColumnEvalUtil.evalDataTypeOfCCInBatch(model, model.getComputedColumnDescs());
+        } finally {
+            NProjectLoader.removeCache();
+        }
     }
 
     @Transaction(project = 0)
@@ -3404,22 +3213,6 @@ public class ModelService extends AbstractModelService
         return semanticUpdater.convertToDataModel(modelDesc);
     }
 
-    public AffectedModelsResponse getAffectedModelsByToggleTableType(String tableName, String project) {
-        aclEvaluate.checkProjectReadPermission(project);
-        val dataflowManager = getManager(NDataflowManager.class, project);
-        val table = getManager(NTableMetadataManager.class, project).getTableDesc(tableName);
-        val response = new AffectedModelsResponse();
-        val models = dataflowManager.getTableOrientedModelsUsingRootTable(table).stream()
-                .map(RootPersistentEntity::getUuid).collect(Collectors.toList());
-        var size = 0;
-        response.setModels(models);
-        for (val model : models) {
-            size += dataflowManager.getDataflowStorageSize(model);
-        }
-        response.setByteSize(size);
-        return response;
-    }
-
     public AffectedModelsResponse getAffectedModelsByDeletingTable(String tableName, String project) {
         aclEvaluate.checkProjectReadPermission(project);
         val dataflowManager = getManager(NDataflowManager.class, project);
@@ -3434,22 +3227,6 @@ public class ModelService extends AbstractModelService
         }
         response.setByteSize(size);
         return response;
-    }
-
-    public void checkSingleIncrementingLoadingTable(String project, String tableName) {
-        aclEvaluate.checkProjectReadPermission(project);
-        val dataflowManager = getManager(NDataflowManager.class, project);
-        val table = getManager(NTableMetadataManager.class, project).getTableDesc(tableName);
-        val modelsUsingTable = dataflowManager.getModelsUsingTable(table);
-        for (val modelDesc : modelsUsingTable) {
-            if (!modelDesc.getRootFactTable().getTableDesc().getIdentity().equals(tableName)
-                    || modelDesc.isJoinTable(tableName)) {
-                Preconditions.checkState(
-                        getManager(NDataLoadingRangeManager.class, project).getDataLoadingRange(tableName) == null);
-                throw new KylinException(PERMISSION_DENIED, String.format(Locale.ROOT,
-                        MsgPicker.getMsg().getInvalidSetTableIncLoading(), tableName, modelDesc.getAlias()));
-            }
-        }
     }
 
     public List<ModelConfigResponse> getModelConfig(String project, String modelName) {
@@ -4441,21 +4218,6 @@ public class ModelService extends AbstractModelService
     @Override
     public NDataModel onGetModelById(String modelId, String project) {
         return getModelById(modelId, project);
-    }
-
-    @Override
-    public void onSyncPartition(String model, String project) {
-        syncPartitionDesc(model, project);
-    }
-
-    @Override
-    public void onPurgeModel(String modelId, String project) {
-        purgeModel(modelId, project);
-    }
-
-    @Override
-    public void onCheckLoadingRange(String project, String tableName) {
-        checkSingleIncrementingLoadingTable(project, tableName);
     }
 
     @Override

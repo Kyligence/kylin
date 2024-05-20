@@ -28,6 +28,7 @@ import java.util.stream.IntStream;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.code.ErrorCodeServer;
+import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
@@ -36,6 +37,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
+import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.S3TableExtInfo;
 import org.apache.kylin.rest.request.TableExclusionRequest;
@@ -164,10 +166,16 @@ public class TableExtServiceTest extends NLocalFileMetadataTestCase {
         tableDesc.setName("TABLE1");
         tableDesc.setDatabase("DEFAULT");
         tableDesc.setUuid(RandomUtil.randomUUIDStr());
-        NTableMetadataManager tableMetadataManager = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(),
-                "default");
-        tableMetadataManager.saveTableExt(tableExtDesc);
-        tableMetadataManager.saveSourceTable(tableDesc);
+
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            MemoryLockUtils.lockAndRecord("TABLE_EXD/default.DEFAULT.TABLE1");
+            MemoryLockUtils.lockAndRecord("TABLE_INFO/default.DEFAULT.TABLE1");
+            NTableMetadataManager tableMetadataManager = NTableMetadataManager
+                    .getInstance(KylinConfig.getInstanceFromEnv(), "default");
+            tableMetadataManager.saveTableExt(tableExtDesc);
+            tableMetadataManager.saveSourceTable(tableDesc);
+            return null;
+        }, "default");
 
         UpdateAWSTableExtDescResponse response = tableExtService.updateAWSLoadedTableExtProp(request);
         Assert.assertEquals(1, response.getSucceed().size());

@@ -78,7 +78,7 @@ public class ModelTdsServiceColumnNameTest extends SourceTestCase {
     }
 
     @Before
-    public void setup() {
+    public void setUp() {
         SparkJobFactoryUtils.initJobFactory();
         String localMetaDir = "src/test/resources/ut_meta/tds_export_test";
         createTestMetadata(localMetaDir);

@@ -51,7 +51,7 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
     }
 
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         createTestMetadata();
         killProcessCount = new AtomicInteger();
         val originExecutableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
@@ -71,7 +71,7 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
     }
 
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContext jobContext = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
         JobContextUtil.cleanUp();
         cleanupTestMetadata();

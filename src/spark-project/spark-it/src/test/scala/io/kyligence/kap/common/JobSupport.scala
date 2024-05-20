@@ -22,26 +22,20 @@
 
 package io.kyligence.kap.common
 
-import java.io.File
-import java.util.Objects
-
-import java.util.stream.Collectors
-import java.util.{Objects, UUID}
-import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps, Sets}
 import io.kyligence.kap.engine.spark.job.{NSparkCubingJob, NSparkCubingStep, NSparkMergingJob, NSparkMergingStep}
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.kylin.common.persistence.ResourceStore
 import org.apache.kylin.common.persistence.metadata.MetadataStore
+import org.apache.kylin.common.persistence.transaction.UnitOfWork
 import org.apache.kylin.common.util.{RandomUtil, Unsafe}
 import org.apache.kylin.common.{KapConfig, KylinConfig, StorageURL}
 import org.apache.kylin.engine.spark.ExecutableUtils
 import org.apache.kylin.engine.spark.utils.{FileNames, HDFSUtils}
+import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps, Sets}
 import org.apache.kylin.job.execution._
 import org.apache.kylin.job.util.JobContextUtil
-import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps, Sets}
-import org.apache.kylin.job.engine.JobEngineConfig
 import org.apache.kylin.metadata.cube.model._
 import org.apache.kylin.metadata.model.SegmentRange
 import org.apache.kylin.metadata.realization.RealizationStatusEnum
@@ -54,9 +48,9 @@ import org.apache.spark.sql.functions._
 import org.junit.Assert
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 
+import java.io.File
+import java.util.Objects
 import scala.collection.JavaConverters._
-
-import io.kyligence.kap.engine.spark.job.{NSparkCubingJob, NSparkCubingStep, NSparkMergingJob, NSparkMergingStep}
 
 trait JobSupport
   extends BeforeAndAfterAll
@@ -126,7 +120,10 @@ trait JobSupport
     // cleanup all segments first
     val update: NDataflowUpdate = new NDataflowUpdate(df.getUuid)
     update.setToRemoveSegsWithArray(df.getSegments.asScala.toArray)
-    dsMgr.updateDataflow(update)
+    UnitOfWork.doInTransactionWithRetry(() => {
+      NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, prj).updateDataflow(update)
+    }, prj)
+
     df = dsMgr.getDataflow(dfName)
     val layouts: java.util.List[LayoutEntity] =
       df.getIndexPlan.getAllLayouts
@@ -163,7 +160,9 @@ trait JobSupport
     val execMgr: ExecutableManager = ExecutableManager.getInstance(config, prj)
     val df: NDataflow = dsMgr.getDataflow(cubeName)
     // ready dataflow, segment, cuboid layout
-    val oneSeg: NDataSegment = dsMgr.appendSegment(df, segmentRange)
+    val oneSeg: NDataSegment = UnitOfWork.doInTransactionWithRetry(() => {
+      NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, prj).appendSegment(df, segmentRange)
+    }, prj);
     val job: NSparkCubingJob = NSparkCubingJob.create(Sets.newHashSet(oneSeg), toBuildLayouts, "ADMIN", null)
     val sparkStep: NSparkCubingStep = job.getSparkCubingStep
     val distMetaUrl: StorageURL = StorageURL.valueOf(sparkStep.getDistMetaUrl)
@@ -183,11 +182,38 @@ trait JobSupport
     }
 
     val buildStore: ResourceStore = ExecutableUtils.getRemoteStore(config, job.getSparkCubingStep)
-    val merger: AfterBuildResourceMerger = new AfterBuildResourceMerger(config, prj)
     val layoutIds: java.util.Set[java.lang.Long] = toBuildLayouts.asScala.map(c => new java.lang.Long(c.getId)).asJava
-    merger.mergeAfterIncrement(df.getUuid, oneSeg.getId, layoutIds, buildStore)
+    UnitOfWork.doInTransactionWithRetry(() => {
+      val merger: AfterBuildResourceMerger = new AfterBuildResourceMerger(KylinConfig.getInstanceFromEnv, prj)
+      merger.mergeAfterIncrement(df.getUuid, oneSeg.getId, layoutIds, buildStore)
+    }, prj)
     checkSnapshotTable(df.getId, oneSeg.getId, oneSeg.getProject)
     oneSeg
+  }
+
+  @throws[Exception]
+  protected def mergeSegments(cubeName: String,
+                              mergeRange: SegmentRange[_ <: Comparable[_]],
+                              toBuildLayouts: java.util.Set[LayoutEntity],
+                              prj: String): NDataSegment = {
+    val config: KylinConfig = KylinConfig.getInstanceFromEnv
+    val dsMgr: NDataflowManager = NDataflowManager.getInstance(config, prj)
+    val execMgr: ExecutableManager = ExecutableManager.getInstance(config, prj)
+    val df: NDataflow = dsMgr.getDataflow(cubeName)
+    val mergeSeg = UnitOfWork.doInTransactionWithRetry(() => {
+      NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, prj).mergeSegments(df, mergeRange, false)
+    }, prj)
+    val mergeJob = NSparkMergingJob.merge(mergeSeg,
+      Sets.newLinkedHashSet(toBuildLayouts),
+      "ADMIN", RandomUtil.randomUUIDStr)
+    execMgr.addJob(mergeJob)
+    // wait job done
+    Assert.assertEquals(ExecutableState.SUCCEED, wait(mergeJob))
+    UnitOfWork.doInTransactionWithRetry(() => {
+      val merger = new AfterMergeOrRefreshResourceMerger(KylinConfig.getInstanceFromEnv, prj)
+      merger.merge(mergeJob.getTask(classOf[NSparkMergingStep]))
+    }, prj)
+    mergeSeg
   }
 
   @throws[InterruptedException]
@@ -213,7 +239,9 @@ trait JobSupport
     // cleanup all segments first
     val update = new NDataflowUpdate(df.getUuid)
     update.setToRemoveSegsWithArray(df.getSegments.asScala.toArray)
-    dsMgr.updateDataflow(update)
+    UnitOfWork.doInTransactionWithRetry(() => {
+      NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, DEFAULT_PROJECT).updateDataflow(update)
+    }, prj)
 
     /**
      * Round1. Build 4 segment
@@ -256,34 +284,15 @@ trait JobSupport
      */
     df = dsMgr.getDataflow(dfName)
 
-    val firstMergeSeg = dsMgr.mergeSegments(
-      df,
-      new SegmentRange.TimePartitionedSegmentRange(
-        SegmentRange.dateToLong("2010-01-01"),
-        SegmentRange.dateToLong("2013-01-01")),
-      false)
-    val firstMergeJob = NSparkMergingJob.merge(firstMergeSeg,
-      Sets.newLinkedHashSet(layouts),
-      "ADMIN", RandomUtil.randomUUIDStr)
-    execMgr.addJob(firstMergeJob)
-    // wait job done
-    Assert.assertEquals(ExecutableState.SUCCEED, wait(firstMergeJob))
-    val merger = new AfterMergeOrRefreshResourceMerger(config, prj)
-    merger.merge(firstMergeJob.getTask(classOf[NSparkMergingStep]))
+    val firstMergeRange = new SegmentRange.TimePartitionedSegmentRange(
+      SegmentRange.dateToLong("2010-01-01"),
+      SegmentRange.dateToLong("2013-01-01"))
+    mergeSegments(dfName, firstMergeRange, Sets.newLinkedHashSet(layouts), prj)
 
-    df = dsMgr.getDataflow(dfName)
-    val secondMergeSeg = dsMgr.mergeSegments(
-      df,
-      new SegmentRange.TimePartitionedSegmentRange(
-        SegmentRange.dateToLong("2013-01-01"),
-        SegmentRange.dateToLong("2015-01-01")),
-      false)
-    val secondMergeJob = NSparkMergingJob.merge(secondMergeSeg,
-      Sets.newLinkedHashSet(layouts),
-      "ADMIN", RandomUtil.randomUUIDStr)
-    execMgr.addJob(secondMergeJob)
-    Assert.assertEquals(ExecutableState.SUCCEED, wait(secondMergeJob))
-    merger.merge(secondMergeJob.getTask(classOf[NSparkMergingStep]))
+    val secondMergeRange = new SegmentRange.TimePartitionedSegmentRange(
+      SegmentRange.dateToLong("2013-01-01"),
+      SegmentRange.dateToLong("2015-01-01"))
+    mergeSegments(dfName, secondMergeRange, Sets.newLinkedHashSet(layouts), prj)
 
     /**
      * validate cube segment info
@@ -302,68 +311,6 @@ trait JobSupport
     Assert.assertEquals(secondSegment.getSourceBytesSize, seg3 + seg4)
     //    Assert.assertEquals(21, firstSegment.getDictionaries.size)
     //    Assert.assertEquals(21, secondSegment.getDictionaries.size)
-    df.getModel.getLookupTables.asScala.foreach(table => Assert.assertTrue(table.getTableDesc.getLastSnapshotPath != null))
-  }
-
-
-  @throws[Exception]
-  def buildTwoSegementAndMerge(dfName: String,
-                               prj: String = DEFAULT_PROJECT): Unit = {
-    val config = KylinConfig.getInstanceFromEnv
-    val dsMgr = NDataflowManager.getInstance(config, DEFAULT_PROJECT)
-    val execMgr = ExecutableManager.getInstance(config, DEFAULT_PROJECT)
-    var df = dsMgr.getDataflow(dfName)
-    Assert.assertTrue(config.getHdfsWorkingDirectory.startsWith("file:"))
-    // cleanup all segments first
-    val update = new NDataflowUpdate(df.getUuid)
-    update.setToRemoveSegsWithArray(df.getSegments.asScala.toArray)
-    dsMgr.updateDataflow(update)
-
-    /**
-     * Round1. Build 4 segment
-     */
-    val layouts = df.getIndexPlan.getAllLayouts
-    var start = SegmentRange.dateToLong("2010-01-01")
-    var end = SegmentRange.dateToLong("2013-01-01")
-    builCuboid(dfName,
-      new SegmentRange.TimePartitionedSegmentRange(start, end),
-      Sets.newLinkedHashSet[LayoutEntity](layouts),
-      prj)
-    start = SegmentRange.dateToLong("2013-01-01")
-    end = SegmentRange.dateToLong("2015-01-01")
-    builCuboid(dfName,
-      new SegmentRange.TimePartitionedSegmentRange(start, end),
-      Sets.newLinkedHashSet[LayoutEntity](layouts),
-      prj)
-
-    /**
-     * Round2. Merge two segments
-     */
-    df = dsMgr.getDataflow(dfName)
-    val firstMergeSeg = dsMgr.mergeSegments(
-      df,
-      new SegmentRange.TimePartitionedSegmentRange(
-        SegmentRange.dateToLong("2010-01-01"),
-        SegmentRange.dateToLong("2015-01-01")),
-      false)
-    val firstMergeJob = NSparkMergingJob.merge(firstMergeSeg,
-      Sets.newLinkedHashSet(layouts),
-      "ADMIN", RandomUtil.randomUUIDStr)
-    execMgr.addJob(firstMergeJob)
-    // wait job done
-    Assert.assertEquals(ExecutableState.SUCCEED, wait(firstMergeJob))
-    val merger = new AfterMergeOrRefreshResourceMerger(config, prj)
-    merger.merge(firstMergeJob.getTask(classOf[NSparkMergingStep]))
-
-    /**
-     * validate cube segment info
-     */
-    val firstSegment = dsMgr.getDataflow(dfName).getSegments().get(0)
-    Assert.assertEquals(new SegmentRange.TimePartitionedSegmentRange(
-      SegmentRange.dateToLong("2010-01-01"),
-      SegmentRange.dateToLong("2015-01-01")),
-      firstSegment.getSegRange)
-    //    Assert.assertEquals(21, firstSegment.getDictionaries.size)
     df.getModel.getLookupTables.asScala.foreach(table => Assert.assertTrue(table.getTableDesc.getLastSnapshotPath != null))
   }
 

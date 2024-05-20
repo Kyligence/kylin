@@ -54,20 +54,16 @@ public class NSparkCleanupAfterMergeStep extends NSparkExecutable {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         NDataflow dataflow = NDataflowManager.getInstance(config, getProject()).getDataflow(name);
 
-        boolean timeMachineEnabled = KylinConfig.getInstanceFromEnv().getTimeMachineEnabled();
-
         for (String segmentId : segmentIds) {
             String path = dataflow.getSegmentHdfsPath(segmentId);
-                if (!timeMachineEnabled) {
-                    try {
-                        HadoopUtil.deletePath(HadoopUtil.getCurrentConfiguration(), new Path(path));
-                        logger.info("The segment {} in dataflow {} has been successfully deleted, path : {}", //
-                                segmentId, name, path);
-                    } catch (IOException e) {
-                        logger.warn("Can not delete segment {} in dataflow {}." //
-                                + " Please try workaround thru garbage clean manually.", segmentId, name, e);
-                    }
-                }
+            try {
+                HadoopUtil.deletePath(HadoopUtil.getCurrentConfiguration(), new Path(path));
+                logger.info("The segment {} in dataflow {} has been successfully deleted, path : {}", //
+                        segmentId, name, path);
+            } catch (IOException e) {
+                logger.warn("Can not delete segment {} in dataflow {}." //
+                        + " Please try workaround thru garbage clean manually.", segmentId, name, e);
+            }
         }
 
         return ExecuteResult.createSucceed();

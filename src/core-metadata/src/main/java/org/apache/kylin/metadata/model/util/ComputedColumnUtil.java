@@ -23,6 +23,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.COMPUTED_CO
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.COMPUTED_COLUMN_EXPR_CONFLICT;
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.COMPUTED_COLUMN_NAME_CONFLICT;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +45,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.BiMap;
@@ -687,5 +689,17 @@ public class ComputedColumnUtil {
         for (String usedColumn : ccUsedColsMap.get(ccColName)) {
             collectCCUsedSourceCols(usedColumn, ccUsedColsMap, ccUsedSourceCols);
         }
+    }
+    
+    public static List<ComputedColumnDesc> deepCopy(List<ComputedColumnDesc> ccList) {
+        List<ComputedColumnDesc> result = Lists.newArrayList();
+        try {
+            for (ComputedColumnDesc cc : ccList) {
+                result.add(JsonUtil.deepCopy(cc, ComputedColumnDesc.class));
+            }
+        } catch (IOException e) {
+            logger.error("failed to deep copy cc list", e);
+        }
+        return result;
     }
 }

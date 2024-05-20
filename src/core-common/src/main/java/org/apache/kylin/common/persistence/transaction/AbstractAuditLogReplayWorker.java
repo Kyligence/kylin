@@ -36,9 +36,9 @@ import org.apache.kylin.common.logging.SetLogCategory;
 import org.apache.kylin.common.persistence.AuditLog;
 import org.apache.kylin.common.persistence.UnitMessages;
 import org.apache.kylin.common.persistence.event.Event;
-import org.apache.kylin.common.persistence.metadata.JdbcAuditLogStore;
+import org.apache.kylin.common.persistence.metadata.AuditLogStore;
+import org.apache.kylin.common.util.DaemonThreadFactory;
 import org.apache.kylin.common.util.ExecutorServiceUtil;
-import org.apache.kylin.common.util.NamedThreadFactory;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 
@@ -51,12 +51,12 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class AbstractAuditLogReplayWorker {
 
     protected static final long STEP = 1000;
-    protected final JdbcAuditLogStore auditLogStore;
+    protected final AuditLogStore auditLogStore;
     protected final KylinConfig config;
 
     // only a thread is necessary
     protected volatile ScheduledExecutorService consumeExecutor = Executors.newScheduledThreadPool(1,
-            new NamedThreadFactory("ReplayWorker"));
+            new DaemonThreadFactory("ReplayWorker"));
 
     protected final AtomicBoolean isStopped = new AtomicBoolean(false);
 
@@ -66,7 +66,7 @@ public abstract class AbstractAuditLogReplayWorker {
     @Setter
     protected Predicate<String> filterByResPath;
 
-    protected AbstractAuditLogReplayWorker(KylinConfig config, JdbcAuditLogStore auditLogStore) {
+    protected AbstractAuditLogReplayWorker(KylinConfig config, AuditLogStore auditLogStore) {
         this.config = config;
         this.auditLogStore = auditLogStore;
         this.replayWaitMaxRetryTimes = config.getReplayWaitMaxRetryTimes();
@@ -180,7 +180,7 @@ public abstract class AbstractAuditLogReplayWorker {
             return;
         }
         isStopped.set(false);
-        consumeExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("ReplayWorker"));
+        consumeExecutor = Executors.newScheduledThreadPool(1, new DaemonThreadFactory("ReplayWorker"));
         startSchedule(currentId, false);
     }
 

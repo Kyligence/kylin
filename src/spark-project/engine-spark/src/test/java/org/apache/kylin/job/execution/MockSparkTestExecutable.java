@@ -22,8 +22,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.metadata.MetadataConstants;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.metadata.model.NDataModelManager;
 
 import lombok.Getter;
@@ -45,7 +44,7 @@ public class MockSparkTestExecutable extends NSparkExecutable {
     }
 
     private String getResourcePath(String modelId) {
-        return "/default" + ResourceStore.DATA_MODEL_DESC_RESOURCE_ROOT + "/" + modelId + MetadataConstants.FILE_SURFIX;
+        return MetadataType.mergeKeyWithType(modelId, MetadataType.MODEL);
     }
 
     @Override

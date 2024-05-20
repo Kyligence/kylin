@@ -53,7 +53,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.SneakyThrows;
 
@@ -76,8 +75,8 @@ public class UserAclServiceTest extends ServiceTestBase {
     public ExpectedException thrown = ExpectedException.none();
 
     @Before
-    public void setup() {
-        super.setup();
+    public void setUp() {
+        super.setUp();
         getTestConfig().setProperty("kylin.security.acl.data-permission-default-enabled", "true");
         ReflectionTestUtils.setField(userAclService, "userService", userService);
         ReflectionTestUtils.setField(aclEvaluate, "userAclService", userAclService);
@@ -258,8 +257,6 @@ public class UserAclServiceTest extends ServiceTestBase {
 
     @Test
     public void testSyncAdminUserAcl() {
-        EpochManager epochManager = EpochManager.getInstance();
-        epochManager.tryUpdateEpoch(EpochManager.GLOBAL, true);
         userAclService.syncAdminUserAcl();
         Assert.assertTrue(userAclService.hasUserAclPermission("admin", AclPermission.DATA_QUERY));
     }

@@ -100,7 +100,8 @@ public class SnapshotServiceTest extends NLocalFileMetadataTestCase {
     protected TableService tableService = Mockito.spy(TableService.class);
 
     @Before
-    public void setup() {
+    public void setUp() {
+        JobContextUtil.cleanUp();
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         SecurityContextHolder.getContext()
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
@@ -122,7 +123,6 @@ public class SnapshotServiceTest extends NLocalFileMetadataTestCase {
 
         // init snapshot job factory
         new NSparkSnapshotJob();
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobInfoDao(getTestConfig());
     }
 

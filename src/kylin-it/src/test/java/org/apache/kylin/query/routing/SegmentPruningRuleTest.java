@@ -95,12 +95,13 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
 
     }
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         this.createTestMetadata("src/test/resources/ut_meta/multi_partition_date_type");
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
     }
 
@@ -258,13 +259,14 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         Calendar calendar = Calendar.getInstance();
         calendar.set(2021, Calendar.DECEMBER, 6);
 
+        NDataflow dataflow = dataflowManager.getDataflow(dataflowId);
         final int newSegmentCount = 100_000;
         NDataSegment[] newSegments = new NDataSegment[newSegmentCount];
         for (int i = 0; i < newSegmentCount; i++) {
             long startTime = calendar.getTimeInMillis();
             calendar.add(Calendar.DAY_OF_MONTH, 1);
             long endTime = calendar.getTimeInMillis();
-            NDataSegment newSegment = new NDataSegment(null,
+            NDataSegment newSegment = new NDataSegment(dataflow,
                     new SegmentRange.TimePartitionedSegmentRange(startTime, endTime));
             newSegment.setStatus(SegmentStatusEnum.READY);
             newSegments[i] = newSegment;
@@ -274,7 +276,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         update.setToAddSegs(newSegments);
         dataflowManager.updateDataflowWithoutIndex(update);
 
-        NDataflow dataflow = dataflowManager.getDataflow(dataflowId);
+        dataflow = dataflowManager.getDataflow(dataflowId);
 
         CalciteSchema rootSchema = new QueryExec(project, kylinConfig).getRootSchema();
         SimpleDataContext dataContext = new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(),

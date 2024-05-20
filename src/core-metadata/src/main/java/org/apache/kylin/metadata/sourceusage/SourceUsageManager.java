@@ -18,6 +18,7 @@
 package org.apache.kylin.metadata.sourceusage;
 
 import static org.apache.kylin.common.exception.CommonErrorCode.LICENSE_OVER_CAPACITY;
+import static org.apache.kylin.common.persistence.MetadataType.HISTORY_SOURCE_USAGE;
 import static org.apache.kylin.metadata.sourceusage.SourceUsageRecord.CapacityStatus.OVERCAPACITY;
 
 import java.io.IOException;
@@ -45,6 +46,8 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.mail.MailNotificationType;
 import org.apache.kylin.common.mail.MailNotifier;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.persistence.MetadataType;
+import org.apache.kylin.common.persistence.RawResourceFilter;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.JsonUtil;
@@ -52,7 +55,6 @@ import org.apache.kylin.common.util.SizeConvertUtil;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
 import org.apache.kylin.metadata.cube.model.NCubeJoinedFlatTableDesc;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
@@ -93,20 +95,18 @@ public class SourceUsageManager {
 
     private SourceUsageManager(KylinConfig config) {
         this.config = config;
-        this.crud = new CachedCrudAssist<SourceUsageRecord>(getStore(), ResourceStore.HISTORY_SOURCE_USAGE,
+        this.crud = new CachedCrudAssist<SourceUsageRecord>(getStore(), HISTORY_SOURCE_USAGE, null,
                 SourceUsageRecord.class) {
             @Override
             protected SourceUsageRecord initEntityAfterReload(SourceUsageRecord entity, String resourceName) {
-                entity.setResPath(concatResourcePath(resourceName));
+                entity.setResPath(MetadataType.mergeKeyWithType(resourceName, HISTORY_SOURCE_USAGE));
                 return entity;
             }
         };
     }
 
     public SourceUsageRecord getSourceUsageRecord(String resourceName) {
-        return this.crud.listAll().stream()
-                .filter(usage -> usage.getResourcePath().equalsIgnoreCase(concatResourcePath(resourceName))).findAny()
-                .orElse(null);
+        return this.crud.get(resourceName);
     }
 
     public interface SourceUsageRecordUpdater {
@@ -122,7 +122,7 @@ public class SourceUsageManager {
     }
 
     public SourceUsageRecord createSourceUsageRecord(String resourceName, SourceUsageRecord record) {
-        record.setResPath(concatResourcePath(resourceName));
+        record.setResPath(MetadataType.mergeKeyWithType(resourceName, HISTORY_SOURCE_USAGE));
         SourceUsageRecord copy = copyForWrite(record);
         return crud.save(copy);
     }
@@ -135,10 +135,6 @@ public class SourceUsageManager {
         SourceUsageRecord copy = copyForWrite(record);
         updater.modify(copy);
         return crud.save(copy);
-    }
-
-    public static String concatResourcePath(String resourceName) {
-        return ResourceStore.HISTORY_SOURCE_USAGE + "/" + resourceName + MetadataConstants.FILE_SURFIX;
     }
 
     public Map<String, Long> calcAvgColumnSourceBytes(NDataSegment segment) {
@@ -299,7 +295,8 @@ public class SourceUsageManager {
 
     public List<SourceUsageRecord> getLatestRecordByMs(long msAgo) {
         long from = System.currentTimeMillis() - msAgo;
-        return this.crud.listAll().stream().filter(usage -> usage.getCreateTime() >= from).collect(Collectors.toList());
+        RawResourceFilter filter = RawResourceFilter.simpleFilter(RawResourceFilter.Operator.GT, "createTime", from);
+        return this.crud.listByFilter(filter);
     }
 
     public List<SourceUsageRecord> getAllRecords() {
@@ -309,11 +306,11 @@ public class SourceUsageManager {
     // no init means only use json object
     public List<SourceUsageRecord> getAllRecordsWithoutInit() {
         val resourceStore = ResourceStore.getKylinMetaStore(config);
-        val allResourcePaths = resourceStore.listResources(ResourceStore.HISTORY_SOURCE_USAGE);
+        val allResourcePaths = resourceStore.listResources(HISTORY_SOURCE_USAGE.name());
         if (allResourcePaths == null) {
             return Lists.newArrayList();
         }
-        return allResourcePaths.stream().map(path -> getRecordWithoutInit(path)).collect(Collectors.toList());
+        return allResourcePaths.stream().map(this::getRecordWithoutInit).collect(Collectors.toList());
     }
 
     private SourceUsageRecord getRecordWithoutInit(String path) {

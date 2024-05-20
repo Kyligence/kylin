@@ -85,8 +85,10 @@ public class BloomFilterTest extends NLocalWithSparkSessionTest implements Adapt
         SparderEnv.setSparkSession(ss);
     }
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         overwriteSystemProp("kylin.bloom.collect-filter.enabled", "true");
         overwriteSystemProp("kylin.bloom.build.enabled", "true");
@@ -96,12 +98,12 @@ public class BloomFilterTest extends NLocalWithSparkSessionTest implements Adapt
         QueryFiltersCollector.initScheduler();
         dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
 
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(getTestConfig());
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
         QueryFiltersCollector.destoryScheduler();
         cleanupTestMetadata();

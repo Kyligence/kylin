@@ -53,8 +53,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.MissingRootPersistentEntity;
-import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.scheduler.SchedulerEventNotifier;
 import org.apache.kylin.common.util.Pair;
@@ -65,7 +65,6 @@ import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.model.PartitionDesc.PartitionType;
 import org.apache.kylin.metadata.model.graph.JoinsGraph;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
@@ -176,7 +175,7 @@ public class NDataModel extends RootPersistentEntity {
 
     @EqualsAndHashCode.Include
     @JsonProperty("management_type")
-    private ManagementType managementType = ManagementType.TABLE_ORIENTED;
+    private ManagementType managementType = ManagementType.MODEL_BASED;
 
     @JsonProperty("join_tables")
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -224,9 +223,9 @@ public class NDataModel extends RootPersistentEntity {
     private int recommendationsCount;
 
     @EqualsAndHashCode.Include
-    @JsonProperty("computed_columns")
+    @JsonProperty("computed_column_uuids")
     @JsonInclude(JsonInclude.Include.NON_NULL) // output to frontend
-    private List<ComputedColumnDesc> computedColumnDescs = Lists.newArrayList();
+    private List<String> computedColumnUuids = Lists.newArrayList();
 
     @JsonProperty("canvas")
     @JsonInclude(JsonInclude.Include.NON_NULL) // output to frontend
@@ -251,8 +250,6 @@ public class NDataModel extends RootPersistentEntity {
     private String fusionId;
 
     // computed fields below
-    private String project;
-
     private ImmutableBiMap<Integer, TblColRef> effectiveCols; // excluding DELETED cols
 
     private ImmutableBiMap<Integer, TblColRef> effectiveDimensions; // including DIMENSION cols
@@ -263,6 +260,8 @@ public class NDataModel extends RootPersistentEntity {
     private Map<Integer, Collection<Integer>> effectiveExpandedMeasures; // excluding DELETED measures, only after init() is called
 
     private List<TblColRef> mpCols;
+
+    protected List<ComputedColumnDesc> computedColumnDescs = new ArrayList<>();
 
     private TableRef rootFactTableRef;
 
@@ -415,6 +414,7 @@ public class NDataModel extends RootPersistentEntity {
         this.capacity = other.capacity;
         this.allNamedColumns = other.allNamedColumns;
         this.allMeasures = other.allMeasures;
+        this.computedColumnUuids = other.computedColumnUuids;
         this.computedColumnDescs = other.computedColumnDescs;
         this.managementType = other.managementType;
         this.segmentConfig = other.segmentConfig;
@@ -433,12 +433,17 @@ public class NDataModel extends RootPersistentEntity {
     }
 
     public KylinConfig getConfig() {
-        return config;
+        return config == null ? KylinConfig.getInstanceFromEnv() : config;
     }
 
     @Override
     public String resourceName() {
         return uuid;
+    }
+
+    @Override
+    public MetadataType resourceType() {
+        return MetadataType.MODEL;
     }
 
     public ManagementType getManagementType() {
@@ -702,6 +707,8 @@ public class NDataModel extends RootPersistentEntity {
 
     public void init(KylinConfig config) {
         this.config = config;
+        // set computed columns before get extended tables
+        bindComputedColumns();
         Map<String, TableDesc> tables = getExtendedTables(NDataModelManager.getRelatedTables(this, project));
 
         initJoinTablesForUpgrade();
@@ -1067,7 +1074,8 @@ public class NDataModel extends RootPersistentEntity {
 
             TableDesc tableDesc = NTableMetadataManager.getInstance(config, project).getTableDesc(t);
             return tableDesc != null ? tableDesc
-                    : new MissingRootPersistentEntity(TableDesc.concatResourcePath(t, project));
+                    : new MissingRootPersistentEntity(MetadataType
+                            .mergeKeyWithType(TableDesc.generateResourceName(project, t), MetadataType.TABLE_INFO));
 
         }).collect(Collectors.toList());
     }
@@ -1182,6 +1190,19 @@ public class NDataModel extends RootPersistentEntity {
     public void initComputedColumnsFailFast(List<NDataModel> ccRelatedModels) {
         initComputedColumns(ccRelatedModels);
         checkCCConflict(ccRelatedModels, new ComputedColumnUtil.DefaultCCConflictHandler());
+    }
+
+    public void bindComputedColumns() {
+        //If this model is loaded from metaStore, the computedColumnDescs will be empty.
+        //If this model is coming from rest API, the computedColumnDescs may be not null.
+        if (this.computedColumnDescs.isEmpty() && !this.computedColumnUuids.isEmpty()) {
+            ComputedColumnManager ccManager = getConfig().getManager(project,
+                    ComputedColumnManager.class);
+            this.computedColumnDescs = this.computedColumnUuids.stream()
+                    .map(ccUuid -> ccManager.get(ccUuid).orElseThrow(
+                            () -> new IllegalStateException("CC " + ccUuid + " lost for model: " + this.alias)))
+                    .collect(Collectors.toList());
+        }
     }
 
     public ComputedColumnUtil.CCConflictInfo initComputedColumnsFailAtEnd(List<NDataModel> ccRelatedModels) {
@@ -1392,15 +1413,6 @@ public class NDataModel extends RootPersistentEntity {
     public String getMeasureNameByMeasureId(int id) {
         Preconditions.checkArgument(Objects.nonNull(effectiveMeasures));
         return effectiveMeasures.containsKey(id) ? effectiveMeasures.get(id).getName() : null;
-    }
-
-    @Override
-    public String getResourcePath() {
-        return concatResourcePath(getUuid(), project);
-    }
-
-    public static String concatResourcePath(String name, String project) {
-        return "/" + project + ResourceStore.DATA_MODEL_DESC_RESOURCE_ROOT + "/" + name + MetadataConstants.FILE_SURFIX;
     }
 
     @Override

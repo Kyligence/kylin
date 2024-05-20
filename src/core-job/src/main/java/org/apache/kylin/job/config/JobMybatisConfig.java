@@ -32,9 +32,9 @@ import javax.sql.DataSource;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinRuntimeException;
+import org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore;
 import org.apache.kylin.common.persistence.metadata.JdbcDataSource;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.RandomUtil;
@@ -94,7 +94,7 @@ public class JobMybatisConfig implements InitializingBean {
             dataSource = JdbcDataSource.getDataSource(props);
         }
         String keIdentified = url.getIdentifier();
-        if (StringUtils.isEmpty(url.getScheme())) {
+        if (FileSystemMetadataStore.FILE_SCHEME.equals(url.getScheme())) {
             log.info("metadata from file");
             keIdentified = "file";
             if (KylinConfig.getInstanceFromEnv().isUTEnv()) {

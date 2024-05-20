@@ -56,7 +56,6 @@ import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
 import io.github.resilience4j.timelimiter.TimeLimiterConfig;
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 
 @ImportResource(locations = { "applicationContext.xml", "kylinSecurity.xml" })
@@ -147,7 +146,6 @@ public class BootstrapServer implements ISmartApplicationListenerForSystem {
             logger.info("init backend end...");
         } else if (event instanceof ContextClosedEvent) {
             logger.info("Stop Kyligence node...");
-            EpochManager.getInstance().releaseOwnedEpochs();
         }
     }
 

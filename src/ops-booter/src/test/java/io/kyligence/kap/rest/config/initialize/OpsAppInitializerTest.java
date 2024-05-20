@@ -18,6 +18,7 @@
 
 package io.kyligence.kap.rest.config.initialize;
 
+import static org.apache.kylin.metadata.asynctask.MetadataRestoreTask.MetadataRestoreStatus.IN_PROGRESS;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
@@ -45,8 +46,6 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-
-import io.kyligence.kap.metadata.epoch.EpochManager;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ ClusterManager.class, JobInfoTool.class, MetadataTool.class })
@@ -100,16 +99,14 @@ public class OpsAppInitializerTest extends NLocalFileMetadataTestCase {
             return false;
         });
         String restoreTask = opsService.restoreMetadata(path, null, false);
-        await().atMost(10, TimeUnit.SECONDS).until(EpochManager.getInstance()::isMaintenanceMode);
+        await().atMost(10, TimeUnit.SECONDS)
+                .until(() -> IN_PROGRESS == opsService.getMetadataRestoreStatus(restoreTask, UnitOfWork.GLOBAL_UNIT));
         OpsService.MetadataRestore.getRunningTask().cancel(true);
-        Assert.assertEquals(MetadataRestoreTask.MetadataRestoreStatus.IN_PROGRESS,
-                opsService.getMetadataRestoreStatus(restoreTask, UnitOfWork.GLOBAL_UNIT));
-        Assert.assertTrue(EpochManager.getInstance().isMaintenanceMode());
+        Assert.assertEquals(IN_PROGRESS, opsService.getMetadataRestoreStatus(restoreTask, UnitOfWork.GLOBAL_UNIT));
         OpsAppInitializer opsAppInitializer = new OpsAppInitializer();
         opsAppInitializer.beforeStarted();
         Assert.assertEquals(MetadataRestoreTask.MetadataRestoreStatus.FAILED,
                 opsService.getMetadataRestoreStatus(restoreTask, UnitOfWork.GLOBAL_UNIT));
-        Assert.assertFalse(EpochManager.getInstance().isMaintenanceMode());
     }
 
 }

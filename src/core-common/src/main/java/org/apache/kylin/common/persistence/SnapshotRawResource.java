@@ -34,7 +34,7 @@ public class SnapshotRawResource {
 
     @JsonProperty("byte_source")
     @JsonSerialize(using = RawResource.ByteSourceSerializer.class)
-    @JsonDeserialize(using = RawResource.BytesourceDeserializer.class)
+    @JsonDeserialize(using = RawResource.ByteSourceDeserializer.class)
     private ByteSource byteSource;
 
     @JsonProperty("timestamp")
@@ -44,7 +44,7 @@ public class SnapshotRawResource {
 
     public SnapshotRawResource(RawResource rawResource) {
         this.byteSource = rawResource.getByteSource();
-        this.timestamp = rawResource.getTimestamp();
+        this.timestamp = rawResource.getTs();
         this.mvcc = rawResource.getMvcc();
     }
 }

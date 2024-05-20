@@ -39,10 +39,11 @@
   </delete>
   <insert id="insert" parameterType="org.apache.kylin.job.domain.JobLock">
     insert into ${jobLockTable} (id, lock_id, project, lock_node,
-      lock_expire_time, priority, create_time, update_time
+      lock_expire_time, priority, create_time, update_time, job_type
       )
     values (#{id,jdbcType=BIGINT}, #{lockId,jdbcType=VARCHAR}, #{project,jdbcType=VARCHAR}, #{lockNode,jdbcType=VARCHAR},
-      #{lockExpireTime,jdbcType=TIMESTAMP}, #{priority,jdbcType=INTEGER}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT}
+      #{lockExpireTime,jdbcType=TIMESTAMP}, #{priority,jdbcType=INTEGER}, #{createTime,jdbcType=BIGINT},
+      #{updateTime,jdbcType=BIGINT}, #{jobType,jdbcType=VARCHAR}
       )
   </insert>
   <insert id="insertSelective" parameterType="org.apache.kylin.job.domain.JobLock">
@@ -72,6 +73,9 @@
       <if test="updateTime != null">
         update_time,
       </if>
+      <if test="jobType != null">
+        job_type,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -97,6 +101,9 @@
       </if>
       <if test="updateTime != null">
         #{updateTime,jdbcType=BIGINT},
+      </if>
+      <if test="jobType != null">
+        #{jobType,jdbcType=VARCHAR},
       </if>
     </trim>
   </insert>
@@ -148,7 +155,7 @@
         </foreach>
         AND
       </if>
-      (lock_node IS NULL OR lock_expire_time <![CDATA[<]]> CURRENT_TIMESTAMP)
+      (lock_node IS NULL OR lock_expire_time <![CDATA[<]]> CURRENT_TIMESTAMP) AND job_type = 'OFFLINE'
     </where>
     ORDER BY priority ASC
     <if test="batchSize&gt;=0">
@@ -159,14 +166,14 @@
   <select id="getActiveJobLockCount" resultType="int">
     SELECT count(1)
     FROM ${jobLockTable}
-    WHERE lock_id != 'master_scheduler' and lock_expire_time <![CDATA[>=]]> CURRENT_TIMESTAMP
+    WHERE job_type = 'OFFLINE' and lock_expire_time <![CDATA[>=]]> CURRENT_TIMESTAMP
   </select>
 
 
   <select id="findExpiredORNonLockIdList" resultType="java.lang.String">
     SELECT lock_id
     FROM ${jobLockTable}
-    WHERE lock_id != 'master_scheduler' and (lock_expire_time <![CDATA[<]]> CURRENT_TIMESTAMP OR lock_node IS NULL)
+    WHERE job_type = 'OFFLINE' and (lock_expire_time <![CDATA[<]]> CURRENT_TIMESTAMP OR lock_node IS NULL)
     ORDER BY create_time
     <if test="batchSize&gt;=0">
       LIMIT #{batchSize,jdbcType=INTEGER}

@@ -18,8 +18,8 @@
 
 package org.apache.kylin.streaming.app;
 
-import static org.apache.kylin.common.persistence.ResourceStore.STREAMING_RESOURCE_ROOT;
-import static org.apache.kylin.common.persistence.metadata.HDFSMetadataStore.HDFS_SCHEME;
+import static org.apache.kylin.common.persistence.MetadataType.STREAMING_JOB;
+import static org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore.HDFS_SCHEME;
 import static org.apache.kylin.metadata.cube.model.NDataSegDetails.DATAFLOW_DETAILS_RESOURCE_ROOT;
 
 import java.io.IOException;
@@ -37,8 +37,9 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.cluster.IClusterManager;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.StorageURL;
+import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.metadata.HDFSMetadataStore;
+import org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore;
 import org.apache.kylin.common.persistence.metadata.JdbcPartialAuditLogStore;
 import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.Application;
@@ -92,7 +93,7 @@ public abstract class StreamingApplication implements Application, GracefulStopI
 
     private void prepareKylinConfig() throws Exception {
         val jobStorageUrl = StorageURL.valueOf(distMetaUrl);
-        if (!jobStorageUrl.getScheme().equals(HDFSMetadataStore.HDFS_SCHEME)) {
+        if (!jobStorageUrl.getScheme().equals(FileSystemMetadataStore.HDFS_SCHEME)) {
             kylinConfig.setMetadataUrl(distMetaUrl);
             return;
         }
@@ -118,7 +119,7 @@ public abstract class StreamingApplication implements Application, GracefulStopI
         val dumpMetaPathSet = NDataflowManager.getInstance(kylinConfig, project) //
                 .getDataflow(dataflowId) //
                 .collectPrecalculationResource();
-        dumpMetaPathSet.add(String.format(Locale.ROOT, "/%s%s/%s", project, STREAMING_RESOURCE_ROOT, jobId));
+        dumpMetaPathSet.add(MetadataType.mergeKeyWithType(jobId, STREAMING_JOB));
         return dumpMetaPathSet;
     }
 

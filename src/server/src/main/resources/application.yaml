@@ -113,8 +113,8 @@ spring:
 
 mybatis:
   mapper-locations: classpath:/mybatis-mapper/*Mapper.xml
-#  configuration:
-#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
 
 arthas:
   app-name: ${kylin.server.mode}_${server.port}

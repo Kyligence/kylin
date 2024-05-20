@@ -28,6 +28,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.cache.Cache;
 import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
@@ -243,6 +244,19 @@ public class SystemServiceTest extends NLocalFileMetadataTestCase {
         } catch (Exception e) {
             fail("reload should be successful but not");
         }
+    }
+
+    @Test
+    public void testRecoverQueryMetadata() {
+        overwriteSystemProp("kylin.server.mode", "query");
+        overwriteSystemProp("kylin.server.store-type", "hdfs");
+        try {
+            systemService.reloadMetadata();
+        } catch (Exception e) {
+            fail("reload should be successful but not");
+        }
+        val systemStore = ResourceStore.getKylinMetaStore(getTestConfig());
+        Assert.assertFalse(systemStore.listResources("ALL").isEmpty());
     }
 
     @Test

@@ -95,7 +95,7 @@ public class FusionIndexServiceTest extends SourceTestCase {
     public ExpectedException thrown = ExpectedException.none();
 
     @Before
-    public void setup() {
+    public void setUp() {
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         createTestMetadata();
         ReflectionTestUtils.setField(fusionIndexService, "indexPlanService", indexPlanService);

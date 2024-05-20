@@ -43,13 +43,15 @@ public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
 
     private String dfName = "cce7b90d-c1ac-49ef-abc3-f8971eb91544";
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
         this.createTestMetadata("src/test/resources/ut_meta/partial_match_index");
     }
 
+    @Override
     @After
-    public void after() throws Exception {
+    public void tearDown() throws Exception {
         cleanupTestMetadata();
     }
 

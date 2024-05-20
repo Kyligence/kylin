@@ -115,8 +115,8 @@ public class KylinConfigTest {
 
     @Test
     public void testThreadLocalOverride() throws InterruptedException {
-        final String metadata1 = "meta1";
-        final String metadata2 = "meta2";
+        final String metadata1 = "meta1@hdfs";
+        final String metadata2 = "meta2@hdfs";
 
         // set system KylinConfig
         KylinConfig sysConfig = KylinConfig.getInstanceFromEnv();

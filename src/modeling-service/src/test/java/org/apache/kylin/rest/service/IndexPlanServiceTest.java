@@ -55,6 +55,7 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
+import org.apache.kylin.metadata.cube.model.NDataSegmentManager;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
@@ -120,9 +121,9 @@ public class IndexPlanServiceTest extends SourceTestCase {
     }
 
     @Before
-    public void setup() {
+    public void setUp() {
         overwriteSystemProp("HADOOP_USER_NAME", "root");
-        super.setup();
+        super.setUp();
         indexPlanService.setSemanticUpater(semanticService);
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", aclUtil);
         ReflectionTestUtils.setField(indexPlanService, "aclEvaluate", aclEvaluate);
@@ -947,10 +948,9 @@ public class IndexPlanServiceTest extends SourceTestCase {
 
         val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         val df = dataflowManager.getDataflow(modelId);
-        val dfUpdate = new NDataflowUpdate(df.getId());
-        dfUpdate.setToRemoveSegs(df.getSegments().toArray(new NDataSegment[0]));
-        dataflowManager.updateDataflow(modelId, dataflow -> {
-            dataflow.getSegments().getLastSegment().setStatus(SegmentStatusEnum.WARNING);
+        NDataSegment segment = df.getSegments().getLastSegment();
+        NDataSegmentManager.getInstance(getTestConfig(), getProject()).update(segment.resourceName(), copyForWrite -> {
+            copyForWrite.setStatus(SegmentStatusEnum.WARNING);
         });
         Assert.assertEquals(WARNING, dataflowManager.getDataflow(modelId).getLastSegment().getStatus());
         indexPlanService.removeIndexes(getProject(), modelId, df.getLastSegment().getLayoutIds());
@@ -970,10 +970,9 @@ public class IndexPlanServiceTest extends SourceTestCase {
 
         val dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         val df = dataflowManager.getDataflow(modelId);
-        val dfUpdate = new NDataflowUpdate(df.getId());
-        dfUpdate.setToRemoveSegs(df.getSegments().toArray(new NDataSegment[0]));
-        dataflowManager.updateDataflow(modelId, dataflow -> {
-            dataflow.getSegments().getLastSegment().setStatus(SegmentStatusEnum.WARNING);
+        NDataSegment segment = df.getSegments().getLastSegment();
+        NDataSegmentManager.getInstance(getTestConfig(), getProject()).update(segment.resourceName(), copyForWrite -> {
+            copyForWrite.setStatus(WARNING);
         });
 
         Assert.assertEquals(WARNING, dataflowManager.getDataflow(modelId).getLastSegment().getStatus());

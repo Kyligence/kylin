@@ -24,6 +24,13 @@ public class JobFactoryConstant {
     private JobFactoryConstant() {
     }
 
+    public static final String ROUTINE_JOB_FACTORY = "ROUTINE_JOB_FACTORY";
+    public static final String META_JOB_FACTORY = "META_JOB_FACTORY";
+    public static final String SOURCE_USAGE_JOB_FACTORY = "SOURCE_USAGE_JOB_FACTORY";
+    public static final String AUTO_REFRESH_JOB_FACTORY = "AUTO_REFRESH_JOB_FACTORY";
+    public static final String LOW_CARDINALITY_JOB_FACTORY = "LOW_CARDINALITY_JOB_FACTORY";
+    public static final String TEMP_TABLE_CLEAN_JOB_FACTORY = "TEMP_TABLE_CLEAN_JOB_FACTORY";
+
     public static final String CUBE_JOB_FACTORY = "CUBE_JOB_FACTORY";
     public static final String MERGE_JOB_FACTORY = "MERGE_JOB_FACTORY";
     public static final String TABLE_SAMPLING_JOB_FACTORY = "TABLE_SAMPLING_JOB_FACTORY";

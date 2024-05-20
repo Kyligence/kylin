@@ -30,6 +30,7 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.JsonSerializer;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
@@ -42,6 +43,7 @@ import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
 import org.apache.kylin.query.QueryExtension;
+import org.apache.kylin.query.engine.NDataModelWrapper;
 import org.apache.kylin.query.engine.QueryExec;
 import org.junit.After;
 import org.junit.Assert;
@@ -74,13 +76,14 @@ public class ModelViewTest extends NLocalFileMetadataTestCase {
                     new LinkedHashMap<>());
         }
         // copy tables from project default
-        val ssbMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
+        val defaultMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
         val tableMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-        for (TableDesc tableDesc : ssbMgr.listAllTables()) {
+        for (TableDesc tableDesc : defaultMgr.listAllTables()) {
             if (tableDesc.getDatabase().equalsIgnoreCase("SSB")) {
                 if (tableMgr.getTableDesc(tableDesc.getName()) == null) {
                     val clone = new TableDesc(tableDesc);
                     clone.setMvcc(-1);
+                    clone.setProject(project);
                     tableMgr.saveSourceTable(clone);
                 }
             }
@@ -97,7 +100,7 @@ public class ModelViewTest extends NLocalFileMetadataTestCase {
 
     private NDataModel createModel(String project, String modelAlias) throws IOException {
         val mgr = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-        val serializer = mgr.getDataModelSerializer();
+        val serializer = new JsonSerializer<>(NDataModelWrapper.class);
         val contents = StringUtils
                 .join(Files.readAllLines(new File("src/test/resources/ut_meta/view/" + modelAlias + ".json").toPath(),
                         Charset.defaultCharset()), "\n");
@@ -172,6 +175,8 @@ public class ModelViewTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testDBNameCollision() throws IOException {
+        val projMgr = NProjectManager.getInstance(KylinConfig.getInstanceFromEnv());
+        projMgr.forceDropProject("SSB");
         // same db, different table name
         val views = Lists.newArrayList("model_single_table", "model_joins", "model_cc");
         val projectName = "SSB";

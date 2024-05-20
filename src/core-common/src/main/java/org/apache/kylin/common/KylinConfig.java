@@ -445,26 +445,43 @@ public class KylinConfig extends KylinConfigBase {
     }
 
     public <T> T getManager(Class<T> clz) {
-        KylinConfig base = base();
-        if (base != this)
-            return base.getManager(clz);
+        return getManager(null, clz, null);
+    }
 
-        return singletons.getInstance0(clz, clazz -> {
-            Method method = clazz.getDeclaredMethod("newInstance", KylinConfig.class);
-            Unsafe.changeAccessibleObject(method, true);// override accessibility
-            return (T) method.invoke(null, KylinConfig.this);
-        });
+    public <T1, T2> T1 getManager(Class<T1> managerClass, Class<T2> entityClass) {
+        return getManager(null, managerClass, entityClass);
     }
 
     public <T> T getManager(String project, Class<T> clz) {
+        return getManager(project, clz, null);
+    }
+
+    public <T1, T2> T1 getManager(@Nullable String project, Class<T1> managerClass, @Nullable Class<T2> entityClass) {
         KylinConfig base = base();
         if (base != this)
-            return base.getManager(project, clz);
-        return singletons.getInstance0(project, clz, clazz -> {
-            Method method = clazz.getDeclaredMethod("newInstance", KylinConfig.class, String.class);
-            Unsafe.changeAccessibleObject(method, true);// override accessibility
-            return (T) method.invoke(null, this, project);
-        });
+            return base.getManager(project, managerClass, entityClass);
+        Singletons.Creator<T1> creator = clazz -> {
+            if (entityClass == null) {
+                if (StringUtils.isEmpty(project)) {
+                    Method method = clazz.getDeclaredMethod("newInstance", KylinConfig.class);
+                    Unsafe.changeAccessibleObject(method, true);// override accessibility
+                    return (T1) method.invoke(null, this);
+                } else {
+                    Method method = clazz.getDeclaredMethod("newInstance", KylinConfig.class, String.class);
+                    Unsafe.changeAccessibleObject(method, true);// override accessibility
+                    return (T1) method.invoke(null, this, project);
+                }
+            } else {
+                Method method = clazz.getDeclaredMethod("newInstance", Class.class, KylinConfig.class, String.class);
+                Unsafe.changeAccessibleObject(method, true);// override accessibility
+                return (T1) method.invoke(null, entityClass, this, project);
+            }
+        };
+        if (StringUtils.isEmpty(project)) {
+            return singletons.getInstance0(managerClass, entityClass, creator);
+        } else {
+            return singletons.getInstance0(project, managerClass, entityClass, creator);
+        }
     }
 
     public void clearManagers() {

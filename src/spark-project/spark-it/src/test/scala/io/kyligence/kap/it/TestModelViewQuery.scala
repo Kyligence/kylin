@@ -22,28 +22,17 @@
 
 package io.kyligence.kap.it
 
-import java.io.{DataInputStream, File}
-import java.nio.charset.Charset
-import java.nio.file.Files
-import java.sql.SQLException
-import java.util.TimeZone
-
-import org.apache.commons.io.IOUtils
-import org.apache.commons.lang3.StringUtils
-import org.apache.kylin.common.KylinConfig
-import org.apache.kylin.common.persistence.{JsonSerializer, RootPersistentEntity}
+import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
+import io.kyligence.kap.query.QueryFetcher
 import org.apache.kylin.engine.spark.utils.LogEx
-import org.apache.kylin.metadata.cube.model.{IndexPlan, NDataflowManager, NIndexPlanManager}
-import org.apache.kylin.metadata.model.{NDataModel, NDataModelManager}
 import org.apache.kylin.metadata.realization.NoRealizationFoundException
 import org.apache.spark.sql._
 import org.apache.spark.sql.common.{LocalMetadata, SparderBaseFunSuite}
 import org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanHelper
 
+import java.sql.SQLException
+import java.util.TimeZone
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-
-import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
-import io.kyligence.kap.query.QueryFetcher
 
 // scalastyle:off
 class TestModelViewQuery
@@ -74,6 +63,7 @@ class TestModelViewQuery
   override protected def getProject: String = DEFAULT_PROJECT
 
   override def beforeAll(): Unit = {
+    appendMetadata("src/test/resources/ut_meta/modelViewQuery")
     super.beforeAll()
     overwriteSystemProp("calcite.keep-in-clause", "true")
     overwriteSystemProp("kylin.dictionary.null-encoding-opt-threshold", "1")
@@ -81,8 +71,6 @@ class TestModelViewQuery
     overwriteSystemProp("kylin.query.pushdown.runner-class-name", "")
     overwriteSystemProp("kylin.query.pushdown-enabled", "false")
     overwriteSystemProp("kylin.snapshot.parallel-build-enabled", "true")
-
-    addModels()
 
     build()
   }
@@ -96,27 +84,6 @@ class TestModelViewQuery
     "fc883850-60a2-01c7-d9a1-f8782211bf87",
     "b0fab5a2-7c65-03e6-0dc8-8a396b05d833",
     "98d390ef-66ae-8acb-f57a-fe0bfb4fdf13")
-
-  private def addModels(): Unit = {
-    val modelMgr = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv, getProject)
-    val indexPlanMgr = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv, getProject)
-    val dfMgr = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, getProject)
-    modelIds.foreach { id =>
-      val model = read(classOf[NDataModel], s"model_desc/$id.json")
-      model.setProject(getProject)
-      modelMgr.createDataModelDesc(model, "ADMIN")
-      dfMgr.createDataflow(indexPlanMgr.createIndexPlan(
-        read(classOf[IndexPlan], s"index_plan/$id.json")), "ADMIN")
-    }
-  }
-
-  private def read[T <: RootPersistentEntity](clz: Class[T], subPath: String): T = {
-    val path = "src/test/resources/view/" + subPath
-    val contents = StringUtils.join(Files.readAllLines(new File(path).toPath, Charset.defaultCharset), "\n")
-    val bais = IOUtils.toInputStream(contents, Charset.defaultCharset)
-    new JsonSerializer[T](clz).deserialize(new DataInputStream(bais))
-  }
-
 
   def build(): Unit = logTime("Build Time: ", debug = true) {
     modelIds.foreach { id => fullBuildCube(id) }

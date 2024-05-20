@@ -78,7 +78,6 @@ import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import lombok.val;
 
@@ -133,8 +132,6 @@ class KylinConfigBaseTest {
 
         map.put("getMetadataUrl", new PropertiesEntity("kylin.metadata.url", "kylin_metadata@jdbc",
                 StorageURL.valueOf("kylin_metadata@jdbc")));
-
-        map.put("isMetadataAuditLogEnabled", new PropertiesEntity("kylin.metadata.audit-log.enabled", "true", true));
 
         map.put("getMetadataAuditLogMaxSize",
                 new PropertiesEntity("kylin.metadata.audit-log.max-size", "3000000", 3000000L));
@@ -636,8 +633,6 @@ class KylinConfigBaseTest {
         map.put("getStorageResourceSurvivalTimeThreshold",
                 new PropertiesEntity("kylin.storage.resource-survival-time-threshold", "7d", 7L * 24 * 60 * 60 * 1000));
 
-        map.put("getTimeMachineEnabled", new PropertiesEntity("kylin.storage.time-machine-enabled", "false", false));
-
         map.put("getMetadataBackupCountThreshold",
                 new PropertiesEntity("kylin.metadata.backup-count-threshold", "7", 7));
 
@@ -905,8 +900,6 @@ class KylinConfigBaseTest {
                 new PropertiesEntity("kylin.metrics.query.sla.seconds", "1,3,a,15,60", new long[] { 3, 15, 60 }));
         map.put("getMetricsJobSlaMinutes",
                 new PropertiesEntity("kylin.metrics.job.sla.minutes", "1,30,60,300", new long[] { 1, 30, 60, 300 }));
-        map.put("isMetadataKeyCaseInSensitiveEnabled",
-                new PropertiesEntity("kylin.metadata.key-case-insensitive", "false", false));
         map.put("isMeasureNameCheckEnabled",
                 new PropertiesEntity("kylin.model.measure-name-check-enabled", "true", true));
         map.put("isConcurrencyFetchDataSourceSize",
@@ -1137,34 +1130,6 @@ class KylinConfigBaseTest {
                 + "username=kylin,password=test,maxTotal=20,maxIdle=20";
         StorageURL storageURL = StorageURL.valueOf(url);
         Assertions.assertEquals(url, storageURL.toString());
-    }
-
-    @Test
-    void getIsMetadataKeyCaseInSensitiveEnabled() {
-        KylinConfig config = KylinConfig.getInstanceFromEnv();
-        boolean metadataKeyCaseInSensitiveEnabled = config.isMetadataKeyCaseInSensitiveEnabled();
-        Assertions.assertFalse(metadataKeyCaseInSensitiveEnabled);
-    }
-
-    @SetSystemProperty.SetSystemProperties({
-            @SetSystemProperty(key = "kylin.metadata.key-case-insensitive", value = "true"), })
-    @Test
-    void getIsMetadataKeyCaseInSensitiveEnabled2() {
-        KylinConfig.getInstanceFromEnv();
-        KylinConfig config = KylinConfig.getInstanceFromEnv();
-        val metadataKeyCaseInSensitiveEnabled = config.isMetadataKeyCaseInSensitiveEnabled();
-        Assertions.assertTrue(metadataKeyCaseInSensitiveEnabled);
-    }
-
-    @SetSystemProperty.SetSystemProperties({
-            @SetSystemProperty(key = "kylin.metadata.key-case-insensitive", value = "true"),
-            @SetSystemProperty(key = "kylin.security.profile", value = "ldap"), })
-    @Test
-    void getIsMetadataKeyCaseInSensitiveEnabled3() {
-        KylinConfig.getInstanceFromEnv();
-        KylinConfig config = KylinConfig.getInstanceFromEnv();
-        val metadataKeyCaseInSensitiveEnabled = config.isMetadataKeyCaseInSensitiveEnabled();
-        Assertions.assertFalse(metadataKeyCaseInSensitiveEnabled);
     }
 
     @Test
@@ -1652,6 +1617,7 @@ class EnvironmentUpdateUtils {
     }
 
     @Test
+    @MetadataInfo(onlyProps = true)
     void testGetRoutineOpsTaskTimeOut() {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         Assert.assertEquals(4 * 60 * 60 * 1000, config.getRoutineOpsTaskTimeOut());

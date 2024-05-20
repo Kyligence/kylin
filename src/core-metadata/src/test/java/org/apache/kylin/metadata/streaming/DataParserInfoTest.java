@@ -35,8 +35,9 @@ public class DataParserInfoTest {
             Assert.assertEquals(defaultClassName, dataParserInfo.getClassName());
             Assert.assertEquals(jarName, dataParserInfo.getJarName());
             Assert.assertNotNull(dataParserInfo.getStreamingTables().get(0));
-            Assert.assertEquals(defaultClassName, dataParserInfo.resourceName());
-            Assert.assertEquals("/streaming_test/parser/io.kyligence.kap.parser.TimedJsonStreamParser.json",
+            Assert.assertEquals("streaming_test.io.kyligence.kap.parser.TimedJsonStreamParser",
+                    dataParserInfo.resourceName());
+            Assert.assertEquals("DATA_PARSER/streaming_test.io.kyligence.kap.parser.TimedJsonStreamParser",
                     dataParserInfo.getResourcePath());
         }
 

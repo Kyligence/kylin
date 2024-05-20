@@ -148,7 +148,7 @@ public class JobInfoServiceTest extends LogOutputTestCase {
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata();
         KylinConfig config = getTestConfig();
         jobInfoDao = JobContextUtil.getJobInfoDao(config);

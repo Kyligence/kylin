@@ -189,11 +189,7 @@ public class NUserGroupService implements IUserGroupService {
         if (StringUtils.isEmpty(userGroupName)) {
             return listUserGroups();
         }
-        return getUserGroupManager().getAllGroups(path -> {
-            val pathPair = StringUtils.split(path, "/");
-            String groupName = pathPair[pathPair.length - 1];
-            return StringUtils.containsIgnoreCase(groupName, userGroupName);
-        });
+        return getUserGroupManager().getGroupsByName(userGroupName, true);
     }
 
     @Override
@@ -214,8 +210,7 @@ public class NUserGroupService implements IUserGroupService {
             throw new KylinException(USERGROUP_NOT_EXIST,
                     String.format(Locale.ROOT, MsgPicker.getMsg().getUserGroupNotExist(), groupName));
         }
-        val optional = getUserGroupManager().getAllGroups(path -> StringUtils.endsWithIgnoreCase(path, groupName))
-                .stream().filter(group -> StringUtils.equalsIgnoreCase(group.getGroupName(), groupName)).findFirst();
+        val optional = getUserGroupManager().getGroupsByName(groupName, false).stream().findFirst();
         if (!optional.isPresent()) {
             throw new KylinException(USERGROUP_NOT_EXIST,
                     String.format(Locale.ROOT, MsgPicker.getMsg().getUserGroupNotExist(), groupName));

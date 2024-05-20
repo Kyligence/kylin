@@ -41,12 +41,12 @@ public class FilterSimplifyRuleTest extends CalciteRuleTestBase {
     static final String defaultProject = "default";
 
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata();
     }
 
     @After
-    public void teardown() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 

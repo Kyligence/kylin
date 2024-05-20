@@ -18,6 +18,7 @@
 package org.apache.kylin.streaming.jobs.impl;
 
 import static org.apache.kylin.common.exception.ServerErrorCode.JOB_START_FAILURE;
+import static org.apache.kylin.common.persistence.ResourceStore.METASTORE_IMAGE;
 import static org.apache.kylin.streaming.constants.StreamingConstants.DEFAULT_PARSER_NAME;
 
 import java.io.File;
@@ -32,7 +33,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.StorageURL;
 import org.apache.kylin.common.exception.KylinException;
-import org.apache.kylin.common.persistence.metadata.HDFSMetadataStore;
+import org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.metadata.cube.utils.StreamingUtils;
@@ -425,25 +426,25 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
         launcher.init(PROJECT, modelId, JobTypeEnum.STREAMING_BUILD);
 
         val dumpSet = launcher.getMetadataDumpList();
-        Assert.assertEquals(13, dumpSet.size());
+        Assert.assertEquals(17, dumpSet.size());
 
-        Assert.assertTrue(dumpSet.contains("/streaming_test/dataflow/e78a89dd-847f-4574-8afa-8768b4228b72.json"));
-        Assert.assertTrue(dumpSet.contains(
-                "/streaming_test/dataflow_details/e78a89dd-847f-4574-8afa-8768b4228b72/c380dd2a-43b8-4268-b73d-2a5f76236631.json"));
-        Assert.assertTrue(dumpSet.contains(
-                "/streaming_test/dataflow_details/e78a89dd-847f-4574-8afa-8768b4228b72/c380dd2a-43b8-4268-b73d-2a5f76236632.json"));
-        Assert.assertTrue(dumpSet.contains(
-                "/streaming_test/dataflow_details/e78a89dd-847f-4574-8afa-8768b4228b72/c380dd2a-43b8-4268-b73d-2a5f76236633.json"));
-        Assert.assertTrue(dumpSet.contains(
-                "/streaming_test/dataflow_details/e78a89dd-847f-4574-8afa-8768b4228b72/c380dd2a-43b8-4268-b73d-2a5f76236901.json"));
-        Assert.assertTrue(dumpSet.contains("/streaming_test/index_plan/e78a89dd-847f-4574-8afa-8768b4228b72.json"));
-        Assert.assertTrue(dumpSet.contains("/_global/project/streaming_test.json"));
-        Assert.assertTrue(dumpSet.contains("/streaming_test/model_desc/e78a89dd-847f-4574-8afa-8768b4228b72.json"));
-        Assert.assertTrue(dumpSet.contains("/streaming_test/table/SSB.P_LINEORDER_STR.json"));
-        Assert.assertTrue(dumpSet.contains("/streaming_test/kafka/SSB.P_LINEORDER_STR.json"));
-        Assert.assertTrue(dumpSet.contains("/streaming_test/table/SSB.PART.json"));
-        Assert.assertTrue(dumpSet.contains("/_image"));
-        Assert.assertTrue(dumpSet.contains("/streaming_test/streaming/e78a89dd-847f-4574-8afa-8768b4228b72_build"));
+        Assert.assertTrue(dumpSet.contains("DATAFLOW/e78a89dd-847f-4574-8afa-8768b4228b72"));
+        Assert.assertTrue(dumpSet.contains("SEGMENT/c380dd2a-43b8-4268-b73d-2a5f76236631"));
+        Assert.assertTrue(dumpSet.contains("SEGMENT/c380dd2a-43b8-4268-b73d-2a5f76236632"));
+        Assert.assertTrue(dumpSet.contains("SEGMENT/c380dd2a-43b8-4268-b73d-2a5f76236633"));
+        Assert.assertTrue(dumpSet.contains("SEGMENT/f9a7af68-ba3e-a8d3-2493-8d72fdc63fa4"));
+        Assert.assertTrue(dumpSet.contains("LAYOUT/c380dd2a-43b8-4268-b73d-2a5f76236631"));
+        Assert.assertTrue(dumpSet.contains("LAYOUT/c380dd2a-43b8-4268-b73d-2a5f76236632"));
+        Assert.assertTrue(dumpSet.contains("LAYOUT/c380dd2a-43b8-4268-b73d-2a5f76236633"));
+        Assert.assertTrue(dumpSet.contains("LAYOUT/f9a7af68-ba3e-a8d3-2493-8d72fdc63fa4"));
+        Assert.assertTrue(dumpSet.contains("INDEX_PLAN/e78a89dd-847f-4574-8afa-8768b4228b72"));
+        Assert.assertTrue(dumpSet.contains("PROJECT/streaming_test"));
+        Assert.assertTrue(dumpSet.contains("MODEL/e78a89dd-847f-4574-8afa-8768b4228b72"));
+        Assert.assertTrue(dumpSet.contains("TABLE_INFO/streaming_test.SSB.P_LINEORDER_STR"));
+        Assert.assertTrue(dumpSet.contains("KAFKA_CONFIG/streaming_test.SSB.P_LINEORDER_STR"));
+        Assert.assertTrue(dumpSet.contains("TABLE_INFO/streaming_test.SSB.PART"));
+        Assert.assertTrue(dumpSet.contains(METASTORE_IMAGE));
+        Assert.assertTrue(dumpSet.contains("STREAMING_JOB/e78a89dd-847f-4574-8afa-8768b4228b72_build"));
 
     }
 
@@ -478,7 +479,7 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
         ReflectionUtils.invokeGetterMethod(launcher, "initStorageUrl");
 
         val storageUrl = (StorageURL) ReflectionUtils.getField(launcher, "distMetaStorageUrl");
-        Assert.assertEquals(HDFSMetadataStore.HDFS_SCHEME, storageUrl.getScheme());
+        Assert.assertEquals(FileSystemMetadataStore.HDFS_SCHEME, storageUrl.getScheme());
     }
 
     @Test

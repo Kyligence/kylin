@@ -62,7 +62,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.epoch.EpochManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
@@ -110,8 +109,6 @@ class BroadcasterTest {
 
     @Test
     void testBroadcastSyncAdminUserAcl() throws Exception {
-        EpochManager epochManager = EpochManager.getInstance();
-        epochManager.tryUpdateEpoch(EpochManager.GLOBAL, true);
         BroadcastListener broadcastListener = new BroadcastListener();
         val userAclService = Mockito.spy(UserAclService.class);
         ReflectionTestUtils.setField(userAclService, "userService", Mockito.spy(UserService.class));

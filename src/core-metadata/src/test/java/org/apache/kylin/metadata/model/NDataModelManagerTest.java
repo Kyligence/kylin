@@ -26,11 +26,12 @@ import java.util.List;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.hystrix.NCircuitBreaker;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
-import org.apache.kylin.common.hystrix.NCircuitBreaker;
-import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.NDataModel.Measure;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
@@ -41,8 +42,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
-
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import lombok.val;
 
@@ -171,14 +170,16 @@ public class NDataModelManagerTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void createDataModelDesc_simpleModel_succeed() throws IOException {
-        NDataModel nDataModel = JsonUtil.deepCopy(
-                (NDataModel) mgrDefault.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa"), NDataModel.class);
+        NDataModel dataModel = mgrDefault.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
+        NDataModel nDataModel = JsonUtil.deepCopy(dataModel
+                , NDataModel.class);
 
         nDataModel.setAlias("nmodel_basic2");
         nDataModel.setUuid(RandomUtil.randomUUIDStr());
         nDataModel.setLastModified(0L);
         nDataModel.setMvcc(-1);
         nDataModel.setProject(projectDefault);
+        nDataModel.setComputedColumnDescs(dataModel.getComputedColumnDescs());
         mgrDefault.createDataModelDesc(nDataModel, "root");
 
         NDataModel model = mgrDefault.getDataModelDesc(nDataModel.getId());
@@ -190,14 +191,15 @@ public class NDataModelManagerTest extends NLocalFileMetadataTestCase {
     public void createDataModelDesc_duplicateNamedColumn_fail() throws IOException {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Multiple entries with same value");
-
-        NDataModel nDataModel = JsonUtil.deepCopy(
-                (NDataModel) mgrDefault.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa"), NDataModel.class);
+        NDataModel model = (NDataModel) mgrDefault.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
+        NDataModel nDataModel = JsonUtil.deepCopy(model
+                , NDataModel.class);
 
         nDataModel.setAlias("nmodel_basic2");
         nDataModel.setUuid(RandomUtil.randomUUIDStr());
         nDataModel.setLastModified(0L);
         nDataModel.setProject(projectDefault);
+        nDataModel.setComputedColumnDescs(model.getComputedColumnDescs());
 
         //add a duplicate
         List<NDataModel.NamedColumn> allNamedColumns = nDataModel.getAllNamedColumns();
@@ -210,15 +212,15 @@ public class NDataModelManagerTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void createDataModelDesc_duplicateNameColumnName_succeed() throws IOException {
-
-        NDataModel nDataModel = JsonUtil.deepCopy(
-                (NDataModel) mgrDefault.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa"), NDataModel.class);
+        NDataModel dataModel = mgrDefault.getDataModelDesc("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
+        NDataModel nDataModel = JsonUtil.deepCopy(dataModel, NDataModel.class);
 
         nDataModel.setAlias("nmodel_basic2");
         nDataModel.setUuid(RandomUtil.randomUUIDStr());
         nDataModel.setLastModified(0L);
         nDataModel.setMvcc(-1);
         nDataModel.setProject(projectDefault);
+        nDataModel.setComputedColumnDescs(dataModel.getComputedColumnDescs());
 
         //make conflict on NamedColumn.name
         List<NDataModel.NamedColumn> allNamedColumns = nDataModel.getAllNamedColumns();
@@ -280,7 +282,7 @@ public class NDataModelManagerTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void createProjectParallel() {
+    public void createModelParallel() {
         KylinConfig conf = getTestConfig();
         NDataModelManager manager = NDataModelManager.getInstance(conf, projectDefault);
         int maxModelNum = manager.listAllModels().size() + 1;

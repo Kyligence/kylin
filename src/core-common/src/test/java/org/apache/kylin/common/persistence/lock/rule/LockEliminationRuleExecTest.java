@@ -31,6 +31,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
@@ -46,6 +47,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    @Disabled("MemoryLockUtils is deprecated")
     void testProjectRule() {
         //              ProjectLock          ModuleLock        PathLock
         // Source:      default             TABLE             table1,table2
@@ -56,7 +58,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
             List<TransactionLock> projectLock = MemoryLockUtils.getProjectLock(project);
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, MODEL);
             List<TransactionLock> pathLocks = MemoryLockUtils
-                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+                    .getPathLocks(Lists.newArrayList("TABLE_INFO/default.db.table1", "TABLE_INFO/default.db.table2"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertFalse(lockInfo.getProjectLocks().isEmpty());
@@ -68,7 +70,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
             List<TransactionLock> projectLock = MemoryLockUtils.getProjectLock(project);
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, TABLE);
             List<TransactionLock> pathLocks = MemoryLockUtils
-                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+                    .getPathLocks(Lists.newArrayList("TABLE_INFO/default.db.table1", "TABLE_INFO/default.db.table2"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertFalse(lockInfo.getProjectLocks().isEmpty());
@@ -90,6 +92,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    @Disabled("MemoryLockUtils is deprecated")
     void testModuleRule() {
         //              ProjectLock      ModuleLock        PathLock
         // Source:      NULL             TABLE             table1,table2
@@ -100,7 +103,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
             List<TransactionLock> projectLock = Collections.emptyList();
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, TABLE);
             List<TransactionLock> pathLocks = MemoryLockUtils
-                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+                    .getPathLocks(Lists.newArrayList("TABLE_INFO/default.db.table1", "TABLE_INFO/default.db.table2"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertTrue(lockInfo.getProjectLocks().isEmpty());
@@ -112,7 +115,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
             List<TransactionLock> projectLock = Collections.emptyList();
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, MODEL);
             List<TransactionLock> pathLocks = MemoryLockUtils
-                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+                    .getPathLocks(Lists.newArrayList("TABLE_INFO/default.db.table1", "TABLE_INFO/default.db.table2"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertTrue(lockInfo.getProjectLocks().isEmpty());
@@ -124,6 +127,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    @Disabled("MemoryLockUtils is deprecated")
     void testPathRule() {
         //              ProjectLock      ModuleLock        PathLock
         // Source:      NULL             MODEL             table1,table2
@@ -134,7 +138,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
             List<TransactionLock> projectLock = Collections.emptyList();
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, MODEL);
             List<TransactionLock> pathLocks = MemoryLockUtils
-                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json", "/default/table/db.table2.json"));
+                    .getPathLocks(Lists.newArrayList("TABLE_INFO/default.db.table1", "TABLE_INFO/default.db.table2"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertTrue(lockInfo.getProjectLocks().isEmpty());
@@ -147,7 +151,7 @@ class LockEliminationRuleExecTest extends NLocalFileMetadataTestCase {
             List<TransactionLock> projectLock = Collections.emptyList();
             List<TransactionLock> moduleLocks = MemoryLockUtils.getModuleLocks(project, MODEL);
             List<TransactionLock> pathLocks = MemoryLockUtils
-                    .getPathLocks(Lists.newArrayList("/default/table/db.table1.json"));
+                    .getPathLocks(Lists.newArrayList("TABLE_INFO/default.db.table1"));
             LockInfo lockInfo = LockEliminationRuleExec.getInstance().execute(project, projectLock, moduleLocks,
                     pathLocks);
             Assertions.assertTrue(lockInfo.getProjectLocks().isEmpty());

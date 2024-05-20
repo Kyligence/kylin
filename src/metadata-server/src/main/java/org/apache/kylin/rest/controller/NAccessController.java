@@ -437,7 +437,9 @@ public class NAccessController extends NBasicController {
         AclEntity ae = accessService.getAclEntity(entityType, uuid);
         accessService.batchRevoke(ae, requests);
         if (AclEntityType.PROJECT_INSTANCE.equals(entityType)) {
-            requests.forEach(r -> aclTCRService.remoteRevokeACL(uuid, r.getSid(), r.isPrincipal()));
+            for(AccessRequest r : requests) {
+                aclTCRService.remoteRevokeACL(uuid, r.getSid(), r.isPrincipal());
+            }
         }
         boolean hasAdminProject = CollectionUtils.isNotEmpty(projectService.getAdminProjects());
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, hasAdminProject, "");

@@ -43,6 +43,9 @@ public class NDataSegmentResponse extends NDataSegment {
 
     private static final String FILE_COUNT = "file_count";
 
+    @JsonProperty("id")
+    private String id; // only used by frontend
+
     @JsonProperty("bytes_size")
     private long bytesSize;
 
@@ -103,6 +106,7 @@ public class NDataSegmentResponse extends NDataSegment {
 
     public NDataSegmentResponse(NDataflow dataflow, NDataSegment segment, List<AbstractExecutable> executables) {
         super(segment);
+        id = segment.getUuid();
         createTime = getCreateTimeUTC();
         startTime = Long.parseLong(getSegRange().getStart().toString());
         endTime = Long.parseLong(getSegRange().getEnd().toString());

@@ -101,7 +101,7 @@ public class ModelServiceBrokenRepairTest extends SourceTestCase {
     private FavoriteRuleManager favoriteRuleManager;
 
     @Before
-    public void setup() {
+    public void setUp() {
         overwriteSystemProp("HADOOP_USER_NAME", "root");
         String localMetaDir = "src/test/resources/ut_meta/broken_repair_test";
         createTestMetadata(localMetaDir);
@@ -131,7 +131,7 @@ public class ModelServiceBrokenRepairTest extends SourceTestCase {
         modelRequest.setProject(PROJECT_NAME);
         modelService.detectInvalidIndexes(modelRequest);
         NDataModel brokenDataModelDesc = dataModelManager.getDataModelDescWithoutInit(modelId);
-        Assert.assertEquals(1, brokenDataModelDesc.getComputedColumnDescs().size());
+        Assert.assertEquals(1, brokenDataModelDesc.getComputedColumnUuids().size());
         Assert.assertEquals(29,
                 brokenDataModelDesc.getAllNamedColumns().stream().filter(NDataModel.NamedColumn::isExist).count());
         Assert.assertEquals(8,

@@ -46,8 +46,6 @@ import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.request.AWSTableLoadRequest;
 import org.apache.kylin.rest.request.AutoMergeRequest;
-import org.apache.kylin.rest.request.PartitionKeyRequest;
-import org.apache.kylin.rest.request.PushDownModeRequest;
 import org.apache.kylin.rest.request.ReloadTableRequest;
 import org.apache.kylin.rest.request.TableDescRequest;
 import org.apache.kylin.rest.request.TableExclusionRequest;
@@ -64,7 +62,6 @@ import org.apache.kylin.rest.response.NHiveTableNameResponse;
 import org.apache.kylin.rest.response.NInitTablesResponse;
 import org.apache.kylin.rest.response.PreReloadTableResponse;
 import org.apache.kylin.rest.response.PreUnloadTableResponse;
-import org.apache.kylin.rest.response.RefreshAffectedSegmentsResponse;
 import org.apache.kylin.rest.response.TableNameResponse;
 import org.apache.kylin.rest.response.TableRefreshAll;
 import org.apache.kylin.rest.response.TablesAndColumnsResponse;
@@ -97,6 +94,7 @@ public class NTableController extends NBasicController {
     private static final String TABLE = "table";
     private static final int MAX_SAMPLING_ROWS = 20_000_000;
     private static final int MIN_SAMPLING_ROWS = 10_000;
+    private static final String DEPRECATED_FUNCTION = "This function is not supported any more.";
 
     @Autowired
     @Qualifier("tableService")
@@ -196,15 +194,8 @@ public class NTableController extends NBasicController {
     @PostMapping(value = "/partition_key", produces = { HTTP_VND_APACHE_KYLIN_JSON,
             HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
     @ResponseBody
-    public EnvelopeResponse<String> setPartitionKey(@RequestBody PartitionKeyRequest partitionKeyRequest) {
-
-        checkProjectName(partitionKeyRequest.getProject());
-        if (partitionKeyRequest.getPartitionColumnFormat() != null) {
-            validateDateTimeFormatPattern(partitionKeyRequest.getPartitionColumnFormat());
-        }
-        tableService.setPartitionKey(partitionKeyRequest.getTable(), partitionKeyRequest.getProject(),
-                partitionKeyRequest.getColumn(), partitionKeyRequest.getPartitionColumnFormat());
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    public EnvelopeResponse<String> setPartitionKey() {
+        return new EnvelopeResponse<>(KylinException.CODE_UNDEFINED, "", DEPRECATED_FUNCTION);
     }
 
     @ApiOperation(value = "makeTop", tags = { "AI" })
@@ -362,29 +353,15 @@ public class NTableController extends NBasicController {
     @GetMapping(value = "/affected_data_range", produces = { HTTP_VND_APACHE_KYLIN_JSON,
             HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
     @ResponseBody
-    public EnvelopeResponse<RefreshAffectedSegmentsResponse> getRefreshAffectedDateRange(
-            @RequestParam(value = "project") String project, @RequestParam(value = "table") String table,
-            @RequestParam(value = "start") String start, @RequestParam(value = "end") String end) {
-        checkProjectName(project);
-        checkRequiredArg(TABLE, table);
-        checkRequiredArg("start", start);
-        checkRequiredArg("end", end);
-        validateRange(start, end);
-        tableService.checkRefreshDataRangeReadiness(project, table, start, end);
-        RefreshAffectedSegmentsResponse response = modelService.getRefreshAffectedSegmentsResponse(project, table,
-                start, end);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
+    public EnvelopeResponse<String> getRefreshAffectedDateRange() {
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", DEPRECATED_FUNCTION);
     }
 
     @ApiOperation(value = "updatePushdownMode", tags = { "AI" }, notes = "Update Body: pushdown_range_limited")
     @PutMapping(value = "/pushdown_mode")
     @ResponseBody
-    public EnvelopeResponse<String> setPushdownMode(@RequestBody PushDownModeRequest pushDownModeRequest) {
-        checkProjectName(pushDownModeRequest.getProject());
-        checkRequiredArg(TABLE, pushDownModeRequest.getTable());
-        tableService.setPushDownMode(pushDownModeRequest.getProject(), pushDownModeRequest.getTable(),
-                pushDownModeRequest.isPushdownRangeLimited());
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    public EnvelopeResponse<String> setPushdownMode() {
+        return new EnvelopeResponse<>(KylinException.CODE_UNDEFINED, "", DEPRECATED_FUNCTION);
     }
 
     @ApiOperation(value = "getPushdownMode", tags = { "AI" })
@@ -392,10 +369,7 @@ public class NTableController extends NBasicController {
     @ResponseBody
     public EnvelopeResponse<Boolean> getPushdownMode(@RequestParam(value = "project") String project,
             @RequestParam(value = "table") String table) {
-        checkProjectName(project);
-        checkRequiredArg(TABLE, table);
-        boolean result = tableService.getPushDownMode(project, table);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, result, "");
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, false, DEPRECATED_FUNCTION);
     }
 
     @ApiOperation(value = "autoMergeConfig", tags = { "DW" })
@@ -409,11 +383,9 @@ public class NTableController extends NBasicController {
         if (StringUtils.isEmpty(modelId) && StringUtils.isEmpty(tableName)) {
             throw new KylinException(EMPTY_PARAMETER, "model name or table name must be specified!");
         }
-        AutoMergeConfigResponse response;
+        AutoMergeConfigResponse response = null;
         if (StringUtils.isNotEmpty(modelId)) {
             response = tableService.getAutoMergeConfigByModel(project, modelId);
-        } else {
-            response = tableService.getAutoMergeConfigByTable(project, tableName);
         }
 
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
@@ -433,8 +405,6 @@ public class NTableController extends NBasicController {
         }
         if (StringUtils.isNotEmpty(autoMergeRequest.getModel())) {
             tableService.setAutoMergeConfigByModel(autoMergeRequest.getProject(), autoMergeRequest);
-        } else {
-            tableService.setAutoMergeConfigByTable(autoMergeRequest.getProject(), autoMergeRequest);
         }
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }

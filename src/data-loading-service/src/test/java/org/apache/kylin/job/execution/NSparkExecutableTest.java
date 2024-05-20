@@ -49,13 +49,13 @@ public class NSparkExecutableTest extends NLocalFileMetadataTestCase {
     private NDataModelManager modelManager;
 
     @Before
-    public void setup() {
+    public void setUp() {
         createTestMetadata();
         modelManager = NDataModelManager.getInstance(getTestConfig(), "default");
     }
 
     @After
-    public void destroy() {
+    public void tearDown() {
         cleanupTestMetadata();
     }
 
@@ -92,15 +92,15 @@ public class NSparkExecutableTest extends NLocalFileMetadataTestCase {
                 return null;
             }, "default");
         }
-    }
 
-    private void addModel(NDataModel model) {
-        for (int i = 0; i < 3; i++) {
-            model = modelManager.copyForWrite(model);
-            model.setUuid(RandomUtil.randomUUIDStr());
-            model.setAlias(RandomUtil.randomUUIDStr());
-            model.setMvcc(-1);
-            modelManager.createDataModelDesc(model, "owner");
+        private void addModel(NDataModel model) {
+            for (int i = 0; i < 3; i++) {
+                model = modelManager.copyForWrite(model);
+                model.setUuid(RandomUtil.randomUUIDStr());
+                model.setAlias(RandomUtil.randomUUIDStr());
+                model.setMvcc(-1);
+                modelManager.createDataModelDesc(model, "owner");
+            }
         }
     }
 

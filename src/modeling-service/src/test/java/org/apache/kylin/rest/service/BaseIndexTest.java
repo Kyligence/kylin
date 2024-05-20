@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.execution.AbstractExecutable;
@@ -85,9 +86,9 @@ public class BaseIndexTest extends SourceTestCase {
     protected IUserGroupService userGroupService = Mockito.spy(NUserGroupService.class);
 
     @Before
-    public void setup() {
+    public void setUp() {
         overwriteSystemProp("HADOOP_USER_NAME", "root");
-        super.setup();
+        super.setUp();
         indexPlanService.setSemanticUpater(semanticService);
         ReflectionTestUtils.setField(aclEvaluate, "aclUtil", aclUtil);
         ReflectionTestUtils.setField(indexPlanService, "aclEvaluate", aclEvaluate);
@@ -359,7 +360,8 @@ public class BaseIndexTest extends SourceTestCase {
     public void testUpdateBuiltBaseIndex() {
         CreateBaseIndexRequest request = new CreateBaseIndexRequest();
         request.setModelId(COMMON_MODEL_ID);
-        indexPlanService.createBaseIndex(getProject(), request);
+        UnitOfWork.doInTransactionWithRetry(() -> indexPlanService.createBaseIndex(getProject(), request),
+                getProject());
         Assert.assertThat(needUpdateBaseIndex(getProject(), COMMON_MODEL_ID), is(false));
 
         NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");

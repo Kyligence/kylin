@@ -53,7 +53,6 @@ import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.constant.ExecutableConstants;
-import org.apache.kylin.job.dao.NExecutableDao;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.BaseTestExecutable;
 import org.apache.kylin.job.execution.ChainedExecutable;
@@ -540,28 +539,6 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testPauseJob_IncBuildJobDataFlowStatusChange() {
-        var job = new DefaultExecutableOnModel();
-        job.setName(JobTypeEnum.INC_BUILD.toString());
-        job.setJobType(JobTypeEnum.INC_BUILD);
-        job.setTargetSubject("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
-        job.setProject(DEFAULT_PROJECT);
-        SucceedTestExecutable executable = new SucceedTestExecutable();
-        job.addTask(executable);
-        manager.addJob(job);
-        manager.updateJobOutput(job.getId(), ExecutableState.PENDING);
-        job = (DefaultExecutableOnModel) manager.getJob(job.getId());
-        manager.pauseJob(job.getId(), ExecutableManager.toPO(job, DEFAULT_PROJECT), job);
-
-        val job1 = (DefaultExecutable) manager.getJob(job.getId());
-        Assert.assertEquals(ExecutableState.PAUSED, job1.getStatus());
-
-        val dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), DEFAULT_PROJECT)
-                .getDataflowByModelAlias("nmodel_basic");
-        Assert.assertEquals(RealizationStatusEnum.LAG_BEHIND, dataflow.getStatus());
-    }
-
-    @Test
     public void testPauseJob_IndexBuildJobDataFlowStatusNotChange() {
         var job = new DefaultExecutableOnModel();
         job.setName(JobTypeEnum.INDEX_BUILD.toString());
@@ -595,10 +572,9 @@ public class ExecutableManagerTest extends NLocalFileMetadataTestCase {
         val po = ExecutableManager.toPO(job, DEFAULT_PROJECT);
         po.setType(null);
 
-        val executableDao = NExecutableDao.getInstance(getTestConfig(), DEFAULT_PROJECT);
-        val savedPO = executableDao.addJob(po);
-
-        Assert.assertNull(manager.getJob(savedPO.getId()));
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("Cannot parse this job: " + job.getJobId() + ", the type is empty");
+        manager.addJob(po);
     }
 
     @Test

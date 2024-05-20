@@ -105,7 +105,7 @@ public class StreamingJobService extends BasicService {
         checkModelStatus(project, modelId, jobType);
         ModelUtils.checkPartitionColumn(project, modelId, MsgPicker.getMsg().getPartitionColumnStartError());
         initDefaultParser(project);
-        StreamingScheduler scheduler = StreamingScheduler.getInstance(project);
+        StreamingScheduler scheduler = StreamingScheduler.getInstance();
         scheduler.submitJob(project, modelId, jobType);
     }
 
@@ -123,18 +123,18 @@ public class StreamingJobService extends BasicService {
     }
 
     public void stopStreamingJob(String project, String modelId, JobTypeEnum jobType) {
-        StreamingScheduler scheduler = StreamingScheduler.getInstance(project);
-        scheduler.stopJob(modelId, jobType);
+        StreamingScheduler scheduler = StreamingScheduler.getInstance();
+        scheduler.stopJob(project, modelId, jobType);
     }
 
     public void forceStopStreamingJob(String project, String modelId, JobTypeEnum jobType) {
-        StreamingScheduler scheduler = StreamingScheduler.getInstance(project);
+        StreamingScheduler scheduler = StreamingScheduler.getInstance();
         scheduler.skipJobListener(project, StreamingUtils.getJobId(modelId, jobType.name()), true);
 
         try {
             MetaInfoUpdater.updateJobState(project, StreamingUtils.getJobId(modelId, jobType.name()),
                     JobStatusEnum.STOPPING);
-            scheduler.killJob(modelId, jobType, JobStatusEnum.STOPPED);
+            scheduler.killJob(project, modelId, jobType, JobStatusEnum.STOPPED);
         } finally {
             scheduler.skipJobListener(project, StreamingUtils.getJobId(modelId, jobType.name()), false);
         }

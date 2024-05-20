@@ -35,8 +35,6 @@ import static org.apache.kylin.common.exception.code.ErrorCodeSystem.JOB_NODE_QU
 import static org.apache.kylin.common.util.CheckUtil.checkCondition;
 import static org.springframework.security.acls.domain.BasePermission.ADMINISTRATION;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -75,14 +73,9 @@ import org.apache.kylin.common.hystrix.NCircuitBreaker;
 import org.apache.kylin.common.logging.SetLogCategory;
 import org.apache.kylin.common.msg.Message;
 import org.apache.kylin.common.msg.MsgPicker;
-import org.apache.kylin.common.persistence.ResourceStore;
-import org.apache.kylin.common.persistence.RootPersistentEntity;
-import org.apache.kylin.common.persistence.Serializer;
-import org.apache.kylin.common.persistence.lock.MemoryLockUtils;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.AddressUtil;
-import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.SetThreadName;
 import org.apache.kylin.constants.AclConstants;
@@ -97,7 +90,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.SetMultimap;
 import org.apache.kylin.job.execution.ExecuteResult;
-import org.apache.kylin.metadata.MetadataConstants;
+import org.apache.kylin.metadata.Manager;
 import org.apache.kylin.metadata.acl.AclTCR;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
@@ -116,6 +109,7 @@ import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryHistorySql;
 import org.apache.kylin.metadata.query.QueryHistorySqlParam;
 import org.apache.kylin.metadata.query.QueryMetricsContext;
+import org.apache.kylin.metadata.query.QueryRecord;
 import org.apache.kylin.metadata.query.StructField;
 import org.apache.kylin.metadata.query.util.QueryHistoryUtil;
 import org.apache.kylin.metadata.querymeta.ColumnMeta;
@@ -148,7 +142,6 @@ import org.apache.kylin.query.util.RawSqlParser;
 import org.apache.kylin.query.util.SlowQueryDetector;
 import org.apache.kylin.query.util.TokenMgrError;
 import org.apache.kylin.query.util.WhiteSpaceParser;
-import org.apache.kylin.rest.cluster.ClusterManager;
 import org.apache.kylin.rest.config.AppConfig;
 import org.apache.kylin.rest.model.Query;
 import org.apache.kylin.rest.request.PrepareSqlRequest;
@@ -177,15 +170,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.gson.Gson;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.val;
 
 /**
@@ -194,7 +183,6 @@ import lombok.val;
 @Component("queryService")
 public class QueryService extends BasicService implements CacheSignatureQuerySupporter {
 
-    public static final String QUERY_STORE_PATH_PREFIX = "/query/";
     private static final String JDBC_METADATA_SCHEMA = "metadata";
     private static final Logger logger = LoggerFactory.getLogger(LogConstant.QUERY_CATEGORY);
     final SlowQueryDetector slowQueryDetector = new SlowQueryDetector();
@@ -209,9 +197,6 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
     private AccessService accessService;
 
     @Autowired
-    private ClusterManager clusterManager;
-
-    @Autowired
     private AppConfig appConfig;
 
     @Autowired
@@ -223,10 +208,6 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
     public QueryService() {
         slowQueryDetector.start();
         queryRoutingEngine = new QueryRoutingEngine();
-    }
-
-    private static String getQueryKeyById(String project, String creator) {
-        return "/" + project + QUERY_STORE_PATH_PREFIX + creator + MetadataConstants.FILE_SURFIX;
     }
 
     public SQLResponse query(SQLRequest sqlRequest) throws Exception {
@@ -306,62 +287,44 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         }
     }
 
-    public void saveQuery(final String creator, final String project, final Query query) throws IOException {
+    public void saveQuery(final String creator, final String project, final Query query) {
         aclEvaluate.checkProjectQueryPermission(project);
         UnitOfWork.doInTransactionWithRetry(() -> {
             Message msg = MsgPicker.getMsg();
-            val record = getSavedQueries(creator, project, true);
-            assert record != null;
-            List<Query> currentQueries = record.getQueries();
-            if (currentQueries.stream().map(Query::getName).collect(Collectors.toSet()).contains(query.getName()))
-                throw new KylinException(SAVE_QUERY_FAILED,
-                        String.format(Locale.ROOT, msg.getDuplicateQueryName(), query.getName()));
-            currentQueries.add(query);
-            getStore().checkAndPutResource(getQueryKeyById(project, creator), record,
-                    QueryRecordSerializer.getInstance());
+            Manager<QueryRecord> manager = Manager.getInstance(KylinConfig.getInstanceFromEnv(), project,
+                    QueryRecord.class);
+            manager.upsert(QueryRecord.generateResourceName(project, creator), copyForWrite -> {
+                List<Query> currentQueries = copyForWrite.getQueries();
+                if (currentQueries.stream().map(Query::getName).collect(Collectors.toSet()).contains(query.getName()))
+                    throw new KylinException(SAVE_QUERY_FAILED,
+                            String.format(Locale.ROOT, msg.getDuplicateQueryName(), query.getName()));
+                currentQueries.add(query);
+            }, () -> new QueryRecord(project, creator));
             return null;
         }, project);
     }
 
-    public void removeSavedQuery(final String creator, final String project, final String id) throws IOException {
+    public void removeSavedQuery(final String creator, final String project, final String id) {
         aclEvaluate.checkProjectQueryPermission(project);
         UnitOfWork.doInTransactionWithRetry(() -> {
-            val record = getSavedQueries(creator, project, true);
-            assert record != null;
-            record.setQueries(
-                    record.getQueries().stream().filter(q -> !q.getId().equals(id)).collect(Collectors.toList()));
-            getStore().checkAndPutResource(getQueryKeyById(project, creator), record,
-                    QueryRecordSerializer.getInstance());
+            Manager<QueryRecord> manager = Manager.getInstance(KylinConfig.getInstanceFromEnv(), project,
+                    QueryRecord.class);
+            manager.update(QueryRecord.generateResourceName(project, creator),
+                    copyForWrite -> copyForWrite.setQueries(copyForWrite.getQueries().stream()
+                            .filter(q -> !q.getId().equals(id)).collect(Collectors.toList())));
             return null;
         }, project);
     }
 
-    public QueryRecord getSavedQueries(final String creator, final String project) throws IOException {
-        return getSavedQueries(creator, project, false);
-    }
-
-    private QueryRecord getSavedQueries(final String creator, final String project, boolean withWriteLock)
-            throws IOException {
+    public QueryRecord getSavedQueries(final String creator, final String project) {
         aclEvaluate.checkProjectQueryPermission(project);
         if (null == creator) {
             return null;
         }
-        String resPath = getQueryKeyById(project, creator);
-        ResourceStore resourceStore = getStore();
-        QueryRecord record;
-        if (withWriteLock) {
-            record = MemoryLockUtils.doWithLock(null, resPath, false, resourceStore,
-                    () -> resourceStore.getResource(resPath, QueryRecordSerializer.getInstance()));
-        } else {
-            record = getStore().getResource(resPath, QueryRecordSerializer.getInstance());
-        }
-        if (record == null) {
-            return new QueryRecord();
-        }
-        val resource = getStore().getResource(getQueryKeyById(project, creator));
-        val copy = JsonUtil.deepCopy(record, QueryRecord.class);
-        copy.setMvcc(resource.getMvcc());
-        return copy;
+        Manager<QueryRecord> manager = Manager.getInstance(KylinConfig.getInstanceFromEnv(), project,
+                QueryRecord.class);
+        return manager.get(QueryRecord.generateResourceName(project, creator))
+                .orElse(new QueryRecord(project, creator));
     }
 
     public String logQuery(final SQLRequest request, final SQLResponse response) {
@@ -629,9 +592,6 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
 
             // Apply sql black list check if matching
             applyQuerySqlBlacklist(project, rawSql.getStatementString());
-
-            // convert CREATE ... to WITH ...
-            sqlResponse = QueryUtils.handleTempStatement(sqlRequest, kylinConfig);
 
             // search cache
             if (sqlResponse == null && kylinConfig.isQueryCacheEnabled() && !sqlRequest.isForcedToPushDown()
@@ -1507,44 +1467,6 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         } catch (Exception e) {
             return -1;
         }
-    }
-
-    private static ResourceStore getStore() {
-        return ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
-    }
-
-    private static class QueryRecordSerializer implements Serializer<QueryRecord> {
-
-        private static final QueryRecordSerializer serializer = new QueryRecordSerializer();
-
-        QueryRecordSerializer() {
-
-        }
-
-        public static QueryRecordSerializer getInstance() {
-            return serializer;
-        }
-
-        @Override
-        public void serialize(QueryRecord record, DataOutputStream out) throws IOException {
-            JsonUtil.writeValueIndent(out, record);
-        }
-
-        @Override
-        public QueryRecord deserialize(DataInputStream in) throws IOException {
-            return JsonUtil.readValue(in, QueryRecord.class);
-        }
-    }
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @SuppressWarnings("serial")
-    public static class QueryRecord extends RootPersistentEntity {
-
-        @JsonProperty
-        private List<Query> queries = Lists.newArrayList();
     }
 
     public static class LogReport {

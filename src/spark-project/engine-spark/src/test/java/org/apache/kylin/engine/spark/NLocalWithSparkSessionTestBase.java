@@ -66,6 +66,8 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
     protected static SparkSession ss;
     private TestingServer zkTestServer;
 
+    private String[] overlay = new String[0];
+
     protected static void ensureSparkConf() {
         if (sparkConf == null) {
             sparkConf = new SparkConf().setAppName(RandomUtil.randomUUIDStr()).setMaster("local[4]");
@@ -132,12 +134,11 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
 
     @Before
     public void setUp() throws Exception {
-        overwriteSystemProp("calcite.keep-in-clause", "true");
+        init();
         overwriteSystemProp("kylin.build.resource.consecutive-idle-state-num", "1");
         overwriteSystemProp("kylin.build.resource.state-check-interval-seconds", "1s");
         overwriteSystemProp("kylin.engine.spark.build-job-progress-reporter", //
                 "org.apache.kylin.engine.spark.job.MockJobProgressReport");
-        this.createTestMetadata();
         SparkJobFactoryUtils.initJobFactory();
         for (int i = 0; i < 100; i++) {
             try {
@@ -149,6 +150,7 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
         }
         overwriteSystemProp("kylin.env.zookeeper-connect-string", zkTestServer.getConnectString());
         overwriteSystemProp("kylin.source.provider.9", "org.apache.kylin.engine.spark.mockup.CsvSource");
+        JobContextUtil.getJobContext(getTestConfig());
     }
 
     @After
@@ -163,9 +165,13 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
         return "default";
     }
 
+    protected void setOverlay(String... overlay) {
+        this.overlay = overlay;
+    }
+
     protected void init() throws Exception {
         overwriteSystemProp("calcite.keep-in-clause", "true");
-        this.createTestMetadata();
+        this.createTestMetadata(overlay);
 
         JobContextUtil.getJobContext(getTestConfig());
     }

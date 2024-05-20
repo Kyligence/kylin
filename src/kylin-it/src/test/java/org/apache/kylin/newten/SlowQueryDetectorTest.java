@@ -59,8 +59,9 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
     private static final Logger logger = LoggerFactory.getLogger(SlowQueryDetectorTest.class);
     private static final int TIMEOUT_MS = 5 * 1000;
 
+    @Override
     @Before
-    public void setup() {
+    public void setUp() {
         overwriteSystemProp("kylin.job.scheduler.poll-interval-second", "1");
         createTestMetadata();
         slowQueryDetector = new SlowQueryDetector(100, TIMEOUT_MS);
@@ -72,8 +73,9 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
         return "match";
     }
 
+    @Override
     @After
-    public void after() {
+    public void tearDown() {
         cleanupTestMetadata();
         slowQueryDetector.interrupt();
     }

@@ -42,7 +42,6 @@ import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.SparderEnv;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -57,11 +56,6 @@ public class NBadQueryAndPushDownTest extends NLocalWithSparkSessionTest {
     @Override
     public String getProject() {
         return PROJECT_NAME;
-    }
-
-    @After
-    public void teardown() {
-        super.cleanupTestMetadata();
     }
 
     @Test

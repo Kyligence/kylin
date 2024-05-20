@@ -90,10 +90,6 @@ public class KylinPrepareEnvListener implements EnvironmentPostProcessor, Ordere
         delegationTokenManager.start();
         env.addActiveProfile(config.getSecurityProfile());
 
-        if (config.isMetadataKeyCaseInSensitiveEnabled()) {
-            env.addActiveProfile("case-insensitive-service");
-        }
-
         // add extra hive class paths.
         val extraClassPath = config.getHiveMetastoreExtraClassPath();
         if (StringUtils.isNotEmpty(extraClassPath)) {
