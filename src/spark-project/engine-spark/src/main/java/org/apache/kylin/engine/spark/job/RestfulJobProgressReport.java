@@ -53,7 +53,7 @@ public class RestfulJobProgressReport implements IJobProgressReport {
      * @param json
      */
     @Override
-    public boolean updateSparkJobInfo(Map<String, String> params, String url, String json) {
+    public synchronized boolean updateSparkJobInfo(Map<String, String> params, String url, String json) {
         String serverAddress = System.getProperty("spark.driver.rest.server.address", "127.0.0.1:7070");
         String requestApi = String.format(Locale.ROOT, "http://%s%s", serverAddress, url);
         Long timeOut = Long.parseLong(params.get(ParamsConstants.TIME_OUT));

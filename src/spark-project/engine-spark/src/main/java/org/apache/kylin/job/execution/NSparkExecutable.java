@@ -530,6 +530,9 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         // If we don't remove these configurations,
         // they will be overwritten in the SparkApplication
         props.setProperty("kylin.metadata.url", metaDumpUrl);
+        // metadata store is 'HdfsMetadataStore' in job process, should always write metadata with project lock
+        props.setProperty("kylin.env.transaction-lock-manager",
+                "org.apache.kylin.common.persistence.transaction.TransactionPessimisticLockManager");
         modifyDump(props);
 
         ResourceStore.dumpKylinProps(tmpDir, props);
