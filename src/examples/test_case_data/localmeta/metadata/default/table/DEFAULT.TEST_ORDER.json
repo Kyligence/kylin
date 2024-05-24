@@ -7,7 +7,8 @@
     "name" : "ORDER_ID",
     "datatype" : "bigint",
     "data_gen" : "ID",
-    "index": "T"
+    "index": "T",
+    "case_sensitive_name": "order_id"
   }, {
     "id" : "2",
     "name" : "BUYER_ID",
@@ -18,7 +19,8 @@
     "id" : "3",
     "name" : "TEST_DATE_ENC",
     "datatype" : "date",
-    "data_gen" : "RAND"
+    "data_gen" : "RAND",
+    "case_sensitive_name": "Test_Date_Enc"
   }, {
     "id" : "4",
     "name" : "TEST_TIME_ENC",

@@ -13,7 +13,8 @@
     "name" : "ORDER_ID",
     "datatype" : "bigint",
     "index": "T",
-    "comment": "ORDER_ID"
+    "comment": "ORDER_ID",
+    "case_sensitive_name": "order_id"
   }, {
     "id" : "3",
     "name" : "CAL_DT",
@@ -66,7 +67,8 @@
     "name" : "ITEM_COUNT",
     "datatype" : "int",
     "data_gen" : "RAND",
-    "comment": "ITEM_COUNT"
+    "comment": "ITEM_COUNT",
+    "case_sensitive_name": "item_COUNT"
   }, {
     "id" : "11",
     "name" : "TEST_COUNT_DISTINCT_BITMAP",

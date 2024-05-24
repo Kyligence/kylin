@@ -117,10 +117,12 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
         private final String defaultSchema;
         private final List<AclTCR> aclTCRList;
         private final NTableMetadataManager tableMgr;
+        private final boolean isPushdownSelectStarCaseSensitiveEnable;
 
         SelectStarAuthVisitor(String project, String defaultSchema, QueryContext.AclInfo aclInfo) {
             this.defaultSchema = defaultSchema;
             KylinConfig config = NProjectManager.getProjectConfig(project);
+            this.isPushdownSelectStarCaseSensitiveEnable = config.getPushdownSelectStarCaseSensitiveEnable();
             this.tableMgr = NTableMetadataManager.getInstance(config, project);
             // init aclTCR
             String user = Objects.nonNull(aclInfo) ? aclInfo.getUsername() : null;
@@ -241,6 +243,10 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
         }
 
         String getQuotedColName(ColumnDesc column) {
+            if (isPushdownSelectStarCaseSensitiveEnable) {
+                return StringHelper.doubleQuote(column.getTable().getName()) + "."
+                        + StringHelper.doubleQuote(column.getCaseSensitiveName());
+            }
             return StringHelper.doubleQuote(column.getTable().getName()) + "."
                     + StringHelper.doubleQuote(column.getName());
         }
