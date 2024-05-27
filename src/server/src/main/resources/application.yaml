@@ -65,6 +65,10 @@ management:
     licenseService:
       enabled: false
 
+springfox:
+  documentation:
+    enabled: ${kylin.swagger.enabled}
+
 spring:
   servlet:
     multipart:
