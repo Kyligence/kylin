@@ -1408,6 +1408,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.pushdown.select-star-case-sensitive-enabled", TRUE));
     }
 
+    public boolean getPushdownSelectStarLowercaseEnable() {
+        return Boolean.parseBoolean(getOptional("kylin.pushdown.select-star-lowercase-enabled", FALSE));
+    }
+
     public int getDefaultVarcharPrecision() {
         int v = Integer.parseInt(getOptional("kylin.source.hive.default-varchar-precision", "4096"));
         if (v < 1) {

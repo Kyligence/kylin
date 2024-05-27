@@ -43,6 +43,7 @@ import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.exception.KylinRuntimeException;
@@ -118,11 +119,13 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
         private final List<AclTCR> aclTCRList;
         private final NTableMetadataManager tableMgr;
         private final boolean isPushdownSelectStarCaseSensitiveEnable;
+        private final boolean isPushdownSelectStarLowerCaseEnable;
 
         SelectStarAuthVisitor(String project, String defaultSchema, QueryContext.AclInfo aclInfo) {
             this.defaultSchema = defaultSchema;
             KylinConfig config = NProjectManager.getProjectConfig(project);
             this.isPushdownSelectStarCaseSensitiveEnable = config.getPushdownSelectStarCaseSensitiveEnable();
+            this.isPushdownSelectStarLowerCaseEnable = config.getPushdownSelectStarLowercaseEnable();
             this.tableMgr = NTableMetadataManager.getInstance(config, project);
             // init aclTCR
             String user = Objects.nonNull(aclInfo) ? aclInfo.getUsername() : null;
@@ -243,7 +246,14 @@ public class HackSelectStarWithColumnACL implements IQueryTransformer, IPushDown
         }
 
         String getQuotedColName(ColumnDesc column) {
+            if (isPushdownSelectStarLowerCaseEnable) {
+                return StringHelper.doubleQuote(column.getTable().getName()) + "."
+                        + StringHelper.doubleQuote(StringUtils.lowerCase(column.getName()));
+            }
             if (isPushdownSelectStarCaseSensitiveEnable) {
+                // caseSensitiveName is required to have a value.
+                // If caseSensitiveName is null, then name will be used,
+                // but using name will not guarantee case sensitivity.
                 return StringHelper.doubleQuote(column.getTable().getName()) + "."
                         + StringHelper.doubleQuote(column.getCaseSensitiveName());
             }
