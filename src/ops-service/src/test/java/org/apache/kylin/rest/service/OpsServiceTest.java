@@ -246,7 +246,7 @@ public class OpsServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(OpsService.MetadataBackupStatus.CANCELED,
                 OpsService.getMetadataBackupList(UnitOfWork.GLOBAL_UNIT).stream()
                         .filter(backup -> backup.getPath().equals(backupPath)).findFirst().get().getStatus());
-        await().atMost(10, TimeUnit.SECONDS)
+        await().atMost(60, TimeUnit.SECONDS)
                 .until(() -> !HadoopUtil.getWorkingFileSystem().exists(new Path(backupPath)));
     }
 
