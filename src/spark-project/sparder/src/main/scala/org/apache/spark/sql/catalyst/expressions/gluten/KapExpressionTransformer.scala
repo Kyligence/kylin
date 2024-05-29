@@ -119,8 +119,7 @@ case class CustomerExpressionTransformer() extends ExpressionExtensionTrait {
         aggregateAttr += aggregateAttributeList(resIdx)
         resIdx += 1
         resIdx
-      case other =>
-        throw new GlutenNotSupportException(s"Unsupported aggregate mode: $other.")
+      case other => throw new GlutenNotSupportException(s"Unsupported aggregate mode: $other.")
     }
   }
 
@@ -133,18 +132,12 @@ case class CustomerExpressionTransformer() extends ExpressionExtensionTrait {
             Some("ke_bitmap_or_cardinality")
           case BinaryType =>
             Some("ke_bitmap_or_data")
-          case _ =>
-            throw new UnsupportedOperationException(
-              s"Aggregate function ${aggregateFunc.getClass} does not support the data type " +
-                s"${countDistinct.dataType}.")
+          case _ => throw new UnsupportedOperationException("Unsupported data type in count distinct")
         }
       case _ =>
         extensionExpressionsMapping.get(aggregateFunc.getClass)
     }
-    if (substraitAggFuncName.isEmpty) {
-      throw new UnsupportedOperationException(
-        s"Aggregate function ${aggregateFunc.getClass} is not supported.")
-    }
+    assert(substraitAggFuncName.isDefined, s"Aggregate function ${aggregateFunc.getClass} is not supported.")
     (substraitAggFuncName, aggregateFunc.children.map(child => child.dataType))
   }
 }

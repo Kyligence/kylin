@@ -31,6 +31,7 @@ import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparderEnv;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.common.GlutenTestConfig;
 import org.apache.spark.sql.execution.SparkPlan;
 import org.apache.spark.sql.internal.StaticSQLConf;
 import org.junit.After;
@@ -61,6 +62,7 @@ public class ExtractLimitInfoTest extends NLocalWithSparkSessionTest {
         sparkConf.set("spark.sql.crossJoin.enabled", "true");
         sparkConf.set("spark.sql.adaptive.enabled", "false");
         sparkConf.set("spark.sql.autoBroadcastJoinThreshold", "1");
+        GlutenTestConfig.configGluten(sparkConf);
         ss = SparkSession.builder().config(sparkConf).getOrCreate();
         SparderEnv.setSparkSession(ss);
     }
