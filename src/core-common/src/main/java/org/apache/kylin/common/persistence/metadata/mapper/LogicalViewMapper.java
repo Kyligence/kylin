@@ -33,11 +33,6 @@ public interface LogicalViewMapper extends BasicMapper<LogicalViewRawResource> {
     List<LogicalViewRawResource> selectManyWithRecordLock(SelectStatementProvider selectStatement);
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "row.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<LogicalViewRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @Results(id = "LogicalViewResult", value = {
             @Result(column = "id", property = "id", jdbcType = JdbcType.BIGINT, id = true),

@@ -44,11 +44,6 @@ public interface QueryRecordMapper extends BasicMapper<QueryRecordRawResource> {
     }
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "record.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<QueryRecordRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @ResultMap("QueryRecordResult")
     Optional<QueryRecordRawResource> selectOne(SelectStatementProvider selectStatement);

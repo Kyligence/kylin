@@ -33,11 +33,6 @@ public interface StreamingJobMapper extends BasicMapper<StreamingJobRawResource>
     List<StreamingJobRawResource> selectManyWithRecordLock(SelectStatementProvider selectStatement);
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "row.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<StreamingJobRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @Results(id = "StreamingJobResult", value = {
             @Result(column = "id", property = "id", jdbcType = JdbcType.BIGINT, id = true),

@@ -589,8 +589,8 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
                 .orElse(new Path(path + "/backup_0/"));
         try (val in = fs.open(new Path(rootPath + "/core_meta", METASTORE_IMAGE + ".json"))) {
             val image = JsonUtil.readValue(IOUtils.toByteArray(in), ImageDesc.class);
-            // restore will delete 17 resources.
-            Assert.assertEquals(resourceStore.listResourcesRecursivelyByProject("default").size() + 17,
+            // restore will delete 15 resources.
+            Assert.assertEquals(resourceStore.listResourcesRecursivelyByProject("default").size() + 15,
                     image.getOffset() - oldOffset);
         }
         FileUtils.deleteDirectory(junitFolder.getAbsoluteFile());
@@ -620,8 +620,8 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
                 .orElse(new Path(path + "/backup_0/"));
         try (val in = fs.open(new Path(rootPath + "/core_meta", METASTORE_IMAGE + ".json"))) {
             val image = JsonUtil.readValue(IOUtils.toByteArray(in), ImageDesc.class);
-            // restore will delete 17 resources.
-            Assert.assertEquals(resourceStore.listResourcesRecursivelyByProject("default").size() + 17,
+            // restore will delete 15 resources.
+            Assert.assertEquals(resourceStore.listResourcesRecursivelyByProject("default").size() + 15,
                     image.getOffset() - oldOffset);
         }
     }

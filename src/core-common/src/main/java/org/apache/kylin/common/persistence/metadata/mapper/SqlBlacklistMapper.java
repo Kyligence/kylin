@@ -43,11 +43,6 @@ public interface SqlBlacklistMapper extends BasicMapper<SqlBlacklistRawResource>
     }
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "record.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<SqlBlacklistRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @ResultMap("SqlBlacklistResult")
     Optional<SqlBlacklistRawResource> selectOne(SelectStatementProvider selectStatement);

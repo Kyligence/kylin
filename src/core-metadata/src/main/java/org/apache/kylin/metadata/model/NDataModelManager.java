@@ -364,8 +364,8 @@ public class NDataModelManager {
         List<String> oldIdentities = oldRelations.stream().map(TableModelRelationDesc::getTableIdentity)
                 .collect(Collectors.toList());
 
-        List<String> finalIdentities = model.getAllTables().stream().map(TableRef::getTableIdentity)
-                .collect(Collectors.toList());
+        Set<String> finalIdentities = model.getAllTables().stream().map(TableRef::getTableIdentity)
+                .collect(Collectors.toSet());
 
         oldRelations.stream().filter(relation -> !finalIdentities.contains(relation.getTableIdentity()))
                 .forEach(relationManager::delete);

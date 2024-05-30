@@ -58,11 +58,6 @@ public interface TableModelRelationMapper extends BasicMapper<TableModelRelation
     }
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "record.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<TableModelRelationRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @ResultMap("TableModelRelationResult")
     Optional<TableModelRelationRawResource> selectOne(SelectStatementProvider selectStatement);

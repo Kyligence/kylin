@@ -41,11 +41,6 @@ public interface KafkaConfigMapper extends BasicMapper<KafkaConfigRawResource> {
     List<KafkaConfigRawResource> selectManyWithRecordLock(SelectStatementProvider selectStatement);
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "row.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<KafkaConfigRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @Results(id = "KafkaConfigResult", value = {
             @Result(column = "id", property = "id", jdbcType = JdbcType.BIGINT, id = true),

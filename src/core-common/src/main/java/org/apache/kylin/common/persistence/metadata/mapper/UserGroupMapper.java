@@ -62,11 +62,6 @@ public interface UserGroupMapper extends BasicMapper<UserGroupRawResource> {
     }
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "record.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<UserGroupRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @ResultMap("UserGroupResult")
     Optional<UserGroupRawResource> selectOne(SelectStatementProvider selectStatement);

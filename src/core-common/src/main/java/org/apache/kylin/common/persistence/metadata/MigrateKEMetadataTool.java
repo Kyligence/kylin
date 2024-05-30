@@ -901,21 +901,30 @@ public class MigrateKEMetadataTool {
         if (resourcePath.startsWith("/")) {
             resourcePath = resourcePath.substring(1);
         }
-        boolean noNeedToUpdate = resourcePath.endsWith(".DS_Store") || resourcePath.endsWith("kylin.properties")
-                || resourcePath.endsWith("_image") || resourcePath.contains("rule/")
-                || resourcePath.contains("query_history_id_offset/") || resourcePath.contains("_global/epoch")
-                || resourcePath.contains("execute/") || resourcePath.contains("recommendation/")
-                || resourcePath.contains("accelerate_ratio/") || resourcePath.contains("favorite/")
-                || resourcePath.contains("query_history_time_offset/") || resourcePath.contains("query_history/")
-                || resourcePath.contains("query_history_time/") || resourcePath.contains("query_history_id/")
-                || resourcePath.contains("event/") || resourcePath.contains("rec_items/")
-                || resourcePath.contains("loading_range/") || resourcePath.contains("dataflow_detail/")
-                || resourcePath.contains("detaflow_details/") || resourcePath.contains("/async_task/");
-        if (noNeedToUpdate) {
-            return true;
+        String[] nonMetadata = new String[] { "kylin.properties", ".DS_Store" };
+        String[] metadataShouldBeIgnored = new String[] { "/rule/", "/query_history_id_offset/", "_global/epoch",
+                "/execute/", "/recommendation/", "/accelerate_ratio/", "/favorite/", "/query_history_time_offset/",
+                "/query_history/", "/query_history_time/", "/query_history_id/", "/event/", "/rec_items/",
+                "/loading_range/", "/dataflow_detail/", "/async_task/" };
+        String[] metadataWithoutJsonPostfix = new String[] { METASTORE_UUID_META_KEY_TAG, VERSION_FILE_META_KEY_TAG,
+                METASTORE_IMAGE_META_KEY_TAG, "_global/user", "_global/user_group", "_global/sys_acl", "/streaming/" };
+
+        for (String s : nonMetadata) {
+            if (resourcePath.endsWith(s)) {
+                return true;
+            }
         }
-        return !resourcePath.contains(METASTORE_UUID_META_KEY_TAG) && !resourcePath.contains(VERSION_FILE_META_KEY_TAG)
-                && !resourcePath.contains(METASTORE_IMAGE_META_KEY_TAG) && !resourcePath.endsWith(".json");
+        for (String s : metadataShouldBeIgnored) {
+            if (s.startsWith("/") ? resourcePath.contains(s) : resourcePath.startsWith(s)) {
+                return true;
+            }
+        }
+        for (String s : metadataWithoutJsonPostfix) {
+            if (s.startsWith("/") ? resourcePath.contains(s) : resourcePath.startsWith(s)) {
+                return false;
+            }
+        }
+        return !resourcePath.endsWith(".json");
     }
 
 }

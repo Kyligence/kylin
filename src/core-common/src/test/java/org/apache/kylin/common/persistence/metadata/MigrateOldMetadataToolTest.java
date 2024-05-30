@@ -25,11 +25,14 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.MetadataType;
+import org.apache.kylin.common.persistence.RawResourceFilter;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * 25/12/2023 hellozepp(lisheng.zhanglin@163.com)
@@ -143,8 +146,8 @@ public class MigrateOldMetadataToolTest extends NLocalFileMetadataTestCase {
             };
             List<String> outputPaths = new ArrayList<String>() {
                 {
-                    add("src/test/resources/migrate_metadata/batch_migrate/result/meta1/metadata");
-                    add("src/test/resources/migrate_metadata/batch_migrate/result/meta2/metadata");
+                    add("src/test/resources/migrate_metadata/result/batch_migrate/meta1/metadata");
+                    add("src/test/resources/migrate_metadata/result/batch_migrate/meta2/metadata");
                 }
             };
             for (int i = 0, inputPathsSize = inputPaths.size(); i < inputPathsSize; i++) {
@@ -170,7 +173,23 @@ public class MigrateOldMetadataToolTest extends NLocalFileMetadataTestCase {
         try {
             callable.call();
         } catch (Exception e) {
-            Assertions.fail(e);
+            Assert.fail(e.getMessage());
         }
+    }
+
+    @Test
+    public void testMigrateUserAndGroups() throws Exception {
+        String inputPath = "src/test/resources/migrate_metadata/user_and_groups/metadata";
+        String outputPath = "src/test/resources/migrate_metadata/result/metadata";
+        MigrateKEMetadataTool tool = new MigrateKEMetadataTool();
+        tool.doMigrate(inputPath, outputPath);
+
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        config.setMetadataUrl(outputPath);
+        FileSystemMetadataStore store = new FileSystemMetadataStore(config);
+        RawResourceFilter emptyFilter = new RawResourceFilter();
+        Assert.assertEquals(1, store.get(MetadataType.USER_INFO, emptyFilter, false, false).size());
+        Assert.assertEquals(4, store.get(MetadataType.USER_GROUP, emptyFilter, false, false).size());
+        Assert.assertEquals(1, store.get(MetadataType.USER_GLOBAL_ACL, emptyFilter, false, false).size());
     }
 }

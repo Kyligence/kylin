@@ -44,11 +44,6 @@ public interface DataflowMapper extends BasicMapper<DataflowRawResource> {
     }
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "record.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<DataflowRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @ResultMap("DataFlowResult")
     Optional<DataflowRawResource> selectOne(SelectStatementProvider selectStatement);

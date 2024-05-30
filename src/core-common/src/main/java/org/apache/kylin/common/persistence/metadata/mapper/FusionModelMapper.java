@@ -39,10 +39,6 @@ import org.mybatis.dynamic.sql.update.UpdateModel;
 import org.mybatis.dynamic.sql.util.SqlProviderAdapter;
 
 public interface FusionModelMapper extends BasicMapper<FusionModelRawResource> {
-    @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "row.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<FusionModelRawResource> insertStatement);
 
     @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")

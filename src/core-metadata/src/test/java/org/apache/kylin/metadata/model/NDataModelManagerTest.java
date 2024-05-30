@@ -27,11 +27,13 @@ import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.hystrix.NCircuitBreaker;
+import org.apache.kylin.common.persistence.RawResourceFilter;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.Manager;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.NDataModel.Measure;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
@@ -279,6 +281,49 @@ public class NDataModelManagerTest extends NLocalFileMetadataTestCase {
         } finally {
             NCircuitBreaker.stop();
         }
+    }
+    
+    @Test
+    public void testCreateModelWithDuplicatedTable() {
+        NDataModel model = mockModel();
+        NDataModelManager modelManager = Mockito.spy(NDataModelManager.getInstance(getTestConfig(), projectDefault));
+        NTableMetadataManager tableManager = NTableMetadataManager.getInstance(getTestConfig(), projectDefault);
+        Manager<TableModelRelationDesc> relationManager = Manager.getInstance(getTestConfig(), projectDefault,
+                TableModelRelationDesc.class);
+
+        TableDesc factTable = tableManager.getTableDesc("DEFAULT.TEST_KYLIN_FACT");
+        TableDesc lookupTable = tableManager.getTableDesc("DEFAULT.TEST_ACCOUNT");
+
+        JoinTableDesc joinTable1 = mockJoinTabledesc(factTable.getIdentity(), lookupTable.getIdentity(),
+                lookupTable.getName() + "_1");
+        JoinTableDesc joinTable2 = mockJoinTabledesc(factTable.getIdentity(), lookupTable.getIdentity(),
+                lookupTable.getName() + "_2");
+
+        model.setJoinTables(Arrays.asList(joinTable1, joinTable2));
+        modelManager.createDataModelDesc(model, "ADMIN");
+        List<TableModelRelationDesc> relations = relationManager
+                .listByFilter(RawResourceFilter.equalFilter("modelUuid", model.getUuid()));
+        Assert.assertEquals(2, relations.size());
+        Assert.assertTrue(relations.stream().anyMatch(r -> r.getTableIdentity().equals(factTable.getIdentity())));
+        Assert.assertTrue(relations.stream().anyMatch(r -> r.getTableIdentity().equals(lookupTable.getIdentity())));
+    }
+
+    private JoinTableDesc mockJoinTabledesc(String fact, String lookup, String lookupAlias) {
+        JoinTableDesc joinTable = new JoinTableDesc();
+        joinTable.setTable(lookup);
+        joinTable.setAlias(lookupAlias);
+        joinTable.setKind(NDataModel.TableKind.LOOKUP);
+
+        JoinDesc join = new JoinDesc();
+        join.setForeignKey(new String[] { "account_id" });
+        join.setPrimaryKey(new String[] { "account_id" });
+        join.setType("inner");
+        join.setPrimaryTable(lookupAlias);
+        join.setForeignTable(fact);
+
+        joinTable.setJoin(join);
+
+        return joinTable;
     }
 
     @Test

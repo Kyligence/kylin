@@ -48,11 +48,6 @@ public interface ObjectAclMapper extends BasicMapper<ObjectAclRawResource> {
     }
 
     @Override
-    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
-    @SelectKey(statement = "SELECT LAST_INSERT_ID()", keyProperty = "record.id", before = false, resultType = Long.class)
-    int insert(InsertStatementProvider<ObjectAclRawResource> insertStatement);
-
-    @Override
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")
     @ResultMap("ObjectAclResult")
     Optional<ObjectAclRawResource> selectOne(SelectStatementProvider selectStatement);

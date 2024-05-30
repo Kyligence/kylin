@@ -160,6 +160,7 @@ public interface BasicMapper<T extends RawResource> extends CommonCountMapper, C
 
     List<T> selectManyWithRecordLock(SelectStatementProvider selectStatement);
 
+    @InsertProvider(type = SqlProviderAdapter.class, method = "insert")
     int insert(InsertStatementProvider<T> insertStatement);
 
     Optional<T> selectOne(SelectStatementProvider selectStatement);
