@@ -33,6 +33,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.response.RestResponse;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.metadata.streaming.ReflectionUtils;
+import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.SparderUIUtil;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -74,6 +75,8 @@ public class SparderUIServiceTest {
     @Mock
     private RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
     @Mock
+    private AclEvaluate aclEvaluate = Mockito.mock(AclEvaluate.class);
+    @Mock
     private KylinConfig kylinConfig = Mockito.mock(KylinConfig.class);
     private SparderUIUtil sparderUIUtil;
 
@@ -88,6 +91,7 @@ public class SparderUIServiceTest {
         ReflectionUtils.setField(sparderUIService, "routeService", routeService);
         ReflectionUtils.setField(sparderUIService, "restTemplate", restTemplate);
         ReflectionUtils.setField(sparderUIService, "sparderUIUtil", sparderUIUtil);
+        ReflectionUtils.setField(sparderUIService, "aclEvaluate", aclEvaluate);
 
         val restResult = JsonUtil.writeValueAsBytes(RestResponse.ok(true));
         val resp = new ResponseEntity<>(restResult, HttpStatus.OK);
