@@ -25,6 +25,7 @@ import java.util.Locale;
 
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.metadata.model.ISourceAware;
@@ -42,7 +43,6 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class QueryContextCutter {
-    private static final int MAX_RETRY_TIMES_OF_CONTEXT_CUT = 10;
 
     private QueryContextCutter() {
     }
@@ -69,13 +69,15 @@ public class QueryContextCutter {
     public static List<OlapContext> selectRealization(String project, RelNode root, boolean isReCutBanned) {
         ContextInitialCutStrategy firstRoundStrategy = new ContextInitialCutStrategy();
         ContextReCutStrategy reCutStrategy = new ContextReCutStrategy();
-        boolean printPlan = NProjectManager.getProjectConfig(project).isPrintQueryPlanEnabled();
+        KylinConfig projectConfig = NProjectManager.getProjectConfig(project);
+        boolean printPlan = projectConfig.isPrintQueryPlanEnabled();
+        int maxRetryTimesOfContextCut = projectConfig.getMaxRetryTimesOfContextCut();
         if (printPlan) {
             log.info("The relNode before cutting:\n{}\n", RelOptUtil.toString(root));
         }
         QueryContextCutter.cutContext(firstRoundStrategy, (OlapRel) root.getInput(0), root);
         int retryCutTimes = 0;
-        while (retryCutTimes++ < MAX_RETRY_TIMES_OF_CONTEXT_CUT) {
+        while (retryCutTimes++ < maxRetryTimesOfContextCut) {
             if (printPlan) {
                 log.info("The {} time{} of cutting OlapContext\n{}\n", retryCutTimes, retryCutTimes > 1 ? "s" : "",
                         RelOptUtil.toString(root));
@@ -103,7 +105,7 @@ public class QueryContextCutter {
         }
 
         String errorMsg = "too many unmatched joins in this query, please check it or create corresponding realization.";
-        ContextUtil.dumpCalcitePlan("cannot find proper realizations After re-cut " + MAX_RETRY_TIMES_OF_CONTEXT_CUT
+        ContextUtil.dumpCalcitePlan("cannot find proper realizations After re-cut " + maxRetryTimesOfContextCut
                 + " times. \nError: " + errorMsg, root, log);
         throw new NoRealizationFoundException(errorMsg);
     }
