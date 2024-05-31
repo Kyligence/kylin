@@ -549,6 +549,17 @@ public class FunctionDesc implements Serializable {
                 + "]";
     }
 
+    public String toStringWithoutAlias() {
+        StringBuilder sb = new StringBuilder();
+        parameters.forEach(parameter -> {
+            sb.append(parameter.toStringWithoutAlias());
+            sb.append(",");
+        });
+        if (sb.length() > 0)
+            sb.setLength(sb.length() - 1);
+        return "FunctionDesc [expression=" + expression + ", parameter=" + sb + ", returnType=" + returnType + "]";
+    }
+
     private boolean parametersEqualInArbitraryOrder(List<ParameterDesc> parameters,
             List<ParameterDesc> otherParameters) {
         return parameters.containsAll(otherParameters) && otherParameters.containsAll(parameters);

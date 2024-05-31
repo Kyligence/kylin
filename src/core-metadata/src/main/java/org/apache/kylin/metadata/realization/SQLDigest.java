@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -294,6 +295,27 @@ public class SQLDigest {
         if (!(t1.getTableRef() == null ? t2.getTableRef() == null : t1.getTableRef().equals(t2.getTableRef())))
             return false;
         return t1.isInnerColumn() == t2.isInnerColumn();
+    }
+
+    public boolean equalsWithoutAlias(SQLDigest other) {
+        if (this.equals(other)) {
+            return true;
+        }
+        return toStringWithoutAlias().equals(other.toStringWithoutAlias());
+    }
+
+    public String toStringWithoutAlias() {
+        List<String> newGroupByColumns = groupByColumns.stream().map(TblColRef::getColumnWithTableAndSchema)
+                .collect(Collectors.toList());
+        List<String> newFilterColumns = filterColumns.stream().map(TblColRef::getColumnWithTableAndSchema)
+                .collect(Collectors.toList());
+        List<String> newAggregations = aggregations.stream().map(FunctionDesc::toStringWithoutAlias)
+                .collect(Collectors.toList());
+
+        return "fact table " + this.factTable + "," //
+                + "group by " + newGroupByColumns + "," //
+                + "filter on " + newFilterColumns + "," //
+                + "with aggregates" + newAggregations + ".";
     }
 
     @Override
