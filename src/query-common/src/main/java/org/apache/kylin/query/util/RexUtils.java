@@ -292,6 +292,7 @@ public class RexUtils {
             String ts = splits.length == 1 ? value + " 00:00:00" : value;
             return rexBuilder.makeTimestampLiteral(new TimestampString(ts), relDataType.getPrecision());
         case DataType.STRING:
+        case DataType.VARCHAR:
             relDataType = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.VARCHAR, colType.getPrecision());
             return rexBuilder.makeLiteral(parsedValue, relDataType, false);
         case DataType.NUMERIC:

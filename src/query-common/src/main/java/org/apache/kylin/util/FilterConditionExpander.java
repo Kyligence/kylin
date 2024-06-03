@@ -38,6 +38,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.NlsString;
 import org.apache.kylin.common.exception.KylinException;
@@ -134,13 +135,12 @@ public class FilterConditionExpander {
         }
 
         if (call.getOperands().size() > 1) {
-            // col IN (...)
+            // col IN (xxx) or col not_in (xxx)
             if (call.getOperands().get(0) instanceof RexInputRef) {
                 val operator = call.getOperator();
-                if (operator.equals(SqlStdOperatorTable.IN)) {
-                    return convertIn(lInputRef, call.getOperands().subList(1, call.getOperands().size()), true);
-                } else if (operator.equals(SqlStdOperatorTable.NOT_IN)) {
-                    return convertIn(lInputRef, call.getOperands().subList(1, call.getOperands().size()), false);
+                if (operator.equals(SqlStdOperatorTable.IN) || operator.equals(SqlStdOperatorTable.NOT_IN)) {
+                    return convertLiterals(lInputRef, call.getOperands().subList(1, call.getOperands().size()),
+                            operator);
                 }
             }
 
@@ -179,22 +179,15 @@ public class FilterConditionExpander {
         return null;
     }
 
-    private RexNode convertIn(RexInputRef rexInputRef, List<RexNode> extendedOperands, boolean isIn) {
+    private RexNode convertLiterals(RexInputRef rexInputRef, List<RexNode> rexLiterals, SqlOperator operator) {
         List<RexNode> transformedOperands = Lists.newArrayList();
-        for (RexNode operand : extendedOperands) {
+        transformedOperands.add(rexInputRef);
+        for (RexNode operand : rexLiterals) {
             if (!(operand instanceof RexLiteral)) {
                 return null;
             }
-            RexNode transformedOperand = transformRexLiteral(rexInputRef, (RexLiteral) operand);
-            val operator = isIn ? SqlStdOperatorTable.EQUALS : SqlStdOperatorTable.NOT_EQUALS;
-            transformedOperands.add(rexBuilder.makeCall(operator, rexInputRef, transformedOperand));
+            transformedOperands.add(operand);
         }
-
-        if (transformedOperands.size() == 1) {
-            return transformedOperands.get(0);
-        }
-
-        val operator = isIn ? SqlStdOperatorTable.OR : SqlStdOperatorTable.AND;
         return rexBuilder.makeCall(operator, transformedOperands);
     }
 
