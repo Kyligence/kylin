@@ -773,19 +773,20 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         if (this.context == null)
             return;
 
-        this.context.getGroupByColumns().stream()
-                .filter(colRef -> !colRef.getName().startsWith("_KY_") && context.belongToContextTables(colRef))
+        this.context.getGroupByColumns().stream().filter(this::isSuitableForContextColumn)
                 .forEach(colRef -> this.context.getAllColumns().add(colRef));
 
-        if (!(getInput() instanceof OlapProjectRel)) {
+        RelNode input = getInput();
+        if (!(input instanceof OlapProjectRel)) {
             // see https://olapio.atlassian.net/browse/KE-42047
             // Calcite 1.30 replaces the input RelNode with the current RelNode when the fields in the aggregate is 0
-            if (this.columnRowType.getSourceColumns() == null) {
+            if (CollectionUtils.isEmpty(columnRowType.getAllColumns().stream().filter(this::isSuitableForContextColumn)
+                    .collect(Collectors.toList()))) {
                 context.getAllColumns().clear();
                 return;
             }
-            for (TblColRef colRef : ((OlapRel) getInput()).getColumnRowType().getAllColumns()) {
-                if (context.belongToContextTables(colRef) && !colRef.getName().startsWith("_KY_"))
+            for (TblColRef colRef : ((OlapRel) input).getColumnRowType().getAllColumns()) {
+                if (isSuitableForContextColumn(colRef))
                     context.getAllColumns().add(colRef);
             }
             return;
@@ -798,10 +799,14 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
 
         for (Set<TblColRef> colRefs : ((OlapProjectRel) getInput()).getColumnRowType().getSourceColumns()) {
             for (TblColRef colRef : colRefs) {
-                if (context.belongToContextTables(colRef) && !colRef.getName().startsWith("_KY_"))
+                if (isSuitableForContextColumn((colRef)))
                     context.getAllColumns().add(colRef);
             }
         }
+    }
+
+    private boolean isSuitableForContextColumn(TblColRef colRef) {
+        return !colRef.getName().startsWith("_KY_") && context.belongToContextTables(colRef);
     }
 
     private void checkAggCallAfterAggRel() {
