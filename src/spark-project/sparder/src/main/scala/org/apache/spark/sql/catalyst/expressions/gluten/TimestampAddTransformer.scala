@@ -17,7 +17,7 @@
 package org.apache.spark.sql.catalyst.expressions.gluten
 
 import org.apache.gluten.expression.ConverterUtils.FunctionConfig
-import org.apache.gluten.expression.{ConverterUtils, ExpressionTransformer, ExpressionTransformerWithOrigin}
+import org.apache.gluten.expression.{ConverterUtils, ExpressionTransformer}
 import org.apache.gluten.substrait.expression.{ExpressionBuilder, ExpressionNode}
 import org.apache.kylin.guava30.shaded.common.collect.Lists
 import org.apache.spark.internal.Logging
@@ -28,12 +28,12 @@ import org.apache.spark.sql.udf.TimestampAddImpl
 import java.time.ZoneId
 import java.util.Locale
 
-case class TimestampAddTransformer(
-                               left: ExpressionTransformer,
-                               mid: ExpressionTransformer,
-                               right: ExpressionTransformer,
-                               original: KylinTimestampAdd
-                             ) extends ExpressionTransformerWithOrigin with Logging {
+class TimestampAddTransformer(
+  val left: ExpressionTransformer,
+  val mid: ExpressionTransformer,
+  val right: ExpressionTransformer,
+  val original: KylinTimestampAdd
+) extends ExpressionTransformer with Logging {
   override def doTransform(args: Object): ExpressionNode = {
     val unitNode = left.doTransform(args)
     val increaseNode = mid.doTransform(args)
@@ -74,5 +74,11 @@ case class TimestampAddTransformer(
     } else {
       original.right.dataType
     }
+  }
+
+  override def substraitExprName: String = "timestamp_add"
+
+  override def children: Seq[ExpressionTransformer] = {
+    Seq(left, mid, right)
   }
 }

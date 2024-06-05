@@ -33,6 +33,10 @@ import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.SegmentRange;
+import org.apache.kylin.query.relnode.ContextUtil;
+import org.apache.kylin.query.util.SlowQueryDetector;
+import org.junit.After;
+import org.junit.Before;
 import org.sparkproject.guava.collect.Sets;
 
 import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
@@ -40,6 +44,21 @@ import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 public class NLocalWithSparkSessionTest extends NLocalWithSparkSessionTestBase {
 
     protected IndexDataConstructor indexDataConstructor = new IndexDataConstructor(getProject());
+
+    @Before
+    public void setUp() throws Exception {
+        super.setUp();
+        indexDataConstructor = new IndexDataConstructor(getProject());
+        SlowQueryDetector.getRunningQueries().clear();
+        ContextUtil.clearThreadLocalContexts();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        this.cleanupTestMetadata();
+        SlowQueryDetector.getRunningQueries().clear();
+        ContextUtil.clearThreadLocalContexts();
+    }
 
     protected void fullBuild(String dfName) throws Exception {
         indexDataConstructor.buildDataflow(dfName);

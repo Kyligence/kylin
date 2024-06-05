@@ -79,7 +79,8 @@ public class SlowQueryDetector extends Thread {
     public void queryStart(String stopId) {
         runningQueries.put(currentThread(), new QueryEntry(System.currentTimeMillis(), currentThread(),
                 QueryContext.current().getQueryId(), QueryContext.current().getUserSQL(), stopId, false,
-                QueryContext.current().getQueryTagInfo().isAsyncQuery(), null, CancelFlag.getContextCancelFlag()));
+                QueryContext.current().getQueryTagInfo().isAsyncQuery(), false, null,
+                CancelFlag.getContextCancelFlag()));
     }
 
     public void addJobIdForAsyncQueryJob(String jobId) {
@@ -188,6 +189,7 @@ public class SlowQueryDetector extends Thread {
         final String stopId;
         boolean isStopByUser;
         final boolean isAsyncQuery;
+        boolean isTimeoutStop;
         String jobId;
         final CancelFlag plannerCancelFlag;
 
@@ -195,12 +197,13 @@ public class SlowQueryDetector extends Thread {
             return (System.currentTimeMillis() - startTime) / 1000;
         }
 
-        public boolean setInterruptIfTimeout() {
+        public synchronized boolean setInterruptIfTimeout() {
             if (isAsyncQuery) {
                 return false;
             }
             long runningMs = System.currentTimeMillis() - startTime;
             if (runningMs >= queryTimeoutMs) {
+                isTimeoutStop = true;
                 plannerCancelFlag.requestCancel();
                 thread.interrupt();
                 logger.error("Trying to cancel query: {}", thread.getName());
@@ -208,6 +211,10 @@ public class SlowQueryDetector extends Thread {
             }
 
             return false;
+        }
+
+        public synchronized CancelFlag getPlannerCancelFlag() {
+            return plannerCancelFlag;
         }
     }
 }

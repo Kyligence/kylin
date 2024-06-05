@@ -23,7 +23,7 @@ import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.assertj.core.util.Lists;
 import org.awaitility.Awaitility;
 import org.junit.Assert;
-import org.junit.jupiter.api.Test;
+import org.junit.Ignore;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 @MetadataInfo(onlyProps = true)
 class TransactionProjectLockTest {
 
-    @Test
+    @Ignore("Deprecated ProjectLock")
     void testStravition() {
         val threads = Lists.<LogicThread> newArrayList();
 

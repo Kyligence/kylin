@@ -19,15 +19,27 @@
 package org.apache.spark.sql.execution.gluten
 
 import org.apache.gluten.execution.FileSourceScanExecTransformer
-
+import org.apache.gluten.extension.GlutenPlan
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.execution.utils.PushDownUtil
 import org.apache.spark.sql.execution.{KylinFileSourceScanExec, LayoutFileSourceScanExec, SparkPlan}
 
-case class ConvertKylinFileSourceToGlutenRule(session: SparkSession) extends Rule[SparkPlan] {
+class ConvertKylinFileSourceToGlutenRule(val session: SparkSession) extends Rule[SparkPlan] {
+
+  private def tryReturnGlutenPlan(glutenPlan: GlutenPlan, originPlan: SparkPlan): SparkPlan = {
+    if (glutenPlan.doValidate().isValid) {
+      logDebug(s"Columnar Processing for ${originPlan.getClass} is currently supported.")
+      glutenPlan
+    } else {
+      logDebug(s"Columnar Processing for ${originPlan.getClass} is currently unsupported.")
+      originPlan
+    }
+  }
 
   override def apply(plan: SparkPlan): SparkPlan = plan.transformDown {
     case f: KylinFileSourceScanExec =>
+
       // convert to Gluten transformer
       val transformer = new KylinFileSourceScanExecTransformer(
         f.relation,
@@ -37,19 +49,13 @@ case class ConvertKylinFileSourceToGlutenRule(session: SparkSession) extends Rul
         None,
         f.optionalShardSpec,
         f.optionalNumCoalescedBuckets,
-        f.dataFilters,
+        PushDownUtil.removeNotSupportPushDownFilters(f.conf, f.output, f.dataFilters),
         f.tableIdentifier,
         f.disableBucketedScan,
         f.sourceScanRows
       )
       // Transformer validate
-      if (transformer.doValidate().isValid) {
-        logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
-        transformer
-      } else {
-        logDebug(s"Columnar Processing for ${plan.getClass} is currently unsupported.")
-        f
-      }
+      tryReturnGlutenPlan(transformer, f)
 
     case l: LayoutFileSourceScanExec =>
       // convert to Gluten transformer
@@ -60,17 +66,11 @@ case class ConvertKylinFileSourceToGlutenRule(session: SparkSession) extends Rul
         l.partitionFilters,
         l.optionalBucketSet,
         l.optionalNumCoalescedBuckets,
-        l.dataFilters,
+        PushDownUtil.removeNotSupportPushDownFilters(l.conf, l.output, l.dataFilters),
         l.tableIdentifier,
         l.disableBucketedScan
       )
       // Transformer validate
-      if (transformer.doValidate().isValid) {
-        logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
-        transformer
-      } else {
-        logDebug(s"Columnar Processing for ${plan.getClass} is currently unsupported.")
-        l
-      }
+      tryReturnGlutenPlan(transformer, l)
   }
 }

@@ -83,7 +83,6 @@ object GlutenTestConfig extends Logging{
     conf.set("spark.gluten.sql.columnar.maxBatchSize", "32768")
     conf.set("spark.gluten.sql.columnar.backend.ch.shuffle.hash.algorithm", "sparkMurmurHash3_32")
     conf.set("spark.gluten.sql.columnar.backend.ch.runtime_config.use_local_format", "true")
-    conf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
   }
 
 }

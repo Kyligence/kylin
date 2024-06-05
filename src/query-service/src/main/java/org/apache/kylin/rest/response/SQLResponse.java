@@ -74,8 +74,6 @@ public class SQLResponse implements Serializable {
 
     private List<Long> scanRows;
 
-    private Boolean glutenFallback;
-
     private List<Long> scanBytes;
 
     private String appMasterURL = "";
@@ -212,7 +210,6 @@ public class SQLResponse implements Serializable {
         this.setScanRows(queryContext.getMetrics().getScanRows());
         this.setScanBytes(queryContext.getMetrics().getScanBytes());
         this.setShufflePartitions(queryContext.getShufflePartitions());
-        this.setGlutenFallback(queryContext.getMetrics().getGlutenFallback());
         return this;
     }
 

@@ -76,7 +76,7 @@ public class QueryInterruptChecker {
                         "Manually stop the query %s. Caused: %s. Step: %s", entry.getQueryId(), cause, step));
             }
 
-            if (entry.getPlannerCancelFlag().isCancelRequested() && Thread.currentThread().isInterrupted()) {
+            if (entry.getPlannerCancelFlag().isCancelRequested() && entry.isTimeoutStop) {
                 QueryContext.current().getQueryTagInfo().setTimeout(true);
                 throw new KylinTimeoutException(String.format(Locale.ROOT,
                         "Run out of time of the query %s. Caused: %s. Step: %s", entry.getQueryId(), cause, step));

@@ -61,6 +61,7 @@ class KylinFileSourceScanExecTransformer(@transient relation: HadoopFsRelation,
   override def getPartitions: Seq[InputPartition] =
     BackendsApiManager.getTransformerApiInstance.genInputPartitionSeq(
       relation,
+      requiredSchema,
       selectedPartitions,
       output,
       bucketedScan,

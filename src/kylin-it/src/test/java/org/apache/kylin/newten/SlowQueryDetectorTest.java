@@ -34,6 +34,7 @@ import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.pushdown.SparkSqlClient;
+import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.runtime.plan.ResultPlan;
 import org.apache.kylin.query.util.QueryParams;
 import org.apache.kylin.query.util.QueryUtil;
@@ -236,6 +237,7 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
         slowQueryDetector.queryStart("");
         try {
             SparderEnv.cleanCompute();
+            ContextUtil.clearThreadLocalContexts();
             long t = System.currentTimeMillis();
             ResultPlan.getResult(mockDf, null);
             ExecAndComp.queryModel(getProject(), "select sum(price) from TEST_KYLIN_FACT group by LSTG_FORMAT_NAME");
@@ -244,6 +246,10 @@ public class SlowQueryDetectorTest extends NLocalWithSparkSessionTest {
             logger.error(error);
             Assert.fail(error);
         } catch (Exception e) {
+            boolean timeout = QueryContext.current().getQueryTagInfo().isTimeout();
+            if (!timeout) {
+                logger.error("Unexpected query exception", e);
+            }
             Assert.assertTrue(QueryContext.current().getQueryTagInfo().isTimeout());
             Assert.assertTrue(e instanceof KylinTimeoutException);
             Assert.assertEquals(
