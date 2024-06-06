@@ -1703,6 +1703,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Integer.parseInt(this.getOptional("kylin.query.engine.spark-ui-zombie-job-clean-seconds", "180"));
     }
 
+    public boolean isSparkUIAclEnabled() {
+        return Boolean.parseBoolean(this.getOptional("kylin.query.engine.spark-ui-acl.enabled", FALSE));
+    }
+
     public int getSparkEngineMaxRetryTime() {
         return Integer.parseInt(getOptional("kylin.engine.max-retry-time", "3"));
     }

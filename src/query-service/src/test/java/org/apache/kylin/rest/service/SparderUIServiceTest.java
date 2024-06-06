@@ -86,6 +86,7 @@ public class SparderUIServiceTest {
         PowerMockito.when(HttpMethod.valueOf(ArgumentMatchers.anyString())).thenAnswer(invocation -> HttpMethod.GET);
         PowerMockito.when(KylinConfig.getInstanceFromEnv()).thenAnswer(invocation -> kylinConfig);
         Mockito.when(kylinConfig.getUIProxyLocation()).thenReturn("/kylin");
+        Mockito.when(kylinConfig.isSparkUIAclEnabled()).thenReturn(false);
 
         sparderUIUtil = Mockito.mock(SparderUIUtil.class);
         ReflectionUtils.setField(sparderUIService, "routeService", routeService);
@@ -102,6 +103,12 @@ public class SparderUIServiceTest {
 
     @Test
     public void proxy() throws Exception {
+        proxyInner();
+        Mockito.when(kylinConfig.isSparkUIAclEnabled()).thenReturn(true);
+        proxyInner();
+    }
+
+    private void proxyInner() throws Exception {
         proxy(false, false, false);
         proxy(true, false, false);
         proxy(true, true, false);

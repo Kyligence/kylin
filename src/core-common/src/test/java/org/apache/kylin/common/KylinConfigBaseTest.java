@@ -952,6 +952,7 @@ class KylinConfigBaseTest {
                 "kylin.storage.columnar.spark-conf.spark.sql.legacy.allowNegativeScaleOfDecimal", "false", false));
         map.put("decimalOperationsAllowPrecisionLoss", new PropertiesEntity(
                 "kylin.storage.columnar.spark-conf.spark.sql.decimalOperations.allowPrecisionLoss", "true", true));
+        map.put("isSparkUIAclEnabled", new PropertiesEntity("kylin.query.engine.spark-ui-acl.enabled", "", false));
     }
 
     @Test
