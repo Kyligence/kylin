@@ -780,8 +780,8 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         if (!(input instanceof OlapProjectRel)) {
             // see https://olapio.atlassian.net/browse/KE-42047
             // Calcite 1.30 replaces the input RelNode with the current RelNode when the fields in the aggregate is 0
-            if (CollectionUtils.isEmpty(columnRowType.getAllColumns().stream().filter(this::isSuitableForContextColumn)
-                    .collect(Collectors.toList()))) {
+            if (!(input instanceof OlapFilterRel) && CollectionUtils.isEmpty(columnRowType.getAllColumns().stream()
+                    .filter(this::isSuitableForContextColumn).collect(Collectors.toList()))) {
                 context.getAllColumns().clear();
                 return;
             }
