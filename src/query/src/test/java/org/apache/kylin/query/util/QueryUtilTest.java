@@ -111,16 +111,16 @@ public class QueryUtilTest {
         config.setProperty("kylin.query.transformers", DefaultQueryTransformer.class.getCanonicalName());
         List<IQueryTransformer> transformers = QueryUtil.fetchTransformers(true, config.getQueryTransformers());
         Assertions.assertEquals(1, transformers.size());
-        Assertions.assertTrue(transformers.get(0) instanceof DefaultQueryTransformer);
+        Assertions.assertInstanceOf(DefaultQueryTransformer.class, transformers.get(0));
 
         config.setProperty("kylin.query.transformers", KeywordDefaultDirtyHack.class.getCanonicalName());
         transformers = QueryUtil.fetchTransformers(true, config.getQueryTransformers());
         Assertions.assertEquals(1, transformers.size());
-        Assertions.assertTrue(transformers.get(0) instanceof KeywordDefaultDirtyHack);
+        Assertions.assertInstanceOf(KeywordDefaultDirtyHack.class, transformers.get(0));
 
         transformers = QueryUtil.fetchTransformers(false, config.getQueryTransformers());
         Assertions.assertEquals(1, transformers.size());
-        Assertions.assertTrue(transformers.get(0) instanceof KeywordDefaultDirtyHack);
+        Assertions.assertInstanceOf(KeywordDefaultDirtyHack.class, transformers.get(0));
 
         config.setProperty("kylin.query.transformers", DefaultQueryTransformer.class.getCanonicalName() + ","
                 + ConvertToComputedColumn.class.getCanonicalName());
@@ -129,7 +129,7 @@ public class QueryUtilTest {
 
         transformers = QueryUtil.fetchTransformers(false, config.getQueryTransformers());
         Assertions.assertEquals(1, transformers.size());
-        Assertions.assertTrue(transformers.get(0) instanceof DefaultQueryTransformer);
+        Assertions.assertInstanceOf(DefaultQueryTransformer.class, transformers.get(0));
     }
 
     @Test
@@ -334,7 +334,7 @@ public class QueryUtilTest {
 
     @Test
     void testAdaptCalciteSyntax() {
-        Assertions.assertEquals("a\"b(", QueryUtil.adaptCalciteSyntax("a\"b("));
+        Assertions.assertEquals("'a\"b('", QueryUtil.adaptCalciteSyntax("'a\"b('"));
         Assertions.assertEquals("  ", QueryUtil.adaptCalciteSyntax("  "));
         Assertions.assertEquals("", QueryUtil.adaptCalciteSyntax(""));
         Assertions.assertEquals("CEIL(col to year)", QueryUtil.adaptCalciteSyntax("ceil_datetime(col, 'year')"));
@@ -342,6 +342,14 @@ public class QueryUtilTest {
                 QueryUtil.adaptCalciteSyntax("ceil_datetime(`t`.`col`, 'year')"));
         Assertions.assertEquals("TIMESTAMPDIFF(day, t1, t2)",
                 QueryUtil.adaptCalciteSyntax("timestampdiff('day', t1, t2)"));
+
+        Assertions.assertEquals("concat(test_kylin_fact.lstg_format_name, '''''')",
+                QueryUtil.adaptCalciteSyntax("concat(test_kylin_fact.lstg_format_name, '\\\'\\\'')"));
+        Assertions.assertEquals("concat(test_kylin_fact.lstg_format_name, '''''')",
+                QueryUtil.adaptCalciteSyntax("concat(test_kylin_fact.lstg_format_name, '\\'\\'')"));
+        Assertions.assertEquals("concat(test_kylin_fact.lstg_format_name, '''''')",
+                QueryUtil.adaptCalciteSyntax("concat(test_kylin_fact.lstg_format_name, '''''')"));
+
     }
 
     @Test

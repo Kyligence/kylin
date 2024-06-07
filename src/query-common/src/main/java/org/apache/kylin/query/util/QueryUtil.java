@@ -82,8 +82,8 @@ public class QueryUtil {
         if (StringUtils.isBlank(str)) {
             return str;
         }
-        String transformed = ESCAPE_TRANSFORMER.transform(str);
-        transformed = StringHelper.backtickToDoubleQuote(transformed);
+        String transformed = StringHelper.backtickToDoubleQuote(str);
+        transformed = ESCAPE_TRANSFORMER.transform(transformed);
         return transformed;
     }
 
