@@ -671,6 +671,10 @@
                         <groupId>org.lz4</groupId>
                         <artifactId>lz4-java</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>io.airlift</groupId>
+                        <artifactId>aircompressor</artifactId>
+                    </exclusion>
                 </exclusions>
                 <version>${clickhouse-native-jdbc.version}</version>
             </dependency>
@@ -1811,6 +1815,10 @@
                         <groupId>org.eclipse.jetty.aggregate</groupId>
                         <artifactId>jetty-all</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>io.airlift</groupId>
+                        <artifactId>aircompressor</artifactId>
+                    </exclusion>
                 </exclusions>
                 <scope>provided</scope>
             </dependency>
@@ -2013,6 +2021,10 @@
                         <groupId>com.google.protobuf</groupId>
                         <artifactId>protobuf-java</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>io.airlift</groupId>
+                        <artifactId>aircompressor</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -2020,6 +2032,12 @@
                 <artifactId>spark-catalyst_2.12</artifactId>
                 <version>${spark.version}</version>
                 <scope>provided</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.airlift</groupId>
+                        <artifactId>aircompressor</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
@@ -2031,6 +2049,10 @@
                     <exclusion>
                         <groupId>com.google.protobuf</groupId>
                         <artifactId>protobuf-java</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.airlift</groupId>
+                        <artifactId>aircompressor</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -2767,6 +2789,10 @@
                     <exclusion>
                         <groupId>org.codehaus.jackson</groupId>
                         <artifactId>jackson-mapper-asl</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.airlift</groupId>
+                        <artifactId>aircompressor</artifactId>
                     </exclusion>
                 </exclusions>
                 <version>${spark.version}</version>
