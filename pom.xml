@@ -157,6 +157,7 @@
         <api-util.version>1.0.2</api-util.version>
         <neko-htmlunit.version>2.62.0</neko-htmlunit.version>
         <woodstox-core.version>5.4.0</woodstox-core.version>
+        <aircompressor.version>0.27</aircompressor.version>
 
         <!--metric-->
         <dropwizard.version>4.1.1</dropwizard.version>
@@ -671,10 +672,6 @@
                         <groupId>org.lz4</groupId>
                         <artifactId>lz4-java</artifactId>
                     </exclusion>
-                    <exclusion>
-                        <groupId>io.airlift</groupId>
-                        <artifactId>aircompressor</artifactId>
-                    </exclusion>
                 </exclusions>
                 <version>${clickhouse-native-jdbc.version}</version>
             </dependency>
@@ -696,6 +693,11 @@
                     </exclusion>
                 </exclusions>
                 <version>${clickhouse-jdbc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.airlift</groupId>
+                <artifactId>aircompressor</artifactId>
+                <version>${aircompressor.version}</version>
             </dependency>
 
             <dependency>
