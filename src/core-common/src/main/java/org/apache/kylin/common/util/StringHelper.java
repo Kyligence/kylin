@@ -192,21 +192,11 @@ public class StringHelper {
         return convert(expression, StringHelper.DOUBLE_QUOTE, StringHelper.BACKTICK);
     }
 
-    private static String convert(String expression, char srcDelimiter, char dstDelimiter) {
+    private static String convert(String expression, char srcQuote, char targetQuote) {
         char[] chars = expression.toCharArray();
-        List<Integer> quoteIndexes = new ArrayList<>();
-        List<Integer> indexList = StringHelper.findDelimiterIndexes(srcDelimiter, expression, quoteIndexes);
+        List<Integer> indexList = StringHelper.findQuoteIndexes(srcQuote, expression);
         for (Integer integer : indexList) {
-            chars[integer] = dstDelimiter;
-        }
-
-        for (Integer quoteIndex : quoteIndexes) {
-            // change the escape character
-            if (dstDelimiter == DOUBLE_QUOTE) {
-                chars[quoteIndex - 1] = QUOTE;
-            } else if (dstDelimiter == BACKTICK) {
-                chars[quoteIndex - 1] = SLASH;
-            }
+            chars[integer] = targetQuote;
         }
         return new String(chars);
     }
@@ -222,13 +212,12 @@ public class StringHelper {
     }
 
     /**
-     * Search delimiters in the sql string.
-     * @param key the delimiter to search
+     * Search identifier quotes in the sql string.
+     * @param key the char to search
      * @param str the input string
-     * @param quoteIndexes the index of all the quote characters
      * @return index list of {@code key}
      */
-    public static List<Integer> findDelimiterIndexes(char key, String str, List<Integer> quoteIndexes) {
+    public static List<Integer> findQuoteIndexes(char key, String str) {
         Preconditions.checkState(key == BACKTICK || key == DOUBLE_QUOTE);
         char[] chars = str.toCharArray();
         List<Integer> indexList = Lists.newArrayList();
@@ -243,8 +232,7 @@ public class StringHelper {
             }
 
             // The toMatchTokens is not empty, try to collect
-            Pair<Integer, Character> exPair = toMatchTokens.get(toMatchTokens.size() - 1);
-            Character ex = exPair.getSecond();
+            Character ex = toMatchTokens.get(toMatchTokens.size() - 1).getSecond();
             if (ch == ex && ch == key) {
                 toMatchTokens.add(new Pair<>(i, ex));
                 Preconditions.checkState(toMatchTokens.size() == 2);
@@ -252,24 +240,12 @@ public class StringHelper {
                 indexList.add(toMatchTokens.get(1).getFirst());
                 toMatchTokens.clear();
             } else if (ch == ex && ch == QUOTE) {
-                // There are two kind of method to escape the quote character in the char array.
-                // One uses quote escapes {{@code ''}}, which need record the index of the second quote;
-                // the other uses slash escapes {{@code \'}}, which need record the index of the quote.
+                // There are two kind of single quote in the char array.
+                // One kind has two successive single quote '', we need to clear the toMatchTokens.
+                // Another kind has a form of \', just ignore it and go on match the next char.
                 Preconditions.checkState(toMatchTokens.size() == 1);
-                boolean isDelimiter = isQuoteDelimiter(i, chars);
-                if (isDelimiter) {
-                    // Given that the i-th character is not a slash-escaped quotation, we mark it 
-                    // as a delimiter and continue to examine the next character. If the next one
-                    // is also a quotation, then the i-th character serves only as an escape, 
-                    // and the (i+1)-th character is considered the actual quotation.
-                    if (i + 1 < chars.length && chars[i + 1] == QUOTE) {
-                        i++;
-                        quoteIndexes.add(i);
-                    } else {
-                        toMatchTokens.clear();
-                    }
-                } else {
-                    quoteIndexes.add(i);
+                if (chars[i - 1] != SLASH || isQuoteDelimiter(i, chars)) {
+                    toMatchTokens.clear();
                 }
             }
         }
@@ -278,7 +254,7 @@ public class StringHelper {
     }
 
     /**
-     * Determines if the i-th character is a quote character or delimiter.
+     * Determines if the i-th character is a common quote(') character or delimiter.
      */
     private static boolean isQuoteDelimiter(int i, char[] chars) {
         int num = 0;
