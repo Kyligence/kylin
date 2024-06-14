@@ -68,7 +68,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mybatis.dynamic.sql.select.SelectDSLCompleter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
@@ -390,6 +392,22 @@ class JdbcMetadataStoreTest {
         val metadataStore = MetadataStore.createMetadataStore(getTestConfig());
         prj0.setContent(null);
         Assertions.assertEquals(-1, metadataStore.save(MetadataType.PROJECT, prj0));
+    }
+
+    @Test
+    void testTransactionCheck() throws Exception {
+        JdbcMetadataStore ms = (JdbcMetadataStore) ResourceStore.getKylinMetaStore(getTestConfig()).getMetadataStore();
+        DataSourceTransactionManager manager = ms.getTransactionManager();
+        try {
+            JdbcUtil.withTransaction(manager, () -> {
+                UnitOfWork.doInTransactionWithRetry(() -> true, "default");
+                return true;
+            });
+            Assertions.fail("Expected an exception");
+        } catch (Exception e) {
+            Assertions.assertInstanceOf(TransactionException.class, e.getCause());
+            Assertions.assertInstanceOf(IllegalTransactionStateException.class, e.getCause().getCause());
+        }
     }
 
     KylinConfig getTestConfig() {

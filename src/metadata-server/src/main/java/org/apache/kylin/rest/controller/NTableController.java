@@ -94,7 +94,7 @@ public class NTableController extends NBasicController {
     private static final String TABLE = "table";
     private static final int MAX_SAMPLING_ROWS = 20_000_000;
     private static final int MIN_SAMPLING_ROWS = 10_000;
-    private static final String DEPRECATED_FUNCTION = "This function is not supported any more.";
+    private static final String DEPRECATED_FUNCTION = "This function is not supported anymore.";
 
     @Autowired
     @Qualifier("tableService")

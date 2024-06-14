@@ -46,6 +46,7 @@ import org.apache.kylin.source.SourceFactory;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparderEnv;
+import org.awaitility.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -222,9 +223,8 @@ public class NTableSamplingJobTest extends NLocalWithSparkSessionTestBase {
         await().atMost(60, TimeUnit.MINUTES).until(() -> executableManager.getJob(jobId).getStatus().isFinalState());
         Assert.assertEquals(ExecutableState.SUCCEED, samplingJob.getStatus());
 
-        stats = jobStatisticsManager.getOverallJobStats(startTime, endTime);
-        Assert.assertEquals(1, (int) stats.getFirst());
-
+        await().atMost(Duration.FIVE_SECONDS)
+                .until(() -> jobStatisticsManager.getOverallJobStats(startTime, endTime).getFirst() == 1);
     }
 
     @Test
@@ -249,9 +249,8 @@ public class NTableSamplingJobTest extends NLocalWithSparkSessionTestBase {
         await().atMost(60, TimeUnit.MINUTES).until(() -> executableManager.getJob(jobId).getStatus().isFinalState());
         Assert.assertEquals(ExecutableState.SUCCEED, samplingJob.getStatus());
 
-        stats = jobStatisticsManager.getOverallJobStats(startTime, endTime);
-        Assert.assertEquals(1, (int) stats.getFirst());
-
+        await().atMost(Duration.FIVE_SECONDS)
+                .until(() -> jobStatisticsManager.getOverallJobStats(startTime, endTime).getFirst() == 1);
     }
 
     @Test

@@ -669,7 +669,6 @@ public class NDataflowManager implements IRealizationProvider {
 
             Arrays.stream(Optional.ofNullable(update.getToUpdateSegs()).orElse(new NDataSegment[0])).forEach(seg -> {
                 seg.setDataflow(df);
-                updateSegmentStatus(seg);
                 newSegs.replace(Comparator.comparing(NDataSegment::getId), seg);
                 segManager.update(seg.getUuid(), seg::copyPropertiesTo);
             });
@@ -699,18 +698,24 @@ public class NDataflowManager implements IRealizationProvider {
             df.setCost(update.getCost() > 0 ? update.getCost() : df.getCost());
 
             NDataSegDetailsManager.getInstance(df.getConfig(), project).updateDataflow(df, update);
-            if (update.getToRemoveLayouts() != null) {
-                // When layouts are removed, the segment status may be updated.
-                newSegs.forEach(seg -> segManager.update(seg.getUuid(), this::updateSegmentStatus));
-            }
+            newSegs.forEach(seg -> {
+                if (needUpdateSegmentStatus(seg)) {
+                    segManager.update(seg.getUuid(), this::updateSegmentStatus);
+                }
+            });
         });
     }
 
     private void updateSegmentStatus(NDataSegment seg) {
-        NDataSegDetails segDetails = NDataSegDetailsManager.getInstance(seg.getConfig(), project).getForSegment(seg);
-        if (seg.getStatus() == SegmentStatusEnum.WARNING && segDetails != null && segDetails.getAllLayouts().isEmpty()) {
+        if (needUpdateSegmentStatus(seg)) {
             seg.setStatus(SegmentStatusEnum.READY);
         }
+    }
+
+    private boolean needUpdateSegmentStatus(NDataSegment seg) {
+        NDataSegDetails segDetails = NDataSegDetailsManager.getInstance(seg.getConfig(), project).getForSegment(seg);
+        return seg.getStatus() == SegmentStatusEnum.WARNING && segDetails != null
+                && segDetails.getAllLayouts().isEmpty();
     }
 
     public NDataflow dropDataflow(String dfId) {

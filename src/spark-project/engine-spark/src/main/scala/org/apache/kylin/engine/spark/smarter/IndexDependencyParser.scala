@@ -19,6 +19,7 @@ package org.apache.kylin.engine.spark.smarter
 
 import org.apache.commons.collections.CollectionUtils
 import org.apache.commons.lang3.StringUtils
+import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil
 import org.apache.kylin.engine.spark.job.stage.build.FlatTableAndDictBase
 import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps, Sets}
@@ -128,7 +129,7 @@ class IndexDependencyParser(val model: NDataModel) {
       val condition = NSparkCubingUtil.convertFromDot(massagedCondition)
       SparkOperation.filter(col(condition), df)
     }
-    SparkInternalAgent.getDataFrame(SparderEnv.getSparkSession, df)
+    SparkInternalAgent.getDataFrame(SparderEnv.getSparkSessionWithConfig(KylinConfig.getInstanceFromEnv), df)
   }
 
   private def generateLogicalPlanOnTable(tableRef: TableRef): LogicalPlan = {

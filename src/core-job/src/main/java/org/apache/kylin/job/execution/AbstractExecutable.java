@@ -329,12 +329,12 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
                 }
             }
             executableManager.updateJobOutput(jobId, newStatus, existedInfo, null, null, 0, failedMsg);
-            if (hook != null) {
-                hook.accept(jobId);
-            }
 
             return true;
         });
+        if (hook != null) {
+            hook.accept(jobId);
+        }
 
         //write output to HDFS
         updateJobOutputToHDFS(project, jobId, output, logPath);

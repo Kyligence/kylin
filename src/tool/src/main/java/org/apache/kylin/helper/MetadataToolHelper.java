@@ -22,6 +22,7 @@ import static org.apache.kylin.common.constant.Constants.CORE_META_DIR;
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.FILE_ALREADY_EXISTS;
 import static org.apache.kylin.common.exception.code.ErrorCodeTool.MODEL_DUPLICATE_UUID_FAILED;
 import static org.apache.kylin.common.persistence.ResourceStore.GLOBAL_PROJECT;
+import static org.apache.kylin.common.persistence.ResourceStore.METASTORE_IMAGE;
 
 import java.io.File;
 import java.io.IOException;
@@ -301,10 +302,10 @@ public class MetadataToolHelper extends CancelableTask {
             logger.info("start to restore all projects");
             val destResources = currentResourceStore.listResourcesRecursively(MetadataType.ALL.name());
             val srcResources = restoreResourceStore.listResourcesRecursively(MetadataType.ALL.name());
+            srcResources.remove(METASTORE_IMAGE);
             UnitOfWorkParams<Object> params = UnitOfWorkParams.builder().unitName(GLOBAL_PROJECT).maxRetry(1)
-                    .useProjectLock(true).processor(() -> doRestore(currentResourceStore, restoreResourceStore,
-                            destResources, srcResources, delete))
-                    .build();
+                    .useProjectLock(true)
+                    .processor(() -> doRestore(restoreResourceStore, destResources, srcResources, delete)).build();
             UnitOfWork.doInTransactionWithRetry(params);
 
         } else {
@@ -313,9 +314,8 @@ public class MetadataToolHelper extends CancelableTask {
             val srcResources = restoreResourceStore.listResourcesRecursivelyByProject(project);
 
             UnitOfWorkParams<Object> params = UnitOfWorkParams.builder().unitName(project).maxRetry(1)
-                    .useProjectLock(true).processor(() -> doRestore(currentResourceStore, restoreResourceStore,
-                            destResources, srcResources, delete))
-                    .build();
+                    .useProjectLock(true)
+                    .processor(() -> doRestore(restoreResourceStore, destResources, srcResources, delete)).build();
             UnitOfWork.doInTransactionWithRetry(params);
         }
 
@@ -429,9 +429,9 @@ public class MetadataToolHelper extends CancelableTask {
         return models;
     }
 
-    private int doRestore(ResourceStore currentResourceStore, ResourceStore restoreResourceStore,
-            Set<String> destResources, Set<String> srcResources, boolean delete) throws IOException {
-        val threadViewRS = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
+    private int doRestore(ResourceStore restoreResourceStore, Set<String> destResources, Set<String> srcResources,
+            boolean delete) throws IOException {
+        val transparentRS = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
 
         // check destResources and srcResources are null,
         // because Sets.difference(srcResources, destResources) will report NullPointerException
@@ -441,25 +441,26 @@ public class MetadataToolHelper extends CancelableTask {
         logger.info("Start insert metadata resource...");
         val insertRes = Sets.difference(srcResources, destResources);
         for (val res : insertRes) {
+            transparentRS.getResource(res, true); // return null, just to lock it.
             val metadataRaw = restoreResourceStore.getResource(res);
             UnitOfWork.get().getCopyForWriteItems().add(res);
-            threadViewRS.checkAndPutResource(res, metadataRaw.getByteSource(), -1L);
+            transparentRS.checkAndPutResource(res, metadataRaw.getByteSource(), -1L);
         }
 
         logger.info("Start update metadata resource...");
         val updateRes = Sets.intersection(destResources, srcResources);
         for (val res : updateRes) {
-            val raw = currentResourceStore.getResource(res);
+            val raw = transparentRS.getResource(res, true);
             val metadataRaw = restoreResourceStore.getResource(res);
             UnitOfWork.get().getCopyForWriteItems().add(res);
-            threadViewRS.checkAndPutResource(res, metadataRaw.getByteSource(), raw.getMvcc());
+            transparentRS.checkAndPutResource(res, metadataRaw.getByteSource(), raw.getMvcc());
         }
         if (delete) {
             logger.info("Start delete metadata resource...");
             val deleteRes = Sets.difference(destResources, srcResources);
             for (val res : deleteRes) {
                 UnitOfWork.get().getCopyForWriteItems().add(res);
-                threadViewRS.deleteResource(res);
+                transparentRS.deleteResource(res);
             }
         }
 

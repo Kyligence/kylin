@@ -64,6 +64,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.util.InMemoryResource;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
@@ -231,9 +232,6 @@ public class JdbcMetadataStore extends MetadataStore {
      */
     @VisibleForTesting
     public void createIfNotExist(String table) throws Exception {
-        if (isTableExists(jdbcTemplate.getDataSource().getConnection(), table)) {
-            return;
-        }
         String fileName = "metadata-jdbc-default.properties";
         if (((BasicDataSource) jdbcTemplate.getDataSource()).getDriverClassName().equals("org.postgresql.Driver")) {
             fileName = "metadata-jdbc-postgresql.properties";
@@ -285,7 +283,12 @@ public class JdbcMetadataStore extends MetadataStore {
         val definition = new DefaultTransactionDefinition();
         definition.setIsolationLevel(ISOLATION_REPEATABLE_READ);
         definition.setTimeout(TIMEOUT_DEFAULT);
-        return transactionManager.getTransaction(definition);
+        TransactionStatus status = transactionManager.getTransaction(definition);
+        if (!status.isNewTransaction()) {
+            throw new IllegalTransactionStateException("Expect an new transaction here. Please check the code if "
+                    + "the UnitOfWork.doInTransactionWithRetry() is wrapped by JdbcUtil.withTransaction()");
+        }
+        return status;
     }
 
     @Override

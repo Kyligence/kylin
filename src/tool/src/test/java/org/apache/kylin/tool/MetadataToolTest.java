@@ -735,7 +735,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         val dataModel1 = dataModelMgr.getDataModelDescByAlias("nmodel_basic");
         Assertions.assertThat(dataModel1).isNotNull().hasFieldOrPropertyWithValue("owner", "ADMIN")
-                .hasFieldOrPropertyWithValue("mvcc", 2L);
+                .hasFieldOrPropertyWithValue("mvcc", 1L);
 
         val dataModel2 = dataModelMgr.getDataModelDescByAlias("nmodel_basic_inner");
         Assertions.assertThat(dataModel2).isNotNull().hasFieldOrPropertyWithValue("mvcc", 0L);

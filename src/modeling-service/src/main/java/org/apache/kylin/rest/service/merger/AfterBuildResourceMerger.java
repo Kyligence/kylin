@@ -82,13 +82,13 @@ public class AfterBuildResourceMerger extends MetadataMerger {
         }
     }
 
-    public NDataLayout[] mergeAfterIncrement(String flowName, String segmentId, Set<Long> layoutIds,
+    public NDataLayout[] mergeAfterIncrement(String dataflowId, String segmentId, Set<Long> layoutIds,
             ResourceStore remoteStore) {
         val localDataflowManager = NDataflowManager.getInstance(getConfig(), getProject());
         val remoteDataflowManager = NDataflowManager.getInstance(remoteStore.getConfig(), getProject());
-        val remoteDataflow = remoteDataflowManager.getDataflow(flowName).copy();
+        val remoteDataflow = remoteDataflowManager.getDataflow(dataflowId).copy();
 
-        val dfUpdate = new NDataflowUpdate(flowName);
+        val dfUpdate = new NDataflowUpdate(dataflowId);
         val theSeg = remoteDataflow.getSegment(segmentId);
         val toRemoveSegments = remoteDataflowManager.getToRemoveSegs(remoteDataflow, theSeg);
 
@@ -102,6 +102,7 @@ public class AfterBuildResourceMerger extends MetadataMerger {
         } else {
             theSeg.setLastBuildTime(theSeg.getSegDetails().getLastModified());
         }
+        theSeg.setMvcc(localDataflowManager.getDataflow(dataflowId).getSegment(segmentId).getMvcc());
 
         resetBreakpoints(theSeg);
 
@@ -111,7 +112,7 @@ public class AfterBuildResourceMerger extends MetadataMerger {
         dfUpdate.setToAddOrUpdateLayouts(theSeg.getSegDetails().getEffectiveLayouts().toArray(new NDataLayout[0]));
 
         localDataflowManager.updateDataflow(dfUpdate);
-        updateIndexPlan(flowName, remoteStore);
+        updateIndexPlan(dataflowId, remoteStore);
         return dfUpdate.getToAddOrUpdateLayouts();
     }
 
@@ -149,6 +150,7 @@ public class AfterBuildResourceMerger extends MetadataMerger {
                 Preconditions.checkNotNull(dataCuboid);
                 addCuboids.add(dataCuboid);
             }
+            remoteSeg.setMvcc(localSeg.getMvcc());
 
             resetBreakpoints(remoteSeg);
 

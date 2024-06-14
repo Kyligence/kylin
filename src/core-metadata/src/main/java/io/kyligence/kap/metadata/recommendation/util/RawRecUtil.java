@@ -62,11 +62,13 @@ public class RawRecUtil {
         return dependColumn;
     }
 
-    public static String dimensionUniqueContent(TblColRef tblColRef, Map<String, ComputedColumnDesc> ccMap) {
-        return colUniqueName(tblColRef, ccMap);
+    public static String dimensionUniqueContent(TblColRef tblColRef, Map<String, ComputedColumnDesc> ccMap,
+            Set<String> newCcUuids) {
+        return colUniqueName(tblColRef, ccMap, newCcUuids);
     }
 
-    public static String measureUniqueContent(NDataModel.Measure measure, Map<String, ComputedColumnDesc> ccMap) {
+    public static String measureUniqueContent(NDataModel.Measure measure, Map<String, ComputedColumnDesc> ccMap,
+            Set<String> newCcUuids) {
         Set<String> paramNames = Sets.newHashSet();
         List<ParameterDesc> parameters = measure.getFunction().getParameters();
         parameters.forEach(param -> {
@@ -75,21 +77,22 @@ public class RawRecUtil {
                 paramNames.add(String.valueOf(Integer.MAX_VALUE));
                 return;
             }
-            paramNames.add(colUniqueName(colRef, ccMap));
+            paramNames.add(colUniqueName(colRef, ccMap, newCcUuids));
         });
         return String.format(Locale.ROOT, "%s__%s", measure.getFunction().getExpression(),
                 String.join("__", paramNames));
     }
 
-    private static String colUniqueName(TblColRef tblColRef, Map<String, ComputedColumnDesc> ccMap) {
+    private static String colUniqueName(TblColRef tblColRef, Map<String, ComputedColumnDesc> ccMap,
+            Set<String> newCcUuids) {
         final ColumnDesc columnDesc = tblColRef.getColumnDesc();
         String uniqueName;
         if (columnDesc.isComputedColumn()) {
             /* if cc is new, unique_name forward to its uuid,
-             * otherwise table_alias.column_id
+             * otherwise table_alias.column
              */
             ComputedColumnDesc cc = ccMap.get(columnDesc.getIdentity());
-            if (cc.getUuid() != null) {
+            if (newCcUuids.contains(cc.getUuid())) {
                 uniqueName = cc.getUuid();
             } else {
                 uniqueName = tblColRef.getTableRef().getAlias() + "$" + columnDesc.getName();

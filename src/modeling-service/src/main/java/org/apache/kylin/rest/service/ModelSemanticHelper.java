@@ -578,6 +578,8 @@ public class ModelSemanticHelper extends BasicService {
             updateImpact.getInvalidMeasures().add(unusedMeasure.getId());
         });
         originModel.setComputedColumnDescs(expectedModel.getComputedColumnDescs());
+        originModel.setComputedColumnUuids(originModel.getComputedColumnDescs().stream()
+                .map(ComputedColumnDesc::getUuid).collect(Collectors.toList()));
 
         // compare measures
         List<NDataModel.Measure> newMeasures = Lists.newArrayList();
