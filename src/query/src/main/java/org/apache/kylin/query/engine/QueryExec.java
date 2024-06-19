@@ -32,15 +32,8 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.core.Values;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutorImpl;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
@@ -48,7 +41,6 @@ import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.ReadFsSwitch;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.query.StructField;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
@@ -63,13 +55,13 @@ import org.apache.kylin.query.mask.QueryResultMasks;
 import org.apache.kylin.query.optrule.OlapFilterJoinRule;
 import org.apache.kylin.query.optrule.OlapProjectJoinTransposeRule;
 import org.apache.kylin.query.optrule.SumConstantConvertRule;
+import org.apache.kylin.query.optrule.UnionTypeCastRule;
 import org.apache.kylin.query.relnode.ContextUtil;
-import org.apache.kylin.query.relnode.OlapAggregateRel;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.util.AsyncQueryUtil;
-import org.apache.kylin.query.util.CalcitePlanRouterVisitor;
 import org.apache.kylin.query.util.HepUtils;
 import org.apache.kylin.query.util.QueryContextCutter;
+import org.apache.kylin.query.util.QueryHelper;
 import org.apache.kylin.query.util.QueryInterruptChecker;
 import org.apache.kylin.query.util.QueryUtil;
 import org.apache.kylin.query.util.RelAggPushDownUtil;
@@ -270,6 +262,7 @@ public class QueryExec {
         Collection<RelOptRule> postOptRules = new LinkedHashSet<>();
         // It will definitely work if it were put here
         postOptRules.add(SumConstantConvertRule.INSTANCE);
+        postOptRules.add(UnionTypeCastRule.INSTANCE);
         if (kylinConfig.isConvertSumExpressionEnabled()) {
             postOptRules.addAll(HepUtils.SumExprRules);
         }
@@ -393,7 +386,7 @@ public class QueryExec {
      * @return
      */
     private ExecuteResult executeQueryPlan(List<RelNode> rels) {
-        boolean routeToCalcite = routeToCalciteEngine(rels.get(0));
+        boolean routeToCalcite = QueryHelper.isConstantQueryAndCalciteEngineCapable(rels.get(0));
         dataContext.setContentQuery(routeToCalcite);
         if (!QueryContext.current().getQueryTagInfo().isAsyncQuery()
                 && KapConfig.wrap(kylinConfig).runConstantQueryLocally() && routeToCalcite) {
@@ -411,7 +404,7 @@ public class QueryExec {
             try {
                 ContextUtil.clearThreadLocalContexts();
                 ContextUtil.clearParameter();
-                return new SparderPlanExec().executeToIterable(rel, dataContext);
+                return new SparderPlanExec(kylinConfig).executeToIterable(rel, dataContext);
             } catch (NoRealizationFoundException e) {
                 ExecuteResult result = tryEnhancedAggPushDown(rel);
                 if (result != null) {
@@ -458,7 +451,7 @@ public class QueryExec {
                 transformed, logger);
         try {
             RelAggPushDownUtil.clearUnmatchedJoinDigest();
-            return new SparderPlanExec().executeToIterable(transformed, dataContext);
+            return new SparderPlanExec(kylinConfig).executeToIterable(transformed, dataContext);
         } catch (NoRealizationFoundException e) {
             QueryInterruptChecker.checkThreadInterrupted(
                     "Interrupted SparderQueryOptimized NoRealizationFoundException",
@@ -475,80 +468,6 @@ public class QueryExec {
 
     private SimpleDataContext createDataContext(CalciteSchema rootSchema) {
         return new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(), kylinConfig);
-    }
-
-    private boolean routeToCalciteEngine(RelNode rel) {
-        return isConstantQuery(rel) && isCalciteEngineCapable(rel);
-    }
-
-    /**
-     * search rel node tree to see if there is any table scan node
-     * @param rel
-     * @return
-     */
-    private boolean isConstantQuery(RelNode rel) {
-        if (TableScan.class.isAssignableFrom(rel.getClass())) {
-            return false;
-        }
-        for (RelNode input : rel.getInputs()) {
-            if (!isConstantQuery(input)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Calcite is not capable for some constant queries, need to route to Sparder
-     */
-    private boolean isCalciteEngineCapable(RelNode rel) {
-        if (rel instanceof Project) {
-            Project projectRelNode = (Project) rel;
-            if (projectRelNode.getProjects().stream().filter(RexCall.class::isInstance)
-                    .anyMatch(pRelNode -> pRelNode.accept(new CalcitePlanRouterVisitor()))) {
-                return false;
-            }
-            if (projectRelNode.getProjects() != null
-                    && projectRelNode.getProjects().stream().anyMatch(this::isPlusString)) {
-                return false;
-            }
-        }
-
-        if (rel instanceof OlapAggregateRel) {
-            OlapAggregateRel aggregateRel = (OlapAggregateRel) rel;
-            if (aggregateRel.getAggCallList().stream().anyMatch(
-                    aggCall -> FunctionDesc.FUNC_BITMAP_BUILD.equalsIgnoreCase(aggCall.getAggregation().getName()))) {
-                return false;
-            }
-            if (aggregateRel.getInput() instanceof Values
-                    && aggregateRel.getAggCallList().stream().anyMatch(AggregateCall::isDistinct)) {
-                return false;
-            }
-        }
-
-        return rel.getInputs().stream().allMatch(this::isCalciteEngineCapable);
-    }
-
-    /**
-     * calcite not support 'number' + number/'number'
-     * @param node
-     * @return
-     */
-    private boolean isPlusString(RexNode node) {
-        if (node instanceof RexCall) {
-            RexCall rexCall = (RexCall) node;
-            if ("plus".equals(rexCall.getOperator().getKind().lowerName)) {
-                for (RexNode operand : rexCall.operands) {
-                    if (operand.getType().getFamily() == SqlTypeFamily.STRING
-                            || operand.getType().getFamily() == SqlTypeFamily.CHARACTER) {
-                        return true;
-                    }
-                }
-            }
-            return rexCall.getOperands().stream().anyMatch(this::isPlusString);
-        }
-        return false;
     }
 
     private SQLException newSqlException(String sql, String msg, Throwable e) {

@@ -69,6 +69,8 @@ public class DateFormat {
 
     private static final Map<String, FastDateFormat> formatMap = new ConcurrentHashMap<>();
 
+    private static final Map<String, FastDateFormat> formatMapForEpochDays = new ConcurrentHashMap<>();
+
     private static final Map<String, String> dateFormatRegex = Maps.newHashMap();
 
     private static final Logger logger = LoggerFactory.getLogger(DateFormat.class);
@@ -126,12 +128,21 @@ public class DateFormat {
     }
 
     public static FastDateFormat getDateFormat(String datePattern) {
-        FastDateFormat r = formatMap.get(datePattern);
+        return getDateFormat(datePattern, false);
+    }
+
+    public static FastDateFormat getDateFormat(String datePattern, boolean forEpochDays) {
+        FastDateFormat r = getFormatMap(forEpochDays).get(datePattern);
         if (r == null) {
-            r = FastDateFormat.getInstance(datePattern, TimeZone.getDefault());
-            formatMap.put(datePattern, r);
+            TimeZone timeZone = forEpochDays ? TimeZone.getTimeZone("GMT") : TimeZone.getDefault();
+            r = FastDateFormat.getInstance(datePattern, timeZone);
+            getFormatMap(forEpochDays).put(datePattern, r);
         }
         return r;
+    }
+
+    private static Map<String, FastDateFormat> getFormatMap(boolean forEpochDays) {
+        return forEpochDays ? formatMapForEpochDays : formatMap;
     }
 
     public static FastDateFormat getDateFormat(String datePattern, TimeZone timeZone) {
@@ -197,9 +208,13 @@ public class DateFormat {
     }
 
     public static Date stringToDate(String str, String pattern) {
+        return stringToDate(str, pattern, false);
+    }
+
+    public static Date stringToDate(String str, String pattern, boolean forEpochDays) {
         Date date;
         try {
-            date = getDateFormat(pattern).parse(str);
+            date = getDateFormat(pattern, forEpochDays).parse(str);
         } catch (ParseException e) {
             throw new IllegalArgumentException("'" + str + "' is not a valid date of pattern '" + pattern + "'", e);
         }
@@ -207,9 +222,13 @@ public class DateFormat {
     }
 
     public static long stringToMillis(String str) {
+        return stringToMillis(str, false);
+    }
+
+    public static long stringToMillis(String str, boolean forEpochDays) {
         for (Map.Entry<String, String> regexToPattern : dateFormatRegex.entrySet()) {
             if (str.matches(regexToPattern.getKey()))
-                return stringToDate(str, regexToPattern.getValue()).getTime();
+                return stringToDate(str, regexToPattern.getValue(), forEpochDays).getTime();
         }
 
         try {
@@ -286,6 +305,7 @@ public class DateFormat {
     @VisibleForTesting
     public static void cleanCache() {
         formatMap.clear();
+        formatMapForEpochDays.clear();
     }
 
     public static Long getFormatTimeStamp(String time, String pattern) {
