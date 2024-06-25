@@ -1829,7 +1829,8 @@ public abstract class KylinConfigBase implements Serializable {
     public int getMaxCommandLineOutputLength() {
         // default 10MB, if the command line output length over this value
         // the output will be truncated as 5MB head and 5MB tail.
-        return Integer.parseInt(getOptional("kylin.command.max-output-bytes", String.valueOf(10 * 1024 * 1024))) / BYTES_PER_CHAR;
+        return Integer.parseInt(getOptional("kylin.command.max-output-bytes", String.valueOf(10 * 1024 * 1024)))
+                / BYTES_PER_CHAR;
     }
 
     public boolean isStreamingEnabled() {

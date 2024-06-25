@@ -33,8 +33,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+
 import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
+import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
@@ -56,7 +58,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
-@SuppressWarnings({"rawtypes", "FieldMayBeFinal"})
+@SuppressWarnings({ "rawtypes", "FieldMayBeFinal" })
 @Slf4j
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class NDataSegment extends RootPersistentEntity implements ISegment, Serializable {
@@ -201,6 +203,18 @@ public class NDataSegment extends RootPersistentEntity implements ISegment, Seri
         this.layoutInfo = new LayoutInfo();
     }
 
+    public <T extends Comparable<?>> NDataSegment(NDataflow df, SegmentRange<T> segmentRange,
+                                                  Map<String, DimensionRangeInfo> dimensionRangeInfoMap) {
+        this.dataflow = df;
+        this.segmentRange = segmentRange;
+        this.name = Segments.makeSegmentName(segmentRange);
+        this.uuid = RandomUtil.randomUUIDStr();
+        this.createTimeUTC = System.currentTimeMillis();
+        this.status = SegmentStatusEnum.NEW;
+        this.layoutInfo = new LayoutInfo();
+        this.dimensionRangeInfoMap = dimensionRangeInfoMap;
+    }
+
     public <T extends Comparable<?>> NDataSegment(NDataflow df, SegmentRange<T> segRange, String uuid) {
         this(df, segRange);
         if (!StringUtils.isEmpty(uuid)) {
@@ -302,8 +316,8 @@ public class NDataSegment extends RootPersistentEntity implements ISegment, Seri
 
     @Override
     public int getEffectiveLayoutSize() {
-        return (int) getLayoutInfo().getLayoutsMap().values().stream()
-                .filter(NDataLayout::filterEffectiveLayout).count();
+        return (int) getLayoutInfo().getLayoutsMap().values().stream().filter(NDataLayout::filterEffectiveLayout)
+                .count();
     }
 
     public NDataLayout getLayout(long layoutId) {
@@ -412,8 +426,8 @@ public class NDataSegment extends RootPersistentEntity implements ISegment, Seri
                 if (NDataLayout.filterEffectiveLayout(layout)) {
                     effectiveLayoutsMap.put(layout.getLayoutId(), layout);
                     Map<Long, Long> cuboidBucketMap = Maps.newHashMap();
-                    layout.getMultiPartition().forEach(dataPartition -> cuboidBucketMap.put(dataPartition.getPartitionId(),
-                            dataPartition.getBucketId()));
+                    layout.getMultiPartition().forEach(dataPartition -> cuboidBucketMap
+                            .put(dataPartition.getPartitionId(), dataPartition.getBucketId()));
                     partitionBucketMap.put(layout.getLayoutId(), cuboidBucketMap);
                 }
             }
@@ -711,7 +725,6 @@ public class NDataSegment extends RootPersistentEntity implements ISegment, Seri
     public boolean buildedDictColShouldRebuild() {
         return Boolean.parseBoolean(extraBuildOptions.getOrDefault("job.retry.segment.force-build-dict", "false"));
     }
-
 
     public boolean isFlatTableReady() {
         return isFlatTableReady;
