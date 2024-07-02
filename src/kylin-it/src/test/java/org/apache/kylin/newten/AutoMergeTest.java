@@ -31,6 +31,7 @@ import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.DateFormat;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.engine.spark.job.NSparkMergingJob;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.manager.SegmentAutoMergeUtil;
@@ -56,7 +57,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 import lombok.val;
 
 @RunWith(TimeZoneTestRunner.class)

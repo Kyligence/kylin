@@ -18,10 +18,10 @@
 
 package io.kyligence.kap.softaffinity.strategy
 
-import scala.collection.mutable.ListBuffer
-
 import io.kyligence.kap.cache.softaffinity.SoftAffinityConstants
 import org.apache.spark.SparkEnv
+
+import scala.collection.mutable.ListBuffer
 
 trait SoftAffinityAllocationTrait {
 

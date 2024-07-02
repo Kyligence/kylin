@@ -18,11 +18,11 @@
 
 package org.apache.kylin.engine.spark.job
 
-import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps}
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.common.persistence.transaction.UnitOfWork
 import org.apache.kylin.engine.spark.job.PartitionExec.PartitionResult
 import org.apache.kylin.engine.spark.job.SegmentExec.ResultType
+import org.apache.kylin.guava30.shaded.common.collect.{Lists, Maps}
 import org.apache.kylin.metadata.cube.model._
 import org.apache.kylin.metadata.job.JobBucket
 import org.apache.spark.sql.datasource.storage.{StorageListener, WriteTaskStats}

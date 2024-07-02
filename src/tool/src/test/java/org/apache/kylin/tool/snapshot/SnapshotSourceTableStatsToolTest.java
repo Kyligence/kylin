@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.engine.spark.job.NSparkCubingStep;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
@@ -53,7 +54,6 @@ import org.mockito.Mockito;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import io.kyligence.kap.engine.spark.job.NSparkCubingStep;
 import lombok.val;
 
 @MetadataInfo

@@ -36,6 +36,7 @@ import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.response.RestResponse;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.RandomUtil;
+import org.apache.kylin.engine.spark.job.NSparkSnapshotJob;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -54,7 +55,6 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 import lombok.val;
 import lombok.var;
 

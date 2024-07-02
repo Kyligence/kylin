@@ -20,13 +20,12 @@ package io.kyligence.kap.softaffinity
 
 import io.kyligence.kap.cache.softaffinity.{SoftAffinityBookKeeping, SoftAffinityConstants}
 import io.kyligence.kap.softaffinity.strategy.SoftAffinityStrategy
-
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import scala.collection.mutable
 import org.apache.spark.SparkEnv
 import org.apache.spark.internal.Logging
 
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import scala.collection.mutable
 
 object SoftAffinityManager extends Logging {
 

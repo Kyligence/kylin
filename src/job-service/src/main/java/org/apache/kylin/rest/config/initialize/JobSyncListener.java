@@ -64,12 +64,14 @@ import org.apache.kylin.common.scheduler.JobFinishedNotifier;
 import org.apache.kylin.common.scheduler.JobReadyNotifier;
 import org.apache.kylin.common.util.AddressUtil;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.engine.spark.job.NSparkCubingJob;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
+import org.apache.kylin.job.manager.SegmentAutoMergeUtil;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -78,14 +80,12 @@ import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TimeRange;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.constant.SnapshotStatus;
-import org.apache.kylin.rest.feign.MetadataInvoker;
 import org.apache.kylin.rest.response.SegmentPartitionResponse;
 import org.apache.kylin.rest.util.SpringContext;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.Builder;
@@ -160,7 +160,7 @@ public class JobSyncListener {
     public void onBuildJobFinished(JobFinishedNotifier notifier) {
         try {
             if (notifier.getJobClass().equals(NSparkCubingJob.class.getName()) && notifier.isSucceed()) {
-                MetadataInvoker.getInstance().checkAndAutoMergeSegments(notifier.getProject(), notifier.getSubject(),
+                SegmentAutoMergeUtil.autoMergeSegments(notifier.getProject(), notifier.getSubject(),
                         notifier.getOwner());
             }
         } catch (Exception e) {

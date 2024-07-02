@@ -22,7 +22,7 @@
 
 package org.apache.spark.sql
 
-import org.apache.kylin.common.KylinConfig
+import org.apache.kylin.common.{KylinConfig, SSSource}
 import org.apache.kylin.engine.spark.job.KylinBuildEnv
 import org.apache.kylin.engine.spark.source.NSparkCubingSourceInput
 import org.apache.kylin.metadata.model.{ColumnDesc, TableDesc}
@@ -30,8 +30,6 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.common.{LocalMetadata, SparderBaseFunSuite}
 import org.apache.spark.sql.types.DataTypes
 import org.junit.Assert
-
-import io.kyligence.kap.common.SSSource
 
 class TestSparkDataSource extends SparderBaseFunSuite
   with LocalMetadata

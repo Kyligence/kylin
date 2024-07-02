@@ -24,8 +24,8 @@ import java.util.HashSet;
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.metrics.AppStatus
-import org.apache.spark.sql.execution.adaptive.{AdaptiveSparkPlanExec, ShuffleQueryStageExec}
 import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.adaptive.{AdaptiveSparkPlanExec, ShuffleQueryStageExec}
 import org.apache.spark.sql.hive.execution.HiveTableScanExec
 import org.apache.spark.sql.execution.datasources.v2.BatchScanExec
 

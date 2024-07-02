@@ -36,8 +36,9 @@ import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.handler.AbstractJobHandler;
 import org.apache.kylin.job.handler.AddIndexHandler;
 import org.apache.kylin.job.handler.AddSegmentHandler;
-import org.apache.kylin.job.handler.LayoutDataOptimizeJobHandler;
+import org.apache.kylin.job.handler.IndexPlanOptimizeJobHandler;
 import org.apache.kylin.job.handler.InternalTableJobHandler;
+import org.apache.kylin.job.handler.LayoutDataOptimizeJobHandler;
 import org.apache.kylin.job.handler.MergeSegmentHandler;
 import org.apache.kylin.job.handler.RefreshSegmentHandler;
 import org.apache.kylin.job.handler.SnapshotJobHandler;
@@ -169,6 +170,9 @@ public class JobManager {
             case SNAPSHOT_BUILD:
             case SNAPSHOT_REFRESH:
                 handler = new SnapshotJobHandler();
+                break;
+            case INDEX_PLAN_OPT:
+                handler = new IndexPlanOptimizeJobHandler();
                 break;
             case LAYOUT_DATA_OPTIMIZE:
                 handler = new LayoutDataOptimizeJobHandler();

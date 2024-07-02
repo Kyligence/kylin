@@ -26,8 +26,8 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.metrics.MetricsGroup;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
-import org.apache.kylin.rest.util.SpringContext;
 import org.apache.kylin.rest.constant.Constant;
+import org.apache.kylin.rest.util.SpringContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,7 +48,7 @@ import lombok.val;
 @RunWith(PowerMockRunner.class)
 @PowerMockIgnore({ "com.sun.security.*", "org.w3c.*", "javax.xml.*", "org.xml.*", "org.apache.cxf.*",
         "javax.management.*", "javax.script.*", "org.apache.hadoop.*", "javax.security.*", "java.security.*",
-        "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.common.asyncprofiler.AsyncProfiler" })
+        "javax.crypto.*", "javax.net.ssl.*", "org.apache.kylin.profiler.AsyncProfiler" })
 @PrepareForTest({ SpringContext.class, MetricsGroup.class, UserGroupInformation.class, MeterRegistry.class })
 public class ProjectDropListenerTest extends NLocalFileMetadataTestCase {
 

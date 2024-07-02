@@ -673,8 +673,8 @@ public class InternalTableServiceTest extends AbstractTestCase {
         TransactionException exception = Assertions.assertThrows(TransactionException.class,
                 () -> internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(),
                         partitionCols, "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.PARQUET.name()));
-        Assertions.assertEquals(String.format(Locale.ROOT, MsgPicker.getMsg().getSameInternalTableNameExist(),
-                        table.getName()),
+        Assertions.assertEquals(
+                String.format(Locale.ROOT, MsgPicker.getMsg().getSameInternalTableNameExist(), table.getName()),
                 exception.getCause().getMessage());
         if (!internalTableFolder.delete()) {
             Assertions.fail();

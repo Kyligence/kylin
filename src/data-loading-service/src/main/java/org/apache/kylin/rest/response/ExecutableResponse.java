@@ -27,6 +27,9 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.engine.spark.job.InternalTableLoadingJob;
+import org.apache.kylin.engine.spark.job.NSparkSnapshotJob;
+import org.apache.kylin.engine.spark.job.NTableSamplingJob;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.constant.JobStatusEnum;
@@ -37,7 +40,7 @@ import org.apache.kylin.job.execution.ChainedStageExecutable;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobSchedulerModeEnum;
 import org.apache.kylin.job.execution.Output;
-import org.apache.kylin.job.execution.StageBase;
+import org.apache.kylin.job.execution.StageExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
@@ -50,9 +53,6 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
-import io.kyligence.kap.engine.spark.job.InternalTableLoadingJob;
-import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
-import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -260,7 +260,7 @@ public class ExecutableResponse implements Comparable<ExecutableResponse> {
         for (AbstractExecutable task : tasks) {
             if (task instanceof ChainedStageExecutable) {
                 final ChainedStageExecutable stageExecutable = (ChainedStageExecutable) task;
-                Map<String, List<StageBase>> stageMap = Optional.ofNullable(stageExecutable.getStagesMap())
+                Map<String, List<StageExecutable>> stageMap = Optional.ofNullable(stageExecutable.getStagesMap())
                         .orElse(Maps.newHashMap());
                 var taskMapStageCount = Optional.of(stageMap.values()).orElse(Lists.newArrayList()).stream().findFirst()
                         .orElse(Lists.newArrayList()).size();
@@ -287,11 +287,12 @@ public class ExecutableResponse implements Comparable<ExecutableResponse> {
     }
 
     /** calculate stage count from segment */
-    public static double calculateSuccessStageInTaskMap(AbstractExecutable task, Map<String, List<StageBase>> stageMap,
+    public static double calculateSuccessStageInTaskMap(AbstractExecutable task,
+            Map<String, List<StageExecutable>> stageMap,
             ExecutablePO executablePO) {
         var successStages = 0D;
         boolean calculateIndexExecRadio = stageMap.size() == 1;
-        for (Map.Entry<String, List<StageBase>> entry : stageMap.entrySet()) {
+        for (Map.Entry<String, List<StageExecutable>> entry : stageMap.entrySet()) {
             double count = calculateSuccessStage(task, entry.getKey(), entry.getValue(), calculateIndexExecRadio,
                     executablePO);
             successStages += count;
@@ -299,10 +300,11 @@ public class ExecutableResponse implements Comparable<ExecutableResponse> {
         return successStages / stageMap.size();
     }
 
-    public static double calculateSuccessStage(AbstractExecutable task, String segmentId, List<StageBase> stageBases,
+    public static double calculateSuccessStage(AbstractExecutable task, String segmentId,
+            List<StageExecutable> stageExecutables,
             boolean calculateIndexExecRadio, ExecutablePO executablePO) {
         var successStages = 0D;
-        for (StageBase stage : stageBases) {
+        for (StageExecutable stage : stageExecutables) {
             if (ExecutableState.SUCCEED == stage.getStatusInMem(segmentId)
                     || ExecutableState.SKIP == stage.getStatusInMem(segmentId)
                     || ExecutableState.WARNING == stage.getStatusInMem(segmentId)) {

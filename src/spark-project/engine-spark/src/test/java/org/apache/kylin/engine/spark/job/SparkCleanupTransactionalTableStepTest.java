@@ -29,8 +29,6 @@ import org.apache.kylin.job.exception.ExecuteException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import io.kyligence.kap.engine.spark.job.SparkCleanupTransactionalTableStep;
-
 public class SparkCleanupTransactionalTableStepTest extends NLocalWithSparkSessionTestBase {
 
     @Test
