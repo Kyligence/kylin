@@ -72,7 +72,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.kyligence.kap.fileseg.FileSegments.ModelFileSegments;
 import io.swagger.annotations.ApiOperation;
-
 import lombok.val;
 
 @RestController

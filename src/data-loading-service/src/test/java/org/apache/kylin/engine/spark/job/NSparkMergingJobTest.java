@@ -50,7 +50,6 @@ import org.junit.Test;
 
 import io.kyligence.kap.engine.spark.job.NSparkMergingJob;
 import io.kyligence.kap.engine.spark.job.NSparkMergingStep;
-
 import lombok.val;
 
 public class NSparkMergingJobTest extends NLocalWithSparkSessionTest {

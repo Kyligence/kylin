@@ -89,7 +89,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import io.kyligence.kap.metadata.user.ManagedUser;
 import io.kyligence.kap.metadata.user.NKylinUserManager;
-
 import lombok.val;
 import lombok.var;
 
