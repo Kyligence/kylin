@@ -233,6 +233,7 @@ public class MetricsRegistry {
                                 .filter(jobExecutable -> project.equals(jobExecutable.getProject())).count();
             }).tags(projectTag).tags(MetricsTag.STATE.getVal(), MetricsTag.RUNNING.getVal()).register(meterRegistry);
         }
+        Gauge.builder(PrometheusMetrics.PROJECT_LIST.getValue(), () -> 0).tags(projectTag).register(meterRegistry);
         for (double runningTimeoutHour : RUNNING_JOB_TIMEOUT_HOUR) {
             Gauge.builder(PrometheusMetrics.JOB_LONG_RUNNING.getValue(),
                     () -> MetricsRegistry.projectRunningJobMap.getOrDefault(project, Maps.newHashMap())
