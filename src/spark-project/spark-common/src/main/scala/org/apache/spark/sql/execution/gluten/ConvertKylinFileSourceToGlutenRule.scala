@@ -28,7 +28,7 @@ import org.apache.spark.sql.execution.{KylinFileSourceScanExec, LayoutFileSource
 class ConvertKylinFileSourceToGlutenRule(val session: SparkSession) extends Rule[SparkPlan] {
 
   private def tryReturnGlutenPlan(glutenPlan: GlutenPlan, originPlan: SparkPlan): SparkPlan = {
-    if (glutenPlan.doValidate().isValid) {
+    if (glutenPlan.doValidate().ok()) {
       logDebug(s"Columnar Processing for ${originPlan.getClass} is currently supported.")
       glutenPlan
     } else {

@@ -65,6 +65,7 @@ public class NLayoutCandidate implements IRealizationCandidate {
         Preconditions.checkNotNull(layoutEntity);
         Preconditions.checkNotNull(dataLayoutDetails);
         this.layoutEntity = layoutEntity;
+        this.layoutId = layoutEntity.getId();
         this.dataLayoutDetails = dataLayoutDetails;
     }
 
