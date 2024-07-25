@@ -573,7 +573,7 @@ public abstract class KylinConfigBase implements Serializable {
         return Long.parseLong(getOptional("kylin.metadata.audit-log.max-size", "500000"));
     }
 
-    public boolean isConcurrencyProcessMetadataSize() {
+    public boolean isConcurrencyProcessMetadataEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.metadata.concurrency-process-metadata-size-enabled", TRUE));
     }
 

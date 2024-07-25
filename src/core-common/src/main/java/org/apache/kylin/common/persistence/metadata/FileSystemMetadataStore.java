@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -106,6 +105,8 @@ public class FileSystemMetadataStore extends MetadataStore {
     private static final int DEFAULT_FILE_NUMBER = 10000;
     private static final ThreadLocal<Set<ReentrantLock>> OWNED_LOCKS = ThreadLocal.withInitial(HashSet::new);
     private static final ConcurrentHashMap<String, ReentrantLock> LOCK_MAP = new ConcurrentHashMap<>();
+    @VisibleForTesting
+    protected static volatile ExecutorService fileSystemMetadataExecutor = null;
 
     @Getter
     protected Path rootPath;
@@ -119,8 +120,6 @@ public class FileSystemMetadataStore extends MetadataStore {
     @VisibleForTesting
     protected final Type type;
 
-    @VisibleForTesting
-    protected ExecutorService fileSystemMetadataExecutor = null;
     private final CompressHandlerInterface compressHandlerInterface;
 
     public FileSystemMetadataStore(KylinConfig kylinConfig) throws IOException {
@@ -155,11 +154,15 @@ public class FileSystemMetadataStore extends MetadataStore {
                 fs.mkdirs(p);
             }
 
-            if (kylinConfig.isConcurrencyProcessMetadataSize()) {
-                fileSystemMetadataExecutor = new ThreadPoolExecutor(
-                        kylinConfig.getConcurrencyProcessMetadataThreadNumber(),
-                        kylinConfig.getConcurrencyProcessMetadataThreadNumber(), 300L, TimeUnit.SECONDS,
-                        new LinkedBlockingQueue<>(), new DaemonThreadFactory("fileSystemMetadataExecutor"));
+            if (fileSystemMetadataExecutor == null && kylinConfig.isConcurrencyProcessMetadataEnabled()) {
+                synchronized (FileSystemMetadataStore.class) {
+                    if (fileSystemMetadataExecutor == null) {
+                        fileSystemMetadataExecutor = new ThreadPoolExecutor(
+                                kylinConfig.getConcurrencyProcessMetadataThreadNumber(),
+                                kylinConfig.getConcurrencyProcessMetadataThreadNumber(), 300L, TimeUnit.SECONDS,
+                                new LinkedBlockingQueue<>(), new DaemonThreadFactory("fileSystemMetadataExecutor"));
+                    }
+                }
             }
             auditLogStore = new MemoryAuditLogStore(kylinConfig);
             log.info("The FileSystem location is {}, hdfs root path : {}", fs.getUri().toString(), rootPath.toString());
