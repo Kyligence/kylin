@@ -78,7 +78,7 @@ class VacantIndexPruningRuleTest extends NLocalWithSparkSessionTest {
             List<OlapContext> olapContexts = OlapContextTestUtil.getOlapContexts(getProject(), sql);
             OlapContext olapContext = olapContexts.get(0);
             StorageContext storageContext = olapContext.getStorageContext();
-            Assertions.assertTrue(storageContext.isEmptyLayout());
+            Assertions.assertTrue(storageContext.isDataSkipped());
             Assertions.assertTrue(queryContext.getQueryTagInfo().isVacant());
         }
     }

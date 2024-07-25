@@ -82,8 +82,7 @@ class SelectRealizationTest {
                         + "FROM \"SSB\".\"LINEORDER\" \"LINEORDER\"\n" + "GROUP BY 1.1000000000000001 ) \"t0\"\n"
                         + "ON LINEORDER.LO_ORDERDATE = t0.X_measure__0\n" + "GROUP BY 1.1000000000000001");
         RelNode node = queryOptimizer.optimize(relRoot).rel;
-        val olapContexts = QueryContextCutter.selectRealization(prj, node,
-                BackdoorToggles.getIsQueryFromAutoModeling());
+        val olapContexts = QueryContextCutter.selectRealization(prj, node, BackdoorToggles.isModelingSql());
         Assertions.assertNotNull(olapContexts);
         Assertions.assertFalse(olapContexts.isEmpty());
     }

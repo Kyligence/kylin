@@ -84,7 +84,7 @@ public class QueryContextCutter {
             }
             try {
                 fillOlapContextPropertiesWithRelTree(root);
-                List<OlapContext> olapContexts = chooseCandidate();
+                List<OlapContext> olapContexts = chooseCandidate(project);
                 if (isReCutBanned) {
                     throw new NoRealizationFoundException("There is no need to select realizations for OlapContexts.");
                 }
@@ -125,7 +125,7 @@ public class QueryContextCutter {
         QueryContext.current().record("collect_olap_context_info");
     }
 
-    private static List<OlapContext> chooseCandidate() {
+    private static List<OlapContext> chooseCandidate(String project) {
         List<OlapContext> contexts = ContextUtil.listContextsHavingScan();
         contexts.forEach(olapContext -> {
             olapContext.setHasSelected(true);
@@ -133,11 +133,7 @@ public class QueryContextCutter {
         });
 
         long selectLayoutStartTime = System.currentTimeMillis();
-        if (contexts.size() > 1) {
-            RealizationChooser.multiThreadSelectLayoutCandidate(contexts);
-        } else {
-            RealizationChooser.selectLayoutCandidate(contexts);
-        }
+        RealizationChooser.selectLayoutCandidate(project, contexts);
         log.info("select layout candidate for {} olapContext cost {} ms", contexts.size(),
                 System.currentTimeMillis() - selectLayoutStartTime);
         QueryContext.current().record("end_select_realization");

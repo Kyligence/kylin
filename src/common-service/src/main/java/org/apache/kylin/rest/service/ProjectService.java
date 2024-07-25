@@ -113,6 +113,7 @@ import org.apache.kylin.rest.request.MultiPartitionConfigRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
 import org.apache.kylin.rest.request.ProjectExclusionRequest;
 import org.apache.kylin.rest.request.ProjectGeneralInfoRequest;
+import org.apache.kylin.rest.request.ProjectInternalTableConfigRequest;
 import org.apache.kylin.rest.request.ProjectKerberosInfoRequest;
 import org.apache.kylin.rest.request.PushDownConfigRequest;
 import org.apache.kylin.rest.request.PushDownProjectConfigRequest;
@@ -966,7 +967,7 @@ public class ProjectService extends BasicService {
         val prjManager = getManager(NProjectManager.class);
         val tableManager = getManager(NTableMetadataManager.class, project);
         if (ProjectInstance.DEFAULT_DATABASE.equals(uppderDB)
-                || tableManager.dbToTablesMap(getConfig().streamingEnabled()).containsKey(uppderDB)) {
+                || tableManager.dbToTablesMap(getConfig().isStreamingEnabled()).containsKey(uppderDB)) {
             final ProjectInstance projectInstance = prjManager.getProject(project);
             if (uppderDB.equals(projectInstance.getDefaultDatabase())) {
                 return;
@@ -1271,6 +1272,15 @@ public class ProjectService extends BasicService {
             boolean exclusionEnabled = request.isTableExclusionEnabled();
             copyForWrite.putOverrideKylinProps("kylin.metadata.table-exclusion-enabled",
                     String.valueOf(exclusionEnabled));
+        });
+    }
+
+    @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#project, 'ADMINISTRATION')")
+    @Transaction(project = 0)
+    public void updateInternalTableConfig(String project, ProjectInternalTableConfigRequest request) {
+        getManager(NProjectManager.class).updateProject(project, copyForWrite -> {
+            boolean internalTableEnabled = request.isInternalTableEnabled();
+            copyForWrite.putOverrideKylinProps("kylin.internal-table-enabled", String.valueOf(internalTableEnabled));
         });
     }
 }

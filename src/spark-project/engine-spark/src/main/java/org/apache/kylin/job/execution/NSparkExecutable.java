@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -100,6 +101,7 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
     private static final String EMPTY = "";
     private static final String EQUALS = "=";
     private static final String SPACE = " ";
+    private static final String PATH_DELIMITER = "/";
     private static final String SUBMIT_LINE_FORMAT = " \\\n";
 
     private static final String DRIVER_EXTRA_CLASSPATH = "spark.driver.extraClassPath";
@@ -893,8 +895,8 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
             Set<String> sparkJars = Sets.newLinkedHashSet();
             sparkJars.add(APP_JAR_NAME);
             sparkJars.addAll(getSparkJars(kylinConf, sparkConf));
-            final String jointJarNames = String.join(COLON, //
-                    sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString()).collect(Collectors.toSet()));
+            final String jointJarNames = sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString()).sorted()
+                    .collect(Collectors.joining(COLON));
             sparkConf.put(DRIVER_EXTRA_CLASSPATH, jointJarNames);
             sparkConf.put(EXECUTOR_EXTRA_CLASSPATH, jointJarNames);
             return;
@@ -902,9 +904,11 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
 
         // Client mode.
         Set<String> sparkJars = getSparkJars(kylinConf, sparkConf);
-        sparkConf.put(DRIVER_EXTRA_CLASSPATH, String.join(COLON, sparkJars));
-        sparkConf.put(EXECUTOR_EXTRA_CLASSPATH, String.join(COLON, //
-                sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString()).collect(Collectors.toSet())));
+        sparkConf.put(DRIVER_EXTRA_CLASSPATH,
+                sparkJars.stream().sorted(Comparator.comparing(jar -> jar.substring(jar.lastIndexOf(PATH_DELIMITER))))
+                        .collect(Collectors.joining(COLON)));
+        sparkConf.put(EXECUTOR_EXTRA_CLASSPATH, sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString())
+                .sorted().collect(Collectors.joining(COLON)));
     }
 
     private void rewriteDriverLog4jConf(StringBuilder sb, KylinConfig config, Map<String, String> sparkConf) {

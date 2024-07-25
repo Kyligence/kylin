@@ -79,7 +79,7 @@ public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
         QueryContext.current().setPartialMatchIndex(true);
         ExecAndComp.queryModelWithoutCompute(getProject(), sql);
         val context = ContextUtil.listContexts().get(0);
-        val segmentIds = context.getStorageContext().getPrunedSegments();
+        val segmentIds = context.getStorageContext().getBatchCandidate().getPrunedSegments();
         assertPrunedSegmentRange(df.getModel().getId(), segmentIds, expectedRanges);
     }
 
@@ -96,7 +96,7 @@ public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
         } catch (Exception e) {
             if (e.getCause() instanceof NoRealizationFoundException) {
                 val context = ContextUtil.listContexts().get(0);
-                val segmentIds = context.getStorageContext().getPrunedSegments();
+                val segmentIds = context.getStorageContext().getBatchCandidate().getPrunedSegments();
                 assertPrunedSegmentRange(df.getModel().getId(), segmentIds, Lists.newArrayList());
             }
         }

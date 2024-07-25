@@ -18,23 +18,13 @@
 
 package org.apache.kylin.query.routing;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
-import org.apache.kylin.metadata.cube.cuboid.NLookupCandidate;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
-import org.apache.kylin.metadata.model.NDataModel;
-import org.apache.kylin.metadata.model.NDataModelManager;
-import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentRange;
-import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.metadata.realization.HybridRealization;
 import org.apache.kylin.metadata.realization.IRealization;
@@ -59,85 +49,39 @@ public class DataflowCapabilityChecker {
             return result;
         }
 
-        // 1. match joins is ensured at model select
-        String factTableOfQuery = digest.getFactTable();
-        String modelFactTable = dataflow.getModel().getQueryCompatibleFactTable(factTableOfQuery);
         IRealizationCandidate chosenCandidate = null;
-        if (digest.getJoinDescs().isEmpty() && !modelFactTable.equals(factTableOfQuery)) {
-            log.trace("Snapshot dataflow matching");
-            chosenCandidate = tryMatchLookup(dataflow, digest, result);
-            if (chosenCandidate != null) {
-                log.info("Matched table {} snapshot in dataflow {} ", factTableOfQuery, dataflow);
-            }
-        } else {
-            // for query-on-fact-table
-            log.trace("Normal dataflow matching");
-            List<NDataSegment> prunedSegments = candidate.getPrunedSegments(dataflow);
-            NLayoutCandidate candidateAndInfluence = QueryLayoutChooser.selectLayoutCandidate(dataflow, prunedSegments,
-                    digest);
-            if (candidateAndInfluence == null && QueryContext.current().isPartialMatchIndex()) {
-                // This branch is customized requirements
-                log.trace("Partial dataflow matching");
-                candidateAndInfluence = QueryLayoutChooser.selectPartialLayoutCandidate(dataflow, prunedSegments,
-                        digest);
-            } else if (candidateAndInfluence == null) {
-                log.debug("select the layout candidate with high data integrity.");
-                candidateAndInfluence = QueryLayoutChooser.selectHighIntegrityCandidate(dataflow, candidate, digest);
-                if (candidateAndInfluence != null) {
-                    result.setPartialResult(true);
-                }
-            }
+
+        // for query-on-fact-table
+        log.trace("Normal dataflow matching");
+        List<NDataSegment> prunedSegments = candidate.getPrunedSegments(dataflow);
+        NLayoutCandidate candidateAndInfluence = QueryLayoutChooser.selectLayoutCandidate(dataflow, prunedSegments,
+                digest);
+        if (candidateAndInfluence == null && QueryContext.current().isPartialMatchIndex()) {
+            // This branch is customized requirements
+            log.trace("Partial dataflow matching");
+            candidateAndInfluence = QueryLayoutChooser.selectPartialLayoutCandidate(dataflow, prunedSegments, digest);
+        } else if (candidateAndInfluence == null) {
+            log.debug("select the layout candidate with high data integrity.");
+            candidateAndInfluence = QueryLayoutChooser.selectHighIntegrityCandidate(dataflow, candidate, digest);
             if (candidateAndInfluence != null) {
-                chosenCandidate = candidateAndInfluence;
-                result.influences.addAll(candidateAndInfluence.getCapabilityResult().influences);
-                log.info("Matched layout {} snapshot in dataflow {} ", chosenCandidate, dataflow);
+                result.setPartialResult(true);
             }
         }
+        if (candidateAndInfluence != null) {
+            chosenCandidate = candidateAndInfluence;
+            result.influences.addAll(candidateAndInfluence.getCapabilityResult().influences);
+            log.info("Matched layout {} snapshot in dataflow {} ", chosenCandidate, dataflow);
+        }
+
         if (chosenCandidate != null) {
             result.setCapable(true);
             result.setCandidate(dataflow.isStreaming(), chosenCandidate);
             result.setCost(chosenCandidate.getCost());
         } else {
+            result.setCandidate(dataflow.isStreaming(), NLayoutCandidate.ofEmptyCandidate());
             result.setCapable(false);
         }
         return result;
-    }
-
-    private static IRealizationCandidate tryMatchLookup(NDataflow dataflow, SQLDigest digest, CapabilityResult result) {
-        // query from snapShot table
-        NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(dataflow.getConfig(), dataflow.getProject());
-        if (dataflow.getLatestReadySegment() == null) {
-            return null;
-        }
-
-        String factTable = digest.getFactTable();
-        if (StringUtils.isEmpty(tableMgr.getTableDesc(factTable).getLastSnapshotPath())) {
-            log.info("Exclude NDataflow {} because snapshot of table {} does not exist", dataflow, factTable);
-            result.incapableCause = CapabilityResult.IncapableCause
-                    .create(CapabilityResult.IncapableType.NOT_EXIST_SNAPSHOT);
-            result.setCapable(false);
-            return null;
-        }
-
-        //1. all aggregations on lookup table can be done
-        NDataModel model = dataflow.getModel();
-        if (model.isFusionModel()) {
-            model = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), model.getProject())
-                    .getDataModelDesc(model.getFusionId());
-        }
-        Set<TblColRef> colsOfSnapShot = Sets.newHashSet(model.findFirstTable(factTable).getColumns());
-        Collection<TblColRef> unmatchedCols = Sets.newHashSet(digest.getAllColumns());
-        if (!unmatchedCols.isEmpty()) {
-            unmatchedCols.removeAll(colsOfSnapShot);
-        }
-
-        if (!unmatchedCols.isEmpty()) {
-            log.info("Exclude NDataflow {} because unmatched dimensions [{}] in Snapshot", dataflow, unmatchedCols);
-            result.incapableCause = CapabilityResult.IncapableCause.unmatchedDimensions(unmatchedCols);
-            return null;
-        } else {
-            return new NLookupCandidate(factTable, true);
-        }
     }
 
     public static CapabilityResult hybridRealizationCheck(HybridRealization r, Candidate candidate, SQLDigest digest) {

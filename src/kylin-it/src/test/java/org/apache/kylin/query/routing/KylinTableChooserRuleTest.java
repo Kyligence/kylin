@@ -45,9 +45,8 @@ public class KylinTableChooserRuleTest extends NLocalWithSparkSessionTest {
         OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
         Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
         olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
-        Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
         KylinTableChooserRule rule = new KylinTableChooserRule();
-        CapabilityResult result = rule.check(dataflow, candidate, olapContext.getSQLDigest());
+        CapabilityResult result = rule.check(dataflow, olapContext, olapContext.getSQLDigest());
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getSelectedCandidate().getCost(), result.getCost(), 0.001);
     }
@@ -58,11 +57,8 @@ public class KylinTableChooserRuleTest extends NLocalWithSparkSessionTest {
                 .getDataflow("7d840904-7b34-4edd-aabd-79df992ef32e");
         String sql = "SELECT ORDER_ID FROM TEST_ORDER";
         OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
-        Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(), olapContext);
-        olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
-        Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
         KylinTableChooserRule rule = new KylinTableChooserRule();
-        CapabilityResult result = rule.check(dataflow, candidate, olapContext.getSQLDigest());
+        CapabilityResult result = rule.check(dataflow, olapContext, olapContext.getSQLDigest());
         Assert.assertNotNull(result);
         Assert.assertNull(result.getSelectedCandidate());
     }

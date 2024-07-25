@@ -36,7 +36,6 @@ import org.apache.kylin.metadata.realization.NoStreamingRealizationFoundExceptio
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapContext;
-import org.apache.kylin.query.routing.RealizationChooser;
 import org.apache.kylin.query.util.ComputedColumnRewriter;
 import org.apache.kylin.query.util.QueryAliasMatchInfo;
 import org.apache.kylin.query.util.QueryContextCutter;
@@ -127,10 +126,10 @@ public class OlapContextTestUtil {
     }
 
     public static Map<String, String> matchJoins(NDataModel model, OlapContext ctx) {
-        KylinConfig projectConfig = NProjectManager.getProjectConfig(ctx.getOlapSchema().getProjectName());
+        KylinConfig projectConfig = NProjectManager.getProjectConfig(ctx.getOlapSchema().getProject());
         boolean isPartialInnerJoin = projectConfig.isQueryMatchPartialInnerJoinModel();
         boolean isPartialNonEquiJoin = projectConfig.partialMatchNonEquiJoins();
-        return RealizationChooser.matchJoins(model, ctx, isPartialInnerJoin, isPartialNonEquiJoin);
+        return ctx.matchJoins(model, isPartialInnerJoin, isPartialNonEquiJoin);
     }
 
     public static void rewriteComputedColumns(NDataModel model, OlapContext olapContext) {

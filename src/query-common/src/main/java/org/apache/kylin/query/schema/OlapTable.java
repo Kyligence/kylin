@@ -224,7 +224,7 @@ public class OlapTable extends AbstractQueryableTable implements TranslatableTab
         List<ColumnDesc> tableColumns = listTableColumnsIncludingCC();
 
         List<ColumnDesc> metricColumns = Lists.newArrayList();
-        List<MeasureDesc> countMeasures = mgr.listEffectiveRewriteMeasures(olapSchema.getProjectName(),
+        List<MeasureDesc> countMeasures = mgr.listEffectiveRewriteMeasures(olapSchema.getProject(),
                 sourceTable.getIdentity());
         HashSet<String> metFields = new HashSet<>();
         for (MeasureDesc m : countMeasures) {
@@ -297,7 +297,7 @@ public class OlapTable extends AbstractQueryableTable implements TranslatableTab
         String userName = Objects.nonNull(aclInfo) ? aclInfo.getUsername() : null;
         Set<String> groups = Objects.nonNull(aclInfo) ? aclInfo.getGroups() : null;
         return QueryExtension.getFactory().getTableColumnAuthExtension().isColumnsAuthorized(olapSchema.getConfig(),
-                olapSchema.getProjectName(), userName, groups, ccSourceCols);
+                olapSchema.getProject(), userName, groups, ccSourceCols);
     }
 
     @Override

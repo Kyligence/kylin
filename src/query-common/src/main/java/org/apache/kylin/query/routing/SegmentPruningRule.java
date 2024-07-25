@@ -82,8 +82,8 @@ public class SegmentPruningRule extends PruningRule {
                     candidate.getRealization().getProject(), candidate.getRealization().getCanonicalName());
             CapabilityResult capability = new CapabilityResult();
             capability.setCapable(true);
-            capability.setSelectedCandidate(NLayoutCandidate.EMPTY);
-            capability.setSelectedStreamingCandidate(NLayoutCandidate.EMPTY);
+            capability.setSelectedCandidate(NLayoutCandidate.ofEmptyCandidate());
+            capability.setSelectedStreamCandidate(NLayoutCandidate.ofEmptyCandidate());
             candidate.setCapability(capability);
         }
     }

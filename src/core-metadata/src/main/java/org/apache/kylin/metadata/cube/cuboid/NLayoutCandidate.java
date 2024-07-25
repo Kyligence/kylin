@@ -25,8 +25,10 @@ import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
+import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.model.DeriveInfo;
 import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.metadata.realization.IRealizationCandidate;
@@ -43,16 +45,20 @@ public class NLayoutCandidate implements IRealizationCandidate {
 
     private LayoutEntity layoutEntity;
     private NDataLayoutDetails dataLayoutDetails;
+    private long layoutId;
     private double cost;
+    private List<NDataSegment> prunedSegments;
     private CapabilityResult capabilityResult;
     private long range;
     private long maxSegEnd;
     private Map<Integer, DeriveInfo> derivedToHostMap = Maps.newHashMap();
-    Set<String> derivedTableSnapshots = Sets.newHashSet();
+    Set<String> derivedLookups = Sets.newHashSet();
+    private boolean isStreaming;
 
     public NLayoutCandidate(LayoutEntity layoutEntity) {
         Preconditions.checkNotNull(layoutEntity);
         this.layoutEntity = layoutEntity;
+        this.layoutId = layoutEntity.getId();
     }
 
     public NLayoutCandidate(LayoutEntity layoutEntity, NDataLayoutDetails dataLayoutDetails) {
@@ -68,8 +74,22 @@ public class NLayoutCandidate implements IRealizationCandidate {
         this.capabilityResult = result;
     }
 
-    public boolean isEmptyCandidate() {
-        return this.getLayoutEntity().getIndex() == null;
+    public static NLayoutCandidate ofEmptyCandidate() {
+        LayoutEntity layout = new LayoutEntity();
+        layout.setId(-1L);
+        return new NLayoutCandidate(layout, Integer.MAX_VALUE, new CapabilityResult());
+    }
+
+    public boolean isEmpty() {
+        return layoutEntity == null || this.layoutEntity.getId() == -1L;
+    }
+
+    public boolean isTableIndex() {
+        return !isEmpty() && IndexEntity.isTableIndex(layoutId);
+    }
+
+    public boolean isAggIndex() {
+        return !isEmpty() && IndexEntity.isAggIndex(layoutId);
     }
 
     public Map<List<Integer>, List<DeriveInfo>> makeHostToDerivedMap() {

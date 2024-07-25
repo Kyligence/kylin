@@ -72,7 +72,7 @@ public class BackdoorToggles {
         return getBoolean(DEBUG_TOGGLE_DISABLE_FUZZY_KEY);
     }
 
-    public static boolean getIsQueryFromAutoModeling() {
+    public static boolean isModelingSql() {
         return getBoolean(QUERY_FROM_AUTO_MODELING);
     }
 

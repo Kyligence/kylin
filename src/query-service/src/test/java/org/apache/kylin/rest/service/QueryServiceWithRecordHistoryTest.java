@@ -197,12 +197,13 @@ public class QueryServiceWithRecordHistoryTest extends NLocalFileMetadataTestCas
         Mockito.when(mockRealization1.getModel()).thenReturn(mockModel1);
         aggMock.setRealization(mockRealization1);
         IndexEntity mockIndexEntity1 = new IndexEntity();
-        mockIndexEntity1.setId(1);
+        mockIndexEntity1.setId(0L);
         LayoutEntity mockLayout1 = new LayoutEntity();
+        mockLayout1.setId(1L);
         mockLayout1.setIndex(mockIndexEntity1);
-        aggMock.getStorageContext().setCandidate(new NLayoutCandidate(mockLayout1));
-        aggMock.getStorageContext().setLayoutId(1L);
-        aggMock.getStorageContext().setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        NLayoutCandidate layoutCandidate1 = new NLayoutCandidate(mockLayout1);
+        layoutCandidate1.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        aggMock.getStorageContext().setBatchCandidate(layoutCandidate1);
         ContextUtil.registerContext(aggMock);
 
         // mock table index realization
@@ -215,12 +216,13 @@ public class QueryServiceWithRecordHistoryTest extends NLocalFileMetadataTestCas
         Mockito.when(mockRealization2.getModel()).thenReturn(mockModel2);
         tableMock.setRealization(mockRealization2);
         IndexEntity mockIndexEntity2 = new IndexEntity();
-        mockIndexEntity2.setId(IndexEntity.TABLE_INDEX_START_ID + 1);
+        mockIndexEntity2.setId(IndexEntity.TABLE_INDEX_START_ID);
         LayoutEntity mockLayout2 = new LayoutEntity();
+        mockLayout2.setId(IndexEntity.TABLE_INDEX_START_ID + 1);
         mockLayout2.setIndex(mockIndexEntity2);
-        tableMock.getStorageContext().setCandidate(new NLayoutCandidate(mockLayout2));
-        tableMock.getStorageContext().setLayoutId(1L);
-        tableMock.getStorageContext().setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        NLayoutCandidate layoutCandidate2 = new NLayoutCandidate(mockLayout2);
+        layoutCandidate2.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        tableMock.getStorageContext().setBatchCandidate(layoutCandidate2);
         ContextUtil.registerContext(tableMock);
         mockQueryWithSqlMassage();
     }

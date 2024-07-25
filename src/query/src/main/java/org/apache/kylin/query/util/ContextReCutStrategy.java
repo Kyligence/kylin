@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.cube.cuboid.NLookupCandidate;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.relnode.OlapRel;
@@ -58,18 +59,19 @@ public class ContextReCutStrategy implements ICutContextStrategy {
                 ? new ContextCutImpl(ContextUtil.getThreadLocalContexts().size())
                 : new ContextCutImpl(getReCutter().getCtxSeq());
         setReCutter(cutter);
-        for (OlapContext context : ContextUtil.listContextsHavingScan()) {
-            if (context.isHasSelected() && context.getRealization() == null
-                    && (!context.isHasPreCalcJoin() || context.getModelAlias() != null)) {
-                throw e;
-            } else if (context.isHasSelected() && context.getRealization() == null) {
-                QueryContextCutter.cutContext(this, context.getTopNode(), root);
-                ContextUtil.setSubContexts(root.getInput(0));
-                continue;
-            } else if (context.getRealization() != null) {
-                context.unfixModel();
-            }
-            context.clearCtxInfo();
-        }
+        ContextUtil.listContextsHavingScan().stream()
+                .filter(context -> context.deduceLookupTableType() == NLookupCandidate.Type.NONE).forEach(context -> {
+                    if (context.isHasSelected() && context.getRealization() == null
+                            && (!context.isHasPreCalcJoin() || context.getBoundedModelAlias() != null)) {
+                        throw e;
+                    } else if (context.isHasSelected() && context.getRealization() == null) {
+                        QueryContextCutter.cutContext(this, context.getTopNode(), root);
+                        ContextUtil.setSubContexts(root.getInput(0));
+                        return;
+                    } else if (context.getRealization() != null) {
+                        context.unfixModel();
+                    }
+                    context.clearCtxInfo();
+                });
     }
 }

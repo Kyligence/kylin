@@ -594,7 +594,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             applyQuerySqlBlacklist(project, rawSql.getStatementString());
 
             // search cache
-            if (sqlResponse == null && kylinConfig.isQueryCacheEnabled() && !sqlRequest.isForcedToPushDown()
+            if (kylinConfig.isQueryCacheEnabled() && !sqlRequest.isForcedToPushDown()
                     && !queryContext.getQueryTagInfo().isAsyncQuery()) {
                 sqlResponse = searchCache(sqlRequest, kylinConfig);
             }
@@ -634,7 +634,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             val fusionManager = FusionModelManager.getInstance(KylinConfig.getInstanceFromEnv(),
                     sqlRequest.getProject());
             if (CollectionUtils.isNotEmpty(sqlResponse.getNativeRealizations())) {
-                sqlResponse.getNativeRealizations().stream()
+                sqlResponse.getNativeRealizations()
                         .forEach(realization -> realization.setModelId(fusionManager.getModelId(realization)));
             }
             //check query result row count
@@ -1408,6 +1408,10 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         response.wrapResultOfQueryContext(queryContext);
         response.setNativeRealizations(ContextUtil.getNativeRealizations());
         response.updateDataFetchTime(queryContext);
+        if (queryContext.isExplainSql()) {
+            response.setQueryPlan(queryContext.getQueryPlan());
+            response.setExplain(queryContext.isExplainSql());
+        }
 
         if (!queryContext.getQueryTagInfo().isVacant()) {
             setAppMaterURL(response);
@@ -1451,22 +1455,6 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             } catch (Throwable th) {
                 logger.error("Get app master for sql failed", th);
             }
-        }
-    }
-
-    protected int getInt(String content) {
-        try {
-            return Integer.parseInt(content);
-        } catch (Exception e) {
-            return -1;
-        }
-    }
-
-    protected short getShort(String content) {
-        try {
-            return Short.parseShort(content);
-        } catch (Exception e) {
-            return -1;
         }
     }
 
@@ -1553,7 +1541,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         }
 
         public String oldStyleLog() {
-            String newLine = System.getProperty("line.separator");
+            String newLine = System.lineSeparator();
             String delimiter = "==========================[QUERY]===============================";
 
             return newLine + delimiter + newLine //
@@ -1646,8 +1634,8 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
     }
 
     private void applyModelPriority(QueryContext queryContext, RawSql rawSql) {
-        queryContext.setModelPriorities(QueryModelPriorities.getModelPrioritiesFromHintStrOrComment(
-                rawSql.getFirstHintString(), rawSql.getFullTextString()));
+        queryContext.setModelPriorities(QueryModelPriorities
+                .getModelPrioritiesFromHintStrOrComment(rawSql.getFirstHintString(), rawSql.getFullTextString()));
     }
 
     public List<TableMetaWithType> getMetadataAddType(String project, String modelAlias) {

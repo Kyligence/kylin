@@ -28,6 +28,7 @@ import org.apache.kylin.metadata.model.DeriveInfo.DeriveType
 import org.apache.kylin.metadata.model.NonEquiJoinCondition.SimplifiedJoinCondition
 import org.apache.kylin.metadata.model.util.scd2.Scd2Simplifier
 import org.apache.kylin.metadata.model.{DeriveInfo, NDataModel, NTableMetadataManager, TblColRef}
+import org.apache.kylin.metadata.table.InternalTableManager
 import org.apache.kylin.metadata.tuple.TupleInfo
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.logical.{Join, JoinHint, LogicalPlan}
@@ -168,7 +169,13 @@ case class SparderDerivedUtil(gtInfoTableName: String,
     val pkCols = join.getPrimaryKey
     val tableDesc = metaMgr.getTableDesc(derivedTableName)
     val pkIndex = pkCols.map(pkCol => tableDesc.findColumnByName(pkCol).getZeroBasedIndex)
-    val path = tableDesc.getLastSnapshotPath
+    val path: String = if (dataSeg.getConfig.isInternalTableEnabled && tableDesc.getHasInternal) {
+      InternalTableManager.getInstance(dataSeg.getConfig, dataSeg.getProject)
+        .getInternalTableDesc(tableDesc.getIdentity)
+        .getLocation
+    } else {
+      tableDesc.getLastSnapshotPath
+    }
     if (path == null && deriveInfo.`type` != DeriveType.PK_FK) {
       throw new IllegalStateException(
         "No snapshot for table '" + derivedTableName + "' found on cube segment"

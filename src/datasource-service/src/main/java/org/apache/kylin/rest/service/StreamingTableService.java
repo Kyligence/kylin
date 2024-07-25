@@ -46,11 +46,11 @@ import org.apache.kylin.rest.request.StreamingRequest;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.TableUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import lombok.val;
 
-@Component("streamingTableService")
+@Service("streamingTableService")
 public class StreamingTableService extends TableService {
 
     @Autowired

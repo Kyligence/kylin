@@ -85,9 +85,9 @@ public class StreamingScheduler {
 
     @Getter
     private AtomicBoolean hasStarted = new AtomicBoolean(false);
-    
+
     private JobContext jobContext = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
-    
+
     private final Map<String, JdbcJobLock> streamingJobLockCache = new ConcurrentHashMap<>();
 
     private ExecutorService jobPool;
@@ -123,7 +123,7 @@ public class StreamingScheduler {
             return;
         }
 
-        if (config.streamingEnabled()) {
+        if (config.isStreamingEnabled()) {
             int maxPoolSize = config.getNodeMaxStreamingConcurrentJobLimit();
             ThreadFactory executorThreadFactory = new BasicThreadFactory.Builder()
                     .namingPattern("StreamingJobWorker-%d").uncaughtExceptionHandler((t, e) -> {
@@ -143,7 +143,7 @@ public class StreamingScheduler {
 
     public synchronized void submitJob(String project, String modelId, JobTypeEnum jobType) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
-        if (!config.streamingEnabled()) {
+        if (!config.isStreamingEnabled()) {
             return;
         }
         String jobId = StreamingUtils.getJobId(modelId, jobType.name());
@@ -417,7 +417,7 @@ public class StreamingScheduler {
                             || JobStatusEnum.RUNNING == meta.getCurrentStatus()
                             || JobStatusEnum.ERROR == meta.getCurrentStatus())
                     .collect(Collectors.toList());
-            
+
             retryJobMetaList.forEach(meta -> {
                 val modelId = meta.getModelId();
                 val jobType = meta.getJobType();

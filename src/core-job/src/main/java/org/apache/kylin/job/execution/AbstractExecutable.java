@@ -18,6 +18,10 @@
 
 package org.apache.kylin.job.execution;
 
+import static org.apache.kylin.job.execution.JobTypeEnum.Category.INTERNAL;
+import static org.apache.kylin.job.execution.JobTypeEnum.Category.OTHER;
+import static org.apache.kylin.job.execution.JobTypeEnum.Category.SNAPSHOT;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -84,6 +88,7 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
 
     protected static final String SUBMITTER = "submitter";
     protected static final String PARENT_ID = "parentId";
+    private static final Integer DEFAULT_DRIVER_MEMORY = 512;
     public static final String RUNTIME_INFO = "runtimeInfo";
     public static final String DEPENDENT_FILES = "dependentFiles";
 
@@ -104,7 +109,9 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
 
     @Setter
     @Getter
-    private String targetSubject; //uuid of the model or table identity if table sampling
+    // uuid of the model or table identity if table sampling
+    // or internal table
+    private String targetSubject;
 
     @Setter
     @Getter
@@ -388,6 +395,9 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
         //check exception in result to avoid retry on ChainedExecutable(only need retry on subtask actually)
 
         onExecuteFinished(result);
+        if (result.getThrowable() != null) {
+            result.getThrowable().printStackTrace();
+        }
         return result;
     }
 
@@ -881,20 +891,26 @@ public abstract class AbstractExecutable extends AbstractJobExecutable implement
         return config.getSparkEngineDriverMemorySnapshotBuilding();
     }
 
+    private static int computeInternalTableLoadMemory() {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        return config.getSparkEngineDriverMemoryInternalTableLoading();
+    }
+
     public int computeStepDriverMemory() {
-        if (getJobType() == JobTypeEnum.TABLE_SAMPLING) {
-            return computeTableAnalyzeMemory();
+        switch (getJobType().getCategory()) {
+            case OTHER:
+                return computeTableAnalyzeMemory();
+            case SNAPSHOT:
+                return computeSnapshotAnalyzeMemory();
+            case INTERNAL:
+                return computeInternalTableLoadMemory();
+            default:
+                String layouts = getParam(NBatchConstants.P_LAYOUT_IDS);
+                if (layouts != null) {
+                    return computeDriverMemory(StringHelper.splitAndTrim(layouts, ",").length);
+                }
         }
-
-        if (getJobType() == JobTypeEnum.SNAPSHOT_BUILD || getJobType() == JobTypeEnum.SNAPSHOT_REFRESH) {
-            return computeSnapshotAnalyzeMemory();
-        }
-
-        String layouts = getParam(NBatchConstants.P_LAYOUT_IDS);
-        if (layouts != null) {
-            return computeDriverMemory(StringHelper.splitAndTrim(layouts, ",").length);
-        }
-        return 0;
+        return DEFAULT_DRIVER_MEMORY;
     }
 
     public static Integer computeDriverMemory(Integer cuboidNum) {

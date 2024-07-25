@@ -501,15 +501,15 @@ public class MultiPartitionPruningTest extends NLocalWithSparkSessionTest implem
         val df = ExecAndComp.queryModelWithoutCompute(getProject(), sql);
         val context = ContextUtil.listContexts().get(0);
         if (emptyLayout) {
-            Assert.assertTrue(context.getStorageContext().isEmptyLayout());
-            Assert.assertEquals(Long.valueOf(-1), context.getStorageContext().getLayoutId());
+            Assert.assertTrue(context.getStorageContext().isDataSkipped());
+            Assert.assertEquals(-1L, context.getStorageContext().getBatchCandidate().getLayoutId());
             return numScanFiles;
         }
         df.collect();
         val actualNum = findFileSourceScanExec(df.queryExecution().executedPlan()).metrics().get("numFiles").get()
                 .value();
         Assert.assertEquals(numScanFiles, actualNum);
-        val segmentIds = context.getStorageContext().getPrunedSegments();
+        val segmentIds = context.getStorageContext().getBatchCandidate().getPrunedSegments();
         val partitions = context.getStorageContext().getPrunedPartitions();
         assertPrunedSegmentRange(modelId, segmentIds, partitions, expectedRanges, expectedPartitions);
         return actualNum;

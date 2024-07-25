@@ -24,6 +24,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -62,7 +63,6 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.query.calcite.KylinRelDataTypeSystem;
 import org.apache.kylin.query.util.ICutContextStrategy;
 import org.apache.kylin.query.util.RexToTblColRefTranslator;
@@ -169,13 +169,22 @@ public class OlapFilterRel extends Filter implements OlapRel {
                 reverses.offerLast(Boolean.FALSE.equals(reverses.peekLast()));
             } else {
                 assert reverses.peekLast() != null;
-                if (reverses.peekLast().booleanValue()) {
+                if (reverses.peekLast()) {
                     kind = REVERSE_OP_MAP.get(kind);
                     reverses.offerLast(kind == SqlKind.AND || kind == SqlKind.OR);
                 } else {
                     reverses.offerLast(false);
                 }
             }
+            TblColRef.FilterColEnum tmpLevel = getFilterColEnum(kind);
+            tmpLevels.offerLast(tmpLevel);
+            call.operands.forEach(operand -> operand.accept(this));
+            tmpLevels.pollLast();
+            reverses.pollLast();
+            return null;
+        }
+
+        private TblColRef.FilterColEnum getFilterColEnum(SqlKind kind) {
             TblColRef.FilterColEnum tmpLevel;
             if (kind == SqlKind.EQUALS) {
                 tmpLevel = TblColRef.FilterColEnum.EQUAL_FILTER;
@@ -188,11 +197,7 @@ public class OlapFilterRel extends Filter implements OlapRel {
             } else {
                 tmpLevel = TblColRef.FilterColEnum.OTHER_FILTER;
             }
-            tmpLevels.offerLast(tmpLevel);
-            call.operands.forEach(operand -> operand.accept(this));
-            tmpLevels.pollLast();
-            reverses.pollLast();
-            return null;
+            return tmpLevel;
         }
 
         boolean isRangeFilter(SqlKind sqlKind) {
@@ -245,7 +250,8 @@ public class OlapFilterRel extends Filter implements OlapRel {
 
     @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        return super.computeSelfCost(planner, mq).multiplyBy(OlapRel.OLAP_COST_FACTOR).multiplyBy(calcComplexity());
+        return Objects.requireNonNull(super.computeSelfCost(planner, mq)).multiplyBy(OlapRel.OLAP_COST_FACTOR)
+                .multiplyBy(calcComplexity());
     }
 
     // For example:
@@ -310,15 +316,14 @@ public class OlapFilterRel extends Filter implements OlapRel {
         if (context.getOlapSchema() == null) {
             return false;
         }
-        String projectName = context.getOlapSchema().getProjectName();
-        KylinConfig kylinConfig = NProjectManager.getProjectConfig(projectName);
+        KylinConfig kylinConfig = context.getOlapSchema().getConfig();
         return kylinConfig.isHeterogeneousSegmentEnabled() || kylinConfig.isMultiPartitionEnabled();
     }
 
     private boolean isJoinMatchOptimizationEnabled() {
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         if (this.context != null && this.context.getOlapSchema() != null) {
-            kylinConfig = NProjectManager.getProjectConfig(context.getOlapSchema().getProjectName());
+            kylinConfig = context.getOlapSchema().getConfig();
         }
         return kylinConfig.isJoinMatchOptimizationEnabled();
     }

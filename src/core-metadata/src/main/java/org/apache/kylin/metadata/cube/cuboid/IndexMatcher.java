@@ -20,13 +20,13 @@ package org.apache.kylin.metadata.cube.cuboid;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableCollection;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMultimap;
@@ -42,6 +42,9 @@ import org.apache.kylin.metadata.model.ColExcludedChecker;
 import org.apache.kylin.metadata.model.DeriveInfo;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.util.scd2.Scd2Simplifier;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -214,16 +217,25 @@ public abstract class IndexMatcher {
                 return true;
             }
         } else if (indexEntity.dimensionsDerive(foreignKeyColumns) //
-                && model.getColRef(unmatchedDim) != null //
-                && Optional.ofNullable(model.getAliasMap().get(alias))
-                        .map(ref -> ref.getTableDesc().getLastSnapshotPath()).filter(StringUtils::isNotBlank)
-                        .isPresent()) {
-            DeriveInfo.DeriveType deriveType = matchNonEquiJoinFks(indexEntity, joinByPKSide)
-                    ? DeriveInfo.DeriveType.LOOKUP_NON_EQUI
-                    : DeriveInfo.DeriveType.LOOKUP;
-            needDeriveCollector.put(unmatchedDim, new DeriveInfo(deriveType, joinByPKSide, foreignKeyColumns, false));
-            unmatchedDimItr.remove();
-            return true;
+                && model.getColRef(unmatchedDim) != null) {
+            TableRef tableRef = model.getAliasMap().get(alias);
+            String tableIdentity = tableRef.getTableIdentity();
+            KylinConfig projectConfig = NProjectManager.getProjectConfig(model.getProject());
+            NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(projectConfig, project);
+            TableDesc tableDesc = tableMgr.getTableDesc(tableIdentity);
+            boolean present = tableDesc != null
+                    && ((projectConfig.isInternalTableEnabled() && tableDesc.getHasInternal())
+                            || !projectConfig.isInternalTableEnabled()
+                                    && !StringUtils.isBlank(tableDesc.getLastSnapshotPath()));
+            if (present) {
+                DeriveInfo.DeriveType deriveType = matchNonEquiJoinFks(indexEntity, joinByPKSide)
+                        ? DeriveInfo.DeriveType.LOOKUP_NON_EQUI
+                        : DeriveInfo.DeriveType.LOOKUP;
+                needDeriveCollector.put(unmatchedDim,
+                        new DeriveInfo(deriveType, joinByPKSide, foreignKeyColumns, false));
+                unmatchedDimItr.remove();
+                return true;
+            }
         }
         return false;
     }

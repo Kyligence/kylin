@@ -62,7 +62,7 @@ public class OlapModelViewRel extends SingleRel implements OlapRel, EnumerableRe
     @Override
     public void implementOlap(OlapImpl olapImpl) {
         ((OlapRel) getInput(0)).implementOlap(olapImpl);
-        this.context.setModelAlias(modelAlias);
+        this.context.setBoundedModelAlias(modelAlias);
     }
 
     @Override

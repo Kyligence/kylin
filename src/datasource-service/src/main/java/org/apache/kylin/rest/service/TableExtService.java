@@ -93,6 +93,9 @@ public class TableExtService extends BasicService {
     private TableService tableService;
 
     @Autowired
+    private InternalTableService internalTableService;
+
+    @Autowired
     private AclEvaluate aclEvaluate;
 
     @Autowired
@@ -148,7 +151,8 @@ public class TableExtService extends BasicService {
         LoadTableResponse loadTableResponse = new LoadTableResponse();
         if (tableResponseFromDB != null) {
             if (!canLoadTablesFromDB.isEmpty()) {
-                innerLoadTables(project, tableResponseFromDB, canLoadTablesFromDB);
+                innerLoadTables(project, tableResponseFromDB, canLoadTablesFromDB, request.getLoadAsInternal(),
+                        request.getStorageType());
             }
             loadTableResponse.getFailed().addAll(tableResponseFromDB.getFailed());
             loadTableResponse.getLoaded().addAll(tableResponseFromDB.getLoaded());
@@ -157,7 +161,8 @@ public class TableExtService extends BasicService {
 
         if (tableResponse != null) {
             if (!canLoadTables.isEmpty()) {
-                innerLoadTables(project, tableResponse, canLoadTables);
+                innerLoadTables(project, tableResponse, canLoadTables, request.getLoadAsInternal(),
+                        request.getStorageType());
             }
             loadTableResponse.getFailed().addAll(tableResponse.getFailed());
             loadTableResponse.getLoaded().addAll(tableResponse.getLoaded());
@@ -226,7 +231,7 @@ public class TableExtService extends BasicService {
         List<Pair<TableDesc, TableExtDesc>> canLoadTables = findCanLoadTables(tables, project, isDb, tableResponse,
                 existDbs, Maps.newHashMap()).getFirst();
         if (!canLoadTables.isEmpty()) {
-            return innerLoadTables(project, tableResponse, canLoadTables);
+            return innerLoadTables(project, tableResponse, canLoadTables, false, null);
         }
 
         return tableResponse;
@@ -304,7 +309,7 @@ public class TableExtService extends BasicService {
             }
         }
         if (!loadTables.isEmpty()) {
-            return innerLoadTables(project, tableResponse, loadTables);
+            return innerLoadTables(project, tableResponse, loadTables, false, null);
         }
 
         return tableResponse;
@@ -352,12 +357,12 @@ public class TableExtService extends BasicService {
     }
 
     private LoadTableResponse innerLoadTables(String project, LoadTableResponse tableResponse,
-            List<Pair<TableDesc, TableExtDesc>> loadTables) {
+            List<Pair<TableDesc, TableExtDesc>> loadTables, Boolean loadAsInternal, String storageType) {
         int batchSize = NProjectManager.getProjectConfig(project).getLoadTableBatchSize();
         List<List<Pair<TableDesc, TableExtDesc>>> batches = splitIntoBatches(loadTables, batchSize);
         for (List<Pair<TableDesc, TableExtDesc>> batch : batches) {
             try {
-                microBatchLoadTable(project, tableResponse, batch);
+                microBatchLoadTable(project, tableResponse, batch, loadAsInternal, storageType);
             } catch (Exception e) {
                 logger.error("Load table transaction failure : ", e);
                 tableResponse.getFailed()
@@ -368,18 +373,24 @@ public class TableExtService extends BasicService {
     }
 
     private LoadTableResponse microBatchLoadTable(String project, LoadTableResponse tableResponse,
-            List<Pair<TableDesc, TableExtDesc>> batch) {
+            List<Pair<TableDesc, TableExtDesc>> batch, Boolean loadAsInternal, String storageType) {
         return EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> { //
             NTableMetadataManager tableManager = NTableMetadataManager.getInstance(KylinConfig.readSystemKylinConfig(),
                     project);
             batch.forEach(pair -> {
-                String tableName = pair.getFirst().getIdentity();
+                TableDesc tableDesc = pair.getFirst();
+                TableExtDesc tableExtDesc = pair.getSecond();
+                String tableName = tableDesc.getIdentity();
                 boolean success = true;
                 boolean realLoaded = false;
                 if (tableManager.getTableDesc(tableName) == null) {
                     realLoaded = true;
                     try {
-                        loadTable(pair.getFirst(), pair.getSecond(), project);
+                        tableDesc.setProject(project);
+                        loadTable(tableDesc, tableExtDesc, project);
+                        if (loadAsInternal) {
+                            internalTableService.createInternalTable(project, tableDesc, storageType);
+                        }
                     } catch (Exception ex) {
                         logger.error("Failed to load table ({}/{})", project, tableName, ex);
                         success = false;
@@ -456,10 +467,10 @@ public class TableExtService extends BasicService {
     @Transaction(project = 2)
     public void loadTable(TableDesc tableDesc, TableExtDesc extDesc, String project) {
         checkBeforeLoadTable(tableDesc, project);
-        String[] loaded = tableService.loadTableToProject(tableDesc, extDesc, project);
+        String loaded = tableService.loadTableToProject(tableDesc, extDesc, project);
         // sanity check when loaded is empty or loaded table is not the table
         String tableName = tableDesc.getIdentity();
-        if (loaded.length == 0 || !loaded[0].equals(tableName))
+        if (loaded == null || !loaded.equals(tableName))
             throw new IllegalStateException();
 
     }

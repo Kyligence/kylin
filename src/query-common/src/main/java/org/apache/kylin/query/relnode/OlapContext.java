@@ -34,11 +34,14 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexNode;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
+import org.apache.kylin.metadata.cube.cuboid.NLookupCandidate;
 import org.apache.kylin.metadata.cube.model.DimensionRangeInfo;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -46,14 +49,15 @@ import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.FunctionDesc;
 import org.apache.kylin.metadata.model.JoinDesc;
 import org.apache.kylin.metadata.model.NDataModel;
+import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
+import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.graph.JoinsGraph;
 import org.apache.kylin.metadata.realization.IRealization;
 import org.apache.kylin.metadata.realization.SQLDigest;
 import org.apache.kylin.metadata.tuple.TupleInfo;
-import org.apache.kylin.query.routing.RealizationCheck;
 import org.apache.kylin.query.schema.OlapSchema;
 import org.apache.kylin.query.schema.OlapTable;
 import org.apache.kylin.storage.StorageContext;
@@ -94,9 +98,7 @@ public class OlapContext {
     // cube metadata
     @Setter
     private IRealization realization;
-    // seems the realizationCheck can be final, to be done
-    @Setter
-    private RealizationCheck realizationCheck = new RealizationCheck();
+    private final IncapableInfo incapableInfo = new IncapableInfo();
     @Setter
     private Set<TblColRef> allColumns = new HashSet<>();
     private final Set<TblColRef> metricsColumns = new HashSet<>();
@@ -172,7 +174,7 @@ public class OlapContext {
     @Setter
     private boolean needToManyDerived;
     @Setter
-    private String modelAlias;
+    private String boundedModelAlias;
 
     public OlapContext(int seq) {
         this.id = seq;
@@ -217,8 +219,8 @@ public class OlapContext {
     }
 
     public boolean hasPrecalculatedFields() {
-        NLayoutCandidate candidate = storageContext.getCandidate();
-        if (candidate.isEmptyCandidate()) {
+        NLayoutCandidate candidate = storageContext.getBatchCandidate();
+        if (candidate.isEmpty()) {
             return false;
         }
         boolean isTableIndex = candidate.getLayoutEntity().getIndex().isTableIndex();
@@ -319,12 +321,11 @@ public class OlapContext {
     public boolean isAnsweredByTableIndex() {
         NLayoutCandidate candidate;
         if (this.realization.isStreaming()) {
-            candidate = this.storageContext.getStreamingCandidate();
+            candidate = this.storageContext.getStreamCandidate();
         } else {
-            candidate = this.storageContext.getCandidate();
+            candidate = this.storageContext.getBatchCandidate();
         }
-        return candidate != null && !candidate.isEmptyCandidate()
-                && candidate.getLayoutEntity().getIndex().isTableIndex();
+        return candidate.isTableIndex();
     }
 
     /**
@@ -352,25 +353,104 @@ public class OlapContext {
                 + ", filterColumns=" + filterColumns + '}';
     }
 
-    public void matchJoinWithFilterTransformation() {
-        Set<TableRef> leftOrInnerTables = getNotNullTables();
-        if (CollectionUtils.isEmpty(leftOrInnerTables)) {
-            return;
+    public boolean isBoundedModel(NDataModel model) {
+        if (boundedModelAlias == null) {
+            // If there is no bound model, any model can be bound to the OlapContext
+            return true;
         }
-
-        for (JoinDesc join : joins) {
-            if (leftOrInnerTables.contains(join.getPKSide())) {
-                joinsGraph.setJoinToLeftOrInner(join);
-                logger.info("Current join: {} is set to LEFT_OR_INNER", join);
-            }
-        }
+        return StringUtils.equalsIgnoreCase(model.getAlias(), boundedModelAlias);
     }
 
-    public void matchJoinWithEnhancementTransformation() {
+    public Map<String, String> matchJoins(NDataModel model, boolean isInnerJoinPartial, boolean isNonEquivJoinPartial) {
+
+        if (joinsGraph == null) {
+            joinsGraph = new JoinsGraph(firstTableScan.getTableRef(), joins);
+        }
+
+        Map<String, String> tableAliasMap = new HashMap<>();
+        boolean matched = joinsGraph.match(model.getJoinsGraph(), tableAliasMap, isInnerJoinPartial,
+                isNonEquivJoinPartial);
+        if (!matched) {
+            logger.debug("Context joinsGraph missed model {}, model join graph {}", model, model.getJoinsGraph());
+            logger.debug("Mismatch nodes - Context {}, Model {}", joinsGraph.unmatched(model.getJoinsGraph()),
+                    model.getJoinsGraph().unmatched(joinsGraph));
+            if (olapSchema.getConfig().isJoinMatchOptimizationEnabled()) {
+                String project = model.getProject();
+                String mAlias = model.getAlias();
+                logger.info("Rewrite the joinsGraph by filter conditions and match with model({}/{}).", project,
+                        mAlias);
+                this.transformJoinsGraphByFilterConditions();
+                matched = joinsGraph.match(model.getJoinsGraph(), tableAliasMap, isInnerJoinPartial,
+                        isNonEquivJoinPartial);
+                logger.info("Match result of rewritten joinsGraph of model({}/{}): {}", project, mAlias, matched);
+            }
+        }
+
+        if (!matched) {
+            incapableInfo.addIncapableReason(model, IncapableInfo.Type.MODEL_UNMATCHED_JOIN);
+            tableAliasMap.clear();
+        }
+        return tableAliasMap;
+    }
+
+    public boolean isInvalidContext() {
+        return !allTableScans.isEmpty() && joins.size() != allTableScans.size() - 1;
+    }
+
+    public void markInvalid() {
+        incapableInfo.addIncapableReason(IncapableInfo.Type.BAD_OLAP_CONTEXT);
+    }
+
+    private void transformJoinsGraphByFilterConditions() {
+        Set<TableRef> leftOrInnerTables = getNotNullTables();
+        if (CollectionUtils.isNotEmpty(leftOrInnerTables)) {
+            for (JoinDesc join : joins) {
+                if (leftOrInnerTables.contains(join.getPKSide())) {
+                    joinsGraph.setJoinToLeftOrInner(join);
+                    logger.info("Current join: {} is set to LEFT_OR_INNER", join);
+                }
+            }
+        }
         joinsGraph.normalize();
     }
 
-    public String genExecFunc(OlapRel rel, String tableName) {
+    public NLookupCandidate.Type deduceLookupTableType() {
+        NLookupCandidate.Type type = NLookupCandidate.Type.NONE;
+        if (getSQLDigest().getJoinDescs().isEmpty()) {
+            KylinConfig olapConfig = olapSchema.getConfig();
+            String project = olapSchema.getProject();
+            String factTable = getSQLDigest().getFactTable();
+            NTableMetadataManager tableMgr = NTableMetadataManager.getInstance(olapConfig, project);
+            TableDesc tableDesc = tableMgr.getTableDesc(factTable);
+            if (tableDesc != null) {
+                if (olapConfig.isInternalTableEnabled() && tableDesc.getHasInternal()) {
+                    logger.info("Hit internal table {}", factTable);
+                    type = NLookupCandidate.Type.INTERNAL_TABLE;
+                } else if (!olapConfig.isInternalTableEnabled()
+                        && !StringUtils.isBlank(tableDesc.getLastSnapshotPath())) {
+                    logger.info("Hit the snapshot {}, the path is: {}", factTable, tableDesc.getLastSnapshotPath());
+                    type = NLookupCandidate.Type.SNAPSHOT;
+                }
+            }
+        }
+        return type;
+    }
+
+    public String incapableMsg() {
+        StringBuilder buf = new StringBuilder("OlapContext");
+        if (incapableInfo.getReason() != null) {
+            buf.append(", ").append(incapableInfo.getReason());
+        }
+        for (Set<IncapableInfo.Type> types : incapableInfo.getReasons().values()) {
+            types.forEach(type -> buf.append(", ").append(type));
+        }
+
+        buf.append(", ").append(firstTableScan);
+        joins.forEach(join -> buf.append(", ").append(join));
+        return buf.toString();
+    }
+
+    public String genExecFunc(OlapRel rel) {
         setReturnTupleInfo(rel.getRowType(), rel.getColumnRowType());
 
         if (isConstantQueryWithAggregations()) {
@@ -378,7 +458,7 @@ public class OlapContext {
         }
 
         // If the table being scanned is not a fact table, then it is a lookup table.
-        if (realization.getModel().isLookupTable(tableName)) {
+        if (this.getStorageContext().getLookupCandidate() != null) {
             return "executeLookupTableQuery";
         }
 
@@ -499,4 +579,26 @@ public class OlapContext {
         NDataModel model = df.getModel();
         return String.valueOf(model.getColumnIdByColumnName(colRef.getAliasDotName()));
     }
+
+    @Getter
+    public static class IncapableInfo {
+        private Type reason;
+        private final Map<NDataModel, Set<Type>> reasons = Maps.newHashMap();
+
+        public void addIncapableReason(Type reason) {
+            this.reason = reason;
+
+        }
+
+        public void addIncapableReason(NDataModel model, Type reason) {
+            reasons.putIfAbsent(model, new LinkedHashSet<>());
+            reasons.get(model).add(reason);
+        }
+
+        public enum Type {
+            MODEL_UNMATCHED_JOIN, //
+            BAD_OLAP_CONTEXT
+        }
+    }
+
 }

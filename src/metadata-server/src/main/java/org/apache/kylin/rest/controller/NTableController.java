@@ -437,6 +437,8 @@ public class NTableController extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
 
+
+
     @ApiOperation(value = "reloadHiveTableName", tags = { "AI" }, notes = "Update URL: table_name")
     @GetMapping(value = "/reload_hive_table_name")
     @ResponseBody

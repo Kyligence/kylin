@@ -18,28 +18,17 @@
 
 package org.apache.kylin.query.routing;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
-import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.metadata.cube.cuboid.NLookupCandidate;
-import org.apache.kylin.metadata.cube.model.IndexEntity;
-import org.apache.kylin.metadata.cube.model.LayoutEntity;
-import org.apache.kylin.metadata.cube.model.NDataLayout;
-import org.apache.kylin.metadata.cube.model.NDataSegDetails;
+import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
-import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.util.OlapContextTestUtil;
@@ -62,67 +51,6 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         Assert.assertEquals(result.getSelectedCandidate().getCost(), result.getCost(), 0.001);
     }
 
-    private void addTableIndexes(String modelId) {
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            NIndexPlanManager indexMgr = NIndexPlanManager.getInstance(getTestConfig(), getProject());
-            indexMgr.updateIndexPlan(modelId, copyForWrite -> {
-                IndexEntity index = new IndexEntity();
-                index.setMeasures(Lists.newArrayList());
-                index.setDimensions(ImmutableList.of(0, 1, 2, 3));
-                index.setId(IndexEntity.TABLE_INDEX_START_ID);
-                LayoutEntity layout = new LayoutEntity();
-                layout.setId(index.getId() + 1);
-                layout.setIndex(index);
-                layout.setColOrder(ImmutableList.of(0, 1, 2, 3));
-                layout.setBase(true);
-                layout.setUpdateTime(System.currentTimeMillis());
-                index.setLayouts(ImmutableList.of(layout));
-                index.setIndexPlan(copyForWrite);
-                copyForWrite.getIndexes().add(index);
-
-                IndexEntity otherIndex = new IndexEntity();
-                otherIndex.setMeasures(Lists.newArrayList());
-                otherIndex.setDimensions(ImmutableList.of(0, 1, 2));
-                otherIndex.setId(IndexEntity.TABLE_INDEX_START_ID + IndexEntity.INDEX_ID_STEP);
-                LayoutEntity otherLayout = new LayoutEntity();
-                otherLayout.setId(otherIndex.getId() + 1);
-                otherLayout.setIndex(otherIndex);
-                otherLayout.setColOrder(ImmutableList.of(0, 1, 2));
-                otherLayout.setBase(true);
-                otherLayout.setUpdateTime(System.currentTimeMillis());
-                otherIndex.setLayouts(ImmutableList.of(otherLayout));
-                otherIndex.setIndexPlan(copyForWrite);
-                copyForWrite.getIndexes().add(otherIndex);
-            });
-            return null;
-        }, getProject());
-    }
-
-    private void clearAndAddDesiredTableIndex(String modelId, Set<String> missingSegIds, long desiredLayoutId) {
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            NDataflowManager dfMgr = NDataflowManager.getInstance(getTestConfig(), getProject());
-            NDataflow df = dfMgr.getDataflow(modelId);
-            List<NDataLayout> toAddLayouts = Lists.newArrayList();
-            List<NDataLayout> toRemoveLayouts = Lists.newArrayList();
-            for (NDataSegment segment : df.getSegments()) {
-                NDataSegDetails segDetails = segment.getSegDetails();
-                toRemoveLayouts.addAll(segDetails.getAllLayouts());
-                if (!missingSegIds.contains(segment.getId())) {
-                    NDataLayout layout = NDataLayout.newDataLayout(segDetails, desiredLayoutId);
-                    layout.setRows(100);
-                    toAddLayouts.add(layout);
-                }
-            }
-
-            // update
-            NDataflowUpdate dataflowUpdate = new NDataflowUpdate(modelId);
-            dataflowUpdate.setToRemoveLayouts(toRemoveLayouts.toArray(new NDataLayout[0]));
-            dataflowUpdate.setToAddOrUpdateLayouts(toAddLayouts.toArray(new NDataLayout[0]));
-            dfMgr.updateDataflow(dataflowUpdate);
-            return null;
-        }, getProject());
-    }
-
     @Test
     public void testLookupMatch() throws SqlParseException {
         NDataflow dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
@@ -136,13 +64,10 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         {
             String sql = "select SITE_ID from EDW.TEST_SITES";
             OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
-            Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
-                    olapContext);
-            olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
-            Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
-            CapabilityResult result = DataflowCapabilityChecker.check(dataflow, candidate, olapContext.getSQLDigest());
+            NLayoutCandidate candidate = olapContext.getStorageContext().getBatchCandidate();
+            CapabilityResult result = candidate.getCapabilityResult();
             Assert.assertNotNull(result);
-            Assert.assertTrue(result.getSelectedCandidate() instanceof NLookupCandidate);
+            Assert.assertNotNull(olapContext.getStorageContext().getLookupCandidate());
             Assert.assertFalse(olapContext.getSQLDigest().getAllColumns().isEmpty());
             Assert.assertEquals(1, olapContext.getSQLDigest().getAllColumns().size());
         }
@@ -151,27 +76,37 @@ public class DataflowCapabilityCheckerTest extends NLocalWithSparkSessionTest {
         {
             String sql = "select sum(SITE_ID) from EDW.TEST_SITES";
             OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
-            Map<String, String> sqlAlias2ModelNameMap = OlapContextTestUtil.matchJoins(dataflow.getModel(),
-                    olapContext);
-            olapContext.fixModel(dataflow.getModel(), sqlAlias2ModelNameMap);
-            Candidate candidate = new Candidate(dataflow, olapContext, sqlAlias2ModelNameMap);
-            CapabilityResult result = DataflowCapabilityChecker.check(dataflow, candidate, olapContext.getSQLDigest());
+            NLayoutCandidate candidate = olapContext.getStorageContext().getBatchCandidate();
+            CapabilityResult result = candidate.getCapabilityResult();
             Assert.assertNotNull(result);
-            Assert.assertTrue(result.getSelectedCandidate() instanceof NLookupCandidate);
+            Assert.assertNotNull(olapContext.getStorageContext().getLookupCandidate());
             Assert.assertFalse(olapContext.getSQLDigest().getAllColumns().isEmpty());
             Assert.assertEquals(1, olapContext.getSQLDigest().getAllColumns().size());
         }
 
+        // case 3. can answer by snapshot when there are no ready segment
         {
-            // case 3. cannot answer when there are no ready segment
+            removeAllSegments(dataflow);
             String sql = "select sum(SITE_ID) from EDW.TEST_SITES";
             OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
-            removeAllSegments(dataflow);
-            dataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject())
-                    .getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
-            Candidate candidate = new Candidate(dataflow, olapContext, Maps.newHashMap());
-            CapabilityResult result = DataflowCapabilityChecker.check(dataflow, candidate, olapContext.getSQLDigest());
-            Assert.assertFalse(result.isCapable());
+            NLayoutCandidate candidate = olapContext.getStorageContext().getBatchCandidate();
+            CapabilityResult result = candidate.getCapabilityResult();
+            Assert.assertNotNull(result);
+            Assert.assertNotNull(olapContext.getStorageContext().getLookupCandidate());
+            Assert.assertFalse(olapContext.getSQLDigest().getAllColumns().isEmpty());
+            Assert.assertEquals(1, olapContext.getSQLDigest().getAllColumns().size());
+        }
+
+        // case 4. no snapshot
+        {
+            NTableMetadataManager.getInstance(dataflow.getConfig(), getProject()).updateTableDesc("EDW.TEST_SITES",
+                    copyForWrite -> copyForWrite.setLastSnapshotPath(""));
+            String sql = "select sum(SITE_ID) from EDW.TEST_SITES";
+            OlapContext olapContext = OlapContextTestUtil.getOlapContexts(getProject(), sql).get(0);
+            NLayoutCandidate candidate = olapContext.getStorageContext().getBatchCandidate();
+            CapabilityResult result = candidate.getCapabilityResult();
+            Assert.assertNotNull(result);
+            Assert.assertNull(olapContext.getStorageContext().getLookupCandidate());
         }
     }
 

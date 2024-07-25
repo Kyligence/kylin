@@ -1638,6 +1638,18 @@ public class ModelService extends AbstractModelService
         }, project);
     }
 
+    public void mergeMetadataForLoadingInternalTable(String project, MergerInfo mergerInfo) {
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            MetadataMerger merger = MetadataMerger.createMetadataMerger(project, mergerInfo.getHandlerType());
+
+            List<MergerInfo.TaskMergeInfo> infoList = mergerInfo.getTaskMergeInfoList();
+            Preconditions.checkArgument(infoList.size() == 1);
+
+            merger.merge(infoList.get(0));
+            return null;
+        }, project);
+    }
+
     public List<NDataLayout[]> mergeMetadata(String project, MergerInfo mergerInfo) {
         return EnhancedUnitOfWork
                 .doInTransactionWithCheckAndRetry(UnitOfWorkParams.<List<NDataLayout[]>> builder().processor(() -> {
@@ -3360,7 +3372,7 @@ public class ModelService extends AbstractModelService
     public List<ModelConfigResponse> getModelConfig(String project, String modelName) {
         aclEvaluate.checkProjectReadPermission(project);
         val responseList = Lists.<ModelConfigResponse> newArrayList();
-        boolean streamingEnabled = getConfig().streamingEnabled();
+        boolean streamingEnabled = getConfig().isStreamingEnabled();
         getManager(NDataflowManager.class, project).listUnderliningDataModels().stream()
                 .filter(model -> (StringUtils.isEmpty(modelName) || model.getAlias().contains(modelName)))
                 .filter(model -> model.isAccessible(streamingEnabled) && !model.fusionModelBatchPart())

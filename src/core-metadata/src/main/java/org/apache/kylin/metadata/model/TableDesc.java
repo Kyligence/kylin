@@ -32,9 +32,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.MetadataType;
-import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.util.Pair;
-import org.apache.kylin.common.util.StringSplitter;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -42,13 +40,12 @@ import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
 import org.apache.kylin.metadata.streaming.KafkaConfigManager;
+import org.apache.kylin.metadata.table.ATable;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
-import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -59,7 +56,7 @@ import lombok.Setter;
  * Table Metadata from Source. All name should be uppercase.
  */
 @JsonAutoDetect(fieldVisibility = Visibility.NONE, getterVisibility = Visibility.NONE, isGetterVisibility = Visibility.NONE, setterVisibility = Visibility.NONE)
-public class TableDesc extends RootPersistentEntity implements Serializable, ISourceAware {
+public class TableDesc extends ATable implements Serializable, ISourceAware {
 
     public static final String TABLE_TYPE_VIEW = "VIEW";
     public static final long NOT_READY = -1;
@@ -89,18 +86,16 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
 
     // ============================================================================
 
-    private String name;
-
-    @Getter
-    @Setter
-    @JsonProperty("columns")
-    private ColumnDesc[] columns;
-
     @JsonProperty("source_type")
     private int sourceType = ISourceAware.ID_HIVE;
 
     @JsonProperty("table_type")
     private String tableType;
+
+    @Getter
+    @Setter
+    @JsonProperty("has_Internal")
+    private Boolean hasInternal = false;
 
     //Sticky table
     @Getter
@@ -178,8 +173,6 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
     @JsonProperty("snapshot_has_broken")
     private boolean snapshotHasBroken;
 
-    private final DatabaseDesc database = new DatabaseDesc();
-    private String identity = null;
     private KafkaConfig kafkaConfig;
 
     @Setter
@@ -210,6 +203,7 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
         this.lastModified = other.lastModified;
         this.createTime = other.createTime;
         this.name = other.name;
+        this.hasInternal = other.hasInternal;
         this.sourceType = other.sourceType;
         this.tableType = other.tableType;
         this.dataGen = other.dataGen;
@@ -246,15 +240,6 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
      */
     public boolean isAccessible(boolean turnOnStreaming) {
         return turnOnStreaming || getSourceType() != ID_STREAMING;
-    }
-
-    @Override
-    public String resourceName() {
-        return generateResourceName(getProject(), getIdentity());
-    }
-
-    public static String generateResourceName(String project, String identity) {
-        return project + "." + identity;
     }
 
     @Override
@@ -319,16 +304,6 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
         return null;
     }
 
-    public String getIdentity() {
-        String originIdentity = getCaseSensitiveIdentity();
-        return originIdentity.toUpperCase(Locale.ROOT);
-    }
-
-    public String getLowerCaseIdentity() {
-        String originIdentity = getCaseSensitiveIdentity();
-        return originIdentity.toLowerCase(Locale.ROOT);
-    }
-
     public String getBackTickIdentity() {
         return getBackTickCaseSensitiveIdentity("");
     }
@@ -350,18 +325,6 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
         return getBackTickTransactionalTableIdentity(suffix);
     }
 
-    public String getCaseSensitiveIdentity() {
-        if (identity == null) {
-            if (this.getCaseSensitiveDatabase().equals("null")) {
-                identity = String.format(Locale.ROOT, "%s", this.getCaseSensitiveName());
-            } else {
-                identity = String.format(Locale.ROOT, "%s.%s", this.getCaseSensitiveDatabase(),
-                        this.getCaseSensitiveName());
-            }
-        }
-        return identity;
-    }
-
     private String getBackTickCaseSensitiveIdentity(String suffix) {
         return "null".equals(this.getCaseSensitiveDatabase())
                 ? String.format(Locale.ROOT, "`%s`", this.getCaseSensitiveName())
@@ -378,53 +341,6 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
 
     public boolean isView() {
         return StringUtils.containsIgnoreCase(tableType, TABLE_TYPE_VIEW);
-    }
-
-    public String getProject() {
-        return project;
-    }
-
-    public void setProject(String project) {
-        this.project = project;
-    }
-
-    public String getName() {
-        return name == null ? null : name.toUpperCase(Locale.ROOT);
-    }
-
-    @JsonGetter("name")
-    public String getCaseSensitiveName() {
-        return this.name;
-    }
-
-    @JsonSetter("name")
-    public void setName(String name) {
-        if (name != null) {
-            String[] splits = StringSplitter.split(name, ".");
-            if (splits.length == 2) {
-                this.setDatabase(splits[0]);
-                this.name = splits[1];
-            } else if (splits.length == 1) {
-                this.name = splits[0];
-            }
-            identity = null;
-        } else {
-            this.name = null;
-        }
-    }
-
-    public String getDatabase() {
-        return database.getName().toUpperCase(Locale.ROOT);
-    }
-
-    @JsonGetter("database")
-    public String getCaseSensitiveDatabase() {
-        return database.getName();
-    }
-
-    @JsonSetter("database")
-    public void setDatabase(String database) {
-        this.database.setName(database);
     }
 
     public int getMaxColumnIndex() {
@@ -456,20 +372,9 @@ public class TableDesc extends RootPersistentEntity implements Serializable, ISo
         return snapshotLastModified;
     }
 
+    @Override
     public void init(String project) {
-        this.project = project;
-
-        if (columns != null) {
-            Arrays.sort(columns, (col1, col2) -> {
-                Integer id1 = Integer.parseInt(col1.getId());
-                Integer id2 = Integer.parseInt(col2.getId());
-                return id1.compareTo(id2);
-            });
-
-            for (ColumnDesc col : columns) {
-                col.init(this);
-            }
-        }
+        super.init(project);
         if (sourceType == ISourceAware.ID_STREAMING) {
             kafkaConfig = KafkaConfigManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
                     .getKafkaConfig(this.getIdentity());

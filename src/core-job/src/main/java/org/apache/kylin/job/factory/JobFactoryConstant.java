@@ -28,19 +28,12 @@ public class JobFactoryConstant {
     public static final String META_JOB_FACTORY = "META_JOB_FACTORY";
     public static final String SOURCE_USAGE_JOB_FACTORY = "SOURCE_USAGE_JOB_FACTORY";
     public static final String AUTO_REFRESH_JOB_FACTORY = "AUTO_REFRESH_JOB_FACTORY";
-    public static final String LOW_CARDINALITY_JOB_FACTORY = "LOW_CARDINALITY_JOB_FACTORY";
-    public static final String TEMP_TABLE_CLEAN_JOB_FACTORY = "TEMP_TABLE_CLEAN_JOB_FACTORY";
 
     public static final String CUBE_JOB_FACTORY = "CUBE_JOB_FACTORY";
     public static final String MERGE_JOB_FACTORY = "MERGE_JOB_FACTORY";
     public static final String TABLE_SAMPLING_JOB_FACTORY = "TABLE_SAMPLING_JOB_FACTORY";
     public static final String SNAPSHOT_JOB_FACTORY = "SNAPSHOT_JOB_FACTORY";
-    public static final String STORAGE_JOB_FACTORY = "STORAGE_JOB_FACTORY";
-    public static final String STORAGE_NODE_CLEAN_FACTORY = "STORAGE_NODE_CLEAN_FACTORY";
-    public static final String STORAGE_MODEL_CLEAN_FACTORY = "STORAGE_MODEL_CLEAN_FACTORY";
-    public static final String STORAGE_SEGMENT_CLEAN_FACTORY = "STORAGE_SEGMENT_CLEAN_FACTORY";
-    public static final String STORAGE_INDEX_CLEAN_FACTORY = "STORAGE_INDEX_CLEAN_FACTORY";
-    public static final String STORAGE_REFRESH_SECONDARY_INDEXES_FACTORY = "STORAGE_REFRESH_SECONDARY_INDEXES_FACTORY";
     public static final String LAYOUT_DATA_OPTIMIZE_JOB_FACTORY = "OPTIMIZE_JOB_FACTORY";
+    public static final String INTERNAL_TABLE_JOB_FACTORY = "INTERNAL_TABLE_JOB_FACTORY";
 
 }

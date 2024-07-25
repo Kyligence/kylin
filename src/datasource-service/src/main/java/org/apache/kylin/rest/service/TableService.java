@@ -178,13 +178,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import io.kyligence.kap.metadata.recommendation.ref.OptRecManagerV2;
 import lombok.val;
 import lombok.var;
 
-@Component("tableService")
+@Service("tableService")
 public class TableService extends BasicService {
 
     private static final Logger logger = LoggerFactory.getLogger(TableService.class);
@@ -225,6 +225,8 @@ public class TableService extends BasicService {
 
     @Autowired
     private ClusterManager clusterManager;
+    @Autowired
+    private InternalTableService internalTableService;
 
     public Pair<List<TableDesc>, Integer> getTableDesc(String project, boolean withExt, final String table,
             final String database, boolean isFuzzy, List<Integer> sourceType, int returnTableSize) throws IOException {
@@ -236,7 +238,7 @@ public class TableService extends BasicService {
     public Pair<List<TableDesc>, Integer> getTableDesc(TableDescRequest tableDescRequest, int returnTableSize)
             throws IOException {
         aclEvaluate.checkProjectReadPermission(tableDescRequest.getProject());
-        boolean streamingEnabled = getConfig().streamingEnabled();
+        boolean streamingEnabled = getConfig().isStreamingEnabled();
         NTableMetadataManager nTableMetadataManager = getManager(NTableMetadataManager.class,
                 tableDescRequest.getProject());
         List<TableDesc> tables = Lists.newArrayList();
@@ -264,7 +266,7 @@ public class TableService extends BasicService {
                 if (!sourceTypes.isEmpty()) {
                     return sourceTypes.contains(tableDesc.getSourceType())
                             || sourceTypes.stream().flatMap(st -> getConfig().getSourceProviderFamily(st).stream())
-                            .collect(Collectors.toList()).contains(tableDesc.getSourceType());
+                                    .collect(Collectors.toList()).contains(tableDesc.getSourceType());
                 }
                 return true;
             }).filter(table -> table.isAccessible(streamingEnabled)).sorted(this::compareTableDesc)
@@ -286,76 +288,60 @@ public class TableService extends BasicService {
     }
 
     @Transaction(project = 2)
-    public String[] loadTableToProject(TableDesc tableDesc, TableExtDesc extDesc, String project) {
-        return loadTablesToProject(Lists.newArrayList(Pair.newPair(tableDesc, extDesc)), project);
-    }
-
-    private String[] loadTablesToProject(List<Pair<TableDesc, TableExtDesc>> allMeta, String project) {
+    public String loadTableToProject(TableDesc tableDesc, TableExtDesc extDesc, String project) {
         final NTableMetadataManager tableMetaMgr = getManager(NTableMetadataManager.class, project);
-        // save table meta
-        List<String> saved = Lists.newArrayList();
         Set<TableExtDesc.RoleCredentialInfo> broadcastConf = new HashSet<>();
-        for (Pair<TableDesc, TableExtDesc> pair : allMeta) {
-            TableDesc tableDesc = pair.getFirst();
-            TableExtDesc extDesc = pair.getSecond();
-            TableDesc origTable = tableMetaMgr.getTableDesc(tableDesc.getIdentity());
-            val nTableDesc = new TableDesc(tableDesc);
-            if (origTable == null || origTable.getProject() == null) {
-                nTableDesc.setUuid(RandomUtil.randomUUIDStr());
-                nTableDesc.setLastModified(0);
-                tableMetaMgr.saveSourceTable(nTableDesc);
-            } else {
-                tableMetaMgr.updateTableDesc(nTableDesc.getIdentity(), copyForWrite -> {
-                    nTableDesc.copyPropertiesTo(copyForWrite);
 
-                    copyForWrite.setUuid(origTable.getUuid());
-                    copyForWrite.setLastModified(origTable.getLastModified());
-                    copyForWrite.setIncrementLoading(origTable.isIncrementLoading());
-                    copyForWrite.setTableComment(tableDesc.getTableComment());
+        TableDesc origTable = tableMetaMgr.getTableDesc(tableDesc.getIdentity());
+        val nTableDesc = new TableDesc(tableDesc);
+        if (origTable == null || origTable.getProject() == null) {
+            nTableDesc.setUuid(RandomUtil.randomUUIDStr());
+            nTableDesc.setLastModified(0);
+            tableMetaMgr.saveSourceTable(nTableDesc);
+        } else {
+            tableMetaMgr.updateTableDesc(nTableDesc.getIdentity(), copyForWrite -> {
+                nTableDesc.copyPropertiesTo(copyForWrite);
+                copyForWrite.setUuid(origTable.getUuid());
+                copyForWrite.setLastModified(origTable.getLastModified());
+                copyForWrite.setIncrementLoading(origTable.isIncrementLoading());
+                copyForWrite.setTableComment(tableDesc.getTableComment());
+            });
+        }
+        if (extDesc != null) {
+            val colNameMap = Stream.of(nTableDesc.getColumns()).collect(Collectors.toMap(ColumnDesc::getName, col -> {
+                try {
+                    return Integer.parseInt(col.getId());
+                } catch (NumberFormatException e) {
+                    return Integer.MAX_VALUE;
+                }
+            }));
+            TableExtDesc origExt = tableMetaMgr.getTableExtIfExists(tableDesc);
+            TableExtDesc nTableExtDesc = new TableExtDesc(extDesc);
+            if (origExt == null || origExt.getProject() == null) {
+                nTableExtDesc.setUuid(RandomUtil.randomUUIDStr());
+                nTableExtDesc.setLastModified(0);
+                nTableExtDesc.getAllColumnStats()
+                        .sort(Comparator.comparing(stat -> colNameMap.getOrDefault(stat.getColumnName(), -1)));
+                nTableExtDesc.init(project);
+                tableMetaMgr.saveTableExt(nTableExtDesc);
+            } else {
+                tableMetaMgr.updateTableExt(nTableExtDesc.getIdentity(), copyForWrite -> {
+                    nTableExtDesc.copyPropertiesTo(copyForWrite);
+                    copyForWrite.setUuid(origExt.getUuid());
+                    copyForWrite.setLastModified(origExt.getLastModified());
+                    copyForWrite.setMvcc(origExt.getMvcc());
+                    copyForWrite.setOriginalSize(origExt.getOriginalSize());
+                    copyForWrite.getAllColumnStats()
+                            .sort(Comparator.comparing(stat -> colNameMap.getOrDefault(stat.getColumnName(), -1)));
+                    copyForWrite.init(project);
                 });
             }
-
-            if (extDesc != null) {
-                val colNameMap = Stream.of(nTableDesc.getColumns())
-                        .collect(Collectors.toMap(ColumnDesc::getName, col -> {
-                            try {
-                                return Integer.parseInt(col.getId());
-                            } catch (NumberFormatException e) {
-                                return Integer.MAX_VALUE;
-                            }
-                        }));
-
-                TableExtDesc origExt = tableMetaMgr.getTableExtIfExists(tableDesc);
-                TableExtDesc nTableExtDesc = new TableExtDesc(extDesc);
-                if (origExt == null || origExt.getProject() == null) {
-                    nTableExtDesc.setUuid(RandomUtil.randomUUIDStr());
-                    nTableExtDesc.setLastModified(0);
-                    nTableExtDesc.getAllColumnStats()
-                            .sort(Comparator.comparing(stat -> colNameMap.getOrDefault(stat.getColumnName(), -1)));
-                    nTableExtDesc.init(project);
-                    tableMetaMgr.saveTableExt(nTableExtDesc);
-                } else {
-                    tableMetaMgr.updateTableExt(nTableExtDesc.getIdentity(), copyForWrite -> {
-                        nTableExtDesc.copyPropertiesTo(copyForWrite);
-
-                        copyForWrite.setUuid(origExt.getUuid());
-                        copyForWrite.setLastModified(origExt.getLastModified());
-                        copyForWrite.setMvcc(origExt.getMvcc());
-                        copyForWrite.setOriginalSize(origExt.getOriginalSize());
-                        copyForWrite.getAllColumnStats()
-                                .sort(Comparator.comparing(stat -> colNameMap.getOrDefault(stat.getColumnName(), -1)));
-                        copyForWrite.init(project);
-                    });
-                }
-                if (!broadcastConf.contains(extDesc.getRoleCredentialInfo())) {
-                    addAndBroadcastSparkSession(extDesc.getRoleCredentialInfo());
-                    broadcastConf.add(extDesc.getRoleCredentialInfo());
-                }
+            if (!broadcastConf.contains(extDesc.getRoleCredentialInfo())) {
+                addAndBroadcastSparkSession(extDesc.getRoleCredentialInfo());
+                broadcastConf.add(extDesc.getRoleCredentialInfo());
             }
-
-            saved.add(tableDesc.getIdentity());
         }
-        return saved.toArray(new String[0]);
+        return tableDesc.getIdentity();
     }
 
     public List<Pair<TableDesc, TableExtDesc>> extractTableMeta(String[] tables, String project) {
@@ -525,8 +511,7 @@ public class TableService extends BasicService {
             // Table source type conversion
             sourceTypesRequest.stream()
                     .filter(stq -> getConfig().getSourceProviderFamily(stq).contains(originTable.getSourceType()))
-                    .findFirst()
-                    .ifPresent(tableDescResponse::setSourceType);
+                    .findFirst().ifPresent(tableDescResponse::setSourceType);
 
             descs.add(tableDescResponse);
             satisfiedTableSize++;
@@ -619,7 +604,7 @@ public class TableService extends BasicService {
         long size = 0;
         for (val model : models) {
             val df = dfManger.getDataflow(model.getUuid());
-            if(df==null){
+            if (df == null) {
                 logger.warn("cannot get model size  {} of {}（might be deleted） ", model.getAlias(), project);
                 continue;
             }
@@ -641,7 +626,7 @@ public class TableService extends BasicService {
         Set<String> foreignKey = new HashSet<>();
         for (val model : modelsUsingTable) {
             var dataMode = dataModelManager.getDataModelDesc(model.getUuid());
-            if(dataMode==null){
+            if (dataMode == null) {
                 continue;
             }
             val joinTables = dataMode.getJoinTables();
@@ -795,6 +780,10 @@ public class TableService extends BasicService {
     }
 
     public void unloadTable(String project, String tableIdentity) {
+        NTableMetadataManager tableMetadataManager = getManager(NTableMetadataManager.class, project);
+        if (tableMetadataManager.getTableDesc(tableIdentity).getHasInternal()) {
+            internalTableService.dropInternalTable(project, tableIdentity);
+        }
         getManager(NTableMetadataManager.class, project).removeTableExt(tableIdentity);
         getManager(NTableMetadataManager.class, project).removeSourceTable(tableIdentity);
         KafkaConfigManager kafkaConfigManager = getManager(KafkaConfigManager.class, project);
@@ -1144,6 +1133,7 @@ public class TableService extends BasicService {
                 jobs.add(jobId);
             }
         }
+        internalTableService.reloadInternalTableSchema(projectName, tableIdentity);
 
         mergeTable(projectName, context, false);
         return jobs;
@@ -1642,7 +1632,7 @@ public class TableService extends BasicService {
         NTableMetadataManager tableManager = getManager(NTableMetadataManager.class, project);
         List<TableDesc> tables = tableManager.listAllTables();
         Set<String> loadedDatabases = new HashSet<>();
-        boolean streamingEnabled = getConfig().streamingEnabled();
+        boolean streamingEnabled = getConfig().isStreamingEnabled();
         tables.stream().filter(table -> table.isAccessible(streamingEnabled))
                 .forEach(table -> loadedDatabases.add(table.getDatabase()));
         return loadedDatabases;

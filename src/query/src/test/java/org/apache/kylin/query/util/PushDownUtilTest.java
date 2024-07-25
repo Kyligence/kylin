@@ -140,7 +140,7 @@ class PushDownUtilTest extends AbstractTestCase {
     void testMassagePushDownSqlWithDoubleQuote() {
         KylinConfig config = KylinConfig.createKylinConfig(new Properties());
         String sql = "select '''',trans_id from test_kylin_fact where LSTG_FORMAT_NAME like '%''%' group by trans_id limit 2;";
-        QueryParams queryParams = new QueryParams("", sql, "default", false);
+        QueryParams queryParams = new QueryParams("default", sql, "default", false);
         queryParams.setKylinConfig(config);
         String massagedSql = PushDownUtil.massagePushDownSql(queryParams);
         String expectedSql = "select '\\'', `TRANS_ID` from `TEST_KYLIN_FACT` where `LSTG_FORMAT_NAME` like '%\\'%' group by `TRANS_ID` limit 2";

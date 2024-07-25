@@ -83,7 +83,8 @@ public class OlapRelUtil {
                 .getModelsGroupbyTable();
         CalciteSchema rootSchema = CalciteSchema.createRootSchema(true);
         schemasMap.forEach((schemaName, list) -> {
-            OlapSchema olapSchema = new OlapSchema(project, schemaName, schemasMap.get(schemaName), modelsMap);
+            OlapSchema olapSchema = new OlapSchema(kylinConfig, project, schemaName, schemasMap.get(schemaName),
+                    modelsMap);
             CalciteSchema schema = rootSchema.add(schemaName, olapSchema);
             for (Map.Entry<String, Function> entry : UdfRegistry.allUdfMap.entries()) {
                 schema.plus().add(entry.getKey().toUpperCase(Locale.ROOT), entry.getValue());

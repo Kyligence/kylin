@@ -42,6 +42,7 @@ public class QueryMetrics extends SchedulerEventNotifier {
     public static final String AGG_INDEX = "Agg Index";
     public static final String TABLE_INDEX = "Table Index";
     public static final String TABLE_SNAPSHOT = "Table Snapshot";
+    public static final String INTERNAL_TABLE = "Internal Table";
     public static final String TOTAL_SCAN_COUNT = "totalScanCount";
     public static final String TOTAL_SCAN_BYTES = "totalScanBytes";
     public static final String SOURCE_RESULT_COUNT = "sourceResultCount";

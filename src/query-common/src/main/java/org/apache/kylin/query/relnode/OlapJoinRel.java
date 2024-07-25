@@ -202,7 +202,7 @@ public class OlapJoinRel extends EnumerableHashJoin implements OlapRel {
      */
     @Override
     public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
-        String execFunc = context.genExecFunc(this, "");
+        String execFunc = context.genExecFunc(this);
         PhysType physType = PhysTypeImpl.of(implementor.getTypeFactory(), getRowType(), pref.preferArray());
         RelOptTable factTable = context.getFirstTableScan().getTable();
         MethodCallExpression exprCall = Expressions.call(

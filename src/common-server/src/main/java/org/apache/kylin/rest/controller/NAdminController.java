@@ -119,7 +119,7 @@ public class NAdminController extends NBasicController {
 
     private String addPropertyWithKylinInfoCheck() {
         Properties properties = new Properties();
-        properties.put("kylin.streaming.enabled", KylinConfig.getInstanceFromEnv().streamingEnabled());
+        properties.put("kylin.streaming.enabled", KylinConfig.getInstanceFromEnv().isStreamingEnabled());
         return getPropertyString(properties);
     }
 }

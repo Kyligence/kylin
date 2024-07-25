@@ -65,8 +65,9 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID    \n" + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
         List<OlapContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getBatchCandidate().getLayoutId(), 0);
+        Assert.assertEquals("DEFAULT.KYLIN_CATEGORY_GROUPINGS",
+                contexts.get(1).getStorageContext().getLookupCandidate().getTable());
     }
 
     @Test
@@ -77,8 +78,9 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID    \n" + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
         List<OlapContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getBatchCandidate().getLayoutId(), 0);
+        Assert.assertEquals("DEFAULT.KYLIN_CATEGORY_GROUPINGS",
+                contexts.get(1).getStorageContext().getLookupCandidate().getTable());
     }
 
     @Test
@@ -91,9 +93,11 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID,kcg2.CATEG_LVL3_ID  \n"
                 + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
         List<OlapContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
-        Assert.assertEquals("model_snapshot", contexts.get(2).getRealization().getModel().getAlias());
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getBatchCandidate().getLayoutId(), 0);
+        Assert.assertEquals("DEFAULT.KYLIN_CATEGORY_GROUPINGS",
+                contexts.get(1).getStorageContext().getLookupCandidate().getTable());
+        Assert.assertEquals("DEFAULT.KYLIN_CATEGORY_GROUPINGS",
+                contexts.get(2).getStorageContext().getLookupCandidate().getTable());
     }
 
     @Test
@@ -105,10 +109,12 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID    \n" + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
         List<OlapContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
-        Assert.assertEquals(1L, contexts.get(2).getStorageContext().getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(3).getRealization().getModel().getAlias());
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getBatchCandidate().getLayoutId(), 0);
+        Assert.assertEquals("DEFAULT.KYLIN_CATEGORY_GROUPINGS",
+                contexts.get(1).getStorageContext().getLookupCandidate().getTable());
+        Assert.assertEquals(1L, contexts.get(2).getStorageContext().getBatchCandidate().getLayoutId(), 0);
+        Assert.assertEquals("DEFAULT.KYLIN_CATEGORY_GROUPINGS",
+                contexts.get(3).getStorageContext().getLookupCandidate().getTable());
     }
 
     @Test
@@ -122,10 +128,12 @@ public class EnhancedAggPushDownTest extends NLocalWithSparkSessionTest {
                 + "inner join KYLIN_CATEGORY_GROUPINGS as kcg on TEST_KYLIN_FACT.LEAF_CATEG_ID = kcg.LEAF_CATEG_ID \n"
                 + "group by SELLER_ID,kcg.CATEG_LVL3_ID      \n" + "order by SELLER_ID,kcg.CATEG_LVL3_ID desc limit 9";
         List<OlapContext> contexts = executeSql(sql);
-        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(1).getRealization().getModel().getAlias());
-        Assert.assertEquals(1L, contexts.get(2).getStorageContext().getLayoutId(), 0);
-        Assert.assertEquals("model_snapshot", contexts.get(3).getRealization().getModel().getAlias());
+        Assert.assertEquals(1L, contexts.get(0).getStorageContext().getBatchCandidate().getLayoutId(), 0);
+        Assert.assertEquals("DEFAULT.KYLIN_CATEGORY_GROUPINGS",
+                contexts.get(1).getStorageContext().getLookupCandidate().getTable());
+        Assert.assertEquals(1L, contexts.get(2).getStorageContext().getBatchCandidate().getLayoutId(), 0);
+        Assert.assertEquals("DEFAULT.KYLIN_CATEGORY_GROUPINGS",
+                contexts.get(3).getStorageContext().getLookupCandidate().getTable());
     }
 
     private List<OlapContext> executeSql(String sql) {

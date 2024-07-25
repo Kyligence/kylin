@@ -114,7 +114,7 @@ public class KylinTableChooserRule extends PruningRule {
     private CapabilityResult getCapabilityResult(Candidate candidate) {
         IRealization realization = candidate.getRealization();
         SQLDigest sqlDigest = candidate.getCtx().getSQLDigest();
-        CapabilityResult capability = check((NDataflow) realization, candidate, sqlDigest);
+        CapabilityResult capability = check((NDataflow) realization, candidate.getCtx(), sqlDigest);
 
         // The matching process may modify the dimensions and measures info of the  OlapContext,
         // so we need these properties to be recorded in the candidate's rewrittenCtx. It is important
@@ -123,7 +123,7 @@ public class KylinTableChooserRule extends PruningRule {
         return capability;
     }
 
-    public CapabilityResult check(NDataflow dataflow, Candidate candidate, SQLDigest digest) {
+    public CapabilityResult check(NDataflow dataflow, OlapContext olapContext, SQLDigest digest) {
         logMatchingLayout(dataflow, digest);
         CapabilityResult result = new CapabilityResult();
 
@@ -145,7 +145,7 @@ public class KylinTableChooserRule extends PruningRule {
                 log.info("Matched table {} snapshot in dataflow {} ", factTableOfQuery, dataflow);
             }
         } else {
-            NLayoutCandidate candidateAndInfluence = matchNormalDataflow(dataflow, digest, candidate.ctx);
+            NLayoutCandidate candidateAndInfluence = matchNormalDataflow(dataflow, digest, olapContext);
             if (candidateAndInfluence != null) {
                 chosenCandidate = candidateAndInfluence;
                 result.influences.addAll(candidateAndInfluence.getCapabilityResult().influences);
@@ -309,7 +309,7 @@ public class KylinTableChooserRule extends PruningRule {
             SQLDigest sqlDigest, OlapContext ctx) {
         if (CollectionUtils.isEmpty(fragments)) {
             log.info("There is no data range to answer sql");
-            return NLayoutCandidate.EMPTY;
+            return NLayoutCandidate.ofEmptyCandidate();
         }
 
         ChooserContext chooserContext = new ChooserContext(sqlDigest, dataflow);
@@ -349,7 +349,7 @@ public class KylinTableChooserRule extends PruningRule {
         CapabilityResult tempResult = new CapabilityResult(matchResult);
         if (!matchResult.getNeedDerive().isEmpty()) {
             candidate.setDerivedToHostMap(matchResult.getNeedDerive());
-            candidate.setDerivedTableSnapshots(candidate.getDerivedToHostMap().keySet().stream()
+            candidate.setDerivedLookups(candidate.getDerivedToHostMap().keySet().stream()
                     .map(i -> chooserContext.convertToRef(i).getTable()).collect(Collectors.toSet()));
         }
         long size = pair.getSecond().getSizeInBytes();
@@ -380,7 +380,10 @@ public class KylinTableChooserRule extends PruningRule {
             result.incapableCause = CapabilityResult.IncapableCause.unmatchedDimensions(unmatchedCols);
             return null;
         } else {
-            return new NLookupCandidate(digest.getFactTable(), true);
+            NLookupCandidate.Type type = dataflow.getConfig().isInternalTableEnabled()
+                    ? NLookupCandidate.Type.INTERNAL_TABLE
+                    : NLookupCandidate.Type.SNAPSHOT;
+            return new NLookupCandidate(digest.getFactTable(), type);
         }
     }
 

@@ -49,8 +49,13 @@ public class SQLResponse implements Serializable {
     // the data type for each column
     private List<SelectedColumnMeta> columnMetas;
 
-    // the results rows, each row contains several columns
+    // the result rows, each row contains several columns
     private Iterable<List<String>> results;
+
+    @JsonProperty("query_plan")
+    private QueryContext.QueryPlan queryPlan;
+    @JsonProperty("is_explain")
+    private boolean isExplain;
 
     // if not select query, only return affected row count
     protected int affectedRowCount;
@@ -78,8 +83,6 @@ public class SQLResponse implements Serializable {
 
     private String appMasterURL = "";
 
-    @Getter
-    @Setter
     protected int failTimes = -1;
 
     @JsonProperty("appMasterURL")
@@ -153,6 +156,7 @@ public class SQLResponse implements Serializable {
     private String executedPlan;
 
     private boolean isBigQuery = false;
+
     public SQLResponse() {
         this(new LinkedList<>(), new LinkedList<>(), 0, false, null);
     }

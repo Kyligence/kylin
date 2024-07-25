@@ -28,6 +28,8 @@ import org.apache.kylin.rest.request.DataFlowUpdateRequest;
 public interface MetadataContract {
     void mergeMetadataForSamplingOrSnapshot(String project, MergerInfo mergerInfo);
 
+    void mergeMetadataForLoadingInternalTable(String project, MergerInfo mergerInfo);
+
     List<NDataLayout[]> mergeMetadata(String project, MergerInfo mergerInfo);
 
     void makeSegmentReady(String project, String modelId, String segmentId, int errorOrPausedJobCount);

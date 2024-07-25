@@ -153,7 +153,7 @@ public class QueryCacheSignatureUtil {
         Long layoutId = realization.getLayoutId();
         try {
             val dataflow = NDataflowManager.getInstance(kylinConfig, project).getDataflow(modelId);
-            if (dataflow.getStatus().toString().equals("OFFLINE")) {
+            if (dataflow == null || dataflow.getStatus().toString().equals("OFFLINE")) {
                 return "";
             }
             List<Long> allLayoutTimes = Lists.newLinkedList();

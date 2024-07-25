@@ -111,7 +111,7 @@ public class PartitionPruningRule extends PruningRule {
             log.info("there is no sub-partitions to answer sql");
             CapabilityResult capability = new CapabilityResult();
             capability.setCapable(true);
-            capability.setSelectedCandidate(NLayoutCandidate.EMPTY);
+            capability.setSelectedCandidate(NLayoutCandidate.ofEmptyCandidate());
             candidate.setCapability(capability);
             return;
         }

@@ -49,7 +49,12 @@ public class NSparkCubingSourceInput implements NSparkCubingEngine.NSparkCubingS
 
     @Override
     public Dataset<Row> getSourceData(TableDesc table, SparkSession ss, Map<String, String> params) {
-        KylinConfig kylinConfig = KylinBuildEnv.get().kylinConfig();
+        KylinConfig kylinConfig = null;
+        if(null == KylinBuildEnv.get()){
+            kylinConfig = KylinConfig.getInstanceFromEnv();
+        }else{
+            kylinConfig = KylinBuildEnv.get().kylinConfig();
+        }
         logger.info("isRangePartition:{};isTransactional:{};isReadTransactionalTableEnabled:{}",
                 table.isRangePartition(), table.isTransactional(), kylinConfig.isReadTransactionalTableEnabled());
 

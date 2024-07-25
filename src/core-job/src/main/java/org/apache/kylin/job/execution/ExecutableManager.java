@@ -1740,6 +1740,15 @@ public class ExecutableManager {
         job.cancelJob();
     }
 
+    public void suicideRunningJobByJobType(String project, String targetModelId, List<String> jobType) {
+        List<JobInfo> existingJobs = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project)
+                .fetchNotFinalJobsByTypes(project, jobType, Lists.newArrayList(targetModelId));
+        ExecutableManager execMgr = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        if (CollectionUtils.isNotEmpty(existingJobs)) {
+            existingJobs.forEach(jobInfo -> execMgr.suicideJob(jobInfo.getJobId()));
+        }
+    }
+
     public void checkSuicideJobOfModel(String project, String modelId) {
         JobMapperFilter jobMapperFilter = new JobMapperFilter();
         jobMapperFilter.setProject(project);

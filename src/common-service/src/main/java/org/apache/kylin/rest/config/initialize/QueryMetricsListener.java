@@ -20,6 +20,7 @@ package org.apache.kylin.rest.config.initialize;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
@@ -32,6 +33,7 @@ import org.apache.kylin.common.metrics.prometheus.PrometheusMetrics;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.eventbus.Subscribe;
+import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryMetrics;
@@ -107,12 +109,10 @@ public class QueryMetricsListener {
         }
 
         if (queryMetric.isIndexHit()) {
-            DistributionSummary.builder(PrometheusMetrics.QUERY_SCAN_BYTES.getValue())
-                    .tags(MetricsTag.MODEL.getVal(),
-                            queryMetric.getRealizationMetrics().stream()
-                                    .map(e -> modelManager.getDataModelDesc(e.getModelId()).getAlias())
-                                    .collect(Collectors.joining(",")),
-                            MetricsTag.PROJECT.getVal(), queryMetric.getProjectName())
+            DistributionSummary.builder(PrometheusMetrics.QUERY_SCAN_BYTES.getValue()).tags(MetricsTag.MODEL.getVal(),
+                    queryMetric.getRealizationMetrics().stream().map(e -> modelManager.getDataModelDesc(e.getModelId()))
+                            .filter(Objects::nonNull).map(NDataModel::getAlias).collect(Collectors.joining(",")),
+                    MetricsTag.PROJECT.getVal(), queryMetric.getProjectName())
                     .distributionStatisticExpiry(Duration.ofDays(1)).publishPercentiles(new double[] { 0.8, 0.9 })
                     .register(meterRegistry).record(queryMetric.getTotalScanBytes());
         }

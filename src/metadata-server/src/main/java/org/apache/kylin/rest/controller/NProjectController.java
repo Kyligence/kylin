@@ -61,6 +61,7 @@ import org.apache.kylin.rest.request.ProjectConfigRequest;
 import org.apache.kylin.rest.request.ProjectConfigResetRequest;
 import org.apache.kylin.rest.request.ProjectExclusionRequest;
 import org.apache.kylin.rest.request.ProjectGeneralInfoRequest;
+import org.apache.kylin.rest.request.ProjectInternalTableConfigRequest;
 import org.apache.kylin.rest.request.ProjectKerberosInfoRequest;
 import org.apache.kylin.rest.request.ProjectRequest;
 import org.apache.kylin.rest.request.PushDownConfigRequest;
@@ -512,6 +513,15 @@ public class NProjectController extends NBasicController {
     public EnvelopeResponse<String> updateTableExclusionConfig(@PathVariable("project") String project,
             @RequestBody ProjectExclusionRequest request) {
         projectService.updateTableExclusionRule(project, request);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    @ApiOperation(value = "updateInternalTableConfig", notes = "Add URL: {project}; ")
+    @PutMapping(value = "/{project:.+}/internal_table_enabled")
+    @ResponseBody
+    public EnvelopeResponse<String> updateInternalTableConfig(@PathVariable("project") String project,
+                                                              @RequestBody ProjectInternalTableConfigRequest request) {
+        projectService.updateInternalTableConfig(project, request);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
     }
 }

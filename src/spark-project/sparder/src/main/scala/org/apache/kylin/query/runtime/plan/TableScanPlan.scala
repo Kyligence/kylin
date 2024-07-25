@@ -17,6 +17,9 @@
  */
 package org.apache.kylin.query.runtime.plan
 
+import java.util.concurrent.ConcurrentHashMap
+import java.{lang, util}
+
 import org.apache.commons.collections.CollectionUtils
 import org.apache.kylin.common.util.ClassUtil
 import org.apache.kylin.common.{KapConfig, KylinConfig, QueryContext}
@@ -31,9 +34,8 @@ import org.apache.kylin.metadata.realization.HybridRealization
 import org.apache.kylin.metadata.tuple.TupleInfo
 import org.apache.kylin.query.implicits.sessionToQueryContext
 import org.apache.kylin.query.plugin.runtime.MppOnTheFlyProvider
-import org.apache.kylin.query.relnode.{OlapContext, OlapRel}
+import org.apache.kylin.query.relnode.{OlapContext, OlapRel, OlapTableScan}
 import org.apache.kylin.query.util.{RuntimeHelper, SparderDerivedUtil}
-import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.dsl.plans.DslLogicalPlan
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project, Union}
 import org.apache.spark.sql.execution.utils.SchemaProcessor
@@ -41,9 +43,8 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.manager.SparderLookupManager
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.SparderTypeUtil
+import org.apache.spark.sql.{Column, DataFrame, Row, SparderEnv, SparkInternalAgent, SparkOperation, SparkSession}
 
-import java.util.concurrent.ConcurrentHashMap
-import java.{lang, util}
 import scala.collection.JavaConverters._
 
 
@@ -59,19 +60,20 @@ object TableScanPlan extends LogEx {
   def createOlapTable(rel: OlapRel): LogicalPlan = logTime("table scan", debug = true) {
     val session: SparkSession = SparderEnv.getSparkSession
     val olapContext = rel.getContext
-    val context = olapContext.getStorageContext
-    val prunedSegments = context.getPrunedSegments
-    val prunedStreamingSegments = context.getPrunedStreamingSegments
+    val storage = olapContext.getStorageContext
+    val batchSeg = storage.getBatchCandidate.getPrunedSegments
+    val streamSeg = storage.getStreamCandidate.getPrunedSegments
     val realizations = olapContext.getRealization.getRealizations.asScala.toList
     val plans = realizations.map(_.asInstanceOf[NDataflow])
-      .filter(dataflow => (!dataflow.isStreaming && !context.isBatchCandidateEmpty) ||
-        (dataflow.isStreaming && !context.isStreamCandidateEmpty) ||
-        isSegmentsEmpty(prunedSegments, prunedStreamingSegments))
-      .map(dataflow => {
+      .filter(dataflow => {
+        (!dataflow.isStreaming && !storage.isBatchCandidateEmpty) ||
+          (dataflow.isStreaming && !storage.isStreamCandidateEmpty) ||
+          isSegmentsEmpty(batchSeg, streamSeg)
+      }).map(dataflow => {
         if (dataflow.isStreaming) {
-          tableScan(rel, dataflow, olapContext, session, prunedStreamingSegments, context.getStreamingCandidate)
+          tableScan(rel, dataflow, olapContext, session, streamSeg, storage.getStreamCandidate)
         } else {
-          tableScan(rel, dataflow, olapContext, session, prunedSegments, context.getCandidate)
+          tableScan(rel, dataflow, olapContext, session, batchSeg, storage.getBatchCandidate)
         }
       })
 
@@ -260,17 +262,17 @@ object TableScanPlan extends LogEx {
     val otherDims = Sets.newHashSet(context.getDimensions)
     otherDims.removeAll(groups)
     // expand derived (xxxD means contains host columns only, derived columns were translated)
-    val groupsD = expandDerived(context.getCandidate, groups)
+    val groupsD = expandDerived(context.getBatchCandidate, groups)
     val otherDimsD: util.Set[TblColRef] =
-      expandDerived(context.getCandidate, otherDims)
+      expandDerived(context.getBatchCandidate, otherDims)
     otherDimsD.removeAll(groupsD)
 
     // identify cuboid
     val dimensionsD = new util.LinkedHashSet[TblColRef]
     dimensionsD.addAll(groupsD)
     dimensionsD.addAll(otherDimsD)
-    val model = context.getCandidate.getLayoutEntity.getModel
-    context.getCandidate.getDerivedToHostMap.asScala.toList.foreach(m => {
+    val model = context.getBatchCandidate.getLayoutEntity.getModel
+    context.getBatchCandidate.getDerivedToHostMap.asScala.toList.foreach(m => {
       if (m._2.`type` == DeriveInfo.DeriveType.LOOKUP && !m._2.isOneToOne) {
         m._2.columns.asScala.foreach(derivedId => {
           if (mapping.getIndexOf(model.getColRef(derivedId)) != -1) {
@@ -286,7 +288,7 @@ object TableScanPlan extends LogEx {
       dataflow.getLatestReadySegment,
       gtColIdx,
       olapContext.getReturnTupleInfo,
-      context.getCandidate)
+      context.getBatchCandidate)
     if (derived.hasDerived) {
       newPlan = derived.joinDerived(newPlan)
     }
@@ -469,16 +471,13 @@ object TableScanPlan extends LogEx {
     val start = System.currentTimeMillis()
 
     val olapContext = rel.getContext
-    val instance = olapContext.getRealization match {
-      case dataflow: NDataflow => dataflow
-      case _ => olapContext.getRealization.asInstanceOf[HybridRealization]
-    }
+    val config = olapContext.getOlapSchema.getConfig
+    val project = olapContext.getOlapSchema.getProject
 
-    val tableMetadataManager = NTableMetadataManager.getInstance(instance.getConfig, instance.getProject)
+    val tableMetadataManager = NTableMetadataManager.getInstance(config, project)
     val lookupTableName = olapContext.getFirstTableScan.getTableName
     val snapshotResPath = tableMetadataManager.getTableDesc(lookupTableName).getLastSnapshotPath
-    val config = instance.getConfig
-    val dataFrameTableName = instance.getProject + "@" + lookupTableName
+    val dataFrameTableName = project + "@" + lookupTableName
     val lookupPlan = SparderLookupManager.getOrCreate(dataFrameTableName, snapshotResPath, config)
 
     val olapTable = olapContext.getFirstTableScan.getOlapTable
@@ -509,6 +508,16 @@ object TableScanPlan extends LogEx {
     val plan = SparkOperation.project(colIndex, newNameLookupPlan)
     logInfo(s"Gen lookup table scan cost Time :${System.currentTimeMillis() - start} ")
     plan
+  }
+
+  def createInternalTable(rel: OlapRel): LogicalPlan = {
+    val sparkSession = SparderEnv.getSparkSession
+    val tableScan = rel.asInstanceOf[OlapTableScan]
+    val project = QueryContext.current().getProject
+    val tableIdentity = tableScan.getTableName
+    val allColumns = tableScan.getFields.map(idx => tableScan.getColumnRowType.getColumnByIndex(idx).getName)
+    val sql = f"select ${allColumns.mkString("`", "`, `", "`")} from INTERNAL_CATALOG.$project.$tableIdentity"
+    sparkSession.sql(sql).queryExecution.analyzed
   }
 
   private def expandDerived(layoutCandidate: NLayoutCandidate,

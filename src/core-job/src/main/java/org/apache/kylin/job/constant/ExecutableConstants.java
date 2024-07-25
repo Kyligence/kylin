@@ -72,7 +72,8 @@ public final class ExecutableConstants {
     public static final String STEP_NAME_TABLE_SAMPLING = "Table Sampling";
     public static final String STEP_NAME_BUILD_SNAPSHOT = "Build Snapshot";
     public static final String STEP_NAME_OPTIMIZE_LAYOUT_DATA = "Optimize layout data";
-
+    public static final String STEP_NAME_LOAD_INTERNAL_TABLE = "Load Internal Table";
+    public static final String STEP_NAME_DROP_INTERNAL_TABLE_PARTITION = "Drop Internal Table Partition";
     public static final String STAGE_NAME_WAITE_FOR_RESOURCE = "Waiting for yarn resources";
     public static final String STAGE_NAME_REFRESH_SNAPSHOTS = "Build or refresh snapshot";
     public static final String STAGE_NAME_MATERIALIZED_FACT_TABLE = "Materialize fact table view";
@@ -90,4 +91,6 @@ public final class ExecutableConstants {
     public static final String STAGE_NAME_OPTIMIZE_LAYOUT_DATA_REPARTITION = "Optimize layout data by repartition";
     public static final String STAGE_NAME_OPTIMIZE_LAYOUT_DATA_ZORDER = "Optimize layout data by zorder";
     public static final String STAGE_NAME_OPTIMIZE_LAYOUT_DATA_COMPACTION = "Optimize layout data by compaction";
+    public static final String STAGE_NAME_INTERNAL_TABLE_LOAD = "Load Internal Table";
+    public static final String STAGE_NAME_INTERNAL_TABLE_DROP_PARTITION = "Drop Internal Table Partition";
 }

@@ -57,21 +57,21 @@ public class SparderPlanExec implements QueryPlanExec {
 
     @Override
     public ExecuteResult executeToIterable(RelNode rel, MutableDataContext dataContext) {
-        QueryContext.currentTrace().startSpan(QueryTrace.MODEL_MATCHING);
-        // select realizations
-        ContextUtil.dumpCalcitePlan("EXECUTION PLAN BEFORE (SparderQueryPlanExec) SELECT REALIZATION", rel, log);
+
+        ContextUtil.dumpCalcitePlan("Calcite PLAN BEFORE SELECT REALIZATION:", rel, log);
         QueryContext.current().record("end_plan");
         QueryContext.current().getQueryTagInfo().setWithoutSyntaxError(true);
 
-        QueryContextCutter.selectRealization(QueryContext.current().getProject(), rel,
-                BackdoorToggles.getIsQueryFromAutoModeling());
+        // select realizations
+        QueryContext.currentTrace().startSpan(QueryTrace.MODEL_MATCHING);
+        QueryContextCutter.selectRealization(QueryContext.current().getProject(), rel, BackdoorToggles.isModelingSql());
 
-        String msg = "EXECUTION PLAN AFTER (SparderQueryPlanExec) SELECT REALIZATION IS SET";
-        ContextUtil.dumpCalcitePlan(msg, rel, log);
+        QueryContext.current().getQueryPlan().setCalcitePlan(RelOptUtil.toString(rel));
+        ContextUtil.dumpCalcitePlan("Calcite PLAN AFTER SELECT REALIZATION:", rel, log);
 
         // used for printing query plan when diagnosing query problem
         if (NProjectManager.getProjectConfig(QueryContext.current().getProject()).isPrintQueryPlanEnabled()) {
-            log.info(RelOptUtil.toString(rel));
+            log.info(QueryContext.current().getQueryPlan().getCalcitePlan());
         }
 
         val contexts = ContextUtil.listContexts();
@@ -87,7 +87,7 @@ public class SparderPlanExec implements QueryPlanExec {
         if (!(dataContext instanceof SimpleDataContext) || !((SimpleDataContext) dataContext).isContentQuery()
                 || KapConfig.wrap(((SimpleDataContext) dataContext).getKylinConfig()).runConstantQueryLocally()) {
             for (OlapContext context : contexts) {
-                if (context.getOlapSchema() != null && context.getStorageContext().isEmptyLayout()) {
+                if (context.getOlapSchema() != null && context.getStorageContext().isDataSkipped()) {
                     QueryContext.current().setOutOfSegmentRange(true);
                     if (!QueryContext.current().getQueryTagInfo().isAsyncQuery() && !context.isHasAgg()) {
                         QueryContext.fillEmptyResultSetMetrics();
@@ -124,7 +124,6 @@ public class SparderPlanExec implements QueryPlanExec {
         // rewrite query if necessary
         OlapRel.RewriteImpl rewriteImpl = new OlapRel.RewriteImpl();
         rewriteImpl.visitChild(rel, rel.getInput(0));
-        QueryContext.current().setCalcitePlan(rel.copy(rel.getTraitSet(), rel.getInputs()));
         ContextUtil.dumpCalcitePlan("EXECUTION PLAN AFTER REWRITE", rel, log);
 
         QueryContext.current().getQueryTagInfo().setSparderUsed(true);
@@ -140,8 +139,8 @@ public class SparderPlanExec implements QueryPlanExec {
     }
 
     private boolean isAggImperfectMatch(OlapContext ctx) {
-        NLayoutCandidate candidate = ctx.getStorageContext().getCandidate();
-        if (candidate == null) {
+        NLayoutCandidate candidate = ctx.getStorageContext().getBatchCandidate();
+        if (candidate.isEmpty()) {
             return false;
         }
         long layoutId = candidate.getLayoutEntity().getId();

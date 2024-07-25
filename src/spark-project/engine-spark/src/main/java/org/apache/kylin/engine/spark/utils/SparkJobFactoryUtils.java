@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 
+import io.kyligence.kap.engine.spark.job.InternalTableLoadingJob;
 import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
 import io.kyligence.kap.engine.spark.job.NSparkCubingStep;
 import io.kyligence.kap.engine.spark.job.NSparkLayoutDataOptimizeJob;
@@ -41,6 +42,7 @@ public class SparkJobFactoryUtils {
         new NSparkSnapshotJob();
         new NTableSamplingJob();
         new NSparkLayoutDataOptimizeJob();
+        new InternalTableLoadingJob();
     }
 
     public static boolean needBuildSnapshots(AbstractExecutable buildTask) {

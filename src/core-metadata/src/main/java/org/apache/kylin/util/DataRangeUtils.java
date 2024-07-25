@@ -35,7 +35,7 @@ public final class DataRangeUtils {
         validateRange(Long.parseLong(start), Long.parseLong(end));
     }
 
-    private static void validateRange(long start, long end) {
+    public static void validateRange(long start, long end) {
         if (start < 0 || end < 0) {
             throw new KylinException(TIME_INVALID_RANGE_LESS_THAN_ZERO);
         }

@@ -142,7 +142,7 @@ public class AppInitializer {
             if (isJob || isDataLoading) {
                 // register scheduler listener
                 EventBusFactory.getInstance().register(new JobSchedulerListener(), false);
-                if (kylinConfig.getStreamingEnabledConfig())
+                if (kylinConfig.isStreamingConfigEnabled())
                     streamingJobStatsStore = new JdbcStreamingJobStatsStore(kylinConfig);
                 // register scheduler listener
                 EventBusFactory.getInstance().register(new StreamingJobListener(), true);
@@ -289,12 +289,10 @@ public class AppInitializer {
         }
 
         if (kylinConfig.getQueryHistoryAccelerateInterval() > 0) {
-            QueryHistoryMetaUpdateScheduler qhMetaUpdateScheduler = QueryHistoryMetaUpdateScheduler
-                    .getInstance();
+            QueryHistoryMetaUpdateScheduler qhMetaUpdateScheduler = QueryHistoryMetaUpdateScheduler.getInstance();
             qhMetaUpdateScheduler.init();
             if (!qhMetaUpdateScheduler.hasStarted()) {
-                throw new KylinRuntimeException(
-                        "Query history accelerate scheduler has not been started");
+                throw new KylinRuntimeException("Query history accelerate scheduler has not been started");
             }
         }
     }

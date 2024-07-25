@@ -333,7 +333,7 @@ public class MetricsRegistry {
             return list == null ? 0 : list.size();
         });
 
-        boolean streamingEnabled = config.streamingEnabled();
+        boolean streamingEnabled = config.isStreamingEnabled();
         final NDataflowManager dataflowManager = NDataflowManager.getInstance(config, project);
         MetricsGroup.newGauge(MetricsName.HEALTHY_MODEL_GAUGE, MetricsCategory.PROJECT, project, () -> {
             List<NDataModel> list = dataflowManager.listUnderliningDataModels().stream()
@@ -363,7 +363,7 @@ public class MetricsRegistry {
 
     static void registerModelMetrics(KylinConfig config, String project) {
         NDataModelManager modelManager = NDataModelManager.getInstance(config, project);
-        boolean streamingEnabled = config.streamingEnabled();
+        boolean streamingEnabled = config.isStreamingEnabled();
         modelManager.listAllModels().stream().filter(model -> model.isAccessible(streamingEnabled))
                 .forEach(model -> registerModelMetrics(project, model.getId(), model.getAlias()));
     }

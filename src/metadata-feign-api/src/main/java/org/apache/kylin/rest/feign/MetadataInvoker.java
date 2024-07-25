@@ -69,6 +69,10 @@ public class MetadataInvoker extends ModelMetadataBaseInvoker {
         getDelegate().mergeMetadataForSamplingOrSnapshot(project, mergerInfo);
     }
 
+    public void mergeMetadataForLoadingInternalTable(String project, MergerInfo mergerInfo) {
+        getDelegate().mergeMetadataForLoadingInternalTable(project, mergerInfo);
+    }
+
     public List<NDataLayout[]> mergeMetadata(String project, MergerInfo mergerInfo) {
         return getDelegate().mergeMetadata(project, mergerInfo);
     }

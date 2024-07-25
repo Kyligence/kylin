@@ -18,12 +18,6 @@
 
 package org.apache.spark.sql
 
-import java.io._
-import java.net.URI
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
-import java.util.UUID
-
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.security.UserGroupInformation
 import org.apache.kylin.common.util.{AddressUtil, HadoopUtil, Unsafe}
@@ -42,6 +36,11 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.springframework.expression.common.TemplateParserContext
 import org.springframework.expression.spel.standard.SpelExpressionParser
 
+import java.io._
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import java.util.UUID
 import scala.collection.JavaConverters._
 
 class KylinSession(
@@ -316,8 +315,11 @@ object KylinSession extends Logging {
           }
         }
 
-        val fileName = KylinConfig.getInstanceFromEnv.getKylinJobJarPath
-        sparkConf.set("spark.executor.extraClassPath", Paths.get(fileName).getFileName.toString)
+        var extraJars = Paths.get(KylinConfig.getInstanceFromEnv.getKylinJobJarPath).getFileName.toString
+        if (KylinConfig.getInstanceFromEnv.queryUseGlutenEnabled) {
+          extraJars = "gluten.jar:" + extraJars
+        }
+        sparkConf.set("spark.executor.extraClassPath", extraJars)
 
         val krb5conf = " -Djava.security.krb5.conf=./__spark_conf__/__hadoop_conf__/krb5.conf"
         val executorExtraJavaOptions =

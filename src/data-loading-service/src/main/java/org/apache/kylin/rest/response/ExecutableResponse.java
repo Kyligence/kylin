@@ -43,11 +43,14 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentStatusEnumToDisplay;
 import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.metadata.table.InternalTableDesc;
+import org.apache.kylin.metadata.table.InternalTableManager;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
+import io.kyligence.kap.engine.spark.job.InternalTableLoadingJob;
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 import lombok.AllArgsConstructor;
@@ -195,6 +198,24 @@ public class ExecutableResponse implements Comparable<ExecutableResponse> {
             if (snapshotJob.getStatusInMem().isFinalState()
                     && (tableDesc == null || tableDesc.getLastSnapshotPath() == null)) {
                 executableResponse.setTargetSubject("The snapshot is deleted");
+                executableResponse.setTargetSubjectError(true);
+            }
+        } else if (abstractExecutable instanceof InternalTableLoadingJob) {
+            InternalTableLoadingJob internalTableJob = (InternalTableLoadingJob) abstractExecutable;
+            if ("false".equals(internalTableJob.getParam("incrementalBuild"))
+                    || "true".equals(internalTableJob.getParam("deletePartition"))) {
+                executableResponse.setDataRangeEnd(Long.MAX_VALUE);
+            } else {
+                executableResponse.setDataRangeStart(Long.parseLong(internalTableJob.getParam("startTime")));
+                executableResponse.setDataRangeEnd(Long.parseLong(internalTableJob.getParam("endTime")));
+            }
+            executableResponse.setTargetSubject(internalTableJob.getParam(NBatchConstants.P_TABLE_NAME));
+            InternalTableDesc internalTableDesc = InternalTableManager
+                    .getInstance(KylinConfig.getInstanceFromEnv(), abstractExecutable.getProject())
+                    .getInternalTableDesc(executableResponse.getTargetSubject());
+            if (internalTableDesc == null || internalTableDesc.getLocation() == null) {
+                executableResponse
+                        .setTargetSubject(executableResponse.getTargetSubject() + "not exist or has been deleted");
                 executableResponse.setTargetSubjectError(true);
             }
         } else {

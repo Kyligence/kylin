@@ -827,6 +827,13 @@ public class NModelController extends NBasicController {
         modelService.mergeMetadataForSamplingOrSnapshot(project, mergerInfo);
     }
 
+    @PostMapping(value = "/feign/merge_metadata_for_loading_internal_table")
+    @ResponseBody
+    public void mergeMetadataForLoadingInternalTable(@RequestParam("project") String project,
+                                                   @RequestBody MergerInfo mergerInfo) {
+        modelService.mergeMetadataForSamplingOrSnapshot(project, mergerInfo);
+    }
+
     @PostMapping(value = "/feign/check_and_auto_merge_segments")
     @ResponseBody
     public void checkAndAutoMergeSegments(@RequestParam("project") String project,

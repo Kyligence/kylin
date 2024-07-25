@@ -66,7 +66,11 @@ import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.job.execution.StageBase;
 import org.apache.kylin.job.execution.SucceedChainedTestExecutable;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.table.InternalTableDesc;
+import org.apache.kylin.metadata.table.InternalTableManager;
 import org.apache.kylin.plugin.asyncprofiler.ProfilerStatus;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.response.ExecutableResponse;
@@ -94,6 +98,7 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import io.kyligence.kap.engine.spark.job.InternalTableLoadingJob;
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotJob;
 import io.kyligence.kap.engine.spark.job.step.NStageForBuild;
 import lombok.val;
@@ -985,5 +990,42 @@ public class JobServiceTest extends NLocalFileMetadataTestCase {
         Path path = new Path(file);
         manager.updateJobOutputToHDFS(file, executableOutputPO);
         Assert.assertSame(FsAction.ALL, fs.getFileStatus(path.getParent()).getPermission().getOtherAction());
+    }
+
+    @Test
+    public void testInternalTableLoadingJobResponse() {
+        KylinConfig conf = KylinConfig.getInstanceFromEnv();
+        NTableMetadataManager manager = NTableMetadataManager.getInstance(conf, "default");
+        InternalTableManager internalManager = InternalTableManager.getInstance(conf, "default");
+        InternalTableLoadingJob job = new InternalTableLoadingJob();
+        job.setProject("default");
+        job.setParam("startTime", "10001");
+        job.setParam("endTime", "10002");
+
+        ExecutableResponse response = ExecutableResponse.create(job, null);
+        Assert.assertEquals(10001L, response.getDataRangeStart());
+        Assert.assertEquals(10002L, response.getDataRangeEnd());
+
+        job.setParam("incrementalBuild", "false");
+        response = ExecutableResponse.create(job, null);
+        Assert.assertEquals(Long.MAX_VALUE, response.getDataRangeEnd());
+
+        job.setParam("incrementalBuild", "true");
+        job.setParam("deletePartition", "true");
+        response = ExecutableResponse.create(job, null);
+        Assert.assertEquals(Long.MAX_VALUE, response.getDataRangeEnd());
+
+        TableDesc originTable = manager.getTableDesc("default.TEST_KYLIN_FACT");
+        internalManager.createInternalTable(new InternalTableDesc(originTable));
+
+        job.setParam(NBatchConstants.P_TABLE_NAME, originTable.getIdentity());
+        response = ExecutableResponse.create(job, null);
+        Assert.assertTrue(response.isTargetSubjectError());
+
+        internalManager.updateInternalTable(originTable.getIdentity(),
+                copyForWrite -> copyForWrite.setLocation(copyForWrite.generateInternalTableLocation()));
+        response = ExecutableResponse.create(job, null);
+        Assert.assertFalse(response.isTargetSubjectError());
+        Assert.assertEquals(originTable.getIdentity(), response.getTargetSubject());
     }
 }

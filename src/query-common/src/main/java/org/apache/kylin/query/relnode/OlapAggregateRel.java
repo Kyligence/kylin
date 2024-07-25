@@ -527,8 +527,8 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
             }
             getContext().setExactlyAggregate(isExactlyMatched());
             if (getContext().isExactlyAggregate()) {
-                boolean fastBitmapEnabled = getContext().getStorageContext().getCandidate().getLayoutEntity().getIndex()
-                        .getIndexPlan().isFastBitmapEnabled();
+                boolean fastBitmapEnabled = getContext().getStorageContext().getBatchCandidate().getLayoutEntity()
+                        .getIndex().getIndexPlan().isFastBitmapEnabled();
                 getContext().setExactlyFastBitmap(fastBitmapEnabled && getContext().isHasBitmapMeasure());
             }
         }
@@ -545,8 +545,8 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         if (getSubContexts().size() > 1) {
             return false;
         }
-        NLayoutCandidate candidate = getContext().getStorageContext().getCandidate();
-        if (candidate.isEmptyCandidate()) {
+        NLayoutCandidate candidate = getContext().getStorageContext().getBatchCandidate();
+        if (candidate.isEmpty()) {
             return false;
         }
 
@@ -562,8 +562,8 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
             return false;
         }
         Set<String> cuboidDimSet = new HashSet<>();
-        if (getContext() != null && getContext().getStorageContext().getCandidate() != null) {
-            cuboidDimSet = getContext().getStorageContext().getCandidate().getLayoutEntity().getOrderedDimensions()
+        if (getContext() != null && getContext().getStorageContext().getBatchCandidate() != null) {
+            cuboidDimSet = getContext().getStorageContext().getBatchCandidate().getLayoutEntity().getOrderedDimensions()
                     .values().stream().map(TblColRef::getIdentity).collect(Collectors.toSet());
 
         }

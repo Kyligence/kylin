@@ -84,6 +84,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.acl.AclTCR;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.cube.cuboid.NLayoutCandidate;
+import org.apache.kylin.metadata.cube.cuboid.NLookupCandidate;
 import org.apache.kylin.metadata.cube.model.IndexEntity;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -481,24 +482,16 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertTrue(log.contains("nmodel_basic_inner"));
     }
 
-    private void mockOlapContextForEmptyLayout() throws Exception {
+    private void mockOlapContextForSnapshot() throws Exception {
         val modelManager = Mockito.spy(NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), "default"));
 
         Mockito.doReturn(modelManager).when(queryService).getManager(NDataModelManager.class, "default");
-        // mock empty index realization
-        OlapContext mock = new OlapContext(1);
-        NDataModel mockModel1 = Mockito.spy(new NDataModel());
-        Mockito.when(mockModel1.getUuid()).thenReturn("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
-        Mockito.when(mockModel1.getAlias()).thenReturn("mock_model_alias1");
-        Mockito.doReturn(mockModel1).when(modelManager).getDataModelDesc("mock_model1");
-        IRealization mockRealization1 = Mockito.mock(IRealization.class);
-        Mockito.when(mockRealization1.getModel()).thenReturn(mockModel1);
-        mock.setRealization(mockRealization1);
-        mock.getStorageContext().setEmptyLayout(true);
-        mock.getStorageContext().setCandidate(NLayoutCandidate.EMPTY);
-        mock.getStorageContext().setLayoutId(null);
-        mock.getStorageContext().setPrunedSegments(Lists.newArrayList());
-        ContextUtil.registerContext(mock);
+        OlapContext mockOlapCtx = Mockito.spy(new OlapContext(1));
+        Mockito.doReturn("DEFAULT.TEST_KYLIN_FACT").when(mockOlapCtx).getFirstTableIdentity();
+        NLookupCandidate lookupCandidate = Mockito.mock(NLookupCandidate.class);
+        mockOlapCtx.getStorageContext().setDataSkipped(true);
+        mockOlapCtx.getStorageContext().setLookupCandidate(lookupCandidate);
+        ContextUtil.registerContext(mockOlapCtx);
         mockQueryWithSqlMassage();
     }
 
@@ -515,13 +508,14 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         IRealization mockRealization1 = Mockito.mock(IRealization.class);
         Mockito.when(mockRealization1.getModel()).thenReturn(mockModel1);
         aggMock.setRealization(mockRealization1);
-        IndexEntity mockIndexEntity1 = new IndexEntity();
-        mockIndexEntity1.setId(1);
-        LayoutEntity mockLayout1 = new LayoutEntity();
-        mockLayout1.setIndex(mockIndexEntity1);
-        aggMock.getStorageContext().setCandidate(new NLayoutCandidate(mockLayout1));
-        aggMock.getStorageContext().setLayoutId(1L);
-        aggMock.getStorageContext().setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        IndexEntity mockAggIndex = new IndexEntity();
+        mockAggIndex.setId(0L);
+        LayoutEntity mockAggLayout = new LayoutEntity();
+        mockAggLayout.setId(1L);
+        mockAggLayout.setIndex(mockAggIndex);
+        NLayoutCandidate layoutCandidate = new NLayoutCandidate(mockAggLayout);
+        layoutCandidate.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        aggMock.getStorageContext().setBatchCandidate(layoutCandidate);
         ContextUtil.registerContext(aggMock);
 
         // mock table index realization
@@ -533,13 +527,14 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         IRealization mockRealization2 = Mockito.mock(IRealization.class);
         Mockito.when(mockRealization2.getModel()).thenReturn(mockModel2);
         tableMock.setRealization(mockRealization2);
-        IndexEntity mockIndexEntity2 = new IndexEntity();
-        mockIndexEntity2.setId(IndexEntity.TABLE_INDEX_START_ID + 1);
-        LayoutEntity mockLayout2 = new LayoutEntity();
-        mockLayout2.setIndex(mockIndexEntity2);
-        tableMock.getStorageContext().setCandidate(new NLayoutCandidate(mockLayout2));
-        tableMock.getStorageContext().setLayoutId(1L);
-        tableMock.getStorageContext().setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        IndexEntity mockTableIndex = new IndexEntity();
+        mockTableIndex.setId(IndexEntity.TABLE_INDEX_START_ID);
+        LayoutEntity mockTableIndexLayout = new LayoutEntity();
+        mockTableIndexLayout.setId(mockTableIndex.getId() + 1);
+        mockTableIndexLayout.setIndex(mockTableIndex);
+        NLayoutCandidate layoutCandidate2 = new NLayoutCandidate(mockTableIndexLayout);
+        layoutCandidate2.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        tableMock.getStorageContext().setBatchCandidate(layoutCandidate2);
         ContextUtil.registerContext(tableMock);
         mockQueryWithSqlMassage();
     }
@@ -564,14 +559,24 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         Mockito.when(hybridRealization.getBatchRealization()).thenReturn(batchRealization);
 
         aggMock.setRealization(hybridRealization);
-        IndexEntity mockIndexEntity1 = new IndexEntity();
-        mockIndexEntity1.setId(1);
-        LayoutEntity mockLayout1 = new LayoutEntity();
-        mockLayout1.setIndex(mockIndexEntity1);
-        aggMock.getStorageContext().setCandidate(new NLayoutCandidate(mockLayout1));
-        aggMock.getStorageContext().setLayoutId(20001L);
-        aggMock.getStorageContext().setStreamingLayoutId(10001L);
-        aggMock.getStorageContext().setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+
+        IndexEntity mockBatchIndex = new IndexEntity();
+        mockBatchIndex.setId(20000L);
+        LayoutEntity mockBatchLayout = new LayoutEntity();
+        mockBatchLayout.setId(20001L);
+        mockBatchLayout.setIndex(mockBatchIndex);
+        NLayoutCandidate batchCandidate = new NLayoutCandidate(mockBatchLayout);
+        batchCandidate.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        aggMock.getStorageContext().setBatchCandidate(batchCandidate);
+
+        IndexEntity mockStreamingIndex = new IndexEntity();
+        mockStreamingIndex.setId(10000L);
+        LayoutEntity mockStreamingLayout = new LayoutEntity();
+        mockStreamingLayout.setIndex(mockStreamingIndex);
+        mockStreamingLayout.setId(10001L);
+        NLayoutCandidate streamCandidate = new NLayoutCandidate(mockStreamingLayout);
+        streamCandidate.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        aggMock.getStorageContext().setStreamCandidate(streamCandidate);
         ContextUtil.registerContext(aggMock);
         mockQueryWithSqlMassage();
     }
@@ -599,10 +604,11 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         IndexEntity mockIndexEntity1 = new IndexEntity();
         mockIndexEntity1.setId(1);
         LayoutEntity mockLayout1 = new LayoutEntity();
+        mockLayout1.setId(20001L);
         mockLayout1.setIndex(mockIndexEntity1);
-        aggMock.getStorageContext().setCandidate(new NLayoutCandidate(mockLayout1));
-        aggMock.getStorageContext().setLayoutId(20001L);
-        aggMock.getStorageContext().setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        NLayoutCandidate layoutCandidate1 = new NLayoutCandidate(mockLayout1);
+        layoutCandidate1.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        aggMock.getStorageContext().setBatchCandidate(layoutCandidate1);
         ContextUtil.registerContext(aggMock);
         mockQueryWithSqlMassage();
     }
@@ -620,13 +626,14 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         IRealization realization = Mockito.mock(IRealization.class);
         Mockito.when(realization.getModel()).thenReturn(mockModel1);
         aggMock.setRealization(realization);
-        IndexEntity mockIndexEntity1 = new IndexEntity();
-        mockIndexEntity1.setId(1);
-        LayoutEntity mockLayout1 = new LayoutEntity();
-        mockLayout1.setIndex(mockIndexEntity1);
-        aggMock.getStorageContext().setStreamingCandidate(new NLayoutCandidate(mockLayout1));
-        aggMock.getStorageContext().setStreamingLayoutId(10001L);
-        aggMock.getStorageContext().setPrunedStreamingSegments(Lists.newArrayList(new NDataSegment()));
+        IndexEntity mockIndex = new IndexEntity();
+        mockIndex.setId(0L);
+        LayoutEntity mockLayout = new LayoutEntity();
+        mockLayout.setId(1L);
+        mockLayout.setIndex(mockIndex);
+        NLayoutCandidate streamingCandidate = new NLayoutCandidate(mockLayout);
+        streamingCandidate.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        aggMock.getStorageContext().setStreamCandidate(streamingCandidate);
         ContextUtil.registerContext(aggMock);
         mockQueryWithSqlMassage();
     }
@@ -650,9 +657,9 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         mockIndexEntity.setId(layoutId);
         final LayoutEntity mockLayout = new LayoutEntity();
         mockLayout.setIndex(mockIndexEntity);
-        mock.getStorageContext().setCandidate(new NLayoutCandidate(mockLayout));
-        mock.getStorageContext().setLayoutId(layoutId);
-        mock.getStorageContext().setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        NLayoutCandidate layoutCandidate = new NLayoutCandidate(mockLayout);
+        layoutCandidate.setPrunedSegments(Lists.newArrayList(new NDataSegment()));
+        mock.getStorageContext().setBatchCandidate(layoutCandidate);
 
         ContextUtil.registerContext(mock);
 
@@ -1152,7 +1159,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     public void testQueryWithEmptyLayout() throws Exception {
         String sql = "select price*item_count from test_kylin_fact where cal_dt = '2020-01-01' limit 100";
         stubQueryConnection(sql, "default");
-        mockOlapContextForEmptyLayout();
+        mockOlapContextForSnapshot();
 
         SQLRequest request = new SQLRequest();
         request.setProject("default");
@@ -1161,13 +1168,15 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         SQLResponse response = queryService.queryWithCache(request);
         Assert.assertEquals(1, response.getNativeRealizations().size());
         NativeQueryRealization realization = response.getNativeRealizations().get(0);
-        Assert.assertEquals("mock_model_alias1", realization.getModelAlias());
+        Assert.assertEquals("null", realization.getModelAlias());
         Assert.assertNull(realization.getLayoutId());
-        Assert.assertNull(realization.getIndexType());
+        Assert.assertEquals(QueryMetrics.TABLE_SNAPSHOT, realization.getIndexType());
+        Assert.assertEquals(1, realization.getSnapshots().size());
+        Assert.assertEquals("DEFAULT.TEST_KYLIN_FACT", realization.getSnapshots().get(0));
     }
 
     @Test
-    public void testSaveQuery() throws IOException {
+    public void testSaveQuery() {
         Query query = new Query("test", "default", "test_sql", "test_description");
         queryService.saveQuery("admin", "default", query);
         QueryRecord queryRecord = queryService.getSavedQueries("admin", "default");
@@ -1189,7 +1198,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testSaveLargeQuery() throws IOException {
+    public void testSaveLargeQuery() {
         for (int i = 0; i < 10; i++) {
             Query query = new Query("test-" + i, "default", StringUtils.repeat("abc", 10000), "test_description");
             queryService.saveQuery("admin", "default", query);
@@ -1202,7 +1211,7 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testSaveAndRemoveQueryWithTransaction() throws IOException {
+    public void testSaveAndRemoveQueryWithTransaction() {
         Query query = new Query("test", "default", "test_sql", "test_description");
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             queryService.saveQuery("admin", "default", query);
@@ -2106,9 +2115,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
     public void testQueryContextWithStreamingModel() throws Exception {
         final String project = "demo";
         final String sql = "select count(*) from SSB_STREAMING";
+        final String modelId = "4965c827-fbb4-4ea1-a744-3f341a3b030e";
 
         stubQueryConnection(sql, project);
-        //Will mock a non-existent model 4965c827-fbb4-4ea1-a744-3f341a3b030e
+        // mock a non-existent model 4965c827-fbb4-4ea1-a744-3f341a3b030e
         mockOlapContextWithStreaming();
 
         final SQLRequest request = new SQLRequest();
@@ -2119,11 +2129,8 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         SQLResponse sqlResponse = queryService.doQueryWithCache(request);
 
         Assert.assertEquals(1, sqlResponse.getNativeRealizations().size());
-
-        Assert.assertEquals("4965c827-fbb4-4ea1-a744-3f341a3b030e",
-                sqlResponse.getNativeRealizations().get(0).getModelId());
-        Assert.assertEquals((Long) 10001L, sqlResponse.getNativeRealizations().get(0).getLayoutId());
-
+        Assert.assertEquals(modelId, sqlResponse.getNativeRealizations().get(0).getModelId());
+        Assert.assertEquals(1L, sqlResponse.getNativeRealizations().get(0).getLayoutId().longValue());
         Assert.assertTrue(sqlResponse.getNativeRealizations().get(0).isStreamingLayout());
     }
 

@@ -25,15 +25,16 @@ import java.util.Map;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.kylin.common.KylinConfig;
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.metadata.model.NDataModel;
-import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.TableDesc;
 
+import lombok.Getter;
+
+@Getter
 public class OlapSchema extends AbstractSchema {
 
-    private KylinConfig config;
-    private final String projectName;
+    private final KylinConfig config;
+    private final String project;
     private final String schemaName;
     private final List<TableDesc> tables;
     private final Map<String, List<NDataModel>> modelsMap;
@@ -41,17 +42,17 @@ public class OlapSchema extends AbstractSchema {
     private String starSchemaUser;
     private String starSchemaPassword;
 
-    public OlapSchema(String project, String schemaName, List<TableDesc> tables,
+    public OlapSchema(KylinConfig kylinConfig, String project, String schemaName, List<TableDesc> tables,
             Map<String, List<NDataModel>> modelsMap) {
-        this.projectName = project;
+        this.project = project;
         this.schemaName = schemaName;
         this.tables = tables;
         this.modelsMap = modelsMap;
+        this.config = kylinConfig;
         init();
     }
 
     private void init() {
-        this.config = KylinConfig.getInstanceFromEnv();
         this.starSchemaUrl = config.getHiveUrl();
         this.starSchemaUser = config.getHiveUser();
         this.starSchemaPassword = config.getHivePassword();
@@ -81,40 +82,11 @@ public class OlapSchema extends AbstractSchema {
         return olapTables;
     }
 
-    public String getSchemaName() {
-        return schemaName;
-    }
-
-    public boolean hasStarSchemaUrl() {
-        return starSchemaUrl != null && !starSchemaUrl.isEmpty();
-    }
-
-    public String getStarSchemaUrl() {
-        return starSchemaUrl;
-    }
-
-    public String getStarSchemaUser() {
-        return starSchemaUser;
-    }
-
-    public String getStarSchemaPassword() {
-        return starSchemaPassword;
-    }
-
-    public NDataModelManager getMetadataManager() {
-        return NDataModelManager.getInstance(config, projectName);
-    }
-
     public KylinConfig getConfig() {
         return config;
     }
 
-    @VisibleForTesting
-    public void setConfigOnlyInTest(KylinConfig config) {
-        this.config = config;
-    }
-
-    public String getProjectName() {
-        return this.projectName;
+    public String getProject() {
+        return this.project;
     }
 }

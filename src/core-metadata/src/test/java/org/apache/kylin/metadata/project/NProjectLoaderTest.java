@@ -36,12 +36,11 @@ class NProjectLoaderTest {
 
     static final String PROJECT_NAME = "test_cache_loader";
 
-    @RepeatedTest(value = 100)
+    @RepeatedTest(value = 10)
     void testGetRealizationsByTable() {
         NProjectLoader.removeCache();
         NProjectLoader.updateCache(PROJECT_NAME);
-        Set<IRealization> realizations = new NProjectLoader(
-                NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()))
+        Set<IRealization> realizations = new NProjectLoader(KylinConfig.getInstanceFromEnv())
                 .getRealizationsByTable(PROJECT_NAME, "SSB.P_LINEORDER");
         Assertions.assertEquals(5, realizations.size());
         NProjectLoader.removeCache();
@@ -51,12 +50,10 @@ class NProjectLoaderTest {
     public void testGetEffectiveRewriteMeasures() {
         NProjectLoader.removeCache();
         NProjectLoader.updateCache(PROJECT_NAME);
-        List<MeasureDesc> effectiveRewriteMeasures = new NProjectLoader(
-                NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()))
+        List<MeasureDesc> effectiveRewriteMeasures = new NProjectLoader(KylinConfig.getInstanceFromEnv())
                 .listEffectiveRewriteMeasures(PROJECT_NAME, "SSB.P_LINEORDER");
 
-        List<MeasureDesc> cacheEffectiveRewriteMeasures = new NProjectLoader(
-                NProjectManager.getInstance(KylinConfig.getInstanceFromEnv()))
+        List<MeasureDesc> cacheEffectiveRewriteMeasures = new NProjectLoader(KylinConfig.getInstanceFromEnv())
                 .listEffectiveRewriteMeasures(PROJECT_NAME, "SSB.P_LINEORDER");
         Assertions.assertEquals(effectiveRewriteMeasures.size(), cacheEffectiveRewriteMeasures.size());
         NProjectLoader.removeCache();

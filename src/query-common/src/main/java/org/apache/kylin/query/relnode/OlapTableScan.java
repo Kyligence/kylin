@@ -248,7 +248,7 @@ public class OlapTableScan extends TableScan implements EnumerableRel, OlapRel {
      */
     @Override
     public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
-        String execFunction = context.genExecFunc(this, tableName);
+        String execFunction = context.genExecFunc(this);
         PhysType physType = PhysTypeImpl.of(implementor.getTypeFactory(), getRowType(), JavaRowFormat.ARRAY, false);
         MethodCallExpression exprCall = Expressions.call(table.getExpression(OlapTable.class), execFunction,
                 implementor.getRootExpression(), Expressions.constant(context.getId()));

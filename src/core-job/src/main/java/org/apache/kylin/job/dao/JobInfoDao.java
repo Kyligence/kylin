@@ -17,6 +17,9 @@
  */
 package org.apache.kylin.job.dao;
 
+import static org.apache.kylin.job.execution.JobTypeEnum.Category.CRON;
+import static org.apache.kylin.job.execution.JobTypeEnum.Category.INTERNAL;
+import static org.apache.kylin.job.execution.JobTypeEnum.Category.SNAPSHOT;
 import static org.apache.kylin.job.util.JobInfoUtil.JOB_SERIALIZER;
 
 import java.io.IOException;
@@ -171,28 +174,33 @@ public class JobInfoDao {
         jobInfo.setPriority(executablePO.getPriority());
 
         String subject = null;
-        if (JobTypeEnum.TABLE_SAMPLING == executablePO.getJobType()
-                || JobTypeEnum.LAYOUT_DATA_OPTIMIZE == executablePO.getJobType()) {
-            subject = executablePO.getTargetModel();
-        } else if (JobTypeEnum.SNAPSHOT_REFRESH == executablePO.getJobType()
-                || JobTypeEnum.SNAPSHOT_BUILD == executablePO.getJobType()) {
-            subject = executablePO.getParams().get(NBatchConstants.P_TABLE_NAME);
-        } else if (null != executablePO.getTargetModel() && null != executablePO.getProject()) {
-            if (executablePO.getParams().containsKey(NBatchConstants.P_MODEL_NAME)) {
-                subject = executablePO.getParams().get(NBatchConstants.P_MODEL_NAME);
-            } else {
-                NDataModelManager nDataModelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(),
-                        executablePO.getProject());
-                NDataModel nDataModel = nDataModelManager.getDataModelDesc(executablePO.getTargetModel());
-                if (null == nDataModel) {
-                    logger.warn("Can not get modelName by modelId {}, project {}", executablePO.getTargetModel(),
-                            executablePO.getProject());
-                } else {
-                    subject = nDataModel.getAlias();
+        switch(executablePO.getJobType().getCategory()) {
+            case INTERNAL:
+            case SNAPSHOT:
+                subject = executablePO.getParams().get(NBatchConstants.P_TABLE_NAME);
+                break;
+            case CRON:
+                subject = executablePO.getJobType().name();
+                break;
+            default:
+                if (JobTypeEnum.TABLE_SAMPLING == executablePO.getJobType()
+                        || JobTypeEnum.LAYOUT_DATA_OPTIMIZE == executablePO.getJobType()) {
+                    subject = executablePO.getTargetModel();
+                } else if (null != executablePO.getTargetModel() && null != executablePO.getProject()) {
+                    if (executablePO.getParams().containsKey(NBatchConstants.P_MODEL_NAME)) {
+                        subject = executablePO.getParams().get(NBatchConstants.P_MODEL_NAME);
+                    } else {
+                        NDataModelManager nDataModelManager = NDataModelManager
+                                .getInstance(KylinConfig.getInstanceFromEnv(), executablePO.getProject());
+                        NDataModel nDataModel = nDataModelManager.getDataModelDesc(executablePO.getTargetModel());
+                        if (null == nDataModel) {
+                            logger.warn("Can not get modelName by modelId {}, project {}",
+                                    executablePO.getTargetModel(), executablePO.getProject());
+                        } else {
+                            subject = nDataModel.getAlias();
+                        }
+                    }
                 }
-            }
-        } else if (executablePO.getJobType().getCategory().equals(JobTypeEnum.Category.CRON)) {
-            subject = executablePO.getJobType().name();
         }
 
         jobInfo.setSubject(subject);

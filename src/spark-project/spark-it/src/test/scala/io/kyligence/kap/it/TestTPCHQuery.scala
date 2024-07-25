@@ -74,7 +74,7 @@ class TestTPCHQuery
         ContextUtil.getThreadLocalContexts.asScala
           .map(_.getRealization.getUuid)
           .zip(ContextUtil.getThreadLocalContexts.asScala.map(
-            _.getStorageContext.getLayoutId))
+            _.getStorageContext.getBatchCandidate.getLayoutId))
           .mkString(",")
       }
 

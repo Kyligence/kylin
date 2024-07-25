@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.prepare.CalcitePrepareImpl;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.QueryContext;
@@ -105,6 +106,7 @@ public class QueryRoutingEngine {
                 }
 
                 String correctedSql = QueryUtil.massageSql(queryParams);
+                correctedSql = markExplainSql(correctedSql);
 
                 //CAUTION: should not change sqlRequest content!
                 QueryContext.current().getMetrics().setCorrectedSql(correctedSql);
@@ -286,6 +288,7 @@ public class QueryRoutingEngine {
             } else {
                 //exception in pushdown, throw it instead of exception in calcite
                 msg = "[" + QueryContext.current().getPushdownEngine() + " Exception] ";
+                ThreadUtil.warnKylinStackTrace(msg + ThreadUtil.getKylinStackTrace());
                 throw new KylinRuntimeException(msg + e.getMessage());
             }
         }
@@ -328,6 +331,7 @@ public class QueryRoutingEngine {
 
             String massagedSql = QueryUtil.appendLimitOffset(queryParams.getProject(), sqlString,
                     queryParams.getLimit(), queryParams.getOffset());
+            massagedSql = markExplainSql(massagedSql);
             if (isPrepareStatementWithParams(queryParams)) {
                 QueryContext.current().getMetrics().setCorrectedSql(massagedSql);
             }
@@ -348,6 +352,14 @@ public class QueryRoutingEngine {
             logger.info("Query: {} After the current push down counter {}.", QueryContext.current().getQueryId(),
                     semaphore.availablePermits());
         }
+    }
+
+    private String markExplainSql(String massagedSql) {
+        if (StringUtils.startsWithIgnoreCase(massagedSql, "explain ")) {
+            massagedSql = StringUtils.removeStartIgnoreCase(massagedSql, "explain ");
+            QueryContext.current().setExplainSql(true);
+        }
+        return massagedSql;
     }
 
     private boolean isPrepareStatementWithParams(QueryParams queryParams) {

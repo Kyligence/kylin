@@ -18,7 +18,6 @@
 package org.apache.kylin.query.util;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -302,7 +301,7 @@ public class QueryAliasMatcher {
         }
 
         TableRef getFirstTable() {
-            if (alias2CRT.size() == 0) {
+            if (alias2CRT.isEmpty()) {
                 throw new IllegalStateException("alias2CRT is empty");
             }
             ColumnRowType first = Iterables.getFirst(alias2CRT.values(), null);
@@ -450,22 +449,14 @@ public class QueryAliasMatcher {
         }
 
         private OlapSchema getSchema(String name) {
-            if (schemaMap.get(name) == null) {
-                // init schemaMap
-                Map<String, List<TableDesc>> tablesGroupBySchema = NTableMetadataManager
-                        .getInstance(KylinConfig.getInstanceFromEnv(), project).listTablesGroupBySchema();
-                Map<String, List<NDataModel>> modelsGroupByTable = NDataflowManager
-                        .getInstance(KylinConfig.getInstanceFromEnv(), project).getModelsGroupbyTable();
-                for (Map.Entry<String, List<TableDesc>> entry : tablesGroupBySchema.entrySet()) {
-                    schemaMap.put(entry.getKey(),
-                            new OlapSchema(project, entry.getKey(), entry.getValue(), modelsGroupByTable));
-                }
-                // Maybe name is project name
-                if (schemaMap.get(name) == null) {
-                    schemaMap.put(name, new OlapSchema(project, name, Collections.emptyList(), modelsGroupByTable));
-                }
-            }
-            return schemaMap.get(name);
+            KylinConfig kylinConfig = NProjectManager.getProjectConfig(project);
+            return schemaMap.computeIfAbsent(name, schemaName -> {
+                List<TableDesc> tables = NTableMetadataManager.getInstance(kylinConfig, project)
+                        .listTablesGroupBySchema().get(schemaName);
+                Map<String, List<NDataModel>> tableToModels = NDataflowManager.getInstance(kylinConfig, project)
+                        .getModelsGroupbyTable();
+                return new OlapSchema(kylinConfig, project, schemaName, tables, tableToModels);
+            });
         }
 
         private Pair<String, String> getSchemaAndTable(SqlIdentifier tableIdentifier) {

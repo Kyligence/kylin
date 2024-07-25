@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(name = "common", path = "/kylin/api/models/feign")
-public interface MetadataRPC extends MetadataContract{
+public interface MetadataRPC extends MetadataContract {
 
     @PostMapping(value = "/merge_metadata")
     List<NDataLayout[]> mergeMetadata(@RequestParam("project") String project, @RequestBody MergerInfo mergerInfo);
@@ -45,6 +45,10 @@ public interface MetadataRPC extends MetadataContract{
     void mergeMetadataForSamplingOrSnapshot(@RequestParam("project") String project,
             @RequestBody MergerInfo mergerInfo);
 
+    @PostMapping(value = "/merge_metadata_for_loading_internal_table")
+    void mergeMetadataForLoadingInternalTable(@RequestParam("project") String project,
+            @RequestBody MergerInfo mergerInfo);
+
     @PostMapping(value = "/check_and_auto_merge_segments")
     void checkAndAutoMergeSegments(@RequestParam("project") String project, @RequestParam("modelId") String modelId,
             @RequestParam("owner") String owner);
@@ -56,16 +60,15 @@ public interface MetadataRPC extends MetadataContract{
     @PostMapping(value = "/update_dataflow_maxBucketId")
     @WaitForSyncAfterRPC
     void updateDataflow(@RequestParam("project") String project, @RequestParam("dfId") String dfId,
-                        @RequestParam("segmentId") String segmentId, @RequestParam("maxBucketId") long maxBucketIt);
+            @RequestParam("segmentId") String segmentId, @RequestParam("maxBucketId") long maxBucketIt);
 
     @PostMapping(value = "/update_dataflow_status")
     @WaitForSyncAfterRPC
     void updateDataflowStatus(@RequestParam("project") String project, @RequestParam("uuid") String uuid,
-                              @RequestParam("status") RealizationStatusEnum status);
-
+            @RequestParam("status") RealizationStatusEnum status);
 
     @PostMapping(value = "/update_recommendations_count")
     @WaitForSyncAfterRPC
     void updateRecommendationsCount(@RequestParam("project") String project, @RequestParam("modelId") String modelId,
-                                    @RequestParam("size") int size);
+            @RequestParam("size") int size);
 }

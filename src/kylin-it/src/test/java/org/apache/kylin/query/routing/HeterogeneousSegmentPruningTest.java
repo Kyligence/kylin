@@ -596,7 +596,7 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         // can not query
         {
             OlapContext olapContext = OlapContextTestUtil.getOlapContexts(project, sql).get(0);
-            Assert.assertEquals(-1L, olapContext.getStorageContext().getLayoutId().longValue());
+            Assert.assertEquals(-1L, olapContext.getStorageContext().getBatchCandidate().getLayoutId());
         }
 
         {
@@ -604,7 +604,7 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
                     QueryRouter.USE_VACANT_INDEXES);
             try (QueryContext queryContext = QueryContext.current()) {
                 OlapContext olapContext = OlapContextTestUtil.getOlapContexts(project, sql).get(0);
-                Assert.assertEquals(10001L, olapContext.getStorageContext().getLayoutId().longValue());
+                Assert.assertEquals(10001L, olapContext.getStorageContext().getBatchCandidate().getLayoutId());
                 Assert.assertFalse(queryContext.getQueryTagInfo().isVacant());
             }
         }
@@ -645,14 +645,15 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         MetadataTestUtils.updateProjectConfig(project, "kylin.query.index-match-rules", QueryRouter.USE_VACANT_INDEXES);
         try (QueryContext queryContext = QueryContext.current()) {
             OlapContext olapContext = OlapContextTestUtil.getOlapContexts(project, sql).get(0);
-            Assert.assertEquals(-1L, olapContext.getStorageContext().getLayoutId().longValue());
+            Assert.assertEquals(-1L, olapContext.getStorageContext().getBatchCandidate().getLayoutId());
             Assert.assertFalse(queryContext.getQueryTagInfo().isVacant());
         }
     }
 
     private void assertFiltersAndLayout(OlapContext context, String segId, String expectedFilterCond) {
         if (segId != null) {
-            Assert.assertEquals(segId, context.getStorageContext().getPrunedSegments().get(0).getId());
+            Assert.assertEquals(segId,
+                    context.getStorageContext().getBatchCandidate().getPrunedSegments().get(0).getId());
         }
         if (expectedFilterCond != null) {
             Assert.assertEquals(expectedFilterCond, context.getExpandedFilterConditions().stream()
@@ -677,15 +678,15 @@ public class HeterogeneousSegmentPruningTest extends NLocalWithSparkSessionTest 
         val context = OlapContextTestUtil.getOlapContexts(project, sql).get(0);
 
         if (expectedLayoutId == -1L) {
-            Assert.assertTrue(context.getStorageContext().isEmptyLayout());
-            Assert.assertEquals(Long.valueOf(-1), context.getStorageContext().getLayoutId());
+            Assert.assertTrue(context.getStorageContext().isDataSkipped());
+            Assert.assertEquals(-1L, context.getStorageContext().getBatchCandidate().getLayoutId());
             return;
         }
 
         Assert.assertNotNull(context.getRealization());
-        val prunedSegments = context.getStorageContext().getPrunedSegments();
+        val prunedSegments = context.getStorageContext().getBatchCandidate().getPrunedSegments();
         val prunedPartitions = context.getStorageContext().getPrunedPartitions();
-        val candidate = context.getStorageContext().getCandidate();
+        val candidate = context.getStorageContext().getBatchCandidate();
         Assert.assertEquals(expectedRanges.size(), prunedSegments.size());
         Assert.assertEquals(expectedLayoutId, candidate.getLayoutEntity().getId());
 

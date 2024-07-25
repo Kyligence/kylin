@@ -113,11 +113,10 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
   }
 
   private def convertTableScan(rel: OlapTableScan): LogicalPlan = {
-    val execFunc = rel.getContext.genExecFunc(rel, rel.getTableName)
-    val storageType = getStorageType(rel.getContext.getRealization.getModel.getStorageType)
+    val execFunc = rel.getContext.genExecFunc(rel)
 
     val tablePlan = logTime(getLogMessage(execFunc)) {
-      createTablePlan(rel, execFunc, storageType)
+      createTablePlan(rel, execFunc)
     }
 
     tablePlan
@@ -125,14 +124,13 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
 
   private def convertJoinRel(rel: OlapJoinRel): LogicalPlan = {
     if (!rel.isRuntimeJoin) {
-      val execFunc = rel.getContext.genExecFunc(rel, "")
-      val storageType = getStorageType(rel.getContext.getRealization.getModel.getStorageType)
+      val execFunc = rel.getContext.genExecFunc(rel)
 
       val logicalPlan = logTime(getLogMessage(execFunc)) {
         if (execFunc == "executeMetadataQuery") {
           TableScanPlan.createMetadataTable(rel)
         } else {
-          createTablePlan(rel, execFunc, storageType)
+          createTablePlan(rel, execFunc)
         }
       }
 
@@ -150,11 +148,17 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
   }
 
 
-  private def createTablePlan(rel: OlapRel, execFunc: String, storageType: DataStorageType): LogicalPlan = {
+  private def createTablePlan(rel: OlapRel, execFunc: String): LogicalPlan = {
     execFunc match {
       case "executeLookupTableQuery" =>
-        TableScanPlan.createLookupTable(rel)
+        val config = rel.getContext.getOlapSchema.getConfig
+        if (config.isInternalTableEnabled) {
+          TableScanPlan.createInternalTable(rel)
+        } else {
+          TableScanPlan.createLookupTable(rel)
+        }
       case "executeOlapQuery" =>
+        val storageType = getStorageType(rel.getContext.getRealization.getModel.getStorageType)
         if (storageType == DataStorageType.DELTA) {
           DeltaLakeTableScanPlan.createOlapTable(rel, filePruningMode)
         } else TableScanPlan.createOlapTable(rel)

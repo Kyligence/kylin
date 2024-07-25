@@ -230,8 +230,7 @@ public class QueryUtil {
     }
 
     public static String appendLimitOffset(String project, String sql, int limit, int offset) {
-        sql = sql.trim();
-        sql = sql.replace("\r", StringUtils.SPACE).replace("\n", System.getProperty("line.separator"));
+        sql = sql.replace("\r", StringUtils.SPACE).replace("\n", System.lineSeparator());
         sql = trimRightSemiColon(sql);
 
         //Split keywords and variables from sql by punctuation and whitespace character
@@ -265,7 +264,7 @@ public class QueryUtil {
             sql += ("\nOFFSET " + offset);
         }
 
-        return sql;
+        return sql.trim();
     }
 
     public static boolean isBigQueryPushDownCapable(KylinConfig kylinConfig) {

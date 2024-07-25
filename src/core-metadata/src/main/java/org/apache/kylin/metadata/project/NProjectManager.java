@@ -68,7 +68,7 @@ public class NProjectManager {
         if (!UnitOfWork.isAlreadyInTransaction())
             logger.info("Initializing NProjectManager with KylinConfig Id: {}", System.identityHashCode(config));
         this.config = config;
-        this.projectLoader = new NProjectLoader(this);
+        this.projectLoader = new NProjectLoader(config);
         crud = new CachedCrudAssist<ProjectInstance>(getStore(), MetadataType.PROJECT, null, ProjectInstance.class) {
             @Override
             protected ProjectInstance initEntityAfterReload(ProjectInstance entity, String projectName) {
@@ -95,8 +95,7 @@ public class NProjectManager {
     }
 
     public ProjectInstance getProjectById(String projectId) {
-        return crud.listByFilter(RawResourceFilter.equalFilter("uuid", projectId)).stream().findAny()
-                .orElse(null);
+        return crud.listByFilter(RawResourceFilter.equalFilter("uuid", projectId)).stream().findAny().orElse(null);
     }
 
     public ProjectInstance createProject(String projectName, String owner, String description,
@@ -197,12 +196,9 @@ public class NProjectManager {
         return projectLoader.listAllRealizations(project);
     }
 
-    public Set<IRealization> getRealizationsByTable(String project, String tableName) {
-        return projectLoader.getRealizationsByTable(project, tableName.toUpperCase(Locale.ROOT));
-    }
-
     public List<NDataModel> listHealthyModels(String project) {
-        return listAllRealizations(project).stream().map(IRealization::getModel).filter(Objects::nonNull).collect(Collectors.toList());
+        return listAllRealizations(project).stream().map(IRealization::getModel).filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     public List<MeasureDesc> listEffectiveRewriteMeasures(String project, String factTable) {
@@ -261,5 +257,9 @@ public class NProjectManager {
         }
         ProjectInstance projectInstance = NProjectManager.getInstance(envConfig).getProject(project);
         return projectInstance == null ? envConfig : projectInstance.getConfig();
+    }
+
+    public static Set<IRealization> getRealizations(KylinConfig config, String project, String tableName) {
+        return getInstance(config).projectLoader.getRealizationsByTable(project, tableName.toUpperCase(Locale.ROOT));
     }
 }

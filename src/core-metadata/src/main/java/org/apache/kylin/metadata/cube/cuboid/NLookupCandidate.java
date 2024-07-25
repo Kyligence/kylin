@@ -22,20 +22,30 @@ import org.apache.kylin.metadata.realization.IRealizationCandidate;
 
 import lombok.Getter;
 
+/**
+ * Both Snapshot and InternalTable can be used as LookupCandidate.
+ */
+@Getter
 public class NLookupCandidate implements IRealizationCandidate {
-    @Getter
-    private final String tableRef;
 
-    @Getter
-    private final boolean isUsingSnapShot;
+    private final String table;
+    private final Type type;
 
-    public NLookupCandidate(String tableRef, boolean isUsingSnapShot) {
-        this.tableRef = tableRef;
-        this.isUsingSnapShot = isUsingSnapShot;
+    public NLookupCandidate(String table, Type type) {
+        this.table = table;
+        this.type = type;
     }
 
     @Override
     public double getCost() {
         return 0d;
+    }
+
+    public enum Type {
+        SNAPSHOT,
+
+        INTERNAL_TABLE,
+
+        NONE
     }
 }

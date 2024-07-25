@@ -112,6 +112,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import io.kyligence.kap.engine.spark.job.InternalTableLoadJob;
 import io.kyligence.kap.engine.spark.job.SegmentBuildJob;
 import lombok.val;
 import scala.runtime.AbstractFunction1;
@@ -338,8 +339,10 @@ public abstract class SparkApplication implements Application {
                 Unsafe.setProperty("kylin.env", config.getDeployEnv());
             }
 
-            // disable gluten in build job
-            ss.sparkContext().setLocalProperty("gluten.enabledForCurrentThread", "false");
+            if (!getParam(NBatchConstants.P_CLASS_NAME).equals(InternalTableLoadJob.class.getName())) {
+                ss.sparkContext().setLocalProperty("gluten.enabledForCurrentThread", "false");
+                logger.info("Disable gluten for normal build");
+            }
 
             logger.info("Start job");
             infos.startJob();

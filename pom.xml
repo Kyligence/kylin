@@ -372,6 +372,7 @@
         <module>src/core-metrics</module>
         <module>src/source-hive</module>
         <module>src/server</module>
+        <module>src/spark-project/kylin-internal-catalog</module>
         <module>src/spark-project/kylin-soft-affinity-cache</module>
         <module>src/spark-project/spark-common</module>
         <module>src/spark-project/sparder</module>
@@ -571,6 +572,11 @@
             <dependency>
                 <groupId>org.apache.kylin</groupId>
                 <artifactId>kylin-query-booter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kylin</groupId>
+                <artifactId>kylin-internal-catalog</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

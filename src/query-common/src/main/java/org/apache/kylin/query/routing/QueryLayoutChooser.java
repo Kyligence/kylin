@@ -83,7 +83,7 @@ public class QueryLayoutChooser {
 
         if (CollectionUtils.isEmpty(prunedSegments)) {
             log.info("There is no segment to answer sql");
-            return NLayoutCandidate.EMPTY;
+            return NLayoutCandidate.ofEmptyCandidate();
         }
 
         ChooserContext chooserContext = new ChooserContext(sqlDigest, dataflow);
@@ -119,7 +119,7 @@ public class QueryLayoutChooser {
             CapabilityResult tempResult = new CapabilityResult(matchResult);
             if (!matchResult.getNeedDerive().isEmpty()) {
                 candidate.setDerivedToHostMap(matchResult.getNeedDerive());
-                candidate.setDerivedTableSnapshots(candidate.getDerivedToHostMap().keySet().stream()
+                candidate.setDerivedLookups(candidate.getDerivedToHostMap().keySet().stream()
                         .map(i -> chooserContext.convertToRef(i).getTable()).collect(Collectors.toSet()));
             }
             List<NDataLayout> dataLayouts = entry.getValue();
@@ -162,7 +162,7 @@ public class QueryLayoutChooser {
         }
         if (CollectionUtils.isEmpty(prunedSegments)) {
             log.info("There is no segment to answer sql");
-            return NLayoutCandidate.EMPTY;
+            return NLayoutCandidate.ofEmptyCandidate();
         }
 
         ChooserContext chooserContext = new ChooserContext(digest, dataflow);

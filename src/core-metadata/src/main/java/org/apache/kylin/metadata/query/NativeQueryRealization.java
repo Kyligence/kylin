@@ -56,40 +56,34 @@ public class NativeQueryRealization implements Serializable {
 
     public NativeQueryRealization(String modelId, String modelAlias, Long layoutId, String indexType,
             boolean isPartialMatchModel, List<String> snapshots) {
-        this.modelId = modelId;
+        this(modelId, layoutId, indexType, isPartialMatchModel);
         this.modelAlias = modelAlias;
-        this.layoutId = layoutId;
-        this.indexType = indexType;
-        this.isPartialMatchModel = isPartialMatchModel;
+        this.snapshots = snapshots;
+    }
+
+    public NativeQueryRealization(List<String> snapshots) {
+        this("null", -1L, QueryMetrics.TABLE_SNAPSHOT, false);
+        this.modelAlias = "null";
         this.snapshots = snapshots;
     }
 
     public NativeQueryRealization(String modelId, Long layoutId, String indexType) {
-        this.modelId = modelId;
-        this.layoutId = layoutId;
-        this.indexType = indexType;
-        this.isPartialMatchModel = false;
+        this(modelId, layoutId, indexType, false);
     }
 
     public NativeQueryRealization(String modelId, Long layoutId, String indexType, List<String> snapshots) {
-        this.modelId = modelId;
-        this.layoutId = layoutId;
-        this.indexType = indexType;
+        this(modelId, layoutId, indexType, false);
         this.snapshots = snapshots;
-        this.isPartialMatchModel = false;
     }
 
     public NativeQueryRealization(String modelId, String modelAlias, Long layoutId, String indexType) {
-        this.modelId = modelId;
-        this.layoutId = layoutId;
+        this(modelId, layoutId, indexType, false);
         this.modelAlias = modelAlias;
-        this.indexType = indexType;
-        this.isPartialMatchModel = false;
     }
 
     public NativeQueryRealization(String modelId, Long layoutId, String indexType, boolean isPartialMatchModel) {
         this.modelId = modelId;
-        this.layoutId = layoutId;
+        this.layoutId = layoutId != null && layoutId == -1L ? null : layoutId;
         this.indexType = indexType;
         this.isPartialMatchModel = isPartialMatchModel;
     }

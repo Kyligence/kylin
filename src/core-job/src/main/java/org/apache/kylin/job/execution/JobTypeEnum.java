@@ -36,6 +36,10 @@ public enum JobTypeEnum {
     SNAPSHOT_BUILD(Category.SNAPSHOT), //
     SNAPSHOT_REFRESH(Category.SNAPSHOT), //
 
+    INTERNAL_TABLE_BUILD(Category.INTERNAL), //
+    INTERNAL_TABLE_REFRESH(Category.INTERNAL), //
+    INTERNAL_TABLE_DELETE_PARTITION(Category.INTERNAL), //
+
     STREAMING_MERGE(Category.STREAMING), //
     STREAMING_BUILD(Category.STREAMING), //
 
@@ -62,6 +66,7 @@ public enum JobTypeEnum {
     public static class Category {
         public static final String BUILD = "BUILD";
         public static final String SNAPSHOT = "SNAPSHOT";
+        public static final String INTERNAL = "INTERNAL";
         public static final String STREAMING = "STREAMING";
         public static final String ASYNC_QUERY = "ASYNC_QUERY";
         public static final String CRON = "CRON";

@@ -22,11 +22,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.QueryContext;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.model.Segments;
@@ -65,10 +63,6 @@ public class Candidate {
         } else {
             return queryableSeg.getBatchSegments();
         }
-    }
-
-    public Map<String, Set<Long>> getChSegToLayoutsMap(NDataflow df) {
-        return df.isStreaming() ? Maps.newHashMap() : queryableSeg.getChSegToLayoutsMap();
     }
 
     public void setPrunedSegments(Segments<NDataSegment> prunedSegments, NDataflow df) {

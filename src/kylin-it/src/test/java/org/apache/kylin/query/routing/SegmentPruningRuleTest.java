@@ -120,7 +120,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         SimpleDataContext dataContext = new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(),
                 kylinConfig);
         context.getFirstTableScan().getCluster().getPlanner().setExecutor(new RexExecutorImpl(dataContext));
-        Map<String, String> map = RealizationChooser.matchJoins(dataflow.getModel(), context, false, false);
+        Map<String, String> map = context.matchJoins(dataflow.getModel(), false, false);
         context.fixModel(dataflow.getModel(), map);
         return new SegmentPruningRule().pruneSegments(dataflow, context);
     }
@@ -288,7 +288,7 @@ public class SegmentPruningRuleTest extends NLocalWithSparkSessionTest {
         SimpleDataContext dataContext = new SimpleDataContext(rootSchema.plus(), TypeSystem.javaTypeFactory(),
                 kylinConfig);
         context.getFirstTableScan().getCluster().getPlanner().setExecutor(new RexExecutorImpl(dataContext));
-        Map<String, String> map = RealizationChooser.matchJoins(dataflow.getModel(), context, false, false);
+        Map<String, String> map = context.matchJoins(dataflow.getModel(), false, false);
         context.fixModel(dataflow.getModel(), map);
 
         Assert.assertTrue("Unexpected size " + dataflow.getQueryableSegments().size(),

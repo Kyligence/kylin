@@ -151,6 +151,8 @@ public class PushDownUtil {
             // on no authorized cols found, return empty result
             return PushdownResult.emptyResult();
         }
+        QueryInterruptChecker.checkThreadInterrupted("Interrupted sql push down at the stage of QueryRoutingEngine",
+                "Current step: try push down select query");
         QueryContext.current().record("massage");
 
         QueryContext.currentTrace().startSpan(QueryTrace.PREPARE_AND_SUBMIT_JOB);
@@ -211,7 +213,7 @@ public class PushDownUtil {
             sql = converter.convert(sql, queryParams.getProject(), queryParams.getDefaultSchema());
         }
         sql = replaceEscapedQuote(sql);
-        return sql;
+        return sql.trim();
     }
 
     static String removeSqlHints(String sql, KylinConfig kylinConfig) {

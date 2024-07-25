@@ -252,8 +252,8 @@ public class PlannerFactory {
     }
 
     private ConverterRule selectJoinRuleByConfig() {
-        return (kylinConfig.isQueryNonEquiJoinModelEnabled() && !BackdoorToggles.getIsQueryFromAutoModeling())
-                || (kylinConfig.isNonEquiJoinRecommendationEnabled() && BackdoorToggles.getIsQueryFromAutoModeling()) //
+        return (kylinConfig.isQueryNonEquiJoinModelEnabled() && !BackdoorToggles.isModelingSql())
+                || (kylinConfig.isNonEquiJoinRecommendationEnabled() && BackdoorToggles.isModelingSql()) //
                         ? OlapJoinRule.NON_EQUI_INSTANCE
                         : OlapJoinRule.INSTANCE;
     }

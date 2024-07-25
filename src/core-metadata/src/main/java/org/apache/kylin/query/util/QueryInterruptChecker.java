@@ -46,7 +46,9 @@ public class QueryInterruptChecker {
                     && SlowQueryDetector.getRunningQueries().get(Thread.currentThread()).isStopByUser()) {
                 throw new UserStopQueryException("");
             }
-
+            if (QueryContext.current().getQueryTagInfo().isErrInterrupted()) {
+                throw new KylinRuntimeException(QueryContext.current().getQueryTagInfo().getInterruptReason());
+            }
             QueryContext.current().getQueryTagInfo().setTimeout(true);
             throw new KylinTimeoutException("The query exceeds the set time limit of "
                     + KylinConfig.getInstanceFromEnv().getQueryTimeoutSeconds() + "s. " + stepInfo);

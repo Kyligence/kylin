@@ -132,8 +132,8 @@ class QueryRouterTest {
         OlapContext olapContext = CandidateTestUtils.mockOlapContext();
         val candidate = new Candidate(realization, olapContext, Maps.newHashMap());
         val cap = new CapabilityResult();
-        cap.setSelectedStreamingCandidate(() -> candidateCost);
-        cap.setCost(cap.getSelectedStreamingCandidate().getCost());
+        cap.setSelectedStreamCandidate(() -> candidateCost);
+        cap.setCost(cap.getSelectedStreamCandidate().getCost());
         candidate.setCapability(cap);
         return candidate;
     }
@@ -145,9 +145,8 @@ class QueryRouterTest {
         val candidate = new Candidate(realization, olapContext, Maps.newHashMap());
         val cap = new CapabilityResult();
         cap.setSelectedCandidate(() -> candidateCost);
-        cap.setSelectedStreamingCandidate(() -> streamingCandidateCost);
-        cap.setCost(
-                (int) Math.min(cap.getSelectedCandidate().getCost(), cap.getSelectedStreamingCandidate().getCost()));
+        cap.setSelectedStreamCandidate(() -> streamingCandidateCost);
+        cap.setCost((int) Math.min(cap.getSelectedCandidate().getCost(), cap.getSelectedStreamCandidate().getCost()));
         candidate.setCapability(cap);
         return candidate;
     }
@@ -158,8 +157,8 @@ class QueryRouterTest {
         val candidate = new Candidate(realization, olapContext, Maps.newHashMap());
         candidate.realization = CandidateTestUtils.mockRealization(modelId, modelName, realizationCost);
         val cap = new CapabilityResult();
-        cap.setSelectedCandidate(NLayoutCandidate.EMPTY);
-        cap.setSelectedStreamingCandidate(NLayoutCandidate.EMPTY);
+        cap.setSelectedCandidate(NLayoutCandidate.ofEmptyCandidate());
+        cap.setSelectedStreamCandidate(NLayoutCandidate.ofEmptyCandidate());
         candidate.setCapability(cap);
         return candidate;
     }

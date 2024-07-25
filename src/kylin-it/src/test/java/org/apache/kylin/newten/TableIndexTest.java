@@ -116,9 +116,8 @@ public class TableIndexTest extends NLocalWithSparkSessionTest {
         populateSSWithCSVData(getTestConfig(), getProject(), SparderEnv.getSparkSession());
         List<Pair<String, String>> query = new ArrayList<>();
         query.add(Pair.newPair("query_count_distinct",
-                "select\n" + "count(\n" + "    distinct(\n" + "        case when (a.ORDER_ID > 0)\n"
-                        + "        THEN a.ORDER_ID\n" + "        ELSE NULL\n" + "        end)\n" + "        )\n"
-                        + "from (\n" + "select ORDER_ID from TEST_KYLIN_FACT\n" + ") a"));
+                "select count( distinct( case when (a.ORDER_ID > 0) THEN a.ORDER_ID ELSE NULL end) )\n"
+                        + "from ( select ORDER_ID from TEST_KYLIN_FACT ) a"));
         ExecAndComp.execAndCompare(query, getProject(), CompareLevel.SAME, "left");
     }
 

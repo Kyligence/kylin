@@ -138,7 +138,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
         Set<String> dbs = snapshotsRequest.getDatabases().stream().map(db -> db.toUpperCase(Locale.ROOT))
                 .collect(Collectors.toSet());
         Map<String, List<TableDesc>> dbToTablesMap = getManager(NTableMetadataManager.class,
-                snapshotsRequest.getProject()).dbToTablesMap(getConfig().streamingEnabled());
+                snapshotsRequest.getProject()).dbToTablesMap(getConfig().isStreamingEnabled());
 
         // check db
         Set<String> nonExisted = dbs.stream().filter(db -> !dbToTablesMap.containsKey(db)).collect(Collectors.toSet());
@@ -674,7 +674,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
         String finalTable = tablePattern;
         String finalDatabase = expectedDatabase;
         String finalExpectedDatabase = expectedDatabase;
-        boolean streamingEnabled = getConfig().streamingEnabled();
+        boolean streamingEnabled = getConfig().isStreamingEnabled();
         List<JobInfo> jobInfoList = fetchAllRunningSnapshotTasksByTableIds(project, null);
         NInitTablesResponse response = new NInitTablesResponse();
         Set<String> groups = getCurrentUserGroups();
@@ -878,8 +878,7 @@ public class SnapshotService extends BasicService implements SnapshotSupporter {
             boolean isMainSourceType = sourceProviderFamilyMapping.containsKey(table.getSourceType());
             if (!isMainSourceType) {
                 sourceProviderFamilyMapping.entrySet().stream()
-                        .filter(entry -> entry.getValue().contains(table.getSourceType()))
-                        .findFirst()
+                        .filter(entry -> entry.getValue().contains(table.getSourceType())).findFirst()
                         .ifPresent(entry -> res.setSourceType(entry.getKey()));
             }
             return res;

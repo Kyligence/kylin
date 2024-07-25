@@ -38,6 +38,7 @@ import org.apache.kylin.engine.spark.job.stage.build.partition.PartitionGatherFl
 import org.apache.kylin.engine.spark.job.stage.build.partition.PartitionGenerateFlatTable;
 import org.apache.kylin.engine.spark.job.stage.build.partition.PartitionMaterializedFactTableView;
 import org.apache.kylin.engine.spark.job.stage.build.partition.PartitionRefreshColumnBytes;
+import org.apache.kylin.engine.spark.job.stage.internal.InternalTableLoad;
 import org.apache.kylin.engine.spark.job.stage.merge.MergeColumnBytes;
 import org.apache.kylin.engine.spark.job.stage.merge.MergeFlatTable;
 import org.apache.kylin.engine.spark.job.stage.merge.MergeIndices;
@@ -53,11 +54,14 @@ import org.apache.kylin.engine.spark.job.stage.tablesampling.AnalyzerTable;
 import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.job.execution.StageBase;
+import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 
 import io.kyligence.kap.engine.spark.job.LayoutDataOptimizeJob;
+import io.kyligence.kap.engine.spark.job.InternalTableLoadJob;
 import io.kyligence.kap.engine.spark.job.SnapshotBuildJob;
 import io.kyligence.kap.engine.spark.job.step.NStageForBuild;
+import io.kyligence.kap.engine.spark.job.step.NStageForInternalTableLoad;
 import io.kyligence.kap.engine.spark.job.step.NStageForMerge;
 import io.kyligence.kap.engine.spark.job.step.NStageForSnapshot;
 import io.kyligence.kap.engine.spark.job.step.NStageForTableSampling;
@@ -278,6 +282,23 @@ public enum StageType {
         @Override
         protected StageBase create(NSparkExecutable parent, KylinConfig config) {
             return new StageBase(ExecutableConstants.STAGE_NAME_OPTIMIZE_LAYOUT_DATA_COMPACTION);
+        }
+    },
+
+    INTERNAL_TABLE_LOAD {
+        @Override
+        public StageExec create(SparkApplication jobContext, NDataSegment dataSegment, BuildParam buildParam) {
+            return new InternalTableLoad((InternalTableLoadJob) jobContext);
+        }
+
+        @Override
+        protected StageBase create(NSparkExecutable parent, KylinConfig config) {
+            Boolean dropPartition = Boolean.parseBoolean(parent.getParam(NBatchConstants.P_DELETE_PARTITION));
+            if (dropPartition) {
+                return new NStageForInternalTableLoad(ExecutableConstants.STAGE_NAME_INTERNAL_TABLE_DROP_PARTITION);
+            } else {
+                return new NStageForInternalTableLoad(ExecutableConstants.STAGE_NAME_INTERNAL_TABLE_LOAD);
+            }
         }
     };
 

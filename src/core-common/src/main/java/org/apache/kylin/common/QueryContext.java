@@ -31,6 +31,7 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 
 import com.alibaba.ttl.TransmittableThreadLocal;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -65,9 +66,6 @@ public class QueryContext implements Closeable {
     @Setter
     private String project;
     private long recordMillis;
-    @Getter
-    @Setter
-    private Object calcitePlan;
     @Getter
     @Setter
     private String pushdownEngine;
@@ -141,11 +139,20 @@ public class QueryContext implements Closeable {
     @Setter
     private String firstHintStr;
 
+    @Getter
+    @Setter
+    private boolean isExplainSql;
+
+    @Getter
+    @Setter
+    private QueryPlan queryPlan;
+
     private QueryContext() {
         // use QueryContext.current() instead
         queryId = RandomUtil.randomUUIDStr();
         recordMillis = System.currentTimeMillis();
         metrics.queryStartTime = recordMillis;
+        queryPlan = new QueryPlan();
     }
 
     public static QueryContext current() {
@@ -367,6 +374,8 @@ public class QueryContext implements Closeable {
         private boolean includeHeader;
         private boolean isVacant;
         private boolean isQueryDetect;
+        private boolean isErrInterrupted;
+        private String interruptReason;
     }
 
     @Getter
@@ -387,4 +396,13 @@ public class QueryContext implements Closeable {
         private List<String> snapshots;
     }
 
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class QueryPlan {
+        @JsonProperty("calcite_plan")
+        private String calcitePlan;
+        @JsonProperty("spark_plan")
+        private String sparkPlan;
+    }
 }

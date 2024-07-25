@@ -113,6 +113,9 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
         sparkConf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false");
         sparkConf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true");
 
+        sparkConf.set("spark.sql.catalog.INTERNAL_CATALOG",
+                "org.apache.spark.sql.execution.datasources.v2.kyinternal.KyinternalCatalog");
+
         GlutenTestConfig.configGluten(sparkConf);
 
         ss = SparkSession.builder().withExtensions(ext -> {

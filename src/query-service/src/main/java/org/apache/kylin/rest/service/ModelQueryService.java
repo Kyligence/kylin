@@ -101,14 +101,13 @@ public class ModelQueryService extends BasicService implements ModelQuerySupport
             modelTripleList.removeIf(t -> !t.getDataModel().getUuid().equals(elem.getModelId()));
         }
 
-        boolean streamingEnabled = KylinConfig.getInstanceFromEnv().streamingEnabled();
+        boolean streamingEnabled = KylinConfig.getInstanceFromEnv().isStreamingEnabled();
         modelTripleList = modelTripleList.parallelStream()
                 .filter(triple -> triple.getDataModel().isAccessible(streamingEnabled)) //
                 .collect(Collectors.toList());
 
         if (!modelAttributeSet.isEmpty()) {
-            modelTripleList = modelTripleList.parallelStream()
-                    .filter(t -> filterModelAttribute(t, modelAttributeSet))
+            modelTripleList = modelTripleList.parallelStream().filter(t -> filterModelAttribute(t, modelAttributeSet))
                     .collect(Collectors.toList());
         }
 
@@ -175,8 +174,7 @@ public class ModelQueryService extends BasicService implements ModelQuerySupport
         tripleList.parallelStream().filter(t -> !t.getDataModel().isFusionModel())
                 .forEach(t -> t.setCalcObject(t.getDataflow().getStorageBytesSize()));
 
-        return tripleList.stream()
-                .sorted(new ModelTripleComparator("calcObject", !reverse, SORT_KEY_CALC_OBJECT))
+        return tripleList.stream().sorted(new ModelTripleComparator("calcObject", !reverse, SORT_KEY_CALC_OBJECT))
                 .collect(Collectors.toList());
     }
 

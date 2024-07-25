@@ -66,7 +66,7 @@ class ProjectSchemaFactory {
         Set<String> groups = Objects.nonNull(aclInfo) ? aclInfo.getGroups() : null;
         schemasMap = QueryExtension.getFactory().getSchemaMapExtension().getAuthorizedTablesAndColumns(kylinConfig,
                 projectName, aclDisabledOrIsAdmin(aclInfo), user, groups);
-        removeStreamingTables(schemasMap, kylinConfig.streamingEnabled());
+        removeStreamingTables(schemasMap, kylinConfig.isStreamingEnabled());
         modelsMap = NDataflowManager.getInstance(kylinConfig, projectName).getModelsGroupbyTable();
 
         // "database" in TableDesc correspond to our schema
@@ -146,7 +146,7 @@ class ProjectSchemaFactory {
     }
 
     private Schema createSchema(String schemaName) {
-        return new OlapSchema(projectName, schemaName, schemasMap.get(schemaName), modelsMap);
+        return new OlapSchema(kylinConfig, projectName, schemaName, schemasMap.get(schemaName), modelsMap);
     }
 
     private void addUDFs(CalciteSchema calciteSchema) {

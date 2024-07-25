@@ -244,6 +244,8 @@ public abstract class MetadataMerger {
             return new AfterSamplingMerger(config, project);
         case SNAPSHOT:
             return new AfterSnapshotMerger(config, project);
+        case LOAD_INTERNAL_TABLE:
+            return new AfterLoadingInternalTableMerger(config, project);
         default:
             throw new IllegalArgumentException("Unknown HandlerType: " + type);
         }

@@ -143,11 +143,6 @@ class KylinConfigBaseTest {
 
         map.put("getSecurityProfile", new PropertiesEntity("kylin.security.profile", "testing", "testing"));
 
-        map.put("getRealizationProviders",
-                new PropertiesEntity("kylin.metadata.realization-providers",
-                        "org.apache.kylin.metadata.cube.model.NDataflowManager",
-                        new String[] { "org.apache.kylin.metadata.cube.model.NDataflowManager" }));
-
         map.put("getCubeDimensionCustomEncodingFactories",
                 new PropertiesEntity("kylin.metadata.custom-dimension-encodings", "", new String[0]));
 
@@ -485,6 +480,7 @@ class KylinConfigBaseTest {
                                 "org.apache.kylin.query.util.RestoreFromComputedColumn",
                                 "org.apache.kylin.query.security.RowFilter",
                                 "org.apache.kylin.query.security.HackSelectStarWithColumnACL",
+                                "org.apache.kylin.query.util.SchemaConverter",
                                 "org.apache.kylin.query.util.SparkSQLFunctionConverter" }));
 
         map.put("isPushdownQueryCacheEnabled",

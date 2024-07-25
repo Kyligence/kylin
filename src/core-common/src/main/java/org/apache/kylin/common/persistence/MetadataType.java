@@ -31,6 +31,7 @@ import org.apache.kylin.common.persistence.resources.DataflowRawResource;
 import org.apache.kylin.common.persistence.resources.FusionModelRawResource;
 import org.apache.kylin.common.persistence.resources.HistorySourceUsageRawResource;
 import org.apache.kylin.common.persistence.resources.IndexPlanRawResource;
+import org.apache.kylin.common.persistence.resources.InternalTableRawResource;
 import org.apache.kylin.common.persistence.resources.JarInfoRawResource;
 import org.apache.kylin.common.persistence.resources.JobStatsRawResource;
 import org.apache.kylin.common.persistence.resources.KafkaConfigRawResource;
@@ -76,6 +77,7 @@ public enum MetadataType {
     OBJECT_ACL(ObjectAclRawResource.class), //
     RESOURCE_GROUP(ResourceGroupRawResource.class), //
     SEGMENT(SegmentRawResource.class), //
+    INTERNAL_TABLE(InternalTableRawResource.class), //
     TABLE_INFO(TableInfoRawResource.class), //
     TABLE_EXD(TableExdRawResource.class), //
     USER_GLOBAL_ACL(UserGlobalAclRawResource.class), //

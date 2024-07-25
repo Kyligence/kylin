@@ -185,6 +185,26 @@ public class Message {
         }
     }
 
+    public String getCreateInternalTableFailed() {
+        return "Failed to create internal table for table \"%s\". ";
+    }
+
+    public String getInvalidInternalTableParameters() {
+        return "Invalid internal table parameters.";
+    }
+
+    public String getDatePartitionColumnNotFound() {
+        return "Date format partition column must be set in an incremental load table.";
+    }
+
+    public String getUnSupportedDateformat() {
+        return "Date partition format \"%s\" is not supported.";
+    }
+
+    public String getPartitionColumnIgnored_WARNING() {
+        return "Partition columns are ignored when converting multiple tables to internal tables";
+    }
+
     public String getCanNotOverwriteModel() {
         return "Can’t overwrite the model \"%s\", as it doesn’t exist. Please re-select and try again.";
     }
@@ -425,6 +445,14 @@ public class Message {
     // Table
     public String getTableNotFound() {
         return "Can’t find table \"%s\". Please check and try again.";
+    }
+
+    public String getInternalTableNotFound() {
+        return "Can’t find internal table \"%s\". Please check and try again.";
+    }
+
+    public String getNotInternalTable() {
+        return "Table \"%s\" is not an internal table. Please check and try again.";
     }
 
     public String getSamplingFailedForIllegalTableName() {
@@ -904,6 +932,10 @@ public class Message {
 
     public String getPartitionColumnNotExist() {
         return "Can’t find the partition column. Please check and try again.";
+    }
+
+    public String getDatePartitionFormatEmpty() {
+        return "Date_partition_format can't be empty when partition columns is not empty. Please check and try again.";
     }
 
     public String getPartitionColumnStartError() {

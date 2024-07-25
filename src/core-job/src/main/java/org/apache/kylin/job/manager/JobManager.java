@@ -37,6 +37,7 @@ import org.apache.kylin.job.handler.AbstractJobHandler;
 import org.apache.kylin.job.handler.AddIndexHandler;
 import org.apache.kylin.job.handler.AddSegmentHandler;
 import org.apache.kylin.job.handler.LayoutDataOptimizeJobHandler;
+import org.apache.kylin.job.handler.InternalTableJobHandler;
 import org.apache.kylin.job.handler.MergeSegmentHandler;
 import org.apache.kylin.job.handler.RefreshSegmentHandler;
 import org.apache.kylin.job.handler.SnapshotJobHandler;
@@ -171,6 +172,11 @@ public class JobManager {
                 break;
             case LAYOUT_DATA_OPTIMIZE:
                 handler = new LayoutDataOptimizeJobHandler();
+                break;
+            case INTERNAL_TABLE_REFRESH:
+            case INTERNAL_TABLE_BUILD:
+            case INTERNAL_TABLE_DELETE_PARTITION:
+                handler = new InternalTableJobHandler();
                 break;
             default:
                 log.error("jobParam doesn't have matched job: {}", jobParam.getJobTypeEnum());

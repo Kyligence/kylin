@@ -598,7 +598,7 @@ public class NBasicController {
     }
 
     public void checkStreamingEnabled() {
-        if (!KylinConfig.getInstanceFromEnv().streamingEnabled()) {
+        if (!KylinConfig.getInstanceFromEnv().isStreamingEnabled()) {
             throw new KylinException(ServerErrorCode.UNSUPPORTED_STREAMING_OPERATION,
                     MsgPicker.getMsg().getStreamingDisabled());
         }

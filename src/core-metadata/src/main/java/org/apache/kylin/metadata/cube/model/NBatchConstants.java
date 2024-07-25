@@ -61,6 +61,16 @@ public interface NBatchConstants {
     String P_WAITE_TIME = "waiteTime";
     String P_OPTIMIZE_LAYOUT_DATA_PARAM = "optimize_layout_data_param";
 
+    // for internal table
+    String P_OUTPUT_MODE = "outputMode";
+    String P_START_DATE = "startTime";
+    String P_END_DATE = "endTime";
+    String P_PRIMARY_KEY = "primaryKey";
+    String P_ORDER_BY_KEY = "orderByKey";
+    String P_DELETE_PARTITION_VALUES = "deletePartitionValues";
+    String P_DELETE_PARTITION = "deletePartition";
+
+
     // ut only
     String P_BREAK_POINT_LAYOUTS = "breakPointLayouts";
 }

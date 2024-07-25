@@ -22,17 +22,19 @@
 
 package io.kyligence.kap.it
 
-import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
-import io.kyligence.kap.query.QueryFetcher
+import java.sql.SQLException
+import java.util.TimeZone
+
 import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.metadata.realization.NoRealizationFoundException
 import org.apache.spark.sql._
 import org.apache.spark.sql.common.{LocalMetadata, SparderBaseFunSuite}
 import org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanHelper
 
-import java.sql.SQLException
-import java.util.TimeZone
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+
+import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
+import io.kyligence.kap.query.QueryFetcher
 
 // scalastyle:off
 class TestModelViewQuery
@@ -105,7 +107,7 @@ class TestModelViewQuery
           (modelResult, _) => {
             val expectedModels = modelSql.split(';')(0).substring(21).split(",")
             expectedModels.zip(modelResult.getOlapContexts.asScala).foreach { case (modelAlias, idx) =>
-              assert(idx.getModelAlias == modelAlias, s"$modelSqlPath, view model fails to match")
+              assert(idx.getBoundedModelAlias == modelAlias, s"$modelSqlPath, view model fails to match")
             }
             true
           }
