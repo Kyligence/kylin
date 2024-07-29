@@ -71,6 +71,7 @@ public final class ExecutableConstants {
     public static final String STEP_NAME_DETECT_RESOURCE = "Detect Resource";
     public static final String STEP_NAME_TABLE_SAMPLING = "Table Sampling";
     public static final String STEP_NAME_BUILD_SNAPSHOT = "Build Snapshot";
+    public static final String STEP_NAME_OPTIMIZE_LAYOUT_DATA = "Optimize layout data";
 
     public static final String STAGE_NAME_WAITE_FOR_RESOURCE = "Waiting for yarn resources";
     public static final String STAGE_NAME_REFRESH_SNAPSHOTS = "Build or refresh snapshot";
@@ -85,4 +86,8 @@ public final class ExecutableConstants {
     public static final String STAGE_NAME_MERGE_COLUMN_BYTES = "Merge flat table statistics";
     public static final String STAGE_NAME_TABLE_SAMPLING = "Sample Table Data";
     public static final String STAGE_NAME_SNAPSHOT_BUILD = "Build Snapshot";
+    public static final String STAGE_NAME_DELETE_USELESS_LAYOUT_DATA = "delete useless layout data";
+    public static final String STAGE_NAME_OPTIMIZE_LAYOUT_DATA_REPARTITION = "Optimize layout data by repartition";
+    public static final String STAGE_NAME_OPTIMIZE_LAYOUT_DATA_ZORDER = "Optimize layout data by zorder";
+    public static final String STAGE_NAME_OPTIMIZE_LAYOUT_DATA_COMPACTION = "Optimize layout data by compaction";
 }

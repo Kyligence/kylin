@@ -40,6 +40,9 @@ class BuildJobInfos {
 
   private val mergingSegments: java.util.List[NDataSegment] = new util.LinkedList[NDataSegment]
 
+  // OPTIMIZE
+  private val optimizeLayoutIds: java.util.List[Long] = new util.LinkedList[Long]
+
   // BUCKET
   private val bucketsInfo = new util.HashMap[Long, util.List[Long]]
 
@@ -116,6 +119,14 @@ class BuildJobInfos {
 
   def clearSparkPlans(): Unit = {
     sparkPlans.clear()
+  }
+
+  def clearOptimizeLayoutIds(): Unit = {
+    optimizeLayoutIds.clear()
+  }
+
+  def recordOptimizeLayoutIds(layoutId: Long): Unit = {
+    optimizeLayoutIds.add(layoutId)
   }
 
   def getSparkPlans: util.List[SparkPlan] = {
@@ -249,6 +260,10 @@ class BuildJobInfos {
     project
   }
 
+  def getOptimizeLayoutIds: util.List[Long] = {
+    optimizeLayoutIds
+  }
+
   def clear(): Unit = {
     seg2cuboidsNumPerLayer.clear()
     seg2SpanningTree.clear()
@@ -258,6 +273,7 @@ class BuildJobInfos {
     abnormalLayouts.clear()
     autoSparkConfs.clear()
     jobRetryInfos.clear()
+    optimizeLayoutIds.clear()
     jobRetryInfosForSegmentParam.clear()
   }
 }

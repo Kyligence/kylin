@@ -26,12 +26,18 @@ import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
 import org.apache.kylin.query.engine.exec.ExecuteResult;
 import org.apache.kylin.query.engine.exec.sparder.QueryEngine;
 import org.apache.kylin.query.mask.QueryResultMasks;
+import org.apache.kylin.query.relnode.ContextUtil;
+import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.runtime.plan.ResultPlan;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparderEnv;
+import org.apache.spark.sql.SparkInternalAgent;
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +54,8 @@ public class SparkEngine implements QueryEngine {
         } finally {
             calciteToSparkPlaner.cleanCache();
         }
-        Dataset<Row> df = calciteToSparkPlaner.getResult();
+        LogicalPlan plan = calciteToSparkPlaner.getResult();
+        Dataset<Row> df = SparkInternalAgent.getDataFrame(SparderEnv.getSparkSession(), plan);
         QueryContext.current().record("to_spark_plan");
         long takeTime = System.currentTimeMillis() - start;
         log.info("Plan take {} ms", takeTime);

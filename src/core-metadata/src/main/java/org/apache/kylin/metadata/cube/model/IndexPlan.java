@@ -50,7 +50,6 @@ import org.apache.kylin.common.persistence.MetadataType;
 import org.apache.kylin.common.persistence.MissingRootPersistentEntity;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.util.JsonUtil;
-import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.base.Joiner;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
 import org.apache.kylin.guava30.shaded.common.collect.BiMap;
@@ -182,6 +181,20 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     @Getter
     @JsonProperty("base_agg_index_reduce_high_cardinality_dim")
     private boolean baseAggIndexReduceHighCardinalityDim;
+
+    public static final String STORAGE_V3_MODEL_DEFAULT_PARTITION_BY_CONF_KEY =
+            "kylin.model.layout.storage.v3-partition-by-columns";
+
+    public static final String STORAGE_V3_MODEL_DEFAULT_ZORDER_BY_CONF_KEY =
+            "kylin.model.layout.storage.v3-zorder-by-columns";
+
+    public static final String STORAGE_V3_MODEL_DEFAULT_MAX_FILE_SIZE_CONF_KEY =
+            "kylin.model.layout.storage.v3-max-file-size-in-bytes";
+
+    public static final String STORAGE_V3_MODEL_DEFAULT_MIN_FILE_SIZE_CONF_KEY =
+            "kylin.model.layout.storage.v3-min-file-size-in-bytes";
+
+    public static final String STORAGE_V3_CONFIG_COLUMN_SEPARATOR = "\u0001";
 
     public void initAfterReload(KylinConfig config, String p) {
         this.project = p;

@@ -285,15 +285,15 @@ public class RuleBasedIndex implements Serializable {
         Map<IndexIdentifier, IndexEntity> identifierIndexMap = existLayouts.keySet().stream()
                 .map(LayoutEntity::getIndex).collect(Collectors.groupingBy(IndexEntity::createIndexIdentifier,
                         Collectors.reducing(null, (l, r) -> r)));
-        boolean needAllocationId = layoutIdMapping.isEmpty();
+        val colOrders = getCuboidScheduler().getAllColOrders();
+        boolean needAllocationId = layoutIdMapping.isEmpty() ;
         boolean isBaseCuboidValid = getIndexPlan().getConfig().isBaseCuboidAlwaysValid();
         val baseColOrder = new ColOrder(getDimensions(), getMeasures());
         long proposalId = indexStartId + 1;
-        val colOrders = getCuboidScheduler().getAllColOrders();
         for (int i = 0; i < colOrders.size(); i++) {
             val colOrder = colOrders.get(i);
 
-            val layout = createLayout(colOrder);
+            val layout = createLayout(colOrder, getModel().getStorageTypeValue());
 
             val dimensionsInLayout = colOrder.getDimensions();
             val measuresInLayout = colOrder.getMeasures();
@@ -378,19 +378,17 @@ public class RuleBasedIndex implements Serializable {
         return id;
     }
 
-    private LayoutEntity createLayout(ColOrder colOrder) {
+    private LayoutEntity createLayout(ColOrder colOrder, int storageType) {
         LayoutEntity layout = new LayoutEntity();
         layout.setManual(true);
         layout.setColOrder(colOrder.toList());
         if (colOrder.getDimensions().containsAll(indexPlan.getAggShardByColumns())) {
             layout.setShardByColumns(indexPlan.getAggShardByColumns());
         }
-        if (colOrder.getDimensions().containsAll(indexPlan.getExtendPartitionColumns())
-                && getModel().getStorageType() == 2) {
-            layout.setPartitionByColumns(indexPlan.getExtendPartitionColumns());
-        }
         layout.setUpdateTime(lastModifiedTime);
-        layout.setStorageType(IStorageAware.ID_NDATA_STORAGE);
+        if (NDataModel.DataStorageType.fromValue(storageType).isV3Storage()) {
+            layout.setStorageType(storageType);
+        }
         return layout;
     }
 

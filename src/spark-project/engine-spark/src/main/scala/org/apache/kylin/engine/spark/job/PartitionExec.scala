@@ -66,8 +66,7 @@ private[job] trait PartitionExec {
       .filter(_.getPartitionId == partitionId) //
       .head.getBucketId
     logInfo(s"Layout partition bucket: ${layout.getId} $partitionId $newBucketId.")
-    val storagePath = NSparkCubingUtil.getStoragePath(dataSegment, layout.getId, newBucketId)
-    val taskStats = saveWithStatistics(layout, layoutDS, storagePath, readableDesc, storageListener)
+    val taskStats = saveWithStatistics(layout, layoutDS, dataSegment, readableDesc, storageListener, newBucketId)
     pipe.offer(PartitionResult(layout.getId, partitionId, newBucketId, taskStats))
   }
 

@@ -23,15 +23,20 @@ import org.apache.calcite.DataContext
 import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.engine.spark.utils.LogEx
+import org.apache.kylin.metadata.model.NDataModel.DataStorageType
 import org.apache.kylin.query.relnode._
+import org.apache.kylin.query.runtime.FilePruningMode.PruningMode
 import org.apache.kylin.query.runtime.plan._
+import org.apache.kylin.query.runtime.planV3.DeltaLakeTableScanPlan
+import org.apache.spark.sql.SparderEnv
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.{DataFrame, SparderEnv, SparkInternalAgent}
 
 class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with LogEx {
   private val stack = new util.ArrayDeque[LogicalPlan]()
   private val setOpStack = new util.ArrayDeque[Int]()
   private var unionLayer = 0
+  private var storageType = DataStorageType.V1
+  private lazy val filePruningMode = computeFilePruningMode
 
   // clear cache before any op
   cleanCache()
@@ -108,46 +113,79 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
   }
 
   private def convertTableScan(rel: OlapTableScan): LogicalPlan = {
-    rel.getContext.genExecFunc(rel, rel.getTableName) match {
-      case "executeLookupTableQuery" =>
-        logTime("createLookupTable") {
-          TableScanPlan.createLookupTable(rel)
-        }
-      case "executeOlapQuery" =>
-        logTime("createOlapTable") {
-          TableScanPlan.createOlapTable(rel)
-        }
-      case "executeSimpleAggregationQuery" =>
-        logTime("createSingleRow") {
-          TableScanPlan.createSingleRow()
-        }
-      case "executeMetadataQuery" =>
-        logTime("createMetadataTable") {
-          TableScanPlan.createMetadataTable(rel)
-        }
+    val execFunc = rel.getContext.genExecFunc(rel, rel.getTableName)
+    val storageType = getStorageType(rel.getContext.getRealization.getModel.getStorageType)
+
+    val tablePlan = logTime(getLogMessage(execFunc)) {
+      createTablePlan(rel, execFunc, storageType)
     }
+
+    tablePlan
   }
 
   private def convertJoinRel(rel: OlapJoinRel): LogicalPlan = {
     if (!rel.isRuntimeJoin) {
-      rel.getContext.genExecFunc(rel, "") match {
-        case "executeMetadataQuery" =>
-          logTime("createMetadataTable") {
-            TableScanPlan.createMetadataTable(rel)
-          }
-        case _ =>
-          logTime("join with table scan") {
-            TableScanPlan.createOlapTable(rel)
-          }
+      val execFunc = rel.getContext.genExecFunc(rel, "")
+      val storageType = getStorageType(rel.getContext.getRealization.getModel.getStorageType)
+
+      val logicalPlan = logTime(getLogMessage(execFunc)) {
+        if (execFunc == "executeMetadataQuery") {
+          TableScanPlan.createMetadataTable(rel)
+        } else {
+          createTablePlan(rel, execFunc, storageType)
+        }
       }
+
+      logicalPlan
     } else {
-      val right = stack.pollLast()
-      val left = stack.pollLast()
-      logTime("join") {
-        plan.JoinPlan.join(Seq.apply(left, right), rel)
-      }
+      performRuntimeJoin(rel)
     }
   }
+
+  private def getStorageType(modelStorageType: DataStorageType) = {
+    if (modelStorageType.isDeltaStorage) {
+      storageType = DataStorageType.DELTA
+    }
+    storageType
+  }
+
+
+  private def createTablePlan(rel: OlapRel, execFunc: String, storageType: DataStorageType): LogicalPlan = {
+    execFunc match {
+      case "executeLookupTableQuery" =>
+        TableScanPlan.createLookupTable(rel)
+      case "executeOlapQuery" =>
+        if (storageType == DataStorageType.DELTA) {
+          DeltaLakeTableScanPlan.createOlapTable(rel, filePruningMode)
+        } else TableScanPlan.createOlapTable(rel)
+      case "executeSimpleAggregationQuery" =>
+        TableScanPlan.createSingleRow()
+      case "executeMetadataQuery" =>
+        TableScanPlan.createMetadataTable(rel)
+      case _ =>
+        // Handle unknown execFunc, or add a default case if needed
+        throw new UnsupportedOperationException(s"Unsupported execFunc: $execFunc")
+    }
+  }
+
+  private def performRuntimeJoin(rel: OlapJoinRel): LogicalPlan = {
+    val right = stack.pollLast()
+    val left = stack.pollLast()
+    logTime("join") {
+      plan.JoinPlan.join(Seq(left, right), rel)
+    }
+  }
+
+  private def getLogMessage(execFunc: String): String = {
+    execFunc match {
+      case "executeLookupTableQuery" => "createLookupTable"
+      case "executeOlapQuery" => "createOlapTable"
+      case "executeSimpleAggregationQuery" => "createSingleRow"
+      case "executeMetadataQuery" => "createMetadataTable"
+      case _ => "unknownOperation"
+    }
+  }
+
 
   private def convertNonEquiJoinRel(rel: OlapNonEquiJoinRel): LogicalPlan = {
     if (!rel.isRuntimeJoin) {
@@ -167,8 +205,39 @@ class CalciteToSparkPlaner(dataContext: DataContext) extends RelVisitor with Log
     TableScanPlan.cachePlan.get().clear()
   }
 
-  def getResult(): DataFrame = {
-    val logicalPlan = stack.pollLast()
-    SparkInternalAgent.getDataFrame(SparderEnv.getSparkSession, logicalPlan)
+  def getResult(): LogicalPlan = {
+    stack.pollLast()
+  }
+
+  private def computeFilePruningMode(): PruningMode = {
+    import scala.collection.JavaConverters._
+
+    val config = KylinConfig.getInstanceFromEnv
+    val v3FileNumLimit = config.getV3FilePruningNumLimit
+    val v3FileSizeLimit = config.getV3FilePruningSizeLimit
+
+    val contextOption = ContextUtil.listContexts.asScala
+      .filter(_.getStorageContext.getCandidate.getDataLayoutDetails != null)
+      .filter {
+        case ctx: OlapContext =>
+          val fragment = ctx.getStorageContext.getCandidate.getDataLayoutDetails
+          val fileNum = fragment.getNumOfFiles
+          val totalSize = fragment.getSizeInBytes
+          fileNum >= v3FileNumLimit || totalSize > v3FileSizeLimit
+      }
+      .headOption
+
+    contextOption match {
+      case Some(context) =>
+        log.info("Auto set file pruning mode Cluster, kylin.query.v3.file-pruning-file-num-limit {}," +
+          " kylin.query.v3.file-pruning-file-size-limit {}.", v3FileNumLimit, v3FileSizeLimit)
+        FilePruningMode.CLUSTER
+
+      case None =>
+        SparderEnv.getSparkSession.sparkContext.setLocalProperty("spark.databricks.delta.stats.skipping", "false")
+        log.info("Auto set file pruning mode Local, kylin.query.v3.file-pruning-file-num-limit {}," +
+          " kylin.query.v3.file-pruning-file-size-limit {}.", v3FileNumLimit, v3FileSizeLimit)
+        FilePruningMode.LOCAL
+    }
   }
 }

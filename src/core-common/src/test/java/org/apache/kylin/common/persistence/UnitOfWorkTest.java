@@ -47,12 +47,12 @@ class UnitOfWorkTest {
             MemoryLockUtils.lockAndRecord("PROJECT/res");
             MemoryLockUtils.lockAndRecord("PROJECT/res2");
             MemoryLockUtils.lockAndRecord("PROJECT/res3");
-            resourceStore.checkAndPutResource("PROJECT/res",
-                    ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
-            resourceStore.checkAndPutResource("PROJECT/res2",
-                    ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
-            resourceStore.checkAndPutResource("PROJECT/res3",
-                    ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
+            resourceStore.checkAndPutResource("PROJECT/res", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                    -1L);
+            resourceStore.checkAndPutResource("PROJECT/res2", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                    -1L);
+            resourceStore.checkAndPutResource("PROJECT/res3", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                    -1L);
             return 0;
         }, UnitOfWork.GLOBAL_UNIT);
         val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
@@ -137,27 +137,27 @@ class UnitOfWorkTest {
             val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
             MemoryLockUtils.lockAndRecord("PROJECT/res");
             MemoryLockUtils.lockAndRecord("PROJECT/res2");
-            resourceStore.checkAndPutResource("PROJECT/res",
-                    ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
-            resourceStore.checkAndPutResource("PROJECT/res2",
-                    ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
+            resourceStore.checkAndPutResource("PROJECT/res", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                    -1L);
+            resourceStore.checkAndPutResource("PROJECT/res2", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                    -1L);
             UnitOfWork.doInTransactionWithRetry(() -> {
                 val resourceStore2 = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
                 MemoryLockUtils.lockAndRecord("MODEL/1");
                 MemoryLockUtils.lockAndRecord("MODEL/2");
                 MemoryLockUtils.lockAndRecord("MODEL/3");
-                resourceStore2.checkAndPutResource("MODEL/1",
-                        ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
-                resourceStore2.checkAndPutResource("MODEL/2",
-                        ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
-                resourceStore2.checkAndPutResource("MODEL/3",
-                        ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
+                resourceStore2.checkAndPutResource("MODEL/1", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                        -1L);
+                resourceStore2.checkAndPutResource("MODEL/2", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                        -1L);
+                resourceStore2.checkAndPutResource("MODEL/3", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                        -1L);
                 Assertions.assertEquals(resourceStore, resourceStore2);
                 return 0;
             }, UnitOfWork.GLOBAL_UNIT);
             MemoryLockUtils.lockAndRecord("PROJECT/res3");
-            resourceStore.checkAndPutResource("PROJECT/res3",
-                    ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
+            resourceStore.checkAndPutResource("PROJECT/res3", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                    -1L);
             val set = resourceStore.getMetadataStore().listAll();
             Assertions.assertEquals(6, set.size());
             return 0;
@@ -177,8 +177,8 @@ class UnitOfWorkTest {
     @Test
     void testReadLockExclusive() {
         val resourceStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
-        resourceStore.checkAndPutResource("PROJECT/res1",
-                ByteSource.wrap("{}".getBytes(Charset.defaultCharset())), -1L);
+        resourceStore.checkAndPutResource("PROJECT/res1", ByteSource.wrap("{}".getBytes(Charset.defaultCharset())),
+                -1L);
         Object condition = new Object();
         AtomicBoolean stop = new AtomicBoolean();
         ResourceStore kylinMetaStore = ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());

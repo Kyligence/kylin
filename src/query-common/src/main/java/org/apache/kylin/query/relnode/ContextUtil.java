@@ -244,6 +244,7 @@ public class ContextUtil {
         // lastDataLoadTime & isLoadingData
         if (ctx.getRealization() instanceof NDataflow) {
             NDataflow df = (NDataflow) ctx.getRealization();
+            realization.setStorageType(df.getStorageType());
             if (df.getModel().isFilePartitioned()) {
                 boolean isLoadingData = df.getSegments().stream()
                         .anyMatch(seg -> seg.getStatus() == SegmentStatusEnum.NEW);

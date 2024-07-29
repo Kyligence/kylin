@@ -340,7 +340,7 @@ abstract class BuildStage(private val jobContext: SegmentJob,
         val dataflowUpdate = new NDataflowUpdate(dataflowId)
         copiedSegment.setSourceCount(stats.totalCount)
         // Cal segment dimension range
-        if (!jobContext.isPartialBuild) {
+        if (!jobContext.isPartialBuild && copiedSegment.getModel.getStorageType.isV1Storage) {
           copiedSegment.setDimensionRangeInfoMap(
             calDimRange(dataSegment, flatTable.getFlatTableDS)
           )

@@ -26,6 +26,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
 import org.apache.kylin.metadata.model.DeriveInfo;
 import org.apache.kylin.metadata.realization.CapabilityResult;
 import org.apache.kylin.metadata.realization.IRealizationCandidate;
@@ -41,6 +42,7 @@ public class NLayoutCandidate implements IRealizationCandidate {
             new CapabilityResult());
 
     private LayoutEntity layoutEntity;
+    private NDataLayoutDetails dataLayoutDetails;
     private double cost;
     private CapabilityResult capabilityResult;
     private long range;
@@ -51,6 +53,13 @@ public class NLayoutCandidate implements IRealizationCandidate {
     public NLayoutCandidate(LayoutEntity layoutEntity) {
         Preconditions.checkNotNull(layoutEntity);
         this.layoutEntity = layoutEntity;
+    }
+
+    public NLayoutCandidate(LayoutEntity layoutEntity, NDataLayoutDetails dataLayoutDetails) {
+        Preconditions.checkNotNull(layoutEntity);
+        Preconditions.checkNotNull(dataLayoutDetails);
+        this.layoutEntity = layoutEntity;
+        this.dataLayoutDetails = dataLayoutDetails;
     }
 
     public NLayoutCandidate(LayoutEntity layoutEntity, double cost, CapabilityResult result) {

@@ -18,26 +18,27 @@
 
 package org.apache.kylin.engine.spark.job
 
-import java.util
-import java.util.Objects
-import java.util.concurrent.{BlockingQueue, ForkJoinPool, LinkedBlockingQueue, TimeUnit}
-
 import org.apache.hadoop.fs.{Path, PathFilter}
 import org.apache.kylin.common.persistence.transaction.UnitOfWork
 import org.apache.kylin.common.{KapConfig, KylinConfig}
 import org.apache.kylin.engine.spark.filter.ParquetBloomFilter
-import org.apache.kylin.engine.spark.job.SegmentExec.{LayoutResult, ResultType, SourceStats, filterSuccessfulLayoutResult}
+import org.apache.kylin.engine.spark.job.SegmentExec._
 import org.apache.kylin.engine.spark.job.stage.merge.MergeStage
 import org.apache.kylin.engine.spark.scheduler.JobRuntime
 import org.apache.kylin.guava30.shaded.common.collect.{Lists, Queues}
 import org.apache.kylin.metadata.cube.model.NDataLayout.AbnormalType
 import org.apache.kylin.metadata.cube.model._
+import org.apache.kylin.metadata.model.NDataModel.DataStorageType
 import org.apache.kylin.metadata.model.{NDataModel, TblColRef}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.datasource.storage.{StorageListener, StorageStoreFactory, WriteTaskStats}
-import org.apache.spark.sql.{Column, Dataset, Row, SparkSession}
+import org.apache.spark.sql.delta.catalog.DeltaTableV2
+import org.apache.spark.sql._
 import org.apache.spark.tracker.BuildContext
 
+import java.util
+import java.util.Objects
+import java.util.concurrent.{BlockingQueue, ForkJoinPool, LinkedBlockingQueue, TimeUnit}
 import scala.collection.JavaConverters._
 import scala.collection.parallel.ForkJoinTaskSupport
 
@@ -52,7 +53,7 @@ trait SegmentExec extends Logging {
   protected val sparkSession: SparkSession
 
   protected val dataModel: NDataModel
-  protected val storageType: Int
+  protected val storageType: DataStorageType
 
   protected val resourceContext: BuildContext
   protected val runtime: JobRuntime
@@ -194,18 +195,70 @@ trait SegmentExec extends Logging {
     if (Objects.isNull(entry)) {
       return
     }
-    val results = Lists.newArrayList(entry.asInstanceOf[LayoutResult])
-    entry = pipe.poll()
+    val results = Lists.newArrayList[LayoutResult]()
+    val v3results = Lists.newArrayList[LayoutDetailResult]()
     while (Objects.nonNull(entry)) {
-      results.add(entry.asInstanceOf[LayoutResult])
+      entry match {
+        case result: LayoutResult =>
+          results.add(result)
+        case result: LayoutDetailResult =>
+          v3results.add(result)
+        case _ =>
+      }
       entry = pipe.poll()
     }
-    logInfo(s"Segment $segmentId drained layouts: " + //
-      s"${results.asScala.map(_.layoutId).mkString("[", ",", "]")}")
 
     val buildJobInfos = KylinBuildEnv.get().buildJobInfos
     buildJobInfos.recordCuboidsNumPerLayer(segmentId, results.asScala.count(filterSuccessfulLayoutResult))
+    saveMetadata(results)
+    saveV3Metadata(v3results)
+  }
 
+   protected def saveV3Metadata(results: java.util.List[LayoutDetailResult]): Unit = {
+     if (results.isEmpty) {
+       return null
+     }
+     class DFUpdate extends UnitOfWork.Callback[Int] {
+       override def process(): Int = {
+         // Merge into the newest data segment.
+         val manager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, project)
+         val layoutDetailsManager = NDataLayoutDetailsManager.getInstance(KylinConfig.getInstanceFromEnv, project)
+         val copiedDataflow = manager.getDataflow(dataflowId).copy()
+         results.asScala.foreach(lr => {
+           val layoutId = lr.layoutId
+           val segment = lr.segment
+           val tablePath = StorageStoreFactory.create(segment.getModel.getStorageType)
+             .getStoragePath(segment, layoutId)
+           val deltaTableSnapshot = DeltaTableV2(sparkSession, new Path(tablePath)).snapshot
+           layoutDetailsManager.updateLayoutDetails(segment.getModel.getId, layoutId, layoutDetails => {
+             layoutDetails.setLocation(tablePath)
+             layoutDetails.setTableVersion(deltaTableSnapshot.version)
+             layoutDetails.setNumOfFiles(deltaTableSnapshot.numOfFiles)
+             layoutDetails.setNumOfRemoveFiles(deltaTableSnapshot.numOfRemoves)
+             layoutDetails.setSizeInBytes(deltaTableSnapshot.sizeInBytes)
+             layoutDetails.setProperties(deltaTableSnapshot.metadata.configuration.asJava)
+             layoutDetails.getFragmentRangeSet.add(segment.getRange)
+           })
+         })
+         val dataLayouts = results.asScala.map { lr =>
+           val layoutId = lr.layoutId
+           val dataLayout = NDataLayout.newDataLayout(copiedDataflow, segmentId, layoutId)
+           // Job id should be set.
+           dataLayout.setBuildJobId(jobId)
+           dataLayout
+         }
+         updateDataLayouts(manager, dataLayouts)
+       }
+     }
+     UnitOfWork.doInTransactionWithRetry(new DFUpdate, project)
+  }
+
+  protected def saveMetadata(results: java.util.List[LayoutResult]): Unit = {
+    if (results.isEmpty) {
+      return null
+    }
+    logInfo(s"Segment $segmentId drained layouts: " + //
+      s"${results.asScala.map(_.layoutId).mkString("[", ",", "]")}")
     class DFUpdate extends UnitOfWork.Callback[Int] {
       override def process(): Int = {
 
@@ -290,10 +343,13 @@ trait SegmentExec extends Logging {
                                     layoutDS: Dataset[Row], //
                                     readableDesc: String,
                                     storageListener: Option[StorageListener]): Unit = {
-    val storagePath = NSparkCubingUtil.getStoragePath(segment, layout.getId)
-    val taskStats = saveWithStatistics(layout, layoutDS, storagePath, readableDesc, storageListener)
-    val sourceStats = newSourceStats(layout, taskStats)
-    pipe.offer(LayoutResult(layout.getId, taskStats, sourceStats, null))
+    val taskStats = saveWithStatistics(layout, layoutDS, segment, readableDesc, storageListener)
+    if(segment.getModel.getDataStorageType.isV3Storage) {
+      pipe.offer(LayoutDetailResult(segment, layout.getId))
+    } else {
+      val sourceStats = newSourceStats(layout, taskStats)
+      pipe.offer(LayoutResult(layout.getId, taskStats, sourceStats, null))
+    }
   }
 
   protected final def newEmptyDataLayout(layout: LayoutEntity, abnormalType: AbnormalType): Unit = {
@@ -316,18 +372,18 @@ trait SegmentExec extends Logging {
   protected val sparkSchedulerPool: String
 
   protected final def saveWithStatistics(layout: LayoutEntity, layoutDS: Dataset[Row], //
-                                         storagePath: String, readableDesc: String,
-                                         storageListener: Option[StorageListener]): WriteTaskStats = {
+                                         segment: NDataSegment, readableDesc: String,
+                                         storageListener: Option[StorageListener], bucketId: Long = -1L): WriteTaskStats = {
     logInfo(readableDesc)
     sparkSession.sparkContext.setJobDescription(readableDesc)
     sparkSession.sparkContext.setLocalProperty("spark.scheduler.pool", sparkSchedulerPool)
-    val store = StorageStoreFactory.create(storageType)
+    val store = StorageStoreFactory.create(segment.getModel.getStorageType)
     storageListener match {
       case Some(x) => store.setStorageListener(x)
       case None =>
     }
     ParquetBloomFilter.registerBloomColumnIfNeed(project, dataflowId);
-    val stats = store.save(layout, new Path(storagePath), KapConfig.wrap(config), layoutDS)
+    val stats = store.saveSegmentLayout(layout, segment, KapConfig.wrap(config), layoutDS, bucketId)
     sparkSession.sparkContext.setJobDescription(null)
     stats
   }
@@ -380,7 +436,7 @@ trait SegmentExec extends Logging {
   protected def cleanupLayoutTempData(segment: NDataSegment, layouts: Seq[LayoutEntity]): Unit = {
     logInfo(s"Segment $segmentId cleanup layout temp data.")
     val prefixes = layouts.map(_.getId).map(id => s"${id}_temp")
-    val segmentPath = new Path(NSparkCubingUtil.getStoragePath(segment))
+    val segmentPath = new Path(StorageStoreFactory.create(segment.getModel.getStorageType).getStoragePath(segment))
     val fileSystem = segmentPath.getFileSystem(sparkSession.sparkContext.hadoopConfiguration)
     if (!fileSystem.exists(segmentPath)) {
       return
@@ -425,10 +481,20 @@ object SegmentExec {
 
   trait ResultType
 
+  case class LayoutDetailResult(segment: NDataSegment, layoutId: java.lang.Long) extends ResultType
+
   case class SourceStats(rows: Long)
 
   case class LayoutResult(layoutId: java.lang.Long, stats: WriteTaskStats, sourceStats: SourceStats,
                           abnormalType: NDataLayout.AbnormalType) extends ResultType
+
+  case class VacuumOptimizeResult(layoutId: java.lang.Long) extends ResultType
+
+  case class ZorderOptimizeResult(layoutId: java.lang.Long) extends ResultType
+
+  case class RepartitionOptimizeResult(layoutId: java.lang.Long) extends ResultType
+
+  case class CompactionOptimizeResult(layoutId: java.lang.Long) extends ResultType
 
   protected def filterSuccessfulLayoutResult(layoutResult: LayoutResult): Boolean = {
     layoutResult.abnormalType == null

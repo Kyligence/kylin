@@ -48,6 +48,12 @@ import lombok.extern.slf4j.Slf4j;
  **/
 @Slf4j
 public class RefreshJobUtil extends ExecutableUtil {
+
+    static {
+        registerImplementation(JobTypeEnum.INDEX_REFRESH, new RefreshJobUtil());
+        registerImplementation(JobTypeEnum.SUB_PARTITION_REFRESH, new RefreshJobUtil());
+    }
+
     @Override
     public void computeLayout(JobParam jobParam) {
         NDataflow df = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), jobParam.getProject())

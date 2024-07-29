@@ -428,11 +428,9 @@ public class DFBuildJob extends SparkApplication {
         ss.sparkContext().setLocalProperty("spark.scheduler.pool", "build");
         long layoutId = layout.getId();
         NDataLayout dataLayout = getDataLayout(seg, layoutId);
-        val path = NSparkCubingUtil.getStoragePath(seg, layoutId);
-        int storageType = layout.getModel().getStorageType();
-        StorageStore storage = StorageStoreFactory.create(storageType);
+        StorageStore storage = StorageStoreFactory.create(layout.getModel().getStorageType());
         storage.setStorageListener(new SanityChecker(seg2Count.getOrDefault(seg.getId(), SanityChecker.SKIP_FLAG())));
-        WriteTaskStats taskStats = storage.save(layout, new Path(path), KapConfig.wrap(config), dataset);
+        WriteTaskStats taskStats = storage.saveSegmentLayout(layout, seg, KapConfig.wrap(config), dataset);
         dataLayout.setBuildJobId(jobId);
         long rowCount = taskStats.numRows();
         if (rowCount == -1) {

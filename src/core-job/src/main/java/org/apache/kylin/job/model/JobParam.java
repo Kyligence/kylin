@@ -198,6 +198,11 @@ public class JobParam {
         return this;
     }
 
+    public JobParam withTargetLayouts(Set<Long> targetLayouts) {
+        this.targetLayouts = targetLayouts;
+        return this;
+    }
+
     public void setTargetLayouts(Set<Long> targetLayouts) {
         if (Objects.nonNull(targetLayouts)) {
             this.targetLayouts = targetLayouts;

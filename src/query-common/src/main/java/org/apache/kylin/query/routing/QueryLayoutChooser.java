@@ -177,7 +177,7 @@ public class QueryLayoutChooser {
                 "selectHighIntegrityCandidate");
     }
 
-    private static NLayoutCandidate chooseBestLayoutCandidate(NDataflow dataflow, SQLDigest digest,
+    public static NLayoutCandidate chooseBestLayoutCandidate(NDataflow dataflow, SQLDigest digest,
             ChooserContext chooserContext, List<NLayoutCandidate> allLayoutCandidates, String invokedByMethod) {
         QueryInterruptChecker.checkThreadInterrupted("Interrupted exception occurs.",
                 "Current step involves gathering all the layouts that "

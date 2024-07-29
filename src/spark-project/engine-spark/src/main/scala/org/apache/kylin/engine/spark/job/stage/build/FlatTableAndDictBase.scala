@@ -252,20 +252,14 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
   }
 
   protected def applyPartitionDesc(originDS: Dataset[Row]): Dataset[Row] = {
-    // Date range partition.
-    val descDRP = dataModel.getPartitionDesc
-    if (Objects.isNull(descDRP) //
-      || Objects.isNull(descDRP.getPartitionDateColumn) //
-      || Objects.isNull(segmentRange) //
-      || segmentRange.isInfinite) {
+    val condition = dataSegment.getPartitionCondition
+    if (condition == null) {
       logInfo(s"No available PARTITION-CONDITION segment $segmentId")
-      return originDS
+      originDS
+    } else {
+      logInfo(s"Apply PARTITION-CONDITION $condition segment $segmentId")
+      originDS.where(condition)
     }
-
-    val condition = descDRP.getPartitionConditionBuilder //
-      .buildDateRangeCondition(descDRP, tableDesc.getDataSegment, segmentRange)
-    logInfo(s"Apply PARTITION-CONDITION $condition segment $segmentId")
-    originDS.where(condition)
   }
 
   private def applyFilterCondition(originDS: Dataset[Row]): Dataset[Row] = {
@@ -469,7 +463,7 @@ abstract class FlatTableAndDictBase(private val jobContext: SegmentJob,
     val tableMetadataDesc = tableMetadataManager.getTableDesc(tableDesc.getTableName(column))
     if (tableMetadataDesc != null) {
       val tableExtDesc = tableMetadataManager.getTableExtIfExists(tableMetadataDesc)
-      if (tableExtDesc.getTotalRows > 0) {
+      if (tableExtDesc!= null && tableExtDesc.getTotalRows > 0) {
         total = tableExtDesc.getTotalRows
         logInfo(s"Find $column's table $tableName count $total from table ext")
       } else if (tableMetadataDesc.getLastSnapshotPath != null) {

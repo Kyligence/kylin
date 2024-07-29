@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.hadoop.fs.Path;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.IndexDataConstructor;
@@ -48,6 +47,7 @@ import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
+import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -304,7 +304,7 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
     private void prepareLayoutsParquet(IndexPlan indexPlan, NDataSegment segment, boolean loseOneAggLayoutRecordForTest,
             boolean loseOneTableLayoutRecordForTest, boolean loseTwoTableLayoutRecordsForTest,
             Set<Long> nonExistingLayouts) {
-        StorageStore store = StorageStoreFactory.create(1);
+        StorageStore store = StorageStoreFactory.create(NDataModel.DataStorageType.V1);
 
         // Prepare layout 1
         {
@@ -330,8 +330,7 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
             final long layoutId = 1L;
             LayoutEntity layoutEntity = indexPlan.getLayoutEntity(layoutId);
             if (CollectionUtils.isEmpty(nonExistingLayouts) || !nonExistingLayouts.contains(layoutId)) {
-                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())),
-                        KapConfig.wrap(config), layoutDS);
+                store.saveSegmentLayout(layoutEntity, segment, KapConfig.wrap(config), layoutDS);
             }
         }
         // Prepare layout 10001
@@ -353,8 +352,7 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
             final long layoutId = 10001L;
             LayoutEntity layoutEntity = indexPlan.getLayoutEntity(layoutId);
             if (CollectionUtils.isEmpty(nonExistingLayouts) || !nonExistingLayouts.contains(layoutId)) {
-                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())),
-                        KapConfig.wrap(config), layoutDS);
+                store.saveSegmentLayout(layoutEntity, segment, KapConfig.wrap(config), layoutDS);
             }
         }
         // Prepare layout 20000000001
@@ -380,8 +378,7 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
             final long layoutId = 20_000_000_001L;
             LayoutEntity layoutEntity = indexPlan.getLayoutEntity(layoutId);
             if (CollectionUtils.isEmpty(nonExistingLayouts) || !nonExistingLayouts.contains(layoutId)) {
-                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())),
-                        KapConfig.wrap(config), layoutDS);
+                store.saveSegmentLayout(layoutEntity, segment, KapConfig.wrap(config), layoutDS);
             }
         }
         // Prepare layout 20000010001
@@ -407,8 +404,7 @@ public class GenerateFlatTableWithSparkSessionTest extends NLocalWithSparkSessio
             final long layoutId = 20_000_010_001L;
             LayoutEntity layoutEntity = indexPlan.getLayoutEntity(layoutId);
             if (CollectionUtils.isEmpty(nonExistingLayouts) || !nonExistingLayouts.contains(layoutId)) {
-                store.save(layoutEntity, new Path(NSparkCubingUtil.getStoragePath(segment, layoutEntity.getId())),
-                        KapConfig.wrap(config), layoutDS);
+                store.saveSegmentLayout(layoutEntity, segment, KapConfig.wrap(config), layoutDS);
             }
         }
     }

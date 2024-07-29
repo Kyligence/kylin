@@ -96,7 +96,6 @@ public class SegmentBuildJob extends SegmentJob {
         buildContext.appStatusTracker().startMonitorBuildResourceState();
 
         build();
-
         updateSegmentSourceBytesSize();
     }
 
@@ -143,6 +142,7 @@ public class SegmentBuildJob extends SegmentJob {
                 GATHER_FLAT_TABLE_STATS.createStage(this, seg, buildParam, exec);
                 BUILD_LAYER.createStage(this, seg, buildParam, exec);
                 REFRESH_COLUMN_BYTES.createStage(this, seg, buildParam, exec);
+
                 if (KylinBuildEnv.get().buildJobInfos().getSegmentId().equals(seg.getId())) {
                     log.info("Segment[{}] build failed, rebuild with new parms", seg.getId());
                     seg.setExtraBuildOptions((KylinBuildEnv.get().buildJobInfos().getJobRetryInfosForSegmentParam()));

@@ -211,11 +211,9 @@ public class DFMergeJob extends SparkApplication {
             sourceCount += cuboid.getSourceRows();
         }
         NDataLayout dataLayout = NDataLayout.newDataLayout(seg.getDataflow(), seg.getId(), layoutId);
-        val path = NSparkCubingUtil.getStoragePath(seg, layoutId);
-        int storageType = layout.getModel().getStorageType();
-        StorageStore storage = StorageStoreFactory.create(storageType);
+        StorageStore storage = StorageStoreFactory.create(layout.getModel().getStorageType());
         ss.sparkContext().setJobDescription("Merge layout " + layoutId);
-        WriteTaskStats taskStats = storage.save(layout, new Path(path), KapConfig.wrap(config), dataset);
+        WriteTaskStats taskStats = storage.saveSegmentLayout(layout, seg, KapConfig.wrap(config), dataset);
         ss.sparkContext().setJobDescription(null);
         dataLayout.setBuildJobId(jobId);
         long rowCount = taskStats.numRows();

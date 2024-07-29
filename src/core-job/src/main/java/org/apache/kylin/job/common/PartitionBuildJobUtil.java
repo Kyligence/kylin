@@ -30,6 +30,7 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -46,6 +47,11 @@ import lombok.extern.slf4j.Slf4j;
  **/
 @Slf4j
 public class PartitionBuildJobUtil extends ExecutableUtil {
+
+    static {
+        registerImplementation(JobTypeEnum.SUB_PARTITION_BUILD, new PartitionBuildJobUtil());
+    }
+
     @Override
     public void computeLayout(JobParam jobParam) {
         // Partition build job only support in one segment.

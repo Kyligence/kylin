@@ -179,7 +179,7 @@ public abstract class ResourceStore implements AutoCloseable {
     public final NavigableSet<String> listResourcesRecursively(String type) {
         return listResourcesRecursively(type, new RawResourceFilter());
     }
-    
+
     public final NavigableSet<String> listResourcesRecursivelyByProject(String project) {
         NavigableSet<String> resources = new TreeSet<>();
         RawResourceFilter filter = RawResourceFilter.equalFilter("project", project);

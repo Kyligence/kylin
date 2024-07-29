@@ -42,6 +42,7 @@ import org.apache.kylin.metadata.job.JobBucket;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.rest.service.merger.AfterMergeOrRefreshResourceMerger;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.datasource.storage.StorageStoreFactory;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.util.SparderTypeUtil;
 import org.junit.After;
@@ -140,6 +141,7 @@ public class NSparkMergingJobTest extends NLocalWithSparkSessionTest {
         segment.getModel().getMultiPartitionDesc().getColumnRefs().forEach(ref -> //
         partitionMap.put(String.valueOf(segment.getModel() //
                 .getColumnIdByColumnName(ref.getIdentity())), ref.getType()));
+        val storageStore = StorageStoreFactory.create(segment.getModel().getStorageType());
 
         segment.getSegDetails().getLayouts().forEach(ld -> {
             val layout = ld.getLayout();
@@ -164,7 +166,7 @@ public class NSparkMergingJobTest extends NLocalWithSparkSessionTest {
             val schema = schema0;
             ld.getMultiPartition().forEach(pd -> {
                 val dataset = ss.createDataFrame(Lists.newArrayList(), schema);
-                val path = NSparkCubingUtil.getStoragePath(segment, ld.getLayoutId(), pd.getBucketId());
+                val path = storageStore.getStoragePath(segment, ld.getLayoutId(), pd.getBucketId());
                 dataset.write().mode(SaveMode.Overwrite).parquet(path);
             });
         });

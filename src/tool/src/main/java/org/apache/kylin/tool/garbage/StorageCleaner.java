@@ -17,6 +17,7 @@
  */
 package org.apache.kylin.tool.garbage;
 
+import static org.apache.kylin.common.util.HadoopUtil.DELTA_STORAGE_ROOT;
 import static org.apache.kylin.common.util.HadoopUtil.FLAT_TABLE_STORAGE_ROOT;
 import static org.apache.kylin.common.util.HadoopUtil.GLOBAL_DICT_STORAGE_ROOT;
 import static org.apache.kylin.common.util.HadoopUtil.JOB_TMP_ROOT;
@@ -65,6 +66,7 @@ import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.LayoutPartition;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
 import org.apache.kylin.metadata.cube.model.NDataSegDetails;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -331,6 +333,7 @@ public class StorageCleaner implements GarbageCleaner {
                     Pair.newPair(JOB_TMP_ROOT.substring(1), projectNode.getJobTmps()),
                     Pair.newPair(GLOBAL_DICT_STORAGE_ROOT.substring(1), projectNode.getGlobalDictTables()),
                     Pair.newPair(PARQUET_STORAGE_ROOT.substring(1), projectNode.getDataflows()),
+                    Pair.newPair(DELTA_STORAGE_ROOT.substring(1), projectNode.getDeltaDataFlows()),
                     Pair.newPair(TABLE_EXD_STORAGE_ROOT.substring(1), projectNode.getTableExds()),
                     Pair.newPair(SNAPSHOT_STORAGE_ROOT.substring(1), tableSnapshotParents),
                     Pair.newPair(FLAT_TABLE_STORAGE_ROOT.substring(1), projectNode.getDfFlatTables()))) {
@@ -350,6 +353,7 @@ public class StorageCleaner implements GarbageCleaner {
                     Pair.newPair(tableSnapshotParents, projectNode.getSnapshots()), //
                     Pair.newPair(projectNode.getGlobalDictTables(), projectNode.getGlobalDictColumns()), //
                     Pair.newPair(projectNode.getDataflows(), projectNode.getSegments()), //
+                    Pair.newPair(projectNode.getDeltaDataFlows(), projectNode.getDeltaDataLayouts()),
                     Pair.newPair(projectNode.getSegments(), projectNode.getLayouts()),
                     Pair.newPair(projectNode.getDfFlatTables(), projectNode.getSegmentFlatTables()))) {
                 val slot = pair.getSecond();
@@ -563,6 +567,10 @@ public class StorageCleaner implements GarbageCleaner {
 
         List<FileTreeNode> dataflows = Lists.newLinkedList();
 
+        List<FileTreeNode> deltaDataFlows = Lists.newArrayList();
+
+        List<FileTreeNode> deltaDataLayouts = Lists.newArrayList();
+
         List<FileTreeNode> segments = Lists.newLinkedList();
 
         List<FileTreeNode> layouts = Lists.newLinkedList();
@@ -575,7 +583,8 @@ public class StorageCleaner implements GarbageCleaner {
 
         Collection<List<FileTreeNode>> getAllCandidates() {
             return Arrays.asList(jobTmps, tableExds, globalDictTables, globalDictColumns, snapshotTables, snapshots,
-                    dataflows, segments, layouts, buckets, dfFlatTables, segmentFlatTables);
+                    dataflows, deltaDataFlows, deltaDataLayouts, segments, layouts, buckets, dfFlatTables,
+                    segmentFlatTables);
         }
 
     }
@@ -687,6 +696,12 @@ public class StorageCleaner implements GarbageCleaner {
             val activeSegmentFlatTableDataPath = Sets.<String> newHashSet();
             val dataflows = NDataflowManager.getInstance(config, project).listAllDataflows().stream()
                     .map(RootPersistentEntity::getId).collect(Collectors.toSet());
+            val deltaDataFlow = NDataflowManager.getInstance(config, project).listAllDataflows().stream()
+                    .filter(df -> df.getModel().getStorageType().isDeltaStorage())
+                    .map(RootPersistentEntity::getId).collect(Collectors.toSet());
+            val dataLayoutDetails = NDataflowManager.getInstance(config, project).listAllDataflows().stream()
+                    .flatMap(df -> df.listAllLayoutDetails().stream().map(NDataLayoutDetails::getResourcePath))
+                    .collect(Collectors.toSet());
             // set activeSegmentFlatTableDataPath, by iterating segments
             dataflowManager.listAllDataflows().forEach(df -> df.getSegments().stream() //
                     .map(segment -> getSegmentFlatTableDir(project, segment))
@@ -705,6 +720,9 @@ public class StorageCleaner implements GarbageCleaner {
                     .collect(Collectors.toSet());
             for (StorageCleaner.StorageItem item : allFileSystems) {
                 item.getProject(project).getDataflows().removeIf(node -> dataflows.contains(node.getName()));
+                item.getProject(project).getDeltaDataFlows().removeIf(node -> deltaDataFlow.contains(node.getName()));
+                item.getProject(project).getDeltaDataLayouts().removeIf(node ->
+                        dataLayoutDetails.contains(node.getRelativePath()));
                 item.getProject(project).getSegments()
                         .removeIf(node -> activeSegmentPath.contains(node.getRelativePath()));
                 item.getProject(project).getLayouts()

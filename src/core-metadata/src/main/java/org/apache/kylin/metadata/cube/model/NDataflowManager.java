@@ -603,10 +603,14 @@ public class NDataflowManager implements IRealizationProvider {
         updater.modify(copy);
 
         Set<String> copySegIdSet = copy.getSegments().stream().map(NDataSegment::getId).collect(Collectors.toSet());
-        val nDataSegDetailsManager = NDataSegDetailsManager.getInstance(cached.getConfig(), project);
+        val nDataSegDetailsManager = NDataSegDetailsManager.getInstance(copy.getConfig(), project);
+        val dataLayoutDetailsManager = NDataLayoutDetailsManager.getInstance(copy.getConfig(), project);
         for (NDataSegment segment : cached.getSegments()) {
             if (!copySegIdSet.contains(segment.getId())) {
                 nDataSegDetailsManager.removeForSegment(segment.getId());
+                if (!cached.getModel().isBroken() && cached.getModel().getStorageType().isV3Storage()) {
+                    dataLayoutDetailsManager.removeFragmentBySegment(copy, segment);
+                }
             }
         }
         return crud.save(copy);

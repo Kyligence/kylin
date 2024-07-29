@@ -551,7 +551,7 @@ public class OlapAggregateRel extends Aggregate implements OlapRel {
         }
 
         NDataModel model = candidate.getLayoutEntity().getModel();
-        if (model.getStorageType() != 0) {
+        if (model.getStorageType().isInvalidStorage()) {
             return false;
         }
         if (model.getModelType() != NDataModel.ModelType.BATCH) {

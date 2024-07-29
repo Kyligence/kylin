@@ -110,11 +110,16 @@ public class AfterBuildResourceMerger extends MetadataMerger {
         dfUpdate.setToUpdateSegs(theSeg);
         dfUpdate.setToRemoveSegs(toRemoveSegments.toArray(new NDataSegment[toRemoveSegments.size()]));
         dfUpdate.setToAddOrUpdateLayouts(theSeg.getSegDetails().getEffectiveLayouts().toArray(new NDataLayout[0]));
+        if (remoteDataflow.getModel().getStorageType().isV3Storage()) {
+            mergeLayoutDetails(getProject(), remoteDataflow.getModel().getId(), layoutIds,
+                    theSeg, toRemoveSegments, remoteStore.getConfig());
+        }
 
         localDataflowManager.updateDataflow(dfUpdate);
         updateIndexPlan(dataflowId, remoteStore);
         return dfUpdate.getToAddOrUpdateLayouts();
     }
+
 
     public NDataLayout[] mergeAfterCatchup(String flowName, Set<String> segmentIds, Set<Long> layoutIds,
             ResourceStore remoteStore, Set<Long> partitionIds) {
@@ -151,6 +156,11 @@ public class AfterBuildResourceMerger extends MetadataMerger {
                 addCuboids.add(dataCuboid);
             }
             remoteSeg.setMvcc(localSeg.getMvcc());
+
+            if (remoteDataflow.getModel().getStorageType().isV3Storage()) {
+                mergeLayoutDetails(getProject(), remoteDataflow.getModel().getId(), layoutIds,
+                        remoteSeg, segsToUpdate, remoteStore.getConfig());
+            }
 
             resetBreakpoints(remoteSeg);
 

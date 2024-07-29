@@ -1498,6 +1498,7 @@ public abstract class KylinConfigBase implements Serializable {
         Map<Integer, String> r = Maps.newLinkedHashMap();
         // ref constants in IStorageAware
         r.put(20, "org.apache.kylin.storage.ParquetDataStorage");
+        r.put(3, "org.apache.kylin.storage.DeltaDataStorage");
         r.putAll(convertKeyToInteger(getPropertiesByPrefix("kylin.storage.provider.")));
         return r;
     }
@@ -1624,6 +1625,23 @@ public abstract class KylinConfigBase implements Serializable {
 
     public String getSparkMergeClassName() {
         return getOptional("kylin.engine.spark.merge-class-name", "io.kyligence.kap.engine.spark.job.SegmentMergeJob");
+    }
+
+    public boolean isCompactionAfterDataUpdateEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.engine.spark.compaction-after-date-update-enabled", TRUE));
+    }
+
+    public boolean isAutoOptimizeAfterBuildEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.engine.spark.optimize-after-build-enabled", FALSE));
+    }
+
+    public int getKylinDeltaStorageWriteRetyTimes() {
+        return Integer.parseInt(getOptional("kylin.engine.spark.delta-storage-write-retry-times", "10"));
+    }
+
+    public String getSparkOptimizeClassName() {
+        return getOptional("kylin.engin.spark.optimize-class-name",
+                "io.kyligence.kap.engine.spark.job.LayoutDataOptimizeJob");
     }
 
     public String getClusterManagerClassName() {
@@ -1831,7 +1849,7 @@ public abstract class KylinConfigBase implements Serializable {
     // ============================================================================
 
     public boolean isRouteToMetadataEnabled() {
-        return Boolean.parseBoolean(this.getOptional("kylin.query.using-metadata-answer-minmax-of-dimension", TRUE));
+        return Boolean.parseBoolean(this.getOptional("kylin.query.using-metadata-answer-minmax-of-dimension", FALSE));
     }
 
     public boolean partialMatchNonEquiJoins() {
@@ -2662,6 +2680,10 @@ public abstract class KylinConfigBase implements Serializable {
                 "kylin.web.timezone,kylin.env,kylin.security.profile,kylin.source.default,"
                         + "metadata.semi-automatic-mode,kylin.cube.aggrgroup.is-base-cuboid-always-valid,"
                         + "kylin.htrace.show-gui-trace-toggle,kylin.web.export-allow-admin,kylin.web.export-allow-other");
+    }
+
+    public Boolean isCalciteInClauseEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.query.calcite-in-clause-enabled", TRUE));
     }
 
     public int convertInSubQueryThreshold() {
@@ -4244,8 +4266,32 @@ public abstract class KylinConfigBase implements Serializable {
         return getOptional("kylin.source.jdbc.extend", "");
     }
 
+    public boolean useV3StorageEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.query.use-v3-storage", FALSE));
+    }
+
     public boolean queryIndexUseGluten() {
         return Boolean.parseBoolean(this.getOptional("kylin.query.index-use-gulten", TRUE));
+    }
+
+    public String getFragmentType() {
+        return getOptional("kylin.fragment.metadata.type", "delta");
+    }
+
+    public boolean isV3SkipVacuumOptimize() {
+        return Boolean.parseBoolean(getOptional("kylin.optimize.v3.skip-vacuum-optimize", FALSE));
+    }
+
+    public boolean isV3SkipRepartitionOptimize() {
+        return Boolean.parseBoolean(getOptional("kylin.optimize.v3.skip-repartition-optimize", FALSE));
+    }
+
+    public boolean isV3SkipZorderOptimize() {
+        return Boolean.parseBoolean(getOptional("kylin.optimize.v3.skip-zorder-optimize", FALSE));
+    }
+
+    public boolean isV3SkipCompactionOptimize() {
+        return Boolean.parseBoolean(getOptional("kylin.optimize.v3.skip-compaction-optimize", FALSE));
     }
 
     public boolean isPushdownSqlHintsErasingEnabled() {
@@ -4262,5 +4308,38 @@ public abstract class KylinConfigBase implements Serializable {
 
     public int getMaxRetryTimesOfContextCut() {
         return Integer.parseInt(getOptional("kylin.query.context-cutting-max-times", "10"));
+    }
+
+    public long getV3FilePruningNumLimit() {
+        return Long.parseLong(getOptional("kylin.query.v3.file-pruning-file-num-limit", "50"));
+    }
+
+    public long getV3FilePruningSizeLimit() {
+        return Long.parseLong(getOptional("kylin.query.v3.file-pruning-file-size-limit", "10485760"));
+    }
+
+    public boolean isV3ScanDynamicSplitEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.query.v3.scan-dynamic-split", TRUE));
+    }
+
+    public int getV3ScanMinPartitionNum() {
+        return Integer.parseInt(getOptional("kylin.query.v3.scan-min-partition-num", "5"));
+    }
+
+    public long getV3ScanSplitRecordNum() {
+        return Long.parseLong(getOptional("kylin.query.v3.scan-split-record-num", "2000000"));
+    }
+
+    public long getV3ScanSplitFileNum() {
+        return Long.parseLong(getOptional("kylin.query.v3.scan-split-file-num", "5"));
+    }
+
+    public long getV3ScanSplitSizeMB() {
+        return Long.parseLong(getOptional("kylin.query.v3.scan-split-size-mb", "64"));
+    }
+
+    public long getV3DeltaLogCacheExpireThreshold() {
+        return TimeUtil.timeStringAs(getOptional("kylin.query.v3.delta-log-cache-expire-threshold", "43200s"),
+                TimeUnit.SECONDS);
     }
 }

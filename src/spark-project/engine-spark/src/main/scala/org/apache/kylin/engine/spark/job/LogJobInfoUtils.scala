@@ -72,6 +72,16 @@ object LogJobInfoUtils {
      """.stripMargin
   }
 
+  def resourceDetectBeforeOptimizeJob: String = {
+    s"""
+       |==========================[RESOURCE DETECT BEFORE OPTIMIZE]=============================
+       |optimize layouts : ${infos.getOptimizeLayoutIds}
+       |spark plans :
+       |  ${infos.getSparkPlans.asScala.map(_.toString).mkString("\n")}
+       |==========================[RESOURCE DETECT BEFORE OPTIMIZE]=============================
+       |""".stripMargin
+  }
+
   def dfMergeJobInfo: String = {
     s"""
        |==========================[MERGE CUBE]===============================

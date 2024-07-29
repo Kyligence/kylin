@@ -21,10 +21,9 @@ package org.apache.spark.sql.datasource.storage
 import java.util.concurrent.Executors
 import java.util.{Objects, List => JList}
 import java.{lang, util}
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.kylin.common.KapConfig
+import org.apache.kylin.common.{KapConfig, KylinConfig}
 import org.apache.kylin.common.util.HadoopUtil
 import org.apache.kylin.engine.spark.job.NSparkCubingUtil
 import org.apache.kylin.engine.spark.utils.{Metrics, StorageUtils}
@@ -61,10 +60,49 @@ abstract class StorageStore extends Logging {
 
   def setStorageListener(listener: StorageListener): Unit = storageListener = Some(listener)
 
-  def save(layout: LayoutEntity,
-           outputPath: Path,
-           kapConfig: KapConfig,
-           dataFrame: DataFrame): WriteTaskStats
+  def getStoragePath(nDataSegment: NDataSegment): String = {
+    getStoragePath(nDataSegment, -1, -1)
+  }
+
+  def getStoragePath(layoutEntity: LayoutEntity): String = {
+    val model = layoutEntity.getModel
+    getStoragePath(model.getProject, model.getConfig, model.getId, null, layoutEntity.getId, -1)
+  }
+
+  def getStoragePath(nDataSegment: NDataSegment, layoutId: Long): String = {
+    getStoragePath(nDataSegment, layoutId, -1)
+  }
+
+  def getStoragePath(nDataSegment: NDataSegment, layoutId: Long, bucketId: Long): String = {
+    getStoragePath(nDataSegment.getProject, nDataSegment.getConfig,
+      nDataSegment.getDataflow.getId, nDataSegment.getId, layoutId, bucketId)
+  }
+
+  def getStoragePath(project: String, config: KylinConfig, dataflowId: String,
+                     segmentId: String, layoutId: Long, bucketId: Long): String = {
+    val hdfsWorkingDir = KapConfig.wrap(config).getMetadataWorkingDirectory
+    val pathWithoutPrefix = getStoragePathWithoutPrefix(project, dataflowId, segmentId, layoutId, bucketId)
+    s"${hdfsWorkingDir}${pathWithoutPrefix}"
+  }
+
+  def getStoragePathWithoutPrefix(project: String, dataflowId: String, segmentId: String, layoutId: Long): String = {
+    getStoragePathWithoutPrefix(project, dataflowId, segmentId, layoutId, -1)
+  }
+  def getStoragePathWithoutPrefix(layoutEntity: LayoutEntity): String = {
+    getStoragePathWithoutPrefix(layoutEntity.getModel.getProject, layoutEntity.getModel.getId, null,
+      layoutEntity.getId, -1)
+  }
+
+  def getStoragePathWithoutPrefix(project: String, dataflowId: String, segmentId: String = null, layoutId: Long,
+                                  bucketId: Long): String
+
+  def saveSegmentLayout(layout: LayoutEntity, segment: NDataSegment,
+                        kapConfig: KapConfig, dataFrame: DataFrame): WriteTaskStats = {
+    saveSegmentLayout(layout, segment, kapConfig, dataFrame, -1)
+  }
+
+  def saveSegmentLayout(layout: LayoutEntity, segment: NDataSegment,
+                        kapConfig: KapConfig, dataFrame: DataFrame, bucketId: Long): WriteTaskStats
 
   def read(dataflow: NDataflow,
            layout: LayoutEntity,
@@ -93,13 +131,16 @@ abstract class StorageStore extends Logging {
 }
 
 class StorageStoreV1 extends StorageStore {
-  override def save(layout: LayoutEntity, outputPath: Path, kapConfig: KapConfig, dataFrame: DataFrame): WriteTaskStats = {
-    val outputSpec =
-      LayoutFormatWriter.write(dataFrame, layout, outputPath, kapConfig, storageListener)
-    val (fileCount, byteSize) = collectFileCountAndSizeAfterSave(outputPath, outputSpec.hadoopConf)
-    checkAndWriterFastBitmapLayout(dataFrame, layout, kapConfig, outputPath)
-    WriteTaskStats(0, fileCount, byteSize, outputSpec.rowCount,
-      outputSpec.metrics.getMetrics(Metrics.SOURCE_ROWS_CNT), outputSpec.bucketNum, new util.ArrayList[String]())
+  override def getStoragePathWithoutPrefix(project: String, dataflowId: String, segmentId: String,
+                                           layoutId: Long, bucketId: Long): String = {
+    val parquet = "parquet"
+    if (layoutId < 0) {
+      s"${project}/${parquet}/${dataflowId}/${segmentId}"
+    } else if (bucketId < 0) {
+      s"${project}/${parquet}/${dataflowId}/${segmentId}/${layoutId}"
+    } else {
+      s"${project}/${parquet}/${dataflowId}/${segmentId}/${layoutId}/${bucketId}"
+    }
   }
 
   def checkAndWriterFastBitmapLayout(dataset: DataFrame, layoutEntity: LayoutEntity, kapConfig: KapConfig, layoutPath: Path): Unit = {
@@ -149,7 +190,7 @@ class StorageStoreV1 extends StorageStore {
                                    segment: NDataSegment, layout: LayoutEntity, sparkSession: SparkSession,
                                    extraOptions: Map[String, String]): DataFrame = {
     val layoutId = layout.getId
-    val path = NSparkCubingUtil.getStoragePath(segment, layoutId)
+    val path = getStoragePath(segment, layoutId)
     sparkSession.read.parquet(path)
   }
 
@@ -158,10 +199,20 @@ class StorageStoreV1 extends StorageStore {
     val layoutId = layout.getId
     val dataPartition = segment.getLayout(layoutId).getDataPartition(partitionId)
     require(Objects.nonNull(dataPartition))
-    val path = NSparkCubingUtil.getStoragePath(segment, layoutId, dataPartition.getBucketId)
+    val path = getStoragePath(segment, layoutId, dataPartition.getBucketId)
     sparkSession.read.parquet(path)
   }
 
+  override def saveSegmentLayout(layout: LayoutEntity, segment: NDataSegment, kapConfig: KapConfig,
+                                 dataFrame: DataFrame, bucketId: Long): WriteTaskStats = {
+    val outputPath = new Path(getStoragePath(segment, layout.getId, bucketId))
+    val outputSpec =
+      LayoutFormatWriter.write(dataFrame, layout, outputPath, kapConfig, storageListener)
+    val (fileCount, byteSize) = collectFileCountAndSizeAfterSave(outputPath, outputSpec.hadoopConf)
+    checkAndWriterFastBitmapLayout(dataFrame, layout, kapConfig, outputPath)
+    WriteTaskStats(0, fileCount, byteSize, outputSpec.rowCount,
+      outputSpec.metrics.getMetrics(Metrics.SOURCE_ROWS_CNT), outputSpec.bucketNum, new util.ArrayList[String]())
+  }
 }
 
 object StorageStoreUtils extends Logging {
@@ -280,17 +331,6 @@ object StorageStoreUtils extends Logging {
 
   private def runCommand(session: SparkSession, name: String)(command: LogicalPlan): Unit = {
     val qe = session.sessionState.executePlan(command)
-    /*try {
-      val start = System.nanoTime()
-      // call `QueryExecution.toRDD` to trigger the execution of commands.
-      SQLExecution.withNewExecutionId(session, qe)(qe.toRdd)
-      val end = System.nanoTime()
-      session.listenerManager.onSuccess(name, qe, end - start)
-    } catch {
-      case e: Exception =>
-        session.listenerManager.onFailure(name, qe, e)
-        throw e
-    }*/
   }
 }
 

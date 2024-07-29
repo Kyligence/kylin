@@ -23,6 +23,8 @@ import java.sql.Timestamp
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.metadata.cube.model.{LayoutEntity, NDataflow, NDataflowManager}
 import org.apache.kylin.metadata.model.FusionModelManager
+import org.apache.kylin.query.runtime.FilePruningMode
+import org.apache.kylin.query.runtime.FilePruningMode.PruningMode
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan}
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.StructType
@@ -69,6 +71,10 @@ class KylinDataFrameManager(sparkSession: SparkSession) {
 
   def bucketingEnabled(bucketingEnabled: Boolean): KylinDataFrameManager = {
     option("bucketingEnabled", bucketingEnabled)
+  }
+
+  def filePruningMode(mode: PruningMode): KylinDataFrameManager = {
+    option("filePruningMode", mode.toString)
   }
 
   def cuboidTable(dataflow: NDataflow, layout: LayoutEntity, pruningInfo: String): LogicalPlan = {

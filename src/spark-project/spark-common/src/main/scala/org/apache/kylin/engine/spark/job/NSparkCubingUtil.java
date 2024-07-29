@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.util.StringSplitter;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -128,38 +127,6 @@ public class NSparkCubingUtil {
             index++;
         }
         return ret;
-    }
-
-    public static String getStoragePath(NDataSegment nDataSegment, Long layoutId, Long bucketId) {
-        String hdfsWorkingDir = KapConfig.wrap(nDataSegment.getConfig()).getMetadataWorkingDirectory();
-        return hdfsWorkingDir + getStoragePathWithoutPrefix(nDataSegment.getProject(),
-                nDataSegment.getDataflow().getId(), nDataSegment.getId(), layoutId, bucketId);
-    }
-
-    public static String getStoragePath(NDataSegment nDataSegment, Long layoutId) {
-        return getStoragePath(nDataSegment, layoutId, null);
-    }
-
-    public static String getStoragePath(NDataSegment nDataSegment) {
-        return getStoragePath(nDataSegment, null, null);
-    }
-
-    public static String getStoragePathWithoutPrefix(String project, String dataflowId, String segmentId,
-            Long layoutId) {
-        return getStoragePathWithoutPrefix(project, dataflowId, segmentId, layoutId, null);
-    }
-
-    public static String getStoragePathWithoutPrefix(String project, String dataflowId, String segmentId, Long layoutId,
-            Long bucketId) {
-        final String parquet = "/parquet/";
-        if (layoutId == null) {
-            return project + parquet + dataflowId + "/" + segmentId;
-        }
-        if (bucketId == null) {
-            return project + parquet + dataflowId + "/" + segmentId + "/" + layoutId;
-        } else {
-            return project + parquet + dataflowId + "/" + segmentId + "/" + layoutId + "/" + bucketId;
-        }
     }
 
     private static final Pattern DOT_PATTERN = Pattern.compile("\\b([\\w]+)\\.([\\w]+)\\b");

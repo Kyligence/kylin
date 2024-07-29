@@ -19,7 +19,6 @@
 package org.apache.spark.sql.execution.datasource
 
 import org.apache.kylin.engine.spark.utils.LogEx
-import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.catalog.BucketSpec
 import org.apache.spark.sql.catalyst.expressions
@@ -141,7 +140,15 @@ object LayoutFileSourceStrategy extends Strategy with LogEx {
 
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
     case PhysicalOperation(projects, filters,
-      l @ LogicalRelation(fsRelation: HadoopFsRelation, _, table, _)) =>
+      l @ LogicalRelation(
+      fsRelation @ HadoopFsRelation(
+      _: FilePruner,
+      _,
+      _,
+      _,
+      _,
+      _),
+      _, table, _)) =>
       // Filters on this relation fall into four categories based on where we can use them to avoid
       // reading unneeded data:
       //  - partition keys only - used to prune directories to read

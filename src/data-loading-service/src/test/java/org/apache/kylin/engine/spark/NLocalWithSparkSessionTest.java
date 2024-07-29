@@ -32,6 +32,7 @@ import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.query.relnode.ContextUtil;
 import org.apache.kylin.query.util.SlowQueryDetector;
@@ -129,4 +130,12 @@ public class NLocalWithSparkSessionTest extends NLocalWithSparkSessionTestBase {
         }
     }
 
+    public void exchangeStorageType(String project, int storageType) {
+        final NDataModelManager modelManager = NDataModelManager.getInstance(getTestConfig(), project);
+        modelManager.listAllModelIds().forEach(modelId -> {
+            modelManager.updateDataModel(modelId, copyForWrite -> {
+                copyForWrite.setStorageType(storageType);
+            });
+        });
+    }
 }

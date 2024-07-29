@@ -20,12 +20,16 @@ package org.apache.kylin.job.execution.step;
 
 import static org.apache.kylin.job.execution.stage.StageType.BUILD_DICT;
 import static org.apache.kylin.job.execution.stage.StageType.BUILD_LAYER;
+import static org.apache.kylin.job.execution.stage.StageType.DELETE_USELESS_LAYOUT_DATA;
 import static org.apache.kylin.job.execution.stage.StageType.GATHER_FLAT_TABLE_STATS;
 import static org.apache.kylin.job.execution.stage.StageType.GENERATE_FLAT_TABLE;
 import static org.apache.kylin.job.execution.stage.StageType.MATERIALIZED_FACT_TABLE;
 import static org.apache.kylin.job.execution.stage.StageType.MERGE_COLUMN_BYTES;
 import static org.apache.kylin.job.execution.stage.StageType.MERGE_FLAT_TABLE;
 import static org.apache.kylin.job.execution.stage.StageType.MERGE_INDICES;
+import static org.apache.kylin.job.execution.stage.StageType.OPTIMIZE_LAYOUT_DATA_BY_COMPACTION;
+import static org.apache.kylin.job.execution.stage.StageType.OPTIMIZE_LAYOUT_DATA_BY_REPARTITION;
+import static org.apache.kylin.job.execution.stage.StageType.OPTIMIZE_LAYOUT_DATA_BY_ZORDER;
 import static org.apache.kylin.job.execution.stage.StageType.REFRESH_COLUMN_BYTES;
 import static org.apache.kylin.job.execution.stage.StageType.REFRESH_SNAPSHOTS;
 import static org.apache.kylin.job.execution.stage.StageType.SNAPSHOT_BUILD;
@@ -44,6 +48,7 @@ import io.kyligence.kap.engine.spark.job.NResourceDetectStep;
 import io.kyligence.kap.engine.spark.job.NSparkCleanupAfterMergeStep;
 import io.kyligence.kap.engine.spark.job.NSparkCubingStep;
 import io.kyligence.kap.engine.spark.job.NSparkMergingStep;
+import io.kyligence.kap.engine.spark.job.NSparkLayoutDataOptimizeStep;
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotBuildingStep;
 import io.kyligence.kap.engine.spark.job.NSparkUpdateMetadataStep;
 import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
@@ -162,6 +167,22 @@ public enum JobStepType {
 
         @Override
         protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
+        }
+    },
+    LAYOUT_DATA_OPTIMIZE {
+        @Override
+        protected AbstractExecutable create(DefaultExecutable parent, KylinConfig config) {
+            return new NSparkLayoutDataOptimizeStep(config.getSparkOptimizeClassName());
+        }
+
+        @Override
+        protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
+            WAITE_FOR_RESOURCE.createStage(parent, config);
+
+            DELETE_USELESS_LAYOUT_DATA.createStage(parent, config);
+            OPTIMIZE_LAYOUT_DATA_BY_REPARTITION.createStage(parent, config);
+            OPTIMIZE_LAYOUT_DATA_BY_ZORDER.createStage(parent, config);
+            OPTIMIZE_LAYOUT_DATA_BY_COMPACTION.createStage(parent, config);
         }
     };
 

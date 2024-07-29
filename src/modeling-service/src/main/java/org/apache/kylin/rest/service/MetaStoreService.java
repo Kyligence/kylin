@@ -528,8 +528,10 @@ public class MetaStoreService extends BasicService {
         indexPlan = indexPlanManager.copy(indexPlan);
         indexPlan.setLastModified(System.currentTimeMillis());
         indexPlan.setMvcc(-1);
+
         indexPlanManager.createIndexPlan(indexPlan);
         dataflowManager.createDataflow(indexPlan, nDataModel.getOwner(), RealizationStatusEnum.OFFLINE);
+        indexPlanService.checkPartitionDimensionForV3Storage(project, nDataModel.getId(), getConfig());
     }
 
     private void updateModel(String project, NDataModel nDataModel, ModelImportRequest.ModelImport modelImport,
@@ -661,12 +663,12 @@ public class MetaStoreService extends BasicService {
     }
 
     private void addRuleBasedIndex(String project, SchemaChangeCheckResult.ModelSchemaChange modelSchemaChange,
-                                   IndexPlan targetIndexPlan) {
+            IndexPlan targetIndexPlan) {
         if (modelSchemaChange != null) {
             val newIndexes = Stream
                     .concat(modelSchemaChange.getNewItems().stream()
-                                    .filter(schemaChange -> schemaChange.getType() == SchemaNodeType.RULE_BASED_INDEX)
-                                    .map(SchemaChangeCheckResult.ChangedItem::getDetail),
+                            .filter(schemaChange -> schemaChange.getType() == SchemaNodeType.RULE_BASED_INDEX)
+                            .map(SchemaChangeCheckResult.ChangedItem::getDetail),
                             modelSchemaChange.getUpdateItems().stream()
                                     .filter(schemaUpdate -> schemaUpdate.getType() == SchemaNodeType.RULE_BASED_INDEX)
                                     .map(SchemaChangeCheckResult.UpdatedItem::getSecondDetail))
@@ -780,6 +782,8 @@ public class MetaStoreService extends BasicService {
                     val nDataModel = importDataModelManager.copyForWrite(importDataModel);
 
                     // delete index, then remove dimension or measure
+                    indexPlanService.checkPartitionDimensionForV3Storage(project, importDataModel.getId(),
+                            targetKylinConfig);
                     val targetIndexPlan = importIndexPlanManager.getIndexPlanByModelAlias(modelImport.getOriginalName())
                             .copy();
 

@@ -1205,11 +1205,11 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         if (targetModelName != null) {
             NIndexPlanManager indexPlanManager = getManager(NIndexPlanManager.class, project);
             targetModelColumns = NProjectManager.getProjectConfig(project).exposeAllModelRelatedColumns()
-                    ? models.stream()
+                    ? models.stream().filter(m -> m.getAlias().equals(targetModelName))
                             .flatMap(m -> m.getEffectiveCols().values().stream()
                                     .map(TblColRef::getColumnWithTableAndSchema))
                             .collect(Collectors.toList())
-                    : models.stream().map(model -> {
+                    : models.stream().filter(m -> m.getAlias().equals(targetModelName)).map(model -> {
                         Set<Integer> relatedColIds = indexPlanManager.getIndexPlan(model.getId()).getRelatedColIds();
                         return relatedColIds.stream().map(id -> model.getColRef(id).getColumnWithTableAndSchema())
                                 .collect(Collectors.toList());
@@ -1220,7 +1220,8 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
 
     private List<String> getTargetModelTables(String targetModelName, List<NDataModel> models) {
         return targetModelName == null ? null
-                : models.stream().flatMap(m -> m.getAllTableRefs().stream().map(TableRef::getTableIdentity))
+                : models.stream().filter(m -> m.getAlias().equals(targetModelName))
+                        .flatMap(m -> m.getAllTableRefs().stream().map(TableRef::getTableIdentity))
                         .collect(Collectors.toList());
     }
 

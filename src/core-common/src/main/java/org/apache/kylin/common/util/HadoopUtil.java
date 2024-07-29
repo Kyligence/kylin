@@ -66,6 +66,8 @@ public class HadoopUtil {
     public static final String JOB_TMP_ROOT = "/job_tmp";
     public static final String SOURCE_TABLE_STATS_ROOT = "/source_table_stats";
     public static final String PARQUET_STORAGE_ROOT = "/parquet";
+
+    public static final String DELTA_STORAGE_ROOT = "/delta";
     public static final String DICT_STORAGE_ROOT = "/dict";
     public static final String GLOBAL_DICT_STORAGE_ROOT = DICT_STORAGE_ROOT + "/global_dict";
     public static final String GLOBAL_DICT_V3_STORAGE_ROOT = DICT_STORAGE_ROOT + "/global_dict_v3";

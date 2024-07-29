@@ -171,7 +171,8 @@ public class JobInfoDao {
         jobInfo.setPriority(executablePO.getPriority());
 
         String subject = null;
-        if (JobTypeEnum.TABLE_SAMPLING == executablePO.getJobType()) {
+        if (JobTypeEnum.TABLE_SAMPLING == executablePO.getJobType()
+                || JobTypeEnum.LAYOUT_DATA_OPTIMIZE == executablePO.getJobType()) {
             subject = executablePO.getTargetModel();
         } else if (JobTypeEnum.SNAPSHOT_REFRESH == executablePO.getJobType()
                 || JobTypeEnum.SNAPSHOT_BUILD == executablePO.getJobType()) {

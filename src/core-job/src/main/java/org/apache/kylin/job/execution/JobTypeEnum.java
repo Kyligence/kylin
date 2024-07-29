@@ -29,6 +29,7 @@ public enum JobTypeEnum {
     INDEX_MERGE(Category.BUILD), //
     INDEX_BUILD(Category.BUILD), //
     INC_BUILD(Category.BUILD), //
+    LAYOUT_DATA_OPTIMIZE(Category.OTHER),
     SUB_PARTITION_BUILD(Category.BUILD), // 
     SUB_PARTITION_REFRESH(Category.BUILD), //
 

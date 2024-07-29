@@ -65,6 +65,10 @@ public class PartitionPruningRule extends PruningRule {
 
     @Override
     public void apply(Candidate candidate) {
+        if (!isStorageMatch(candidate)) {
+            return;
+        }
+
         if (nonBatchRealizationSkipPartitionsPruning(candidate)) {
             log.info("{}({}/{}): only batch model support multi-partitions pruning.", this.getClass().getName(),
                     candidate.getRealization().getProject(), candidate.getRealization().getCanonicalName());
@@ -112,6 +116,11 @@ public class PartitionPruningRule extends PruningRule {
             return;
         }
         candidate.setPrunedPartitions(matchedPartitions);
+    }
+
+    @Override
+    public boolean isStorageMatch(Candidate candidate) {
+        return candidate.getRealization().getModel().getStorageType().isV1Storage();
     }
 
     private boolean needPushDown(Map<String, List<Long>> matchedPartitions) {

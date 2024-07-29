@@ -124,7 +124,7 @@ public class AfterMergeOrRefreshResourceMerger extends MetadataMerger {
     }
 
     public NDataLayout[] mergeNormalModel(String dataflowId, Set<String> segmentIds, Set<Long> layoutIds,
-            ResourceStore remoteResourceStore, JobTypeEnum jobType, Set<Long> partitions) {
+            ResourceStore remoteResourceStore, JobTypeEnum jobType) {
         NDataflowManager mgr = NDataflowManager.getInstance(getConfig(), getProject());
         NDataflowUpdate update = new NDataflowUpdate(dataflowId);
 
@@ -162,6 +162,10 @@ public class AfterMergeOrRefreshResourceMerger extends MetadataMerger {
         update.setToAddOrUpdateLayouts(toUpdateCuboids.toArray(new NDataLayout[0]));
         update.setToRemoveSegs(toRemoveSegments.toArray(new NDataSegment[0]));
         update.setToUpdateSegs(toUpdateSegments.toArray(new NDataSegment[0]));
+        if (distDataflow.getModel().getStorageType().isV3Storage()) {
+            mergeLayoutDetails(getProject(), distDataflow.getModel().getId(), layoutIds, mergedSegment,
+                    toRemoveSegments, remoteResourceStore.getConfig());
+        }
 
         mgr.updateDataflow(update);
 
@@ -175,7 +179,7 @@ public class AfterMergeOrRefreshResourceMerger extends MetadataMerger {
             return mergeMultiPartitionModel(dataflowId, segmentIds, layoutIds, remoteResourceStore, jobType,
                     partitions);
         } else {
-            return mergeNormalModel(dataflowId, segmentIds, layoutIds, remoteResourceStore, jobType, partitions);
+            return mergeNormalModel(dataflowId, segmentIds, layoutIds, remoteResourceStore, jobType);
         }
     }
 

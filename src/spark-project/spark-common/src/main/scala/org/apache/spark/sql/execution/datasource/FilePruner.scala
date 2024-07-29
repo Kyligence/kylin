@@ -76,7 +76,7 @@ case class ShardSpec(numShards: Int,
   }
 }
 
-class FilePruner(val session: SparkSession,
+case class FilePruner(val session: SparkSession,
                  val options: Map[String, String],
                  val dataSchema: StructType)
   extends FileIndex with ResetShufflePartition with LogEx {
@@ -217,11 +217,11 @@ class FilePruner(val session: SparkSession,
   var cached = new java.util.HashMap[(Seq[Expression], Seq[Expression], Seq[Expression]), (Seq[PartitionDirectory], Long)]()
 
   override def listFiles(partitionFilters: Seq[Expression], dataFilters: Seq[Expression]): Seq[PartitionDirectory] = {
-    listFiles(partitionFilters, dataFilters, Seq.empty[Expression]);
+    listFilesInternal(partitionFilters, dataFilters, Seq.empty[Expression]);
   }
 
-  def listFiles(partitionFilters: Seq[Expression], dataFilters: Seq[Expression],
-                derivedFilters: Seq[Expression]): Seq[PartitionDirectory] = {
+  def listFilesInternal(partitionFilters: Seq[Expression], dataFilters: Seq[Expression],
+                        derivedFilters: Seq[Expression]): Seq[PartitionDirectory] = {
     if (cached.containsKey((partitionFilters, dataFilters, derivedFilters))) {
       return cached.get((partitionFilters, dataFilters, derivedFilters))._1
     }

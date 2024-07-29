@@ -43,6 +43,7 @@ import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_RANGE;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_SEGMENT_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.MODEL_BROKEN;
 import static org.apache.kylin.common.exception.ServerErrorCode.MODEL_ONLINE_ABANDON;
+import static org.apache.kylin.common.exception.ServerErrorCode.MODEL_STORAGE_UPDATE_FAILED;
 import static org.apache.kylin.common.exception.ServerErrorCode.PERMISSION_DENIED;
 import static org.apache.kylin.common.exception.ServerErrorCode.STREAMING_INDEX_UPDATE_DISABLE;
 import static org.apache.kylin.common.exception.ServerErrorCode.TABLE_NOT_EXIST;
@@ -76,6 +77,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -84,6 +86,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -139,7 +142,9 @@ import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.execution.MergerInfo;
+import org.apache.kylin.job.manager.JobManager;
 import org.apache.kylin.job.manager.SegmentAutoMergeUtil;
+import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.acl.AclTCRManager;
 import org.apache.kylin.metadata.acl.NDataModelAclParams;
 import org.apache.kylin.metadata.cube.cuboid.NAggregationGroup;
@@ -148,6 +153,8 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetailsManager;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -206,6 +213,7 @@ import org.apache.kylin.rest.request.ModelConfigRequest;
 import org.apache.kylin.rest.request.ModelParatitionDescRequest;
 import org.apache.kylin.rest.request.ModelRequest;
 import org.apache.kylin.rest.request.MultiPartitionMappingRequest;
+import org.apache.kylin.rest.request.OptimizeLayoutDataRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
 import org.apache.kylin.rest.request.SegmentTimeRequest;
 import org.apache.kylin.rest.response.AffectedModelsResponse;
@@ -1071,9 +1079,8 @@ public class ModelService extends AbstractModelService
         segmentResponseList = segs.stream()
                 .filter(segment -> filterSeg(withAllIndexes, withoutAnyIndexes, allToComplement,
                         indexPlan.getAllLayoutIds(false), segment))
-                .filter(segment -> !StringUtils.isNotEmpty(status) || status
-                        .equalsIgnoreCase(SegmentUtil.getSegmentStatusToDisplay(segs, segment, executables,
-                                null).toString()))
+                .filter(segment -> !StringUtils.isNotEmpty(status) || status.equalsIgnoreCase(
+                        SegmentUtil.getSegmentStatusToDisplay(segs, segment, executables, null).toString()))
                 .map(segment -> new NDataSegmentResponse(dataflow, segment, executables)).collect(Collectors.toList());
         return segmentResponseList;
     }
@@ -1085,10 +1092,8 @@ public class ModelService extends AbstractModelService
         }
         val statusEnumSet = statuses.stream().map(SegmentStatusEnumToDisplay::getByName).filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        return segmentResponseList.stream()
-                .filter(segmentResponse -> CollectionUtils.isEmpty(statusEnumSet)
-                        || statusEnumSet.contains(segmentResponse.getStatusToDisplay()))
-                .collect(Collectors.toList());
+        return segmentResponseList.stream().filter(segmentResponse -> CollectionUtils.isEmpty(statusEnumSet)
+                || statusEnumSet.contains(segmentResponse.getStatusToDisplay())).collect(Collectors.toList());
     }
 
     private boolean filterSeg(Collection<Long> withAllIndexes, Collection<Long> withoutAnyIndexes,
@@ -1660,8 +1665,8 @@ public class ModelService extends AbstractModelService
         if (job.getSparkCubingStep().getStatus() != ExecutableState.SUCCEED) {
             return;
         }
-        boolean layoutsDeletableAfterBuild = Boolean.parseBoolean(
-                job.getParam(NBatchConstants.P_LAYOUTS_DELETABLE_AFTER_BUILD));
+        boolean layoutsDeletableAfterBuild = Boolean
+                .parseBoolean(job.getParam(NBatchConstants.P_LAYOUTS_DELETABLE_AFTER_BUILD));
         if (!layoutsDeletableAfterBuild) {
             return;
         }
@@ -2328,7 +2333,123 @@ public class ModelService extends AbstractModelService
         JobInfoResponse jobInfoResponse = new JobInfoResponse();
         jobInfoResponse.setJobs(jobIds);
         return jobInfoResponse;
+    }
 
+    @Transaction(project = 0)
+    public JobInfoResponse optimizeLayoutData(String project, String modelId, OptimizeLayoutDataRequest request)
+            throws Exception {
+        aclEvaluate.checkProjectWritePermission(project);
+        checkModelPermission(project, modelId);
+
+        Set<Long> targetLayout = Sets.newHashSet();
+
+        Set<Long> toOptimizeModelLayouts = updateModelOptimizeSettings(project, modelId,
+                request.getModelOptimizationSetting());
+        targetLayout.addAll(toOptimizeModelLayouts);
+
+        Set<Long> toOptimizeLayouts = updateLayoutOptimizeSettings(project, modelId,
+                request.getLayoutOptimizationSettingList());
+        targetLayout.addAll(toOptimizeLayouts);
+
+        JobParam jobParam = new JobParam(modelId, BasicService.getUsername()).withProject(project)
+                .withJobTypeEnum(JobTypeEnum.LAYOUT_DATA_OPTIMIZE).withPriority(request.getPriority())
+                .withYarnQueue(request.getYarnQueue()).withTargetLayouts(targetLayout);
+
+        String jobId = JobManager.getInstance(getConfig(), project).addJob(jobParam);
+        JobInfoResponse.JobInfo jobInfo = new JobInfoResponse.JobInfo(JobTypeEnum.LAYOUT_DATA_OPTIMIZE.toString(),
+                jobId);
+        JobInfoResponse jobInfoResponse = new JobInfoResponse();
+        jobInfoResponse.setJobs(Lists.newArrayList(jobInfo));
+        return jobInfoResponse;
+    }
+
+    private Set<Long> updateModelOptimizeSettings(String project, String modelId,
+            OptimizeLayoutDataRequest.DataOptimizationSetting modelSettings) {
+        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getConfig(), project);
+        HashSet<Long> toOptimizeLayouts = Sets.newHashSet();
+        AtomicReference<Boolean> modelConfigChange = new AtomicReference<>(false);
+        if (modelSettings != null) {
+            OptimizeLayoutDataRequest.DataOptimizationSetting modelSetting = modelSettings;
+            indexPlanManager.updateIndexPlan(modelId, indexPlan -> {
+                LinkedHashMap<String, String> oldProps = indexPlan.getOverrideProps();
+                List<String> partitionByCols = modelSetting.getRepartitionByColumns();
+                List<String> zorderByCols = modelSetting.getZorderByColumns();
+                long maxFileSize = modelSetting.getMaxCompactionFileSize();
+                long minFileSize = modelSetting.getMinCompactionFileSize();
+                if (partitionByCols != null && !partitionByCols.isEmpty()) {
+                    oldProps.put(IndexPlan.STORAGE_V3_MODEL_DEFAULT_PARTITION_BY_CONF_KEY,
+                            String.join(IndexPlan.STORAGE_V3_CONFIG_COLUMN_SEPARATOR, partitionByCols));
+                    modelConfigChange.set(true);
+                }
+                if (zorderByCols != null && zorderByCols.isEmpty()) {
+                    oldProps.put(IndexPlan.STORAGE_V3_MODEL_DEFAULT_ZORDER_BY_CONF_KEY,
+                            String.join(IndexPlan.STORAGE_V3_CONFIG_COLUMN_SEPARATOR, zorderByCols));
+                    modelConfigChange.set(true);
+                }
+                if (maxFileSize >= 0) {
+                    oldProps.put(IndexPlan.STORAGE_V3_MODEL_DEFAULT_MAX_FILE_SIZE_CONF_KEY, Long.toString(maxFileSize));
+                    modelConfigChange.set(true);
+                }
+                if (minFileSize >= 0) {
+                    oldProps.put(IndexPlan.STORAGE_V3_MODEL_DEFAULT_MIN_FILE_SIZE_CONF_KEY, Long.toString(minFileSize));
+                    modelConfigChange.set(true);
+                }
+            });
+        }
+
+        if (modelConfigChange.get()) {
+            toOptimizeLayouts.addAll(indexPlanManager.getIndexPlan(modelId).getAllLayoutIds(false));
+        }
+
+        return toOptimizeLayouts;
+    }
+
+    private Set<Long> updateLayoutOptimizeSettings(String project, String modelId,
+            List<OptimizeLayoutDataRequest.LayoutOptimizationSetting> layoutSettings) {
+        NDataLayoutDetailsManager layoutDetailsManager = NDataLayoutDetailsManager.getInstance(getConfig(), project);
+        HashSet<Long> toOptimizeLayouts = Sets.newHashSet();
+        layoutSettings.forEach(optimizeRequest -> {
+            optimizeRequest.getLayoutIdList().forEach(layoutId -> {
+                OptimizeLayoutDataRequest.DataOptimizationSetting layoutSetting = optimizeRequest.getSetting();
+                layoutDetailsManager.updateLayoutDetails(modelId, layoutId, (copy) -> {
+                    if (layoutSetting.getMinCompactionFileSize() > 0) {
+                        copy.setMaxCompactionFileSizeInBytes(layoutSetting.getMaxCompactionFileSize());
+                    }
+                    if (layoutSetting.getMaxCompactionFileSize() > 0) {
+                        copy.setMaxCompactionFileSizeInBytes(layoutSetting.getMaxCompactionFileSize());
+                    }
+                    if (layoutSetting.getZorderByColumns() != null && !layoutSetting.getZorderByColumns().isEmpty()) {
+                        copy.setZorderByColumns(layoutSetting.getZorderByColumns());
+                    }
+                    if (layoutSetting.getRepartitionByColumns() != null
+                            && !layoutSetting.getRepartitionByColumns().isEmpty()) {
+                        copy.setPartitionColumns(layoutSetting.getRepartitionByColumns());
+                    }
+                    copy.setCompactionAfterUpdate(layoutSetting.isCompaction());
+                    toOptimizeLayouts.add(layoutId);
+                });
+            });
+        });
+        return toOptimizeLayouts;
+    }
+
+    @Transaction(project = 0)
+    public void setStorageType(String project, String modelId, int storageType) {
+        aclEvaluate.checkProjectWritePermission(project);
+        checkModelPermission(project, modelId);
+        NDataModelManager manager = NDataModelManager.getInstance(getConfig(), project);
+        NDataflowManager dataflowManager = NDataflowManager.getInstance(getConfig(), project);
+        NDataflow dataflow = dataflowManager.getDataflow(modelId);
+        if (dataflow.getSegments().isEmpty()) {
+            manager.updateDataModel(modelId, model -> model.setStorageType(storageType));
+        } else {
+            throw new KylinException(MODEL_STORAGE_UPDATE_FAILED, MsgPicker.getMsg().getModelStorageUpdateFailed());
+        }
+    }
+
+    public NDataLayoutDetails getLayoutDetail(String project, String modelId, long layoutId) {
+        aclEvaluate.checkProjectReadPermission(project);
+        return NDataLayoutDetailsManager.getInstance(getConfig(), project).getNDataLayoutDetails(modelId, layoutId);
     }
 
     public void removeIndexesFromSegments(String project, String modelId, List<String> segmentIds,
@@ -2337,10 +2458,15 @@ public class ModelService extends AbstractModelService
         checkModelPermission(project, modelId);
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             val dfManger = getManager(NDataflowManager.class, project);
+            NDataLayoutDetailsManager layoutDetailsManger = NDataLayoutDetailsManager.getInstance(getConfig(), project);
             NDataflow dataflow = dfManger.getDataflow(modelId);
             for (String segmentId : segmentIds) {
                 NDataSegment seg = dataflow.getSegment(segmentId);
                 dfManger.updateDataflowDetailsLayouts(seg, indexIds, Collections.emptyList());
+                for (Long toRemoveIndex : indexIds) {
+                    layoutDetailsManger.updateLayoutDetails(modelId, toRemoveIndex,
+                            (layoutDetail) -> layoutDetail.getFragmentRangeSet().remove(seg.getRange()));
+                }
             }
             getManager(NIndexPlanManager.class, project).updateIndexPlan(dataflow.getUuid(),
                     IndexPlan::removeTobeDeleteIndexIfNecessary);
@@ -2950,6 +3076,7 @@ public class ModelService extends AbstractModelService
                         semanticUpdater.expandExpandableMeasure(updated);
                         preProcessBeforeModelSave(updated, project);
                         getManager(NDataModelManager.class, project).updateDataModelDesc(updated);
+                        indexPlanService.checkPartitionDimensionForV3Storage(project, modelId, getConfig());
 
                         indexPlanService.updateForMeasureChange(project, modelId, updateImpact.getInvalidMeasures(),
                                 updateImpact.getReplacedMeasures());
@@ -2989,6 +3116,7 @@ public class ModelService extends AbstractModelService
             throw te;
         }
     }
+
     public void updateExcludedCheckerResult(String project, ModelRequest request) {
         NDataModelManager modelManager = getManager(NDataModelManager.class, project);
         NIndexPlanManager indexPlanManager = getManager(NIndexPlanManager.class, project);

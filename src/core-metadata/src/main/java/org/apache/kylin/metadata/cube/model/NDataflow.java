@@ -43,7 +43,6 @@ import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.cube.optimization.FrequencyMap;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
 import org.apache.kylin.metadata.model.FunctionDesc;
-import org.apache.kylin.metadata.model.IStorageAware;
 import org.apache.kylin.metadata.model.MeasureDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -207,11 +206,22 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
             r.add(cc.getResourcePath());
         }
 
+        // layout detail
+        listAllLayoutDetails().forEach(layoutDetail -> r.add(layoutDetail.getResourcePath()));
+
         return r;
     }
 
     public IndexPlan getIndexPlan() {
         return NIndexPlanManager.getInstance(config, project).getIndexPlan(uuid);
+    }
+
+    public List<NDataLayoutDetails> listAllLayoutDetails() {
+        return NDataLayoutDetailsManager.getInstance(config, project).listNDataLayoutDetailsByModel(uuid);
+    }
+
+    public NDataLayoutDetails getDataLayoutDetails(long layoutId) {
+        return NDataLayoutDetailsManager.getInstance(config, project).getNDataLayoutDetails(uuid, layoutId);
     }
 
     @Override
@@ -401,7 +411,11 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
 
     public String getSegmentHdfsPath(String segmentId) {
         String hdfsWorkingDir = KapConfig.wrap(config).getMetadataWorkingDirectory();
-        return hdfsWorkingDir + getProject() + "/parquet/" + getUuid() + "/" + segmentId;
+        if (getModel().getStorageType().isDeltaStorage()) {
+            return hdfsWorkingDir + getProject() + "/delta/" + getUuid();
+        } else {
+            return hdfsWorkingDir + getProject() + "/parquet/" + getUuid() + "/" + segmentId;
+        }
     }
 
     public Segments<NDataSegment> getSegmentsByRange(SegmentRange range) {
@@ -425,7 +439,7 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
 
     @Override
     public int getStorageType() {
-        return IStorageAware.ID_NDATA_STORAGE;
+        return getModel().getStorageTypeValue();
     }
 
     // ============================================================================
@@ -530,12 +544,18 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
     }
 
     public long getStorageBytesSize() {
-        long bytesSize = 0L;
+    long bytesSize = 0L;
+    if (!getModel().isBroken() && getModel().getStorageType().isV3Storage()) {
+        for (val detail : listAllLayoutDetails()) {
+            bytesSize += detail.getSizeInBytes();
+        }
+    } else {
         for (val segment : getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING)) {
             bytesSize += segment.getStorageBytesSize();
         }
-        return bytesSize;
     }
+    return bytesSize;
+}
 
     public long getSourceBytesSize() {
         long bytesSize = 0L;

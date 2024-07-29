@@ -2545,10 +2545,10 @@ public class QueryServiceTest extends NLocalFileMetadataTestCase {
         List<NDataModel> dataModels = dataModelManager.listAllModels();
         overwriteSystemProp("kylin.model.tds-expose-all-model-related-columns", "true");
         List<String> modelColumns1 = queryService.getTargetModelColumns("nmodel_basic", dataModels, project);
-        Assert.assertEquals(861, modelColumns1.size());
+        Assert.assertEquals(201, modelColumns1.size());
         overwriteSystemProp("kylin.model.tds-expose-all-model-related-columns", "false");
         List<String> modelColumns2 = queryService.getTargetModelColumns("nmodel_basic", dataModels, project);
-        Assert.assertEquals(172, modelColumns2.size());
+        Assert.assertEquals(48, modelColumns2.size());
     }
 
     @Test

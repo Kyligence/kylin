@@ -79,7 +79,7 @@ public class QueryHisTransformStandardUtil {
         if (realizations != null) {
             for (NativeQueryRealization r : realizations) {
                 QueryRealization qr = new QueryRealization(
-                        r.getModelId(), r.getModelAlias(), r.getLayoutId(), r.getIndexType(),
+                        r.getModelId(), r.getModelAlias(), r.getLayoutId(), r.getIndexType(), r.getStorageType(),
                         r.isPartialMatchModel(), r.isValid(), r.getSnapshots());
                 queryRealizations.add(qr);
             }

@@ -45,7 +45,6 @@ public class ExecutableAddSegmentHandler extends ExecutableHandler {
         val jobId = executable.getId();
         val modelId = getModelId();
         Preconditions.checkState(executable.getTasks().size() > 1, "job " + jobId + " steps is not enough");
-
         val errorOrPausedJobCount = getErrorOrPausedJobCount();
         MergerInfo mergerInfo = new MergerInfo(project, modelId, jobId, errorOrPausedJobCount, HandlerType.ADD_SEGMENT);
         ExecutableHandleUtils.getNeedMergeTasks(executable)

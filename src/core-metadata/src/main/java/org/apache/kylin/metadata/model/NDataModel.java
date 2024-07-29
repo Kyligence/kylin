@@ -111,6 +111,42 @@ public class NDataModel extends RootPersistentEntity {
         NORMAL, EXPANDABLE, INTERNAL
     }
 
+    public enum DataStorageType implements Serializable {
+        V1, DELTA, ICEBERG, INVALID;
+
+        private static final Map<Integer, DataStorageType> typeValueMap = new HashMap<>();
+        static {
+            typeValueMap.put(0, V1);
+            typeValueMap.put(1, V1);
+            typeValueMap.put(3, DELTA);
+            typeValueMap.put(4, ICEBERG);
+        }
+
+        public boolean isV1Storage() {
+            return this == V1;
+        }
+
+        public boolean isV3Storage() {
+            return this == DELTA || this == ICEBERG;
+        }
+
+        public boolean isDeltaStorage() {
+            return this == DELTA;
+        }
+
+        public boolean isIcebergStorage() {
+            return this == ICEBERG;
+        }
+
+        public boolean isInvalidStorage() {
+            return this == INVALID;
+        }
+
+        public static DataStorageType fromValue(int value) {
+            return typeValueMap.getOrDefault(value, INVALID);
+        }
+    }
+
     @Getter
     @Setter
     @AllArgsConstructor
@@ -285,6 +321,8 @@ public class NDataModel extends RootPersistentEntity {
     // mark this model as used for model save checking
     private boolean saveCheck = false;
 
+    private DataStorageType dataStorageType;
+
     public enum ColumnStatus {
         TOMB, EXIST, DIMENSION
     }
@@ -430,6 +468,8 @@ public class NDataModel extends RootPersistentEntity {
         this.modelType = other.modelType;
         this.fusionId = other.fusionId;
         this.allTableRefs = other.allTableRefs;
+        this.storageType = other.storageType;
+        this.dataStorageType = other.dataStorageType;
     }
 
     public KylinConfig getConfig() {
@@ -723,6 +763,7 @@ public class NDataModel extends RootPersistentEntity {
         if (StringUtils.isEmpty(this.alias)) {
             this.alias = this.uuid;
         }
+        this.dataStorageType = DataStorageType.fromValue(this.storageType);
         checkModelType();
     }
 
@@ -1375,6 +1416,10 @@ public class NDataModel extends RootPersistentEntity {
                 .map(NamedColumn::getId).findAny().orElse(-1);
     }
 
+    public int getPartitionColumnId() {
+        return getColumnIdByColumnName(partitionDesc.getPartitionDateColumnRef().getAliasDotName());
+    }
+
     public NamedColumn getColumnByColumnNameInModel(String name) {
         Preconditions.checkArgument(Objects.nonNull(allNamedColumns));
         return allNamedColumns.stream().filter(col -> col.name.equalsIgnoreCase(name) && col.isExist()).findFirst()
@@ -1563,5 +1608,18 @@ public class NDataModel extends RootPersistentEntity {
 
     public boolean isFilePartitioned() {
         return partitionDesc != null && partitionDesc.getCubePartitionType() == PartitionType.FILE;
+    }
+
+    public DataStorageType getStorageType() {
+        return dataStorageType;
+    }
+
+    public int getStorageTypeValue() {
+        return storageType;
+    }
+
+    public void setStorageType(int storageType) {
+        this.dataStorageType = DataStorageType.fromValue(storageType);
+        this.storageType = storageType;
     }
 }

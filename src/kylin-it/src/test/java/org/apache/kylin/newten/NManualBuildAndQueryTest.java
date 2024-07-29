@@ -75,7 +75,7 @@ public class NManualBuildAndQueryTest extends NLocalWithSparkSessionTest {
         }
     }
 
-    private void buildAndMergeCube(String dfName) throws Exception {
+    protected void buildAndMergeCube(String dfName) throws Exception {
         if (dfName.equals("89af4ee2-2cdb-4b07-b39e-4c29856309aa")) {
             buildFourSegementAndMerge(dfName);
         }
@@ -180,7 +180,7 @@ public class NManualBuildAndQueryTest extends NLocalWithSparkSessionTest {
                 .collect(Collectors.toSet());
     }
 
-    private void buildFourSegementAndMerge(String dfName) throws Exception {
+    protected void buildFourSegementAndMerge(String dfName) throws Exception {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         NDataflowManager dsMgr = NDataflowManager.getInstance(config, getProject());
         ExecutableManager execMgr = ExecutableManager.getInstance(config, getProject());

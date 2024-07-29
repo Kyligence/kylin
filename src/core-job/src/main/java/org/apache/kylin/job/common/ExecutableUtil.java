@@ -22,8 +22,9 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.JOB_CREATE_CHECK_MULTI_PARTITION_EMPTY;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -31,7 +32,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.code.ErrorCodeProducer;
-import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.model.JobParam;
@@ -52,19 +52,35 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class ExecutableUtil {
 
-    static final Map<JobTypeEnum, ExecutableUtil> implementations = Maps.newHashMap();
+    private static final ConcurrentMap<JobTypeEnum, ExecutableUtil> implementations = new ConcurrentHashMap<>();
 
-    public static void registerImplementation(JobTypeEnum type, ExecutableUtil child) {
+    protected static void registerImplementation(JobTypeEnum type, ExecutableUtil child) {
         implementations.put(type, child);
     }
 
-    static {
-        implementations.put(JobTypeEnum.INDEX_BUILD, new IndexBuildJobUtil());
-        implementations.put(JobTypeEnum.INDEX_MERGE, new MergeJobUtil());
-        implementations.put(JobTypeEnum.INDEX_REFRESH, new RefreshJobUtil());
-        implementations.put(JobTypeEnum.INC_BUILD, new SegmentBuildJobUtil());
-        implementations.put(JobTypeEnum.SUB_PARTITION_REFRESH, new RefreshJobUtil());
-        implementations.put(JobTypeEnum.SUB_PARTITION_BUILD, new PartitionBuildJobUtil());
+    private static void registerDefaultImplementations() {
+        registerImplementation(JobTypeEnum.INDEX_BUILD, new IndexBuildJobUtil());
+        registerImplementation(JobTypeEnum.INDEX_MERGE, new MergeJobUtil());
+        registerImplementation(JobTypeEnum.INDEX_REFRESH, new RefreshJobUtil());
+        registerImplementation(JobTypeEnum.INC_BUILD, new SegmentBuildJobUtil());
+        registerImplementation(JobTypeEnum.SUB_PARTITION_REFRESH, new RefreshJobUtil());
+        registerImplementation(JobTypeEnum.SUB_PARTITION_BUILD, new PartitionBuildJobUtil());
+        registerImplementation(JobTypeEnum.LAYOUT_DATA_OPTIMIZE, new LayoutOptimizeJobUtil());
+    }
+
+    public static ExecutableUtil getImplementation(JobTypeEnum type) {
+        // Double-Checked Locking
+        ExecutableUtil implementation = implementations.get(type);
+        if (implementation == null) {
+            synchronized (ExecutableUtil.class) {
+                implementation = implementations.get(type);
+                if (implementation == null) {
+                    registerDefaultImplementations();
+                    implementation = implementations.get(type);
+                }
+            }
+        }
+        return implementation;
     }
 
     public static void computeParams(JobParam jobParam) {
@@ -73,7 +89,7 @@ public abstract class ExecutableUtil {
         if (model != null && model.isMultiPartitionModel()) {
             jobParam.getCondition().put(JobParam.ConditionConstant.MULTI_PARTITION_JOB, true);
         }
-        ExecutableUtil paramUtil = implementations.get(jobParam.getJobTypeEnum());
+        ExecutableUtil paramUtil = getImplementation(jobParam.getJobTypeEnum());
         if (paramUtil != null) {
             paramUtil.computeLayout(jobParam);
         }

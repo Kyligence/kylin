@@ -48,6 +48,8 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.datasource.storage.StorageStore;
+import org.apache.spark.sql.datasource.storage.StorageStoreFactory;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -86,6 +88,7 @@ public class MockedDFBuildJob extends SparkApplication {
             Set<LayoutEntity> cuboids = NSparkCubingUtil.toLayouts(indexPlan, layoutIds).stream()
                     .filter(Objects::nonNull).collect(Collectors.toSet());
             nSpanningTree = NSpanningTreeFactory.fromLayouts(cuboids, dfName);
+            val storageStore = StorageStoreFactory.create(indexPlan.getModel().getStorageType());
 
             for (String segId : segmentIds) {
                 NDataSegment seg = dfMgr.getDataflow(dfName).getSegment(segId);
@@ -123,7 +126,7 @@ public class MockedDFBuildJob extends SparkApplication {
                     dataCuboid.setFileCount(123);
                     dataCuboid.setByteSize(123);
                     StorageFactory.createEngineAdapter(layout, NSparkCubingEngine.NSparkCubingStorage.class)
-                            .saveTo(NSparkCubingUtil.getStoragePath(seg, layout.getId()), ds, ss);
+                            .saveTo(storageStore.getStoragePath(seg, layout.getId()), ds, ss);
 
                     NDataflowUpdate update = new NDataflowUpdate(seg.getDataflow().getUuid());
                     update.setToAddOrUpdateLayouts(dataCuboid);

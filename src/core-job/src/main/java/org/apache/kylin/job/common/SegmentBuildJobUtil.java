@@ -22,6 +22,7 @@ import java.util.HashSet;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
@@ -35,6 +36,11 @@ import lombok.extern.slf4j.Slf4j;
  **/
 @Slf4j
 public class SegmentBuildJobUtil extends ExecutableUtil {
+
+    static {
+        registerImplementation(JobTypeEnum.INC_BUILD, new SegmentBuildJobUtil());
+    }
+
     @Override
     public void computeLayout(JobParam jobParam) {
         IndexPlan indexPlan = NIndexPlanManager.getInstance(KylinConfig.getInstanceFromEnv(), jobParam.getProject())

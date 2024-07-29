@@ -290,7 +290,6 @@ public class ColumnDesc implements Serializable {
                 + "id='" + id //
                 + "', name='" + name //
                 + "', datatype='" + datatype //
-                + "', comment='" + comment //
                 + "'}";
     }
 

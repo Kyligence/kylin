@@ -27,6 +27,7 @@ import static org.apache.kylin.common.persistence.MetadataType.INDEX_PLAN;
 import static org.apache.kylin.common.persistence.MetadataType.JAR_INFO;
 import static org.apache.kylin.common.persistence.MetadataType.KAFKA_CONFIG;
 import static org.apache.kylin.common.persistence.MetadataType.LAYOUT;
+import static org.apache.kylin.common.persistence.MetadataType.LAYOUT_DETAILS;
 import static org.apache.kylin.common.persistence.MetadataType.MODEL;
 import static org.apache.kylin.common.persistence.MetadataType.PROJECT;
 import static org.apache.kylin.common.persistence.MetadataType.RESOURCE_GROUP;
@@ -232,6 +233,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     }
 
     private boolean assertProjectMetadata(String project, File archiveFolder) {
+        System.out.println("---------" + project);
         val tableFolder = findFile(archiveFolder.listFiles(), f -> f.getName().equals(MetadataType.TABLE_INFO.name()));
         Assertions.assertThat(tableFolder.list()).anyMatch(resourceName -> resourceName.startsWith(project));
 
@@ -260,9 +262,9 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         Assertions.assertThat(coreMetaFolder.list()).isNotEmpty().containsExactlyInAnyOrder(SYSTEM.name(),
                 PROJECT.name(), TABLE_INFO.name(), MODEL.name(), DATAFLOW.name(), INDEX_PLAN.name(), SEGMENT.name(),
-                LAYOUT.name(), COMPUTE_COLUMN.name(), CC_MODEL_RELATION.name(), TABLE_MODEL_RELATION.name(),
-                DATA_PARSER.name(), RESOURCE_GROUP.name(), STREAMING_JOB.name(), JAR_INFO.name(), KAFKA_CONFIG.name(),
-                FUSION_MODEL.name(), TABLE_EXD.name(), "kylin.properties");
+                LAYOUT.name(), LAYOUT_DETAILS.name(), COMPUTE_COLUMN.name(), CC_MODEL_RELATION.name(),
+                TABLE_MODEL_RELATION.name(), DATA_PARSER.name(), RESOURCE_GROUP.name(), STREAMING_JOB.name(),
+                JAR_INFO.name(), KAFKA_CONFIG.name(), FUSION_MODEL.name(), TABLE_EXD.name(), "kylin.properties");
 
         val projectDir = findFile(coreMetaFolder.listFiles(), f -> f.getName().startsWith(MetadataType.PROJECT.name()));
         Assertions.assertThat(projectDir.listFiles()).allMatch(
@@ -278,7 +280,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         //there is a project that destResourceStore contains and srcResourceStore doesn't contain
         val toDelete = ResourceStore.getKylinMetaStore(getTestConfig()).listResourcesRecursivelyByProject("demo");
-        for(String resource : toDelete){
+        for (String resource : toDelete) {
             FileUtils.forceDelete(Paths.get(junitCoreMetaFolder.getAbsolutePath(), resource + ".json").toFile());
         }
 
@@ -320,8 +322,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         destResourceStore.deleteResource(modifyPath);
         destResourceStore.putResourceWithoutCheck(modifyPath, ByteSource.wrap(JsonUtil.writeValueAsBytes(modelDesc)), 0,
                 0);
-        destResourceStore.putResourceWithoutCheck(addPath,
-                RawResourceTool.createByteSource("test1"), 0, 0);
+        destResourceStore.putResourceWithoutCheck(addPath, RawResourceTool.createByteSource("test1"), 0, 0);
         Assert.assertNull(destResourceStore.getResource(deletePath));
         Assert.assertNotEquals(originDescription,
                 JsonUtil.readValue(destResourceStore.getResource(modifyPath).getByteSource().read(), NDataModel.class)
@@ -361,8 +362,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         destResourceStore.deleteResource(modifyPath);
         destResourceStore.putResourceWithoutCheck(modifyPath, ByteSource.wrap(JsonUtil.writeValueAsBytes(modelDesc)), 0,
                 0);
-        destResourceStore.putResourceWithoutCheck(addPath,
-                RawResourceTool.createByteSource("test2"), 0, 0);
+        destResourceStore.putResourceWithoutCheck(addPath, RawResourceTool.createByteSource("test2"), 0, 0);
 
         Assert.assertNull(destResourceStore.getResource(deletePath));
         Assert.assertNotEquals(originDescription,
@@ -452,7 +452,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         val backupPath = temporaryFolder.newFolder();
         String backFolder = "testRestoreDuplicateUuidMode_backup";
         val backupTool = new MetadataTool(getTestConfig());
-        backupTool.execute(new String[] { "-backup", "-dir", backupPath.getAbsolutePath(), "-folder", backFolder});
+        backupTool.execute(new String[] { "-backup", "-dir", backupPath.getAbsolutePath(), "-folder", backFolder });
 
         val tool = new MetadataTool(getTestConfig());
         val restorePath = backupPath.getAbsolutePath() + "/" + backFolder;
@@ -637,7 +637,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         //there is a project metadata that destResourceStore contains and srcResourceStore doesn't contain
         val toDelete = ResourceStore.getKylinMetaStore(getTestConfig()).listResourcesRecursivelyByProject("demo");
-        for(String resource : toDelete){
+        for (String resource : toDelete) {
             FileUtils.forceDelete(Paths.get(junitCoreMetaFolder.getAbsolutePath(), resource + ".json").toFile());
         }
 

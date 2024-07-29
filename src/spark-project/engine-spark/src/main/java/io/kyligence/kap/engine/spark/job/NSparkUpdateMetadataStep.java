@@ -65,7 +65,7 @@ public class NSparkUpdateMetadataStep extends AbstractExecutable {
             cleanExpiredSnapshot();
             return ExecuteResult.createSucceed();
         } catch (Throwable throwable) {
-            logger.warn("");
+            logger.warn("update metadata failed.", throwable);
             return ExecuteResult.createError(throwable);
         }
     }

@@ -122,8 +122,11 @@ object KylinSourceStrategy extends Strategy with LogEx {
       logTime("listFiles", debug = true) {
         filePruner.listFiles(partitionKeyFilters.iterator.toSeq, dataFilters.iterator.toSeq)
       }
-      val sourceScanRows = filePruner.cached.get((partitionKeyFilters.iterator.toSeq,
-        dataFilters.iterator.toSeq, Seq.empty[Expression]))._2
+      val cacheV = filePruner.cached.get((partitionKeyFilters.iterator.toSeq,
+        dataFilters.iterator.toSeq, Seq.empty[Expression]))
+      val sourceScanRows = if ( cacheV != null) {
+        cacheV._2
+      } else 0L
       QueryContext.current().getMetrics.addAccumSourceScanRows(sourceScanRows)
       val scan =
         new KylinFileSourceScanExec(

@@ -47,6 +47,7 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.OutOfMaxCombinationException;
 import org.apache.kylin.common.exception.ServerErrorCode;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.common.util.ImmutableBitSet;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.engine.spark.smarter.IndexDependencyParser;
@@ -69,11 +70,13 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.IndexPlan.UpdateRuleImpact;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetailsManager;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.cube.model.RuleBasedIndex;
+import org.apache.kylin.metadata.model.IStorageAware;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
@@ -223,7 +226,11 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
             newLayout.setId(newLayout.getId() + IndexEntity.INDEX_ID_STEP);
         }
         newLayout.setColOrder(convertColumn(request.getColOrder(), model));
-        newLayout.setStorageType(request.getStorageType());
+        int storageType = request.getStorageType();
+        if (model.getStorageType().isV3Storage() && request.getStorageType() == IStorageAware.ID_NDATA_STORAGE) {
+            storageType = IStorageAware.ID_NDATA_STORAGE;
+        }
+        newLayout.setStorageType(storageType);
         newLayout.setShardByColumns(convertColumn(request.getShardByColumns(), model));
         newLayout.setUpdateTime(System.currentTimeMillis());
         newLayout.setOwner(BasicService.getUsername());
@@ -391,6 +398,9 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
         });
 
         modelChangeSupporters.forEach(listener -> listener.onUpdate(project, modelId));
+        if (indexPlan.getModel().getStorageType().isV3Storage()) {
+            NDataLayoutDetailsManager.getInstance(getConfig(), project).removeDetails(modelId, ids);
+        }
     }
 
     private void removeAggGroup(Set<Integer> invalidDimensions, Set<Integer> invalidMeasures, IndexPlan indexPlan) {
@@ -417,8 +427,8 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
             val layout = indexPlan.getLayoutEntity(id);
             Preconditions.checkNotNull(layout);
         }
-        indexPlanManager.updateIndexPlan(indexPlan.getUuid(), copyForWrite -> copyForWrite
-                .markWhiteIndexToBeDelete(indexPlan.getUuid(), Sets.newHashSet(layoutIds)));
+        indexPlanManager.updateIndexPlan(indexPlan.getUuid(),
+                copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(indexPlan.getUuid(), Sets.newHashSet(layoutIds)));
 
         return true;
     }
@@ -906,6 +916,7 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
             response.setUsage(dataflow.getLayoutHitCount().get(layoutEntity.getId()).getDateFrequency().values()
                     .stream().mapToInt(Integer::intValue).sum());
         }
+        response.setStorageType(layoutEntity.getStorageType());
         return response;
     }
 
@@ -1308,6 +1319,70 @@ public class IndexPlanService extends BasicService implements TableIndexPlanSupp
             response.setNeedCreateBaseTableIndex(true);
         }
         return response;
+    }
+
+    public void checkPartitionDimensionForV3Storage(String project, String modelId, KylinConfig config) {
+        NDataModel model = NDataModelManager.getInstance(config, project).getDataModelDesc(modelId);
+        if (model.getStorageType().isV3Storage() && model.isIncrementBuildOnExpertMode()) {
+            NIndexPlanManager.getInstance(getConfig(), project).updateIndexPlan(modelId, (indexPlan) -> {
+                Integer partitionColumnId = model.getPartitionColumnId();
+                RuleBasedIndex ruleBasedIndex = indexPlan.getRuleBasedIndex();
+                if (ruleBasedIndex != null) {
+                    updateAggregationGroups(ruleBasedIndex, partitionColumnId);
+                    indexPlan.getRuleBasedIndex().setLayoutIdMapping(Lists.newArrayList());
+                }
+                indexPlan.setRuleBasedIndex(ruleBasedIndex);
+                updateIndexPlan(indexPlan, partitionColumnId);
+            });
+        }
+    }
+
+    private void updateAggregationGroups(RuleBasedIndex ruleBasedIndex, Integer partitionColumnId) {
+        ruleBasedIndex.getAggregationGroups().forEach(nAggregationGroup -> {
+            if (!Lists.newArrayList(nAggregationGroup.getIncludes()).contains(partitionColumnId)) {
+                updateIncludes(nAggregationGroup, partitionColumnId);
+                updateMandatoryDims(nAggregationGroup, partitionColumnId);
+            }
+        });
+    }
+
+    private void updateIncludes(NAggregationGroup nAggregationGroup, Integer partitionColumnId) {
+        Integer[] newIncludes = new Integer[nAggregationGroup.getIncludes().length + 1];
+        newIncludes[0] = partitionColumnId;
+        System.arraycopy(nAggregationGroup.getIncludes(), 0, newIncludes, 1, nAggregationGroup.getIncludes().length);
+        nAggregationGroup.setIncludes(newIncludes);
+    }
+
+    private void updateMandatoryDims(NAggregationGroup nAggregationGroup, Integer partitionColumnId) {
+        Integer[] mandatoryDims = new Integer[nAggregationGroup.getSelectRule().mandatoryDims.length + 1];
+        mandatoryDims[0] = partitionColumnId;
+        System.arraycopy(nAggregationGroup.getSelectRule().mandatoryDims, 0, mandatoryDims, 1,
+                nAggregationGroup.getSelectRule().mandatoryDims.length);
+        nAggregationGroup.getSelectRule().setMandatoryDims(mandatoryDims);
+    }
+
+    private void updateIndexPlan(IndexPlan indexPlan, Integer partitionColumnId) {
+        List<ImmutableBitSet> indexBitSet = indexPlan.getAllIndexes().stream()
+                .map(index -> index.getDimensionBitset().or(index.getMeasureBitset())).collect(Collectors.toList());
+        List<IndexEntity> indexEntities = indexPlan.getIndexes().stream().map(index -> {
+            if (!index.getDimensions().contains(partitionColumnId)) {
+                if (indexBitSet.contains(index.getDimensionBitset().or(index.getMeasureBitset()))) {
+                    return null;
+                }
+                updateIndex(index, partitionColumnId);
+            }
+            return index;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+        indexPlan.setIndexes(indexEntities);
+    }
+
+    private void updateIndex(IndexEntity index, Integer partitionColumnId) {
+        index.getDimensions().add(0, partitionColumnId);
+        index.getLayouts().stream().forEach(layoutEntity -> {
+            List<Integer> newColOrder = Lists.newArrayList(partitionColumnId);
+            newColOrder.addAll(layoutEntity.getColOrder());
+            layoutEntity.setColOrder(newColOrder);
+        });
     }
 
     @Override

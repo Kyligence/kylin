@@ -23,8 +23,8 @@ import org.apache.kylin.engine.spark.application.SparkApplication
 import org.apache.kylin.engine.spark.job.stage.StageExec
 import org.apache.kylin.engine.spark.job.{KylinBuildEnv, SegmentJob}
 import org.apache.kylin.metadata.cube.model.NDataSegment
-
 import io.kyligence.kap.engine.spark.job.SegmentBuildJob
+import org.apache.kylin.metadata.model.NDataModel.DataStorageType
 
 class RefreshSnapshots(jobContext: SegmentJob) extends StageExec {
 
@@ -40,8 +40,8 @@ class RefreshSnapshots(jobContext: SegmentJob) extends StageExec {
   }
 
   override def execute(): Unit = {
-    jobContext match {
-      case job: SegmentBuildJob =>
+    (jobContext.getDataflow(jobContext.getDataflowId).getModel.getStorageType, jobContext) match {
+      case (storageType, job: SegmentBuildJob) if storageType.isV1Storage =>
         job.tryRefreshSnapshots(this)
       case _ =>
     }

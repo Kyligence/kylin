@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.newten;
 
 import java.io.IOException;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
-import org.apache.kylin.engine.spark.job.NSparkCubingUtil;
 import org.apache.kylin.engine.spark.storage.ParquetStorage;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
@@ -35,6 +33,8 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.util.ExecAndComp;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparderEnv;
+import org.apache.spark.sql.datasource.storage.StorageStore;
+import org.apache.spark.sql.datasource.storage.StorageStoreFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -82,7 +82,8 @@ public class NOptIntersectCountTest extends NLocalWithSparkSessionTest {
                 .getLatestReadySegment();
         NDataLayout dataCuboid = NDataLayout.newDataLayout(seg.getDataflow(), seg.getId(), 100001);
         ParquetStorage storage = new ParquetStorage();
-        List<Row> rows = storage.getFrom(NSparkCubingUtil.getStoragePath(seg, dataCuboid.getLayoutId()), ss)
+        StorageStore storageStore = StorageStoreFactory.create(seg.getModel().getStorageType());
+        List<Row> rows = storage.getFrom(storageStore.getStoragePath(seg, dataCuboid.getLayoutId()), ss)
                 .collectAsList();
         Assert.assertEquals(9, rows.size());
 
@@ -122,23 +123,23 @@ public class NOptIntersectCountTest extends NLocalWithSparkSessionTest {
         /*
         Source table: USER_ID, AGE, CITY, TAG
         TAG value split by "|"
-
+        
         group by key: 20,Shanghai
-
+        
         rich, 2
         tall, 1
         handsome, 2
         ====================================
-
+        
         group by key: 19,Beijing
-
+        
         rich, 1
         tall, 2
         handsome, 1
         ====================================
-
+        
         group by key: 18,Shenzhen
-
+        
         rich, 1
         tall, 1
         handsome, 1

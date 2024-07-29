@@ -53,6 +53,7 @@ import org.apache.kylin.metadata.model.exception.ModelBrokenException;
 
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kylin.metadata.project.NProjectManager;
 
 @Slf4j
 public class NDataModelManager {
@@ -258,7 +259,9 @@ public class NDataModelManager {
         NCircuitBreaker.verifyModelCreation(allModels.size());
 
         copy.setOwner(owner);
-        copy.setStorageType(getConfig().getDefaultStorageType());
+        if (model.getStorageTypeValue() == 0) {
+            copy.setStorageType(NProjectManager.getProjectConfig(project).getDefaultStorageType());
+        }
         model = saveModel(copy);
         return model;
     }

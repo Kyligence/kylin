@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.common.persistence.Serializer;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.shaded.jackson.datatype.guava.GuavaModule;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -55,6 +56,7 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.util.LRUMap;
 import com.fasterxml.jackson.databind.util.LookupCache;
+
 
 public class JsonUtil {
 
@@ -72,10 +74,12 @@ public class JsonUtil {
                 .setConfig(mapper.getSerializationConfig().withView(PersistenceView.class));
         mapper.setFilterProvider(simpleFilterProvider);
         mapper.setTypeFactory(customTypeFactory);
+        mapper.registerModule(new GuavaModule());
         indentMapper.configure(SerializationFeature.INDENT_OUTPUT, true)
                 .setConfig(indentMapper.getSerializationConfig().withView(PersistenceView.class));
         indentMapper.setFilterProvider(simpleFilterProvider);
         indentMapper.setTypeFactory(customTypeFactory);
+        indentMapper.registerModule(new GuavaModule());
     }
 
     public static ArrayNode createArrayNode() {
@@ -195,6 +199,10 @@ public class JsonUtil {
 
     public static String writeValueAsIndentString(Object value) throws JsonProcessingException {
         return indentMapper.writeValueAsString(value);
+    }
+
+    public static String writeValueAsStringWithPretty(Object value) throws JsonProcessingException {
+        return indentMapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
     }
 
     public static <T> T convert(Object obj, Class<T> valueType) {

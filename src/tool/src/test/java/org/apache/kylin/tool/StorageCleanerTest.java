@@ -108,6 +108,15 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
+    public void testDeltaStorageCleaner() throws Exception {
+        val cleaner = new StorageCleaner();
+        val config = getTestConfig();
+        FileUtils.copyDirectory(new File("src/test/resources/ut_storage/delta_storage_cleaner_test"),
+                new File(config.getHdfsWorkingDirectory().replace("file://", "")));
+        cleaner.execute();
+    }
+
+    @Test
     public void testEventLogClean() throws IOException {
         prepareForEventLogClean();
         String allSparderEventLogDir = (KapConfig.wrap(getTestConfig()).getSparkConf().get("spark.eventLog.dir"))

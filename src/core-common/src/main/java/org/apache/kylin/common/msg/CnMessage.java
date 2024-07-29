@@ -1733,4 +1733,9 @@ public class CnMessage extends Message {
     public String getModelConfigKeyExist() {
         return "参数 {%s} 已存在, 请修改后重试.";
     }
+
+    @Override
+    public String getModelStorageUpdateFailed() {
+        return "更新模型存储类型失败，请确认模型中没有 segment 后重试。";
+    }
 }

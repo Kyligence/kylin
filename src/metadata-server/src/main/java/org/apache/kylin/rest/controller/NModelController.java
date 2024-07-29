@@ -26,6 +26,7 @@ import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_NAME_
 import static org.apache.kylin.common.exception.code.ErrorCodeServer.MODEL_NAME_TOO_LONG;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
@@ -35,16 +36,19 @@ import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.constant.Constant;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.exception.KylinRuntimeException;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.MergerInfo;
 import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.exception.LookupTableException;
@@ -61,8 +65,10 @@ import org.apache.kylin.rest.request.ModelRequest;
 import org.apache.kylin.rest.request.ModelUpdateRequest;
 import org.apache.kylin.rest.request.ModelValidationRequest;
 import org.apache.kylin.rest.request.MultiPartitionMappingRequest;
+import org.apache.kylin.rest.request.OptimizeLayoutDataRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
 import org.apache.kylin.rest.request.PartitionColumnRequest;
+import org.apache.kylin.rest.request.UpdateModelStorageTypeRequest;
 import org.apache.kylin.rest.request.UpdateMultiPartitionValueRequest;
 import org.apache.kylin.rest.response.AffectedModelsResponse;
 import org.apache.kylin.rest.response.AggShardByColumnsResponse;
@@ -74,6 +80,7 @@ import org.apache.kylin.rest.response.EnvelopeResponse;
 import org.apache.kylin.rest.response.ExistedDataRangeResponse;
 import org.apache.kylin.rest.response.IndicesResponse;
 import org.apache.kylin.rest.response.InvalidIndexesResponse;
+import org.apache.kylin.rest.response.JobInfoResponse;
 import org.apache.kylin.rest.response.ModelConfigResponse;
 import org.apache.kylin.rest.response.ModelSaveCheckResponse;
 import org.apache.kylin.rest.response.MultiPartitionValueResponse;
@@ -92,6 +99,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -716,6 +724,49 @@ public class NModelController extends NBasicController {
         checkProjectName(project);
         modelService.deletePartitions(project, null, modelId, Sets.newHashSet(ids));
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    @ApiOperation(value = "optimizeLayoutData")
+    @PostMapping(value = "{model:.+}/optimize_layout_data")
+    @ResponseBody
+    public EnvelopeResponse<JobInfoResponse> optimizeModelIndexData(@PathVariable("model") String modelId,
+            @RequestBody OptimizeLayoutDataRequest optimizeRequests) throws Exception {
+        checkProjectName(optimizeRequests.getProject());
+        JobInfoResponse response = modelService.optimizeLayoutData(optimizeRequests.getProject(), modelId,
+                optimizeRequests);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
+    }
+
+    @ApiOperation(value = "getOptimizeLayoutDataConfigTemplate")
+    @GetMapping(value = "/optimize_layout_data_template")
+    @ResponseBody
+    public EnvelopeResponse<String> getOptimizeLayoutDataConfigTemplate(HttpServletResponse response)
+            throws IOException {
+        String templateString = JsonUtil.writeValueAsStringWithPretty(OptimizeLayoutDataRequest.template);
+        InputStream in = IOUtils.toInputStream(templateString, "UTF-8");
+        setDownloadResponse(in, "optimize_layout_data_template.json", MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                response);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    @ApiOperation(value = "setModelStorageType")
+    @PutMapping(value = "{model:.+}/storage_type")
+    @ResponseBody
+    public EnvelopeResponse<String> setModelStorageType(@PathVariable("model") String modelId,
+            @RequestBody UpdateModelStorageTypeRequest request) {
+        checkProjectName(request.getProject());
+        modelService.setStorageType(request.getProject(), modelId, request.getStorageType());
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    @ApiOperation(value = "getLayoutDetail")
+    @GetMapping(value = "/{project}/{model}/{layoutId}/layout_detail")
+    @ResponseBody
+    public EnvelopeResponse<NDataLayoutDetails> getLayoutDetail(@PathVariable("project") String project,
+            @PathVariable("model") String modelId, @PathVariable("layoutId") Long layoutId) {
+        checkProjectName(project);
+        NDataLayoutDetails details = modelService.getLayoutDetail(project, modelId, layoutId);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, details, "");
     }
 
     // feign API for smart module

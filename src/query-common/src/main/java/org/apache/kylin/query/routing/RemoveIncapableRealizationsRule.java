@@ -37,6 +37,10 @@ import lombok.extern.slf4j.Slf4j;
 public class RemoveIncapableRealizationsRule extends PruningRule {
     @Override
     public void apply(Candidate candidate) {
+        if (!isStorageMatch(candidate)) {
+            return;
+        }
+
         if (candidate.getCapability() != null) {
             return;
         }
@@ -63,6 +67,11 @@ public class RemoveIncapableRealizationsRule extends PruningRule {
         }
 
         candidate.setCapability(capabilityResult);
+    }
+
+    @Override
+    public boolean isStorageMatch(Candidate candidate) {
+        return candidate.getRealization().getModel().getStorageType().isV1Storage();
     }
 
     private CapabilityResult getCapabilityResult(Candidate candidate) {

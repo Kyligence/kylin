@@ -65,6 +65,8 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutPartition;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetailsManager;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataSegmentManager;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -176,7 +178,7 @@ public class ModelServiceBuildTest extends SourceTestCase {
     private StreamingJobListener eventListener = new StreamingJobListener();
 
     private final TimeZone defaultTimeZone = TimeZone.getDefault();
-    
+
     private IndexDataConstructor indexDataConstructor;
 
     @Before
@@ -461,7 +463,7 @@ public class ModelServiceBuildTest extends SourceTestCase {
     public void testBuildSegmentsManually_NoPartition_Exception() throws Exception {
         String modelId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
         String project = getProject();
-        
+
         indexDataConstructor.transactionWrap(project, () -> {
             NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             return modelManager.updateDataModel(modelId, copyForWrite -> {
@@ -474,8 +476,7 @@ public class ModelServiceBuildTest extends SourceTestCase {
         NDataflow dataflow = dataflowManager.getDataflow(modelId);
 
         Assert.assertEquals(0, dataflow.getSegments().size());
-        modelBuildService.buildSegmentsManually(project, modelId, "", "", true,
-                Sets.newHashSet(), null, 0, false);
+        modelBuildService.buildSegmentsManually(project, modelId, "", "", true, Sets.newHashSet(), null, 0, false);
         dataflow = dataflowManager.getDataflow(modelId);
         Assert.assertEquals(1, dataflow.getSegments().size());
         Assert.assertTrue(dataflow.getSegments().get(0).getSegRange().isInfinite());
@@ -486,8 +487,8 @@ public class ModelServiceBuildTest extends SourceTestCase {
         Assert.assertTrue(((NSparkCubingJob) job).getHandler() instanceof ExecutableAddSegmentHandler);
         thrown.expectInTransaction(KylinException.class);
         thrown.expectMessageInTransaction(
-                SEGMENT_STATUS.getMsg(dataflowManager.getDataflow(modelId).getSegments()
-                        .get(0).displayIdName(), SegmentStatusEnumToDisplay.LOADING.name()));
+                SEGMENT_STATUS.getMsg(dataflowManager.getDataflow(modelId).getSegments().get(0).displayIdName(),
+                        SegmentStatusEnumToDisplay.LOADING.name()));
         modelBuildService.buildSegmentsManually(project, modelId, "", "");
     }
 
@@ -687,7 +688,32 @@ public class ModelServiceBuildTest extends SourceTestCase {
         model = modelMgr.getDataModelDescByAlias("nmodel_basic");
 
         Assert.assertEquals("", model.getPartitionDesc().getPartitionDateFormat());
+    }
 
+    @Test
+    public void testChangePartitionDescForStorageV3() throws Exception {
+        val project = "storage_v3_test";
+        val modelMgr = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), "storage_v3_test");
+        val modelDesc = modelMgr.getDataModelDescByAlias("ut_inner_join_cube_partial_full");
+
+        val request = new ModelRequest(JsonUtil.deepCopy(modelDesc, NDataModel.class));
+        request.setSimplifiedMeasures(modelDesc.getEffectiveMeasures().values().stream()
+                .map(SimplifiedMeasure::fromMeasure).collect(Collectors.toList()));
+        request.getAllNamedColumns().forEach(c -> c.setName(c.getAliasDotColumn().replace(".", "_")));
+        request.setSimplifiedDimensions(request.getAllNamedColumns().stream().filter(NDataModel.NamedColumn::isExist)
+                .collect(Collectors.toList()));
+        request.setComputedColumnDescs(request.getComputedColumnDescs());
+        PartitionDesc partitionDesc = new PartitionDesc();
+        partitionDesc.setPartitionDateFormat("yyyy-MM-dd");
+        partitionDesc.setPartitionDateColumn("TEST_KYLIN_FACT.CAL_DT");
+        request.setPartitionDesc(partitionDesc);
+        request.setProject(project);
+        int partitionColumnId = 2;
+        Assert.assertNull(modelDesc.getPartitionDesc());
+        val newModelDesc = modelMgr.getDataModelDescByAlias("ut_inner_join_cube_partial");
+        Assert.assertEquals("TEST_KYLIN_FACT.CAL_DT", newModelDesc.getPartitionDesc().getPartitionDateColumn());
+        Assert.assertTrue(NIndexPlanManager.getInstance(getTestConfig(), project).getIndexPlan(modelDesc.getId())
+                .getIndexes().stream().allMatch(idex -> idex.getDimensions().contains(partitionColumnId)));
     }
 
     public void testCreateModel_PartitionNotNull() throws Exception {
@@ -771,7 +797,7 @@ public class ModelServiceBuildTest extends SourceTestCase {
 
         NDataflowManager dataflowManager = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), "default");
         indexDataConstructor.cleanSegments("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
-        
+
         val minAndMaxTime = PushDownUtil.probeMinMaxTs(modelDesc.getPartitionDesc().getPartitionDateColumn(),
                 modelDesc.getRootFactTableName(), "default");
         val dateFormat = DateFormat.proposeDateFormat(minAndMaxTime.getFirst());
@@ -1029,14 +1055,10 @@ public class ModelServiceBuildTest extends SourceTestCase {
             return dfManager.updateDataflow(update2);
         });
 
-        modelBuildService.addIndexesToSegments(IndexBuildParams.builder()
-                        .project(project)
-                        .modelId(modelId)
-                        .segmentIds(Lists.newArrayList(dataSegment1.getId(), dataSegment2.getId()))
-                        .layoutIds(Lists.newArrayList(80001L))
-                        .parallelBuildBySegment(false)
-                        .priority(ExecutablePO.DEFAULT_PRIORITY)
-                        .build());
+        modelBuildService.addIndexesToSegments(IndexBuildParams.builder().project(project).modelId(modelId)
+                .segmentIds(Lists.newArrayList(dataSegment1.getId(), dataSegment2.getId()))
+                .layoutIds(Lists.newArrayList(80001L)).parallelBuildBySegment(false)
+                .priority(ExecutablePO.DEFAULT_PRIORITY).build());
         val executables = getRunningExecutables(getProject(), modelId);
         val job = executables.get(0);
         Assert.assertEquals(1, executables.size());
@@ -1272,6 +1294,26 @@ public class ModelServiceBuildTest extends SourceTestCase {
         Assert.assertTrue(CollectionUtils.isEmpty(dataflow.getSegments()));
         Assert.assertTrue(CollectionUtils.isEmpty(indexPlan.getAllToBeDeleteLayoutId()));
         Assert.assertEquals(RealizationStatusEnum.OFFLINE, dataflow.getStatus());
+    }
+
+    @Test
+    public void testDeleteV3ModelSegment() {
+        String model = "7d840904-7b34-4edd-aabd-79df992ef32e";
+        String project = "storage_v3_test";
+        long layoutId = 1L;
+        NDataLayoutDetailsManager mgr = NDataLayoutDetailsManager.getInstance(getTestConfig(), project);
+        NDataflow df = NDataflowManager.getInstance(getTestConfig(), project).getDataflow(model);
+        Segments<NDataSegment> segments = df.getSegments();
+        NDataSegment deletedSegment = segments.get(0);
+        NDataSegment remainedSegment = segments.get(1);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            modelService.deleteSegmentById(model, project, new String[] { deletedSegment.getId() }, false);
+            return null;
+        }, project);
+        NDataLayoutDetails layoutFragment = mgr.getNDataLayoutDetails(model, layoutId);
+        Assert.assertEquals(1, layoutFragment.getFragmentRangeSet().asRanges().size());
+        Assert.assertEquals(remainedSegment.getRange(),
+                layoutFragment.getFragmentRangeSet().asRanges().iterator().next());
     }
 
     @Test

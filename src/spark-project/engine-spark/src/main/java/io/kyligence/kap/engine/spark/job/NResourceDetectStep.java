@@ -54,6 +54,8 @@ public class NResourceDetectStep extends NSparkExecutable {
             this.setSparkSubmitClassName(ResourceDetectBeforeMergingJob.class.getName());
         } else if (parent instanceof NTableSamplingJob) {
             this.setSparkSubmitClassName(ResourceDetectBeforeSampling.class.getName());
+        } else if (parent instanceof NSparkLayoutDataOptimizeJob) {
+            this.setSparkSubmitClassName(ResourceDetectBeforeOptimizeJob.class.getName());
         } else {
             throw new IllegalArgumentException("Unsupported resource detect for " + parent.getName() + " job");
         }

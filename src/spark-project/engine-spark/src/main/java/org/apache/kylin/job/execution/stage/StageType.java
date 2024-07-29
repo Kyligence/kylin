@@ -44,6 +44,10 @@ import org.apache.kylin.engine.spark.job.stage.merge.MergeIndices;
 import org.apache.kylin.engine.spark.job.stage.merge.partition.PartitionMergeColumnBytes;
 import org.apache.kylin.engine.spark.job.stage.merge.partition.PartitionMergeFlatTable;
 import org.apache.kylin.engine.spark.job.stage.merge.partition.PartitionMergeIndices;
+import org.apache.kylin.engine.spark.job.stage.optimize.LayoutDataCompactionOptimize;
+import org.apache.kylin.engine.spark.job.stage.optimize.LayoutDataRepartitionOptimize;
+import org.apache.kylin.engine.spark.job.stage.optimize.LayoutDataVacuumOptimize;
+import org.apache.kylin.engine.spark.job.stage.optimize.LayoutDataZorderOptimize;
 import org.apache.kylin.engine.spark.job.stage.snapshots.SnapshotsBuild;
 import org.apache.kylin.engine.spark.job.stage.tablesampling.AnalyzerTable;
 import org.apache.kylin.job.constant.ExecutableConstants;
@@ -51,6 +55,7 @@ import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.job.execution.StageBase;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 
+import io.kyligence.kap.engine.spark.job.LayoutDataOptimizeJob;
 import io.kyligence.kap.engine.spark.job.SnapshotBuildJob;
 import io.kyligence.kap.engine.spark.job.step.NStageForBuild;
 import io.kyligence.kap.engine.spark.job.step.NStageForMerge;
@@ -229,6 +234,50 @@ public enum StageType {
         @Override
         protected StageBase create(NSparkExecutable parent, KylinConfig config) {
             return new NStageForSnapshot(ExecutableConstants.STAGE_NAME_SNAPSHOT_BUILD);
+        }
+    },
+    DELETE_USELESS_LAYOUT_DATA {
+        @Override
+        public StageExec create(SparkApplication jobContext, NDataSegment dataSegment, BuildParam buildParam) {
+            return new LayoutDataVacuumOptimize((LayoutDataOptimizeJob) jobContext);
+        }
+
+        @Override
+        protected StageBase create(NSparkExecutable parent, KylinConfig config) {
+            return new StageBase(ExecutableConstants.STAGE_NAME_DELETE_USELESS_LAYOUT_DATA);
+        }
+    },
+    OPTIMIZE_LAYOUT_DATA_BY_REPARTITION {
+        @Override
+        public StageExec create(SparkApplication jobContext, NDataSegment dataSegment, BuildParam buildParam) {
+            return new LayoutDataRepartitionOptimize((LayoutDataOptimizeJob) jobContext);
+        }
+
+        @Override
+        protected StageBase create(NSparkExecutable parent, KylinConfig config) {
+            return new StageBase(ExecutableConstants.STAGE_NAME_OPTIMIZE_LAYOUT_DATA_REPARTITION);
+        }
+    },
+    OPTIMIZE_LAYOUT_DATA_BY_ZORDER {
+        @Override
+        public StageExec create(SparkApplication jobContext, NDataSegment dataSegment, BuildParam buildParam) {
+            return new LayoutDataZorderOptimize((LayoutDataOptimizeJob) jobContext);
+        }
+
+        @Override
+        protected StageBase create(NSparkExecutable parent, KylinConfig config) {
+            return new StageBase(ExecutableConstants.STAGE_NAME_OPTIMIZE_LAYOUT_DATA_ZORDER);
+        }
+    },
+    OPTIMIZE_LAYOUT_DATA_BY_COMPACTION {
+        @Override
+        public StageExec create(SparkApplication jobContext, NDataSegment dataSegment, BuildParam buildParam) {
+            return new LayoutDataCompactionOptimize((LayoutDataOptimizeJob) jobContext);
+        }
+
+        @Override
+        protected StageBase create(NSparkExecutable parent, KylinConfig config) {
+            return new StageBase(ExecutableConstants.STAGE_NAME_OPTIMIZE_LAYOUT_DATA_COMPACTION);
         }
     };
 

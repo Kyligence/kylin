@@ -195,7 +195,7 @@ class TransparentResourceStoreTest {
         assertTrue(list1.containsAll(
                 Sets.newHashSet(path1, path2, path3, ResourceStore.METASTORE_UUID_TAG, pathXyz, pathCubeX)));
         NavigableSet<String> list2 = rs.listResources(MetadataType.ALL.name());
-        assertEquals(29, list2.size());
+        assertEquals(30, list2.size());
         assertTrue(list2.containsAll(Sets.newHashSet(dir1, dir2, SYSTEM.name(), dirXyz)));
         assertTrue(rs.exists(path1));
         assertTrue(rs.exists(path2));
@@ -210,7 +210,7 @@ class TransparentResourceStoreTest {
         assertTrue(
                 list1.containsAll(Sets.newHashSet(path1, path3, ResourceStore.METASTORE_UUID_TAG, pathXyz, pathCubeX)));
         NavigableSet<String> list2 = rs.listResources(ALL.name());
-        assertEquals(29, list2.size());
+        assertEquals(30, list2.size());
         assertTrue(list2.containsAll(Sets.newHashSet(dir1, dir2, SYSTEM.name(), dirXyz)));
         assertTrue(rs.exists(path1));
         assertFalse(rs.exists(path2));
@@ -225,7 +225,7 @@ class TransparentResourceStoreTest {
         assertTrue(list1.containsAll(
                 Sets.newHashSet(path1, path2, path3, ResourceStore.METASTORE_UUID_TAG, pathXyz, pathCubeX)));
         NavigableSet<String> list2 = rs.listResources(ALL.name());
-        assertEquals(29, list2.size());
+        assertEquals(30, list2.size());
         assertTrue(list2.containsAll(Sets.newHashSet(dir1, dir2, SYSTEM.name(), dirXyz)));
         assertTrue(rs.exists(path1));
         assertTrue(rs.exists(path2));
@@ -239,7 +239,7 @@ class TransparentResourceStoreTest {
         assertEquals(4, list1.size());
         assertTrue(list1.containsAll(Sets.newHashSet(path1, ResourceStore.METASTORE_UUID_TAG, pathXyz, pathCubeX)));
         NavigableSet<String> list2 = rs.listResources(MetadataType.ALL.name());
-        assertEquals(29, list2.size());
+        assertEquals(30, list2.size());
         assertTrue(list2.containsAll(Sets.newHashSet(dir1, SYSTEM.name(), dirXyz)));
         assertTrue(rs.exists(path1));
         assertFalse(rs.exists(path2));
@@ -253,7 +253,7 @@ class TransparentResourceStoreTest {
         assertEquals(3, list1.size());
         assertTrue(list1.containsAll(Sets.newHashSet(ResourceStore.METASTORE_UUID_TAG, pathXyz, pathCubeX)));
         NavigableSet<String> list2 = rs.listResources(MetadataType.ALL.name());
-        assertEquals(29, list2.size());
+        assertEquals(30, list2.size());
         assertTrue(list2.containsAll(Sets.newHashSet(SYSTEM.name(), dirXyz)));
         assertFalse(rs.exists(path1));
         assertFalse(rs.exists(path2));
@@ -267,7 +267,7 @@ class TransparentResourceStoreTest {
         assertEquals(2, list1.size());
         assertTrue(list1.containsAll(Sets.newHashSet(ResourceStore.METASTORE_UUID_TAG, pathCubeX)));
         NavigableSet<String> list2 = rs.listResources(MetadataType.ALL.name());
-        assertEquals(29, list2.size());
+        assertEquals(30, list2.size());
         assertTrue(list2.containsAll(Sets.newHashSet(SYSTEM.name(), dirXyz)));
         assertFalse(rs.exists(path1));
         assertFalse(rs.exists(path2));
@@ -282,7 +282,7 @@ class TransparentResourceStoreTest {
         assertTrue(
                 list1.containsAll(Sets.newHashSet(ResourceStore.METASTORE_UUID_TAG, pathCubeX, "MODEL/b", "MODEL/z")));
         NavigableSet<String> list2 = rs.listResources(MetadataType.ALL.name());
-        assertEquals(29, list2.size());
+        assertEquals(30, list2.size());
         assertTrue(list2.containsAll(Sets.newHashSet(dir1, SYSTEM.name(), "MODEL")));
         assertFalse(rs.exists(path1));
         assertFalse(rs.exists(path2));

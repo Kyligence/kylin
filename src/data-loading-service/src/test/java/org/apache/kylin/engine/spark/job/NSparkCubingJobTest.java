@@ -24,6 +24,8 @@ import static org.awaitility.Awaitility.await;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -49,9 +51,11 @@ import org.apache.kylin.engine.spark.IndexDataConstructor;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.engine.spark.builder.SnapshotBuilder;
 import org.apache.kylin.engine.spark.storage.ParquetStorage;
+import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.dao.JobStatistics;
 import org.apache.kylin.job.dao.JobStatisticsManager;
+import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
@@ -65,6 +69,8 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetailsManager;
 import org.apache.kylin.metadata.cube.model.NDataSegDetails;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
@@ -90,6 +96,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.Join;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.datasource.storage.StorageStoreFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -588,6 +595,7 @@ public class NSparkCubingJobTest extends NLocalWithSparkSessionTest {
 
         // wait job done
         IndexDataConstructor.wait(job);
+        System.out.println("Job status" + job.getStatus().name());
 
         Assert.assertEquals(config.getServerAddress(), job.getOutput().getExtra().get("node_info"));
     }
@@ -614,7 +622,8 @@ public class NSparkCubingJobTest extends NLocalWithSparkSessionTest {
         Assert.assertEquals(10000, seg.getLayout(20000000001L).getRows());
 
         ParquetStorage storage = new ParquetStorage();
-        Dataset<Row> ret = storage.getFrom(NSparkCubingUtil.getStoragePath(seg, layout.getId()), ss);
+        val storageStore = StorageStoreFactory.create(seg.getModel().getStorageType());
+        Dataset<Row> ret = storage.getFrom(storageStore.getStoragePath(seg, layout.getId()), ss);
         List<Row> rows = ret.collectAsList();
         Assert.assertEquals("Ebay", rows.get(0).apply(1).toString());
         Assert.assertEquals("Ebaymotors", rows.get(1).apply(1).toString());
@@ -934,8 +943,158 @@ public class NSparkCubingJobTest extends NLocalWithSparkSessionTest {
         ResourceStore.clearCache(metaOutConf);
     }
 
+    @Test
+    public void testFullBuildJobV3() throws InterruptedException {
+        String dfName = "53bb6ab4-8058-4696-bc06-597a5e9a9103";
+        String project = "storage_v3_test";
+        NDataflowManager dsMgr = NDataflowManager.getInstance(config, project);
+        ExecutableManager execMgr = ExecutableManager.getInstance(config, project);
+
+        Assert.assertTrue(config.getHdfsWorkingDirectory().startsWith("file:"));
+        cleanupSegments(dfName, project);
+        NDataflow df = dsMgr.getDataflow(dfName);
+        NDataSegment oneSeg = EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NDataflowManager m = NDataflowManager.getInstance(getTestConfig(), project);
+            return m.appendSegment(df, SegmentRange.TimePartitionedSegmentRange.createInfinite());
+        }, project);
+        List<LayoutEntity> round = Lists.newArrayList();
+        List<Long> layoutIdList = Lists.newArrayList();
+        round.add(df.getIndexPlan().getLayoutEntity(1L));
+        layoutIdList.add(1L);
+        round.add(df.getIndexPlan().getLayoutEntity(30001L));
+        layoutIdList.add(30001L);
+        round.add(df.getIndexPlan().getLayoutEntity(20001L));
+        layoutIdList.add(20001L);
+
+        NSpanningTree nSpanningTree = NSpanningTreeFactory.fromLayouts(round, df.getUuid());
+        for (IndexEntity rootCuboid : nSpanningTree.getRootIndexEntities()) {
+            LayoutEntity layout = NCuboidLayoutChooser.selectLayoutForBuild(oneSeg, rootCuboid);
+            Assert.assertNull(layout);
+        }
+
+        // Round1. Build new segment
+        NSparkCubingJob job = NSparkCubingJob.create(Sets.newHashSet(oneSeg), Sets.newLinkedHashSet(round), "ADMIN",
+                JobTypeEnum.INDEX_REFRESH, RandomUtil.randomUUIDStr(), null, null, null);
+        NSparkCubingStep sparkStep = job.getSparkCubingStep();
+        StorageURL distMetaUrl = StorageURL.valueOf(sparkStep.getDistMetaUrl());
+        Assert.assertEquals("hdfs", distMetaUrl.getScheme());
+        Assert.assertTrue(distMetaUrl.getParameter("path").startsWith(config.getHdfsWorkingDirectory()));
+
+        // launch the job
+        execMgr.addJob(job);
+
+        // wait job done
+        ExecutableState status = IndexDataConstructor.wait(job);
+        System.out.println("v3-ut-test" + job.getOutput().getShortErrMsg());
+        Assert.assertEquals(ExecutableState.SUCCEED, status);
+
+        List<NDataLayoutDetails> nDataLayoutDetails = df.listAllLayoutDetails();
+
+        nDataLayoutDetails.forEach(dataLayoutFragment -> {
+            if (layoutIdList.contains(dataLayoutFragment.getLayoutId())) {
+                Assert.assertEquals(1, dataLayoutFragment.getFragmentRangeSet().asRanges().size());
+            } else {
+                Assert.assertEquals(0, dataLayoutFragment.getFragmentRangeSet().asRanges().size());
+            }
+        });
+        NDataLayoutDetails nDataLayoutDetails1 = NDataLayoutDetailsManager.getInstance(config, project)
+                .getNDataLayoutDetails(df.getUuid(), 20001L);
+        Assert.assertEquals(1, nDataLayoutDetails1.getNumOfFiles());
+        Assert.assertEquals(1, nDataLayoutDetails1.getTableVersion());
+    }
+
+    @Test
+    public void testIncBuildJobV3() throws InterruptedException {
+        String dfName = "7d840904-7b34-4edd-aabd-79df992ef32e";
+        String project = "storage_v3_test";
+        NDataflowManager dsMgr = NDataflowManager.getInstance(config, project);
+        ExecutableManager execMgr = ExecutableManager.getInstance(config, project);
+        cleanupSegments(dfName, project);
+        NDataflow df = dsMgr.getDataflow(dfName);
+        NDataSegment segment1 = EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            NDataflowManager m = NDataflowManager.getInstance(getTestConfig(), project);
+            return m.appendSegment(df, new SegmentRange.TimePartitionedSegmentRange("2012-01-01", "2012-02-01"));
+        }, project);
+        List<LayoutEntity> round1 = new ArrayList<>();
+        round1.add(df.getIndexPlan().getLayoutEntity(1L));
+        round1.add(df.getIndexPlan().getLayoutEntity(30001L));
+        round1.add(df.getIndexPlan().getLayoutEntity(20001L));
+
+        NSparkCubingJob job = NSparkCubingJob.create(Sets.newHashSet(segment1), Sets.newLinkedHashSet(round1), "ADMIN",
+                JobTypeEnum.INC_BUILD, RandomUtil.randomUUIDStr(), null, null, null);
+        NSparkCubingStep sparkStep = job.getSparkCubingStep();
+        StorageURL distMetaUrl = StorageURL.valueOf(sparkStep.getDistMetaUrl());
+        Assert.assertEquals("hdfs", distMetaUrl.getScheme());
+        Assert.assertTrue(distMetaUrl.getParameter("path").startsWith(config.getHdfsWorkingDirectory()));
+
+        // launch the job
+        execMgr.addJob(job);
+
+        // wait job done
+        ExecutableState status = IndexDataConstructor.wait(job);
+        System.out.println("v3-ut-test" + job.getOutput().getShortErrMsg());
+        Assert.assertEquals(ExecutableState.SUCCEED, status);
+        List<NDataLayoutDetails> nDataLayoutDetails = NDataLayoutDetailsManager.getInstance(config, project)
+                .listNDataLayoutDetailsByModel(df.getUuid());
+        Assert.assertEquals(3, nDataLayoutDetails.size());
+        nDataLayoutDetails.forEach(dataLayoutFragment -> {
+            Assert.assertEquals(1, dataLayoutFragment.getFragmentRangeSet().asRanges().size());
+        });
+        NDataLayoutDetails nDataLayoutDetails1 = NDataLayoutDetailsManager.getInstance(config, project)
+                .getNDataLayoutDetails(df.getUuid(), 20001L);
+        Assert.assertEquals(StorageStoreFactory.create(df.getModel().getStorageType())
+                .getStoragePath(df.getIndexPlan().getLayoutEntity(20001L)), nDataLayoutDetails1.getLocation());
+        Assert.assertEquals(1, nDataLayoutDetails1.getNumOfFiles());
+        Assert.assertEquals(1, nDataLayoutDetails1.getTableVersion());
+    }
+
+    @Test
+    public void testV3ConcurrentBuildJob() throws InterruptedException, ParseException {
+        String dfName = "7d840904-7b34-4edd-aabd-79df992ef32e";
+        int concurrentNum = 1;
+        config.setProperty("kylin.job.max-concurrent-jobs", String.valueOf(concurrentNum));
+        String project = "storage_v3_test";
+        NDataflowManager dsMgr = NDataflowManager.getInstance(config, project);
+        ExecutableManager execMgr = ExecutableManager.getInstance(config, project);
+        overwriteSystemProp("kylin.engine.persist-flatview", "true");
+        overwriteSystemProp("kylin.engine.spark.delta-storage-write-retry-times", "10");
+        cleanupSegments(dfName, project);
+        String initDate = "2012-01-01";
+        long startTime = new SimpleDateFormat("yyyy-MM-dd").parse(initDate).getTime();
+        long endTime;
+        List<AbstractExecutable> jobList = new ArrayList<>();
+        for (int offset = 0; offset < concurrentNum; offset++) {
+            NDataflow df = dsMgr.getDataflow(dfName);
+            startTime = startTime + offset * 1000 * 60 * 60 * 24;
+            endTime = startTime + (offset + 1) * 1000 * 60 * 60 * 24;
+
+            long finalStartTime = startTime;
+            long finalEndTime = endTime;
+            NDataSegment segment = EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+                NDataflowManager m = NDataflowManager.getInstance(getTestConfig(), project);
+                return m.appendSegment(df, new SegmentRange.TimePartitionedSegmentRange(finalStartTime, finalEndTime));
+            }, project);
+            List<LayoutEntity> round1 = new ArrayList<>();
+            round1.add(df.getIndexPlan().getLayoutEntity(1L));
+            round1.add(df.getIndexPlan().getLayoutEntity(30001L));
+            round1.add(df.getIndexPlan().getLayoutEntity(20001L));
+            NSparkCubingJob job = NSparkCubingJob.create(Sets.newHashSet(segment), Sets.newLinkedHashSet(round1),
+                    "ADMIN", JobTypeEnum.INC_BUILD, RandomUtil.randomUUIDStr(), null, null, null);
+            execMgr.addJob(job);
+            jobList.add(job);
+        }
+        IndexDataConstructor.wait(jobList);
+        jobList.forEach(job -> {
+            System.out.println("v3-ut-test" + job.getOutput().getShortErrMsg());
+            Assert.assertEquals(ExecutableState.SUCCEED, job.getStatus());
+        });
+    }
+
     private void cleanupSegments(String dfName) {
-        String project = getProject();
+        cleanupSegments(dfName, getProject());
+    }
+
+    private void cleanupSegments(String dfName, String project) {
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             NDataflowManager dsMgr = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
             NDataflow df = dsMgr.getDataflow(dfName);

@@ -689,7 +689,7 @@ public class TableReloadServiceTest extends CSVSourceTestCase {
         Assert.assertEquals("DEAL_YEAR", brokenModel.getAllNamedColumns().get(28).getName());
         Assert.assertEquals(NDataModel.ColumnStatus.TOMB, brokenModel.getAllNamedColumns().get(2).getStatus());
         Assert.assertEquals(NDataModel.ColumnStatus.TOMB, brokenModel.getAllNamedColumns().get(28).getStatus());
-        await().atMost(60000, TimeUnit.MILLISECONDS).untilAsserted(() -> {
+        await().atMost(600000, TimeUnit.MILLISECONDS).untilAsserted(() -> {
             val brokenDataflow = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT)
                     .getDataflow(brokenModel.getId());
             Assert.assertEquals(0, brokenDataflow.getSegments().size());

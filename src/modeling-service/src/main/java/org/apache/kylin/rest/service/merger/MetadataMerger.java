@@ -40,6 +40,8 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.LayoutPartition;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetails;
+import org.apache.kylin.metadata.cube.model.NDataLayoutDetailsManager;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
@@ -205,6 +207,30 @@ public abstract class MetadataMerger {
             copyForWrite.setLayoutBucketNumMapping(remoteIndexPlan.getLayoutBucketNumMapping());
         });
     }
+
+    public void mergeLayoutDetails(String project, String modelId, Set<Long> layoutIds,
+                                   NDataSegment addSegment, List<NDataSegment> toRemoveSegment,
+                                   KylinConfig remoteConfig) {
+        val localLayoutDetailsManager = NDataLayoutDetailsManager.getInstance(getConfig(), project);
+        val remoteLayoutDetailsManager = NDataLayoutDetailsManager.getInstance(remoteConfig, project);
+        for (long layoutId : layoutIds) {
+            NDataLayoutDetails remoteLayoutDetails =
+                    remoteLayoutDetailsManager.getNDataLayoutDetails(modelId, layoutId);
+            localLayoutDetailsManager.updateLayoutDetails(modelId, layoutId, details -> {
+                details.setLayoutId(layoutId);
+                details.setTableVersion(remoteLayoutDetails.getTableVersion());
+                details.setLocation(remoteLayoutDetails.getLocation());
+                details.setNumOfFiles(remoteLayoutDetails.getNumOfFiles());
+                details.setSizeInBytes(remoteLayoutDetails.getSizeInBytes());
+                details.setNumOfRemoveFiles(remoteLayoutDetails.getNumOfRemoveFiles());
+                details.getFragmentRangeSet().add(addSegment.getRange());
+                for (NDataSegment removeSegment : toRemoveSegment) {
+                    details.getFragmentRangeSet().remove(removeSegment.getRange());
+                }
+            });
+        }
+    }
+
 
     public static MetadataMerger createMetadataMerger(String project, ExecutableHandler.HandlerType type) {
         KylinConfig config = KylinConfig.getInstanceFromEnv();

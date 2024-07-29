@@ -59,6 +59,7 @@ public interface NBatchConstants {
     String P_WARNING_CODE = "warning_code";
     /** value like : { "segmentId1": 1223, "segmentId2": 1223 } */
     String P_WAITE_TIME = "waiteTime";
+    String P_OPTIMIZE_LAYOUT_DATA_PARAM = "optimize_layout_data_param";
 
     // ut only
     String P_BREAK_POINT_LAYOUTS = "breakPointLayouts";

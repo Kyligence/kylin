@@ -58,7 +58,7 @@ class KylinFileSourceScanExec(
     logInfo(s"Extra runtime filters from BloomAndRangeFilterExpression to " +
       s"prune segment: ${rangeRuntimeFilters.mkString(",")}")
     val filePruner = relation.location.asInstanceOf[FilePruner]
-    val ret = filePruner.listFiles(partitionFilters, dataFilters, rangeRuntimeFilters)
+    val ret = filePruner.listFilesInternal(partitionFilters, dataFilters, rangeRuntimeFilters)
     val timeTakenMs = ((System.nanoTime() - startTime) + optimizerMetadataTimeNs) / 1000 / 1000
 
     metrics("numFiles").add(ret.map(_.files.size.toLong).sum)

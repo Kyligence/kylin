@@ -1583,4 +1583,8 @@ public class Message {
     public String getModelConfigKeyExist() {
         return "The parameter {%s} already exists, please modify and try again.";
     }
+
+    public String getModelStorageUpdateFailed() {
+        return "Update model storage failed, please make sure model not contain segment.";
+    }
 }

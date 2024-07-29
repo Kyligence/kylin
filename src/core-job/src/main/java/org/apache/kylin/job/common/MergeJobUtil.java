@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
@@ -44,6 +45,11 @@ import lombok.extern.slf4j.Slf4j;
  **/
 @Slf4j
 public class MergeJobUtil extends ExecutableUtil {
+
+    static {
+        registerImplementation(JobTypeEnum.INDEX_MERGE, new MergeJobUtil());
+    }
+
     @Override
     public void computeLayout(JobParam jobParam) {
         NDataflow df = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), jobParam.getProject())
