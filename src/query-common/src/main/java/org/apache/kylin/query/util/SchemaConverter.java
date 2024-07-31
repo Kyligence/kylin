@@ -62,6 +62,7 @@ public class SchemaConverter implements IPushDownConverter {
         } catch (Exception e) {
             log.error("Convert failed! return origin SQL: {}", originSql, e);
             Thread.currentThread().interrupt();
+            QueryContext.current().setPushdownEngine(QueryContext.PUSHDOWN_GLUTEN);
             QueryContext.current().getQueryTagInfo().setErrInterrupted(true);
             QueryContext.current().getQueryTagInfo().setInterruptReason(e.getMessage());
             return originSql;

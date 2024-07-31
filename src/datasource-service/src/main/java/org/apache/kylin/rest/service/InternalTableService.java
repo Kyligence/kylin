@@ -32,7 +32,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,10 +45,10 @@ import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.engine.spark.builder.InternalTableLoader;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
-import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.service.InternalTableLoadingService;
+import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
@@ -78,8 +79,8 @@ public class InternalTableService extends BasicService {
     @Autowired
     private InternalTableLoadingService internalTableLoadingService;
 
-    private final Set<String> SUPPORTED_DATE_FMT = Sets.newHashSet("yyyy-MM-dd", "yyyyMMdd", "yyyy-MM-dd HH:mm:ss",
-            "yyyy-MM-dd HH:mm:ss.SSS", "yyyy/MM/dd", "yyyy-MM", "yyyyMM", "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "yyyy");
+    @Autowired
+    private TableService tableService;
 
     /**
      * Create an internal table from an existing table
@@ -100,7 +101,7 @@ public class InternalTableService extends BasicService {
     public void createInternalTable(String projectName, String tableIdentity, String[] partitionCols,
             String datePartitionFormat, Map<String, String> tblProperties, String storageType) throws Exception {
         aclEvaluate.checkProjectWritePermission(projectName);
-        //TODO
+
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             NTableMetadataManager tableMetadataManager = getManager(NTableMetadataManager.class, projectName);
             InternalTableManager internalTableManager = getManager(InternalTableManager.class, projectName);
@@ -133,27 +134,32 @@ public class InternalTableService extends BasicService {
         }, projectName);
     }
 
-    public void checkParameters(String[] partitionCols, TableDesc originTable, String datePartitionFormat) {
+    public void checkParameters(String[] partitionCols, TableDesc originTable, String datePartitionFormat)
+            throws Exception {
         if (!Objects.isNull(partitionCols)) {
-            // unmatched partition columns
-            if (!Arrays.stream(partitionCols).allMatch(col -> Arrays.stream(originTable.getColumns())
-                    .anyMatch(column -> column.getName().equalsIgnoreCase(col)))) {
+            List<ColumnDesc> partitionColList = Arrays.stream(partitionCols)
+                    .map(col -> originTable.findColumnByName(col)).filter(col -> col != null)
+                    .collect(Collectors.toList());
+            // exist unmatched partition columns
+            if (partitionCols.length != partitionColList.size()) {
                 String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getPartitionColumnNotExist(),
                         originTable.getIdentity());
                 throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
             }
-            // date_type partition column without date_partition_format
-            if (StringUtils.isEmpty(datePartitionFormat) && Arrays.stream(partitionCols)
-                    .anyMatch(col -> Arrays.stream(originTable.getColumns())
-                            .anyMatch(column -> column.getName().equalsIgnoreCase(col)
-                                    && column.getDatatype().equalsIgnoreCase("date")))) {
+            Optional<ColumnDesc> dateCol = partitionColList.stream().filter(col -> col.getTypeName().equals("date"))
+                    .findFirst();
+            if (StringUtils.isEmpty(datePartitionFormat) && dateCol.isPresent()) {
                 throw new KylinException(EMPTY_PARAMETER, "date_partition_format can not be null, please check again");
             }
-        }
-        if (!StringUtils.isEmpty(datePartitionFormat) && !SUPPORTED_DATE_FMT.contains(datePartitionFormat)) {
-            String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getUnSupportedDateformat(),
-                    datePartitionFormat);
-            throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
+            // detect date partition format
+            if (dateCol.isPresent() && !StringUtils.isEmpty(datePartitionFormat)
+                    && !tableService.getPartitionColumnFormat(originTable.getProject(), originTable.getIdentity(),
+                            dateCol.get().getName(), null).equals(datePartitionFormat)) {
+                String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getIncorrectDateformat(),
+                        datePartitionFormat);
+                throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
+
+            }
         }
     }
 
@@ -205,7 +211,7 @@ public class InternalTableService extends BasicService {
             internalTable.setTblProperties(tblProperties);
             internalTable.optimizeTblProperties();
             internalTable.setStorageType(storageType);
-            deleteDataInFileSystem(internalTable);
+            deleteMetaAndDataInFileSystem(internalTable);
             createDeltaSchema(internalTable);
             internalTableManager.saveOrUpdateInternalTable(internalTable);
             return true;
@@ -222,7 +228,7 @@ public class InternalTableService extends BasicService {
         }
     }
 
-    protected void deleteDataInFileSystem(InternalTableDesc internalTable) {
+    protected void deleteMetaAndDataInFileSystem(InternalTableDesc internalTable) {
         try {
             FileSystem fs = HadoopUtil.getWorkingFileSystem();
             Path location = new Path(internalTable.getLocation());
@@ -233,10 +239,6 @@ public class InternalTableService extends BasicService {
         } catch (IOException e) {
             logger.error("Failed to delete internal table on {}", internalTable.getLocation(), e);
         }
-    }
-
-    protected void deleteDataInFileSystemByPartition(InternalTableDesc internalTable, List<String> partitionValues) {
-        // TODO
     }
 
     public void suicideRunningInternalTableJob(String project, String table) {
@@ -268,7 +270,7 @@ public class InternalTableService extends BasicService {
             }
             tableMetadataManager.updateTableDesc(tableIdentity, copyForWrite -> copyForWrite.setHasInternal(false));
             internalTableManager.removeInternalTable(tableIdentity);
-            deleteDataInFileSystem(internalTable);
+            deleteMetaAndDataInFileSystem(internalTable);
             return true;
         }, project);
 
@@ -285,11 +287,11 @@ public class InternalTableService extends BasicService {
             String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getInternalTableNotFound(), tableIdentity);
             throw new KylinException(INTERNAL_TABLE_NOT_EXIST, errorMsg);
         }
+        suicideRunningInternalTableJob(project, tableIdentity);
         if (internalTable.getRowCount() == 0) {
             logger.info("{} not have any data, skip truncate", tableIdentity);
             return InternalTableLoadingJobResponse.of(Collections.emptyList(), "");
         }
-        suicideRunningInternalTableJob(project, tableIdentity);
         return dropAllPartitionsOnDeltaTable(project, tableIdentity);
     }
 
@@ -309,6 +311,7 @@ public class InternalTableService extends BasicService {
         return internalTableLoadingService.dropPartitions(project, partitionValues, tableIdentity, yarnQueue);
     }
 
+    // TODO need fix
     public void reloadInternalTableSchema(String project, String tableIdentity) throws Exception {
         aclEvaluate.checkProjectWritePermission(project);
         InternalTableManager internalTableManager = getManager(InternalTableManager.class, project);

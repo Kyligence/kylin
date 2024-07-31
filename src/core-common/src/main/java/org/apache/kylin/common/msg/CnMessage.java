@@ -188,6 +188,11 @@ public class CnMessage extends Message {
     }
 
     @Override
+    public String getIncorrectDateformat() {
+        return "时间分区格式 \"%s\" 不正确。";
+    }
+
+    @Override
     public String getCanNotOverwriteModel() {
         return "无法覆盖模型 “%s“，因为该模型不存在。请重新选择后重试。";
     }
@@ -1023,6 +1028,16 @@ public class CnMessage extends Message {
     @Override
     public String getTableNotFound() {
         return "无法找到表 \"%s\" 。请检查后重试。";
+    }
+
+    @Override
+    public String getInternalTableNotFound() {
+        return "无法找到内表 \"%s\"。 请检查后重试。";
+    }
+
+    @Override
+    public String getNotInternalTable() {
+        return "表 \"%s\" 不是一个内表。 请检查后重试。";
     }
 
     @Override

@@ -75,7 +75,7 @@
         <delta-standalone.version>0.6.0</delta-standalone.version>
         <iceberg.version>1.4.1</iceberg.version>
 
-        <gluten.version>1.2.0-kylin-240701-SNAPSHOT</gluten.version>
+        <gluten.version>1.2.0-kylin-240730-SNAPSHOT</gluten.version>
         <gluten.deps.scope>compile</gluten.deps.scope>
         <substrait.version>0.5.0</substrait.version>
         <celeborn.version>0.3.0-incubating</celeborn.version>

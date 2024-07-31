@@ -47,7 +47,7 @@ import lombok.Setter;
 public class InternalTableDesc extends ATable implements Serializable {
 
     private static final String BUCKET_COLUMN = "bucketCol";
-    private static final String BUKCET_NUM = "bucketNum";
+    private static final String BUCKET_NUM = "bucketNum";
     private static final String PRIMARY_KEY = "primaryKey";
     private static final String SORT_BY_KEY = "sortByKey";
     public static final  int INIT_SIZE = 0;
@@ -152,10 +152,10 @@ public class InternalTableDesc extends ATable implements Serializable {
     }
 
     public int getBucketNumber() {
-        if (null == tblProperties.get(BUKCET_NUM)) {
+        if (null == tblProperties.get(BUCKET_NUM)) {
             return 0;
         } else {
-            return Integer.parseInt(tblProperties.get(BUKCET_NUM).trim());
+            return Integer.parseInt(tblProperties.get(BUCKET_NUM).trim());
         }
     }
 

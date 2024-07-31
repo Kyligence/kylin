@@ -19,6 +19,9 @@
 package org.apache.kylin.rest.service;
 
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.util.HashMap;
@@ -72,6 +75,9 @@ public class InternalTableServiceTest extends AbstractTestCase {
     @InjectMocks
     private InternalTableService internalTableService = Mockito.spy(new InternalTableService());
 
+    @InjectMocks
+    private TableService tableService = mock(TableService.class);
+
     static final String PROJECT = "default";
     static final String TABLE_INDENTITY = "DEFAULT.TEST_KYLIN_FACT";
     static final String DATE_COL = "CAL_DT";
@@ -95,10 +101,11 @@ public class InternalTableServiceTest extends AbstractTestCase {
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
         SparkJobFactoryUtils.initJobFactory();
         overwriteSystemProp("kylin.source.provider.9", "org.apache.kylin.engine.spark.mockup.CsvSource");
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
     }
 
     @Test
-    void testCheckParams() {
+    void testCheckParams() throws Exception {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
@@ -107,12 +114,12 @@ public class InternalTableServiceTest extends AbstractTestCase {
         internalTableService.checkParameters(null, table, null);
 
         // empty array & blank string are valid too
-        String[] partitionCols = new String[]{};
+        String[] partitionCols = new String[] {};
         String datePartitionFormat = "";
         internalTableService.checkParameters(partitionCols, table, datePartitionFormat);
 
         // partitionCols are case insensitive
-        partitionCols = new String[] {"TRANS_ID", "order_id"};
+        partitionCols = new String[] { "TRANS_ID", "order_id" };
         datePartitionFormat = "yyyy-MM-dd";
         internalTableService.checkParameters(partitionCols, table, datePartitionFormat);
 
@@ -120,18 +127,19 @@ public class InternalTableServiceTest extends AbstractTestCase {
         internalTableService.checkParameters(partitionCols, table, "");
 
         // test partitionCols include date, but datePartitionFormat is null
-        Assertions.assertThrows(KylinException.class, () -> internalTableService
-                .checkParameters(new String[] { "CAL_DT" }, table, ""));
+        Assertions.assertThrows(KylinException.class,
+                () -> internalTableService.checkParameters(new String[] { "CAL_DT" }, table, ""));
 
         // test invalid partitionCols
         Assertions.assertThrows(KylinException.class, () -> internalTableService
                 .checkParameters(new String[] { "TRANS_ID", "order_id_2" }, table, "yyyy-MM-dd"));
 
         // test invalid partitionCols
-        Assertions.assertThrows(KylinException.class, () -> internalTableService
-                .checkParameters(new String[] { "TRANS_ID" }, table, "yyyy-mm-dd"));
+        Assertions.assertThrows(KylinException.class,
+                () -> internalTableService.checkParameters(new String[] { "TRANS_ID", "CAL_DT" }, table, "yyyy-mm"));
 
     }
+
     @Test
     void testCreateInternalTable() throws Exception {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
@@ -197,13 +205,13 @@ public class InternalTableServiceTest extends AbstractTestCase {
         List<InternalTablePartitionDetail> details = internalTableService.getTableDetail(PROJECT,
                 internalTable.getDatabase(), internalTable.getName());
         Assertions.assertNull(details);
-        
+
         // test set partitionCols to null
-        internalTableService.updateInternalTable(PROJECT, internalTable.getName(), internalTable.getDatabase(),
-                null, dateFormat, tblProperties, InternalTableDesc.StorageType.PARQUET.name());
+        internalTableService.updateInternalTable(PROJECT, internalTable.getName(), internalTable.getDatabase(), null,
+                dateFormat, tblProperties, InternalTableDesc.StorageType.PARQUET.name());
         internalTable = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
         Assertions.assertNull(internalTable.getPartitionColumns());
-        
+
         // test set partitionCols to empty
         internalTableService.updateInternalTable(PROJECT, internalTable.getName(), internalTable.getDatabase(),
                 new String[] {}, dateFormat, tblProperties, InternalTableDesc.StorageType.PARQUET.name());
@@ -293,7 +301,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         // check delete
         internalTableService.dropInternalTable(PROJECT, TABLE_INDENTITY);
         Assertions.assertFalse(internalTableFolder.exists());
-        
+
         // test drop an internal table twice
         Assertions.assertThrows(TransactionException.class,
                 () -> internalTableService.dropInternalTable(PROJECT, TABLE_INDENTITY));
@@ -309,7 +317,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         internalTableService.createInternalTable(PROJECT, TABLE_INDENTITY, new String[] { DATE_COL }, "yyyy-MM-dd",
                 new HashMap<>(), InternalTableDesc.StorageType.PARQUET.name());
         String startDate = "1325347200000"; // 2012-01-01
-        String endDate = "1325865600000";   // 2012-01-07
+        String endDate = "1325865600000"; // 2012-01-07
         InternalTableLoadingJobResponse response = internalTableService.loadIntoInternalTable(PROJECT, table.getName(),
                 table.getDatabase(), true, false, startDate, endDate, null);
         String jobId = response.getJobs().get(0).getJobId();
@@ -341,7 +349,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         Assertions.assertEquals(6 - toDeletePartitions.length, internalTableFolder.list().length);
         long newCount = ss.sql(BASE_SQL).count();
         Assertions.assertTrue(newCount > 0 && newCount < count);
-        
+
         // check delete table
         internalTableService.dropInternalTable(PROJECT, TABLE_INDENTITY);
         Assertions.assertFalse(internalTableFolder.exists());

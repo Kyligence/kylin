@@ -197,8 +197,8 @@ public class Message {
         return "Date format partition column must be set in an incremental load table.";
     }
 
-    public String getUnSupportedDateformat() {
-        return "Date partition format \"%s\" is not supported.";
+    public String getIncorrectDateformat() {
+        return "Date partition format \"%s\" is not correct.";
     }
 
     public String getPartitionColumnIgnored_WARNING() {
