@@ -57,6 +57,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings({ "rawtypes", "FieldMayBeFinal" })
 @Slf4j
@@ -639,6 +640,12 @@ public class NDataSegment extends RootPersistentEntity implements ISegment, Seri
     }
 
     public Map<String, Long> getColumnSourceBytes() {
+        if (sourceCount == 0) {
+            if (!columnSourceBytes.isEmpty()) {
+                log.warn("Segment[{}] sourceCount is 0, but columnSourceBytes non-empty.", getId());
+            }
+            return Maps.newHashMap();
+        }
         return columnSourceBytes;
     }
 
@@ -713,8 +720,8 @@ public class NDataSegment extends RootPersistentEntity implements ISegment, Seri
     }
 
     public boolean isDictReady() {
-        boolean forceBuild = Boolean.
-                parseBoolean(extraBuildOptions.getOrDefault("job.retry.segment.force-build-dict", "false"));
+        boolean forceBuild = Boolean
+                .parseBoolean(extraBuildOptions.getOrDefault("job.retry.segment.force-build-dict", "false"));
         return isDictReady && !forceBuild;
     }
 
