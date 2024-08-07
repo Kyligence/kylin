@@ -50,6 +50,7 @@ public class InternalTableLoadingJob extends DefaultExecutableOnTable {
         Preconditions.checkArgument(param.getSubmitter() != null);
         InternalTableLoadingJob job = new InternalTableLoadingJob();
         job.setSubmitter(param.getSubmitter());
+        job.setName(param.getJobType().toString());
         job.setJobType(param.getJobType());
         job.setId(param.getJobId());
         job.setTargetSubject(internalTable.getIdentity());
