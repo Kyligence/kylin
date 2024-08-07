@@ -228,7 +228,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         // test update an internal table which has loaded data.
         UnitOfWork.doInTransactionWithRetry(() -> {
             InternalTableManager manager = InternalTableManager.getInstance(KylinConfig.getInstanceFromEnv(), PROJECT);
-            manager.updateInternalTable(TABLE_INDENTITY, copyForWrite -> copyForWrite.setStorageSize(1L));
+            manager.updateInternalTable(TABLE_INDENTITY, copyForWrite -> copyForWrite.setRowCount(1L));
             return null;
         }, PROJECT);
 

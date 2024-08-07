@@ -198,8 +198,8 @@ public class InternalTableService extends BasicService {
                 String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getInternalTableNotFound(), dbTblName);
                 throw new KylinException(INTERNAL_TABLE_NOT_EXIST, errorMsg);
             }
-            if (internalTable.getStorageSize() > 0L) {
-                throw new KylinException(INTERNAL_TABLE_ERROR, "Loaded internal table can not be updated");
+            if (internalTable.getRowCount() > 0L) {
+                throw new KylinException(INTERNAL_TABLE_ERROR, "Non-empty internal table can not be updated");
             }
             checkParameters(partitionCols, originTable, datePartitionFormat);
             if (partitionCols != null && partitionCols.length != 0) {
@@ -211,6 +211,7 @@ public class InternalTableService extends BasicService {
             internalTable.setTblProperties(tblProperties);
             internalTable.optimizeTblProperties();
             internalTable.setStorageType(storageType);
+            suicideRunningInternalTableJob(project, table);
             deleteMetaAndDataInFileSystem(internalTable);
             createDeltaSchema(internalTable);
             internalTableManager.saveOrUpdateInternalTable(internalTable);

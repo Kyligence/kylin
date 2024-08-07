@@ -17,9 +17,12 @@
  */
 package org.apache.kylin.engine.spark;
 
+import static org.awaitility.Awaitility.with;
+
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -68,25 +71,24 @@ public class IndexDataConstructor {
     }
 
     public static ExecutableState wait(AbstractExecutable job) throws InterruptedException {
-        while (true) {
-            Thread.sleep(500);
-            ExecutableState status = job.getStatus();
-            if (!status.isProgressing()) {
-                return status;
-            }
-        }
+        with().pollDelay(500, TimeUnit.MILLISECONDS)
+                .and().pollInterval(500, TimeUnit.MILLISECONDS)
+                .atMost(1, TimeUnit.HOURS).until(() -> {
+                    ExecutableState status = job.getStatus();
+                    return !status.isProgressing();
+                });
+        return job.getStatus();
     }
 
     public static boolean wait(List<? extends AbstractExecutable> jobs) throws InterruptedException {
-        while (true) {
-            Thread.sleep(500);
-            val isFinished = jobs.stream().map(j -> !j.getStatus().isProgressing()).reduce(true,
-                    (left, right) -> left && right);
-            if (isFinished) {
-                return jobs.stream().map(j -> j.getStatus() == ExecutableState.SUCCEED).reduce(true,
-                        (left, right) -> left && right);
-            }
-        }
+        with().pollDelay(500, TimeUnit.MILLISECONDS)
+                .and().pollInterval(500, TimeUnit.MILLISECONDS)
+                .atMost(1, TimeUnit.HOURS).until(() -> {
+                    return jobs.stream().map(j -> !j.getStatus().isProgressing()).reduce(true,
+                            (left, right) -> left && right);
+                });
+        return jobs.stream().map(j -> j.getStatus() == ExecutableState.SUCCEED).reduce(true,
+                (left, right) -> left && right);
     }
 
     public static String firstFailedJobErrorMessage(ExecutableManager execMgr, ChainedExecutable job) {
