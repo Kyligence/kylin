@@ -18,6 +18,8 @@
 
 package org.apache.kylin.rest.response;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Data;
@@ -51,5 +53,8 @@ public class InternalTableDescResponse {
 
     @JsonProperty("update_time")
     private long updateTime;
+
+    @JsonProperty("tbl_properties")
+    private Map<String, String> tblProperties;
 
 }

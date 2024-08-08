@@ -166,8 +166,7 @@ public class InternalTableController extends NBasicController {
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, DataResult.get(rep, offset, limit), "");
     }
 
-
-    @ApiOperation(value = "update_table", tags = { "AI" })
+    @ApiOperation(value = "get_table_detail", tags = { "AI" })
     @GetMapping(value = "/{database:.+}/{table:.+}", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
     public EnvelopeResponse<DataResult<List<InternalTablePartitionDetail>>> getTableDetail(

@@ -389,6 +389,7 @@ public class InternalTableService extends BasicService {
             internalTableDescResponse.setTimePartitionCol(partitionColumn);
             internalTableDescResponse.setUpdateTime(internalTableDesc.getLastModified());
             internalTableDescResponse.setDatePartitionFormat(internalTableDesc.getDatePartitionFormat());
+            internalTableDescResponse.setTblProperties(internalTableDesc.getTblProperties());
             descList.add(internalTableDescResponse);
         });
         return descList;
