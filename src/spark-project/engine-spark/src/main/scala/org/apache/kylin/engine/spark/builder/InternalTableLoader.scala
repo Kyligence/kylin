@@ -171,11 +171,6 @@ class InternalTableLoader extends Logging {
   def dropPartitions(ss: SparkSession,
                      internalTable: InternalTableDesc,
                      partitionValues: String): Unit = {
-    //    var clickhouseTable: DeltaTable = null
-    //    if (internalTable.getStorageType == StorageType.gluten) {
-    //      clickhouseTable =
-    //    }
-
     val sparkTable = internalTable.getStorageType match {
       case StorageType.GLUTEN => ClickhouseTable.forPath(ss, internalTable.generateInternalTableLocation)
       case StorageType.DELTALAKE => DeltaTable.forPath(ss, internalTable.generateInternalTableLocation)
@@ -192,6 +187,7 @@ class InternalTableLoader extends Logging {
       val toDeletedPaths = new util.ArrayList[String]()
       val values = partitionValues.split(",")
       val deleteStatementBuilder = StringBuilder.newBuilder
+      val toDeletedPartitionValues = new util.ArrayList[String]()
       values.foreach {
         partitionValue =>
           deleteStatementBuilder.clear()
@@ -201,7 +197,12 @@ class InternalTableLoader extends Logging {
           val subPath = partitionCol.toUpperCase(Locale.ROOT) + "=" + partitionValue
           val pathName = new Path(internalTable.getLocation, subPath).toString
           toDeletedPaths.add(pathName)
-          deleteDeltaMetaData(sparkTable, deleteStatementBuilder.toString())
+          toDeletedPartitionValues.add(deleteStatementBuilder.toString())
+      }
+      if (!toDeletedPartitionValues.isEmpty) {
+        val partitionCondition = StringUtils.join(toDeletedPartitionValues, " or ")
+        logInfo(s"Dropping partitions for table: $internalTable, partition condition: $partitionCondition")
+        deleteDeltaMetaData(sparkTable, partitionCondition)
       }
       if (!toDeletedPaths.isEmpty) {
         truncateDataInFileSystem(toDeletedPaths, isInternalTableRootPath = false)

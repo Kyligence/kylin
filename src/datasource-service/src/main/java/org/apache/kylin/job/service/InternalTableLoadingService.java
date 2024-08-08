@@ -100,6 +100,7 @@ public class InternalTableLoadingService extends BasicService {
         String toBeDelete = String.join(",", partitionValues);
         SparkSession ss = SparderEnv.getSparkSession();
         long start = System.currentTimeMillis();
+        logger.info("Start to drop partition for table {}", tableIdentity);
         internalTableLoader.dropPartitions(ss, internalTable, toBeDelete);
         InternalTableLoadJob internalTableLoadJob = new InternalTableLoadJob();
         InternalTableLoadJob.InternalTableMetaUpdateInfo info = internalTableLoadJob.extractUpdateInfo(project,
