@@ -18,6 +18,7 @@
 
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.common.exception.QueryErrorCode.EMPTY_TABLE;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.kylin.common.AbstractTestCase;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.TransactionException;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
@@ -103,7 +106,6 @@ public class InternalTableServiceTest extends AbstractTestCase {
                 .setAuthentication(new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN));
         SparkJobFactoryUtils.initJobFactory();
         overwriteSystemProp("kylin.source.provider.9", "org.apache.kylin.engine.spark.mockup.CsvSource");
-        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
     }
 
     @Test
@@ -111,7 +113,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
-
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
         // null value is valid
         internalTableService.checkParameters(null, table, null);
 
@@ -135,6 +137,33 @@ public class InternalTableServiceTest extends AbstractTestCase {
         // test invalid partitionCols
         Assertions.assertThrows(KylinException.class, () -> internalTableService
                 .checkParameters(new String[] { "TRANS_ID", "order_id_2" }, table, "yyyy-MM-dd"));
+
+        // test invalid partitionCols
+        Assertions.assertThrows(KylinException.class,
+                () -> internalTableService.checkParameters(new String[] { "TRANS_ID", "CAL_DT" }, table, "yyyy-mm"));
+
+    }
+
+    @Test
+    void testCheckParamsWithEmptySourceTable() throws Exception {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
+        TableDesc table = tManager.getTableDesc("DEFAULT.TEST_KYLIN_FACT");
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenThrow(new KylinException(
+                EMPTY_TABLE, String.format(Locale.ROOT, MsgPicker.getMsg().getNoDataInTable(), table)));
+        // test right date format with source table data is empty
+        internalTableService.checkParameters(new String[] { "TRANS_ID", "CAL_DT" }, table, "yyyy-MM-dd");
+    }
+
+    @Test
+    void testCheckParamsWithFatalError() throws Exception {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
+        TableDesc table = tManager.getTableDesc("DEFAULT.TEST_KYLIN_FACT");
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any()))
+                .thenThrow(new IllegalStateException("fatal error"));
+        Assertions.assertThrows(IllegalStateException.class,
+                () -> internalTableService.checkParameters(new String[] { "TRANS_ID", "CAL_DT" }, table, "yyyy-MM-dd"));
     }
 
     @Test
@@ -145,6 +174,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
         String[] partitionCols = new String[] { DATE_COL };
         Map<String, String> tblProperties = new HashMap<>();
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
         internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), partitionCols,
                 "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.PARQUET.name());
         InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
@@ -179,6 +209,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
         String[] partitionCols = new String[] { DATE_COL };
         Map<String, String> tblProperties = new HashMap<>();
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
         internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), partitionCols,
                 "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.DELTALAKE.name());
         InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
@@ -203,7 +234,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
         InternalTableManager internalTableManager = InternalTableManager.getInstance(config, PROJECT);
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
-
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
         internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), new String[] {}, null,
                 new HashMap<>(), InternalTableDesc.StorageType.PARQUET.name());
         InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
@@ -334,7 +365,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
 
         NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
-
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
         internalTableService.createInternalTable(PROJECT, TABLE_INDENTITY, new String[] { DATE_COL }, "yyyy-MM-dd",
                 new HashMap<>(), InternalTableDesc.StorageType.PARQUET.name());
         String startDate = "1325347200000"; // 2012-01-01
@@ -403,6 +434,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
         String[] partitionCols = new String[] { DATE_COL };
         Map<String, String> tblProperties = new HashMap<>();
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
         internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), partitionCols,
                 "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.PARQUET.name());
         InternalTableLoadingJobResponse response = internalTableService.loadIntoInternalTable(PROJECT, table.getName(),
@@ -433,6 +465,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
         String[] partitionCols = new String[] { DATE_COL };
         Map<String, String> tblProperties = new HashMap<>();
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
         internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), partitionCols,
                 "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.DELTALAKE.name());
         InternalTableLoadingJobResponse response = internalTableService.loadIntoInternalTable(PROJECT, table.getName(),
@@ -470,7 +503,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
-
+        when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
         List<InternalTablePartitionDetail> details = internalTableService.getTableDetail(PROJECT, table.getDatabase(),
                 table.getName());
         Assertions.assertNull(details);

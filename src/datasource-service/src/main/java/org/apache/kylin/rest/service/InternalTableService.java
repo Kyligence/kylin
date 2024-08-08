@@ -153,16 +153,23 @@ public class InternalTableService extends BasicService {
             if (StringUtils.isEmpty(datePartitionFormat) && dateCol.isPresent()) {
                 throw new KylinException(EMPTY_PARAMETER, "date_partition_format can not be null, please check again");
             }
-            /**
-             *  Temporarily ignore detect date partition format
-             *  if (dateCol.isPresent() && !StringUtils.isEmpty(datePartitionFormat)
-             *         && !tableService.getPartitionColumnFormat(originTable.getProject(), originTable.getIdentity(),
-             *                 dateCol.get().getName(), null).equals(datePartitionFormat)) {
-             *     String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getIncorrectDateformat(),
-             *             datePartitionFormat);
-             *     throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
-             * }
-             */
+
+            if (dateCol.isPresent() && !StringUtils.isEmpty(datePartitionFormat)) {
+                boolean isFormatMatchRealDataFormat = true;
+                try {
+                    // If the source table is empty, the true format cannot be obtained
+                    isFormatMatchRealDataFormat = tableService.getPartitionColumnFormat(originTable.getProject(),
+                            originTable.getIdentity(), dateCol.get().getName(), null).equals(datePartitionFormat);
+                } catch (KylinException kylinException) {
+                    logger.warn("Cannot get the real data format, skip the date format check", kylinException);
+                    // other non kylin-exception will throw out
+                }
+                if (!isFormatMatchRealDataFormat) {
+                    String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getIncorrectDateformat(),
+                            datePartitionFormat);
+                    throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
+                }
+            }
         }
     }
 
