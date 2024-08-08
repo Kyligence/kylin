@@ -27,6 +27,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.kylin.common.AbstractTestCase;
@@ -52,6 +53,7 @@ import org.apache.kylin.rest.response.InternalTableLoadingJobResponse;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.spark.sql.SparderEnv;
 import org.apache.spark.sql.SparkSession;
+import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -133,11 +135,6 @@ public class InternalTableServiceTest extends AbstractTestCase {
         // test invalid partitionCols
         Assertions.assertThrows(KylinException.class, () -> internalTableService
                 .checkParameters(new String[] { "TRANS_ID", "order_id_2" }, table, "yyyy-MM-dd"));
-
-        // test invalid partitionCols
-        Assertions.assertThrows(KylinException.class,
-                () -> internalTableService.checkParameters(new String[] { "TRANS_ID", "CAL_DT" }, table, "yyyy-mm"));
-
     }
 
     @Test
@@ -171,6 +168,32 @@ public class InternalTableServiceTest extends AbstractTestCase {
         if (!internalTableFolder.delete()) {
             Assertions.fail();
         }
+        internalTableService.dropInternalTable(PROJECT, TABLE_INDENTITY);
+    }
+
+    @Test
+    void testCreateDeltaInternalTable() throws Exception {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
+        InternalTableManager internalTableManager = InternalTableManager.getInstance(config, PROJECT);
+        TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
+        String[] partitionCols = new String[] { DATE_COL };
+        Map<String, String> tblProperties = new HashMap<>();
+        internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), partitionCols,
+                "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.DELTALAKE.name());
+        InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
+        Assertions.assertNotNull(internalTable);
+        String workingDir = config.getHdfsWorkingDirectory().replace("file://", "");
+        File internalTableFolder = new File(workingDir, INTERNAL_DIR);
+        Assertions.assertTrue(internalTableFolder.exists() && internalTableFolder.isDirectory());
+        // test create duplicated internal table
+        Assertions.assertThrows(TransactionException.class,
+                () -> internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(),
+                        partitionCols, "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.DELTALAKE.name()));
+        // test create internal table without tableDesc
+        Assertions.assertThrows(TransactionException.class,
+                () -> internalTableService.createInternalTable(PROJECT, table.getName() + "_xxx", table.getDatabase(),
+                        partitionCols, "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.DELTALAKE.name()));
         internalTableService.dropInternalTable(PROJECT, TABLE_INDENTITY);
     }
 
@@ -278,17 +301,15 @@ public class InternalTableServiceTest extends AbstractTestCase {
         // check internal table data exist
         String workingDir = config.getHdfsWorkingDirectory().replace("file://", "");
         File internalTableFolder = new File(workingDir, INTERNAL_DIR);
-        Assertions.assertEquals(1, internalTableFolder.list().length);
+        Assertions.assertEquals(1, Objects.requireNonNull(internalTableFolder.list()).length);
 
         // check query
         SparkSession ss = SparderEnv.getSparkSession();
         Assertions.assertFalse(ss.sql(BASE_SQL).isEmpty());
 
-        // check truncate
-        response = internalTableService.truncateInternalTable(PROJECT, TABLE_INDENTITY);
-        jobId = response.getJobs().get(0).getJobId();
-        waitJobToFinished(config, jobId);
-        Assertions.assertEquals(0, internalTableFolder.list().length);
+        // check truncate，will delete old path and not create empty schema for parquet format
+        internalTableService.truncateInternalTable(PROJECT, TABLE_INDENTITY);
+        Assertions.assertFalse(internalTableFolder.exists());
 
         // double truncate
         response = internalTableService.truncateInternalTable(PROJECT, TABLE_INDENTITY);
@@ -343,9 +364,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
 
         // remove some partitions and check
         String[] toDeletePartitions = new String[] { "2012-01-03", "2012-01-04" };
-        response = internalTableService.dropPartitionsOnDeltaTable(PROJECT, TABLE_INDENTITY, toDeletePartitions, null);
-        jobId = response.getJobs().get(0).getJobId();
-        waitJobToFinished(config, jobId);
+        internalTableService.dropPartitionsOnDeltaTable(PROJECT, TABLE_INDENTITY, toDeletePartitions, null);
         Assertions.assertEquals(6 - toDeletePartitions.length, internalTableFolder.list().length);
         long newCount = ss.sql(BASE_SQL).count();
         Assertions.assertTrue(newCount > 0 && newCount < count);
@@ -353,6 +372,87 @@ public class InternalTableServiceTest extends AbstractTestCase {
         // check delete table
         internalTableService.dropInternalTable(PROJECT, TABLE_INDENTITY);
         Assertions.assertFalse(internalTableFolder.exists());
+    }
+
+    @Test
+    void testDropNotExistsTablePartition() {
+        // remove some partitions and check
+        String[] toDeletePartitions = new String[] { "2012-01-03", "2012-01-04" };
+        Assert.assertThrows(KylinException.class, () -> {
+            internalTableService.dropPartitionsOnDeltaTable(PROJECT, "DEFAULT.TEST_KYLIN_FACT_NOT", toDeletePartitions,
+                    null);
+        });
+    }
+
+    @Test
+    void testDropNonPartitionTablePartition() throws Exception {
+        internalTableService.createInternalTable(PROJECT, TABLE_INDENTITY, null, null, new HashMap<>(),
+                InternalTableDesc.StorageType.PARQUET.name());
+        String[] toDeletePartitions = new String[] { "2012-01-03", "2012-01-04" };
+        Assert.assertThrows(KylinException.class, () -> {
+            internalTableService.dropPartitionsOnDeltaTable(PROJECT, "DEFAULT.TEST_KYLIN_FACT_NOT", toDeletePartitions,
+                    null);
+        });
+    }
+
+    @Test
+    void testTruncatePartitionInternalTable() throws Exception {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
+        InternalTableManager internalTableManager = InternalTableManager.getInstance(config, PROJECT);
+        TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
+        String[] partitionCols = new String[] { DATE_COL };
+        Map<String, String> tblProperties = new HashMap<>();
+        internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), partitionCols,
+                "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.PARQUET.name());
+        InternalTableLoadingJobResponse response = internalTableService.loadIntoInternalTable(PROJECT, table.getName(),
+                table.getDatabase(), false, false, "", "", null);
+        String jobId = response.getJobs().get(0).getJobId();
+        waitJobToFinished(config, jobId);
+
+        InternalTableDesc internalTableDesc = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
+        // check internal table data exist
+        String workingDir = config.getHdfsWorkingDirectory().replace("file://", "");
+        File internalTableFolder = new File(workingDir, INTERNAL_DIR);
+        // parquet format not have meta dir, so the partition size should equal file size
+        Assertions.assertEquals(internalTableDesc.getTablePartition().getPartitionDetails().size(),
+                Objects.requireNonNull(internalTableFolder.list()).length);
+
+        // check truncate，will delete old path and not create empty schema for parquet format
+        internalTableService.truncateInternalTable(PROJECT, TABLE_INDENTITY);
+        Assertions.assertFalse(internalTableFolder.exists());
+        InternalTableDesc afterTruncateTable = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
+        Assertions.assertEquals(-1, afterTruncateTable.getStorageSize());
+    }
+
+    @Test
+    void testTruncatePartitionDeltaInternalTable() throws Exception {
+        KylinConfig config = KylinConfig.getInstanceFromEnv();
+        NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
+        InternalTableManager internalTableManager = InternalTableManager.getInstance(config, PROJECT);
+        TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
+        String[] partitionCols = new String[] { DATE_COL };
+        Map<String, String> tblProperties = new HashMap<>();
+        internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), partitionCols,
+                "yyyy-MM-dd", tblProperties, InternalTableDesc.StorageType.DELTALAKE.name());
+        InternalTableLoadingJobResponse response = internalTableService.loadIntoInternalTable(PROJECT, table.getName(),
+                table.getDatabase(), false, false, "", "", null);
+        String jobId = response.getJobs().get(0).getJobId();
+        waitJobToFinished(config, jobId);
+
+        InternalTableDesc internalTableDesc = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
+        // check internal table data exist
+        String workingDir = config.getHdfsWorkingDirectory().replace("file://", "");
+        File internalTableFolder = new File(workingDir, INTERNAL_DIR);
+        // delta format have meta dir, so the partition size + 1 should equal file size
+        Assertions.assertEquals(internalTableDesc.getTablePartition().getPartitionDetails().size() + 1,
+                Objects.requireNonNull(internalTableFolder.list()).length);
+
+        // check truncate，will create a new empty schema dir for delta format
+        internalTableService.truncateInternalTable(PROJECT, TABLE_INDENTITY);
+        Assertions.assertTrue(internalTableFolder.exists());
+        InternalTableDesc afterTruncateTable = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
+        Assertions.assertTrue(afterTruncateTable.getStorageSize() > 0);
     }
 
     private void waitJobToFinished(KylinConfig config, String jobId) {

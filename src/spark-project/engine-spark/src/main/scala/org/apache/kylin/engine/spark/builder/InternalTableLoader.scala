@@ -144,6 +144,8 @@ class InternalTableLoader extends Logging {
             }
 
           }
+        } else {
+          logInfo(s"$filePath does not exist, skip it")
         }
       } catch {
         case e: IOException =>
@@ -196,7 +198,7 @@ class InternalTableLoader extends Logging {
           deleteStatementBuilder.append(partitionCol)
             .append(" = ")
             .append("'" + partitionValue + "'")
-          val subPath = partitionCol + "=" + partitionValue
+          val subPath = partitionCol.toUpperCase(Locale.ROOT) + "=" + partitionValue
           val pathName = new Path(internalTable.getLocation, subPath).toString
           toDeletedPaths.add(pathName)
           deleteDeltaMetaData(sparkTable, deleteStatementBuilder.toString())

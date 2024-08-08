@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.engine.spark.application.SparkApplication;
 import org.apache.kylin.engine.spark.builder.InternalTableLoader;
@@ -42,10 +43,13 @@ import org.apache.kylin.metadata.table.InternalTableManager;
 import org.apache.kylin.metadata.table.InternalTablePartition;
 import org.apache.kylin.metadata.table.InternalTablePartitionDetail;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.delta.tables.DeltaTable;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.val;
 
 public class InternalTableLoadJob extends SparkApplication {
@@ -74,17 +78,34 @@ public class InternalTableLoadJob extends SparkApplication {
             logger.info("Start to load data into table");
             loadIntoInternalTable();
         }
-        updateMeta();
+        updateMate();
     }
 
-    private void updateMeta() {
+    private void updateMate() {
         String tableName = getParam(NBatchConstants.P_TABLE_NAME);
+        InternalTableMetaUpdateInfo info = extractUpdateInfo(project, tableName, config, ss);
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            InternalTableManager internalTableManager = InternalTableManager.getInstance(config, project);
+            InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(tableName);
+            InternalTablePartition tablePartition = internalTable.getTablePartition();
+            if (tablePartition != null) {
+                tablePartition.setPartitionValues(info.getPartitionValues());
+                tablePartition.setPartitionDetails(info.getPartitionDetails());
+            }
+            internalTable.setRowCount(info.getFinalCount());
+            internalTableManager.saveOrUpdateInternalTable(internalTable);
+            return true;
+        }, project);
+    }
+
+    public InternalTableMetaUpdateInfo extractUpdateInfo(String project, String tableName, KylinConfig config,
+            SparkSession ss) {
         InternalTableManager internalTableManager = InternalTableManager.getInstance(config, project);
         InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(tableName);
         List<InternalTablePartitionDetail> partitionDetails;
-        long count = getInternalTableCount(internalTable);
+        long count = getInternalTableCount(internalTable, ss);
         if (internalTable.getTablePartition() != null) {
-            partitionDetails = extractPartitionDetails(internalTable);
+            partitionDetails = extractPartitionDetails(ss, internalTable);
         } else {
             partitionDetails = Collections.emptyList();
         }
@@ -95,20 +116,10 @@ public class InternalTableLoadJob extends SparkApplication {
                 partitionDetails.size());
         List<String> finalPartitionValues = partitionDetails.stream()
                 .map(InternalTablePartitionDetail::getPartitionValue).collect(Collectors.toList());
-        long finalCount = count;
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            InternalTablePartition tablePartition = internalTable.getTablePartition();
-            if (tablePartition != null) {
-                tablePartition.setPartitionValues(finalPartitionValues);
-                tablePartition.setPartitionDetails(partitionDetails);
-            }
-            internalTable.setRowCount(finalCount);
-            internalTableManager.saveOrUpdateInternalTable(internalTable);
-            return true;
-        }, project);
+        return new InternalTableMetaUpdateInfo(count, finalPartitionValues, partitionDetails);
     }
 
-    private long getInternalTableCount(InternalTableDesc internalTable) {
+    private long getInternalTableCount(InternalTableDesc internalTable, SparkSession ss) {
         if (internalTable.getStorageType() == InternalTableDesc.StorageType.PARQUET) {
             try {
                 val internalTableDs = ss.read().format(internalTable.getStorageType().getFormat())
@@ -124,7 +135,8 @@ public class InternalTableLoadJob extends SparkApplication {
         }
     }
 
-    private List<InternalTablePartitionDetail> extractPartitionDetails(InternalTableDesc internalTable) {
+    private List<InternalTablePartitionDetail> extractPartitionDetails(SparkSession ss,
+            InternalTableDesc internalTable) {
         val partitionCol = internalTable.getTablePartition().getPartitionColumns()[0];
         List<String> partitionValues;
         List<InternalTablePartitionDetail> partitionDetails = new ArrayList<>();
@@ -146,8 +158,7 @@ public class InternalTableLoadJob extends SparkApplication {
                     detail.setPartitionValue(partitionValue);
                     partitionDetails.add(detail);
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 logger.warn("Can not get parquet info from internal table path {} caused by:",
                         internalTable.getLocation(), e);
             }
@@ -192,8 +203,7 @@ public class InternalTableLoadJob extends SparkApplication {
         String endDate = getParam(NBatchConstants.P_END_DATE);
         String storagePolicy = config.getGlutenStoragePolicy();
         InternalTableLoader loader = new InternalTableLoader();
-        loader.loadInternalTable(ss, internalTable, outPutMode, startDate, endDate, storagePolicy,
-                incrementalBuild);
+        loader.loadInternalTable(ss, internalTable, outPutMode, startDate, endDate, storagePolicy, incrementalBuild);
     }
 
     public void dropPartitons() throws IOException {
@@ -203,5 +213,13 @@ public class InternalTableLoadJob extends SparkApplication {
         InternalTableDesc internalTable = InternalTableManager.getInstance(config, project)
                 .getInternalTableDesc(tableName);
         loader.dropPartitions(ss, internalTable, toBeDelete);
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class InternalTableMetaUpdateInfo {
+        long finalCount;
+        List<String> partitionValues;
+        List<InternalTablePartitionDetail> partitionDetails;
     }
 }

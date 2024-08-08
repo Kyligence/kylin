@@ -21,19 +21,18 @@ package org.apache.kylin.job.service;
 import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_ERROR;
 import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_NOT_EXIST;
 import static org.apache.kylin.job.execution.JobTypeEnum.INTERNAL_TABLE_BUILD;
-import static org.apache.kylin.job.execution.JobTypeEnum.INTERNAL_TABLE_DELETE_PARTITION;
 import static org.apache.kylin.job.execution.JobTypeEnum.INTERNAL_TABLE_REFRESH;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.TimeUtil;
+import org.apache.kylin.engine.spark.builder.InternalTableLoader;
 import org.apache.kylin.job.dao.JobStatisticsManager;
 import org.apache.kylin.job.execution.JobTypeEnum;
 import org.apache.kylin.job.manager.JobManager;
@@ -43,11 +42,16 @@ import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.sourceusage.SourceUsageManager;
 import org.apache.kylin.metadata.table.InternalTableDesc;
 import org.apache.kylin.metadata.table.InternalTableManager;
+import org.apache.kylin.metadata.table.InternalTablePartition;
 import org.apache.kylin.rest.response.InternalTableLoadingJobResponse;
 import org.apache.kylin.rest.service.BasicService;
+import org.apache.spark.sql.SparderEnv;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import io.kyligence.kap.engine.spark.job.InternalTableLoadJob;
 
 @Service("internalTableLoadingService")
 public class InternalTableLoadingService extends BasicService {
@@ -89,21 +93,31 @@ public class InternalTableLoadingService extends BasicService {
     }
 
     public InternalTableLoadingJobResponse dropPartitions(String project, String[] partitionValues,
-            String tableIdentity, String yarnQueue) {
-        List<String> jobIds = new ArrayList<>();
+            String tableIdentity, String yarnQueue) throws IOException {
+        // If internal table can not be obtained, will throw a kylin exception
         InternalTableDesc internalTable = checkAndGetInternalTables(project, tableIdentity);
+        InternalTableLoader internalTableLoader = new InternalTableLoader();
+        String toBeDelete = String.join(",", partitionValues);
+        SparkSession ss = SparderEnv.getSparkSession();
+        long start = System.currentTimeMillis();
+        internalTableLoader.dropPartitions(ss, internalTable, toBeDelete);
+        InternalTableLoadJob internalTableLoadJob = new InternalTableLoadJob();
+        InternalTableLoadJob.InternalTableMetaUpdateInfo info = internalTableLoadJob.extractUpdateInfo(project,
+                internalTable.getIdentity(), getConfig(), ss);
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            String toBeDelete = Arrays.stream(partitionValues).collect(Collectors.joining(","));
-            logger.info("drop partitions for table: {}, partitions: {}", internalTable.getIdentity(), toBeDelete);
-            JobParam jobParam = new JobParam().withProject(project).withOwner(BasicService.getUsername())
-                    .withTable(internalTable.getIdentity()).withYarnQueue(yarnQueue)
-                    .withJobTypeEnum(INTERNAL_TABLE_DELETE_PARTITION)
-                    .addExtParams(NBatchConstants.P_DELETE_PARTITION, "true")
-                    .addExtParams(NBatchConstants.P_DELETE_PARTITION_VALUES, toBeDelete);
-            jobIds.add(getManager(JobManager.class, project).addJob(jobParam));
+            InternalTableManager internalTableManager = InternalTableManager.getInstance(getConfig(), project);
+            InternalTableDesc oldTable = checkAndGetInternalTables(project, tableIdentity);
+            InternalTablePartition tablePartition = oldTable.getTablePartition();
+            tablePartition.setPartitionValues(info.getPartitionValues());
+            tablePartition.setPartitionDetails(info.getPartitionDetails());
+            oldTable.setRowCount(info.getFinalCount());
+            internalTableManager.saveOrUpdateInternalTable(oldTable);
             return true;
         }, project);
-        return InternalTableLoadingJobResponse.of(jobIds, INTERNAL_TABLE_DELETE_PARTITION.toString());
+
+        logger.info("Successfully drop partition[{}] for table {} in {} ms", toBeDelete, tableIdentity,
+                System.currentTimeMillis() - start);
+        return InternalTableLoadingJobResponse.of(new ArrayList<>(), "");
     }
 
     private InternalTableDesc checkAndGetInternalTables(String project, String tableIdentity) {

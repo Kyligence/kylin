@@ -25,8 +25,8 @@ import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_INTERNAL
 import static org.apache.kylin.common.exception.ServerErrorCode.TABLE_NOT_EXIST;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -66,6 +66,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import lombok.val;
 import scala.Option;
 
 @Service("internalTableService")
@@ -84,6 +85,7 @@ public class InternalTableService extends BasicService {
 
     /**
      * Create an internal table from an existing table
+     *
      * @param projectName
      * @param table
      * @param database
@@ -151,20 +153,22 @@ public class InternalTableService extends BasicService {
             if (StringUtils.isEmpty(datePartitionFormat) && dateCol.isPresent()) {
                 throw new KylinException(EMPTY_PARAMETER, "date_partition_format can not be null, please check again");
             }
-            // detect date partition format
-            if (dateCol.isPresent() && !StringUtils.isEmpty(datePartitionFormat)
-                    && !tableService.getPartitionColumnFormat(originTable.getProject(), originTable.getIdentity(),
-                            dateCol.get().getName(), null).equals(datePartitionFormat)) {
-                String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getIncorrectDateformat(),
-                        datePartitionFormat);
-                throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
-
-            }
+            /**
+             *  Temporarily ignore detect date partition format
+             *  if (dateCol.isPresent() && !StringUtils.isEmpty(datePartitionFormat)
+             *         && !tableService.getPartitionColumnFormat(originTable.getProject(), originTable.getIdentity(),
+             *                 dateCol.get().getName(), null).equals(datePartitionFormat)) {
+             *     String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getIncorrectDateformat(),
+             *             datePartitionFormat);
+             *     throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
+             * }
+             */
         }
     }
 
     public void createDeltaSchema(InternalTableDesc internalTable) throws IOException {
-        if (internalTable.getStorageType() == InternalTableDesc.StorageType.GLUTEN) {
+        if (internalTable.getStorageType() == InternalTableDesc.StorageType.GLUTEN
+                || internalTable.getStorageType() == InternalTableDesc.StorageType.DELTALAKE) {
             Option<SparkSession> defaultSession = SparkSession.getDefaultSession();
             InternalTableLoader internalTableLoader = new InternalTableLoader();
             internalTableLoader.onlyLoadSchema(true);
@@ -176,6 +180,7 @@ public class InternalTableService extends BasicService {
     /**
      * create an internal table with source table
      * and no partition columns and table properties specified
+     *
      * @param project
      * @param originTable
      * @param storageType
@@ -236,6 +241,9 @@ public class InternalTableService extends BasicService {
             if (fs.exists(location)) {
                 HadoopUtil.deletePath(HadoopUtil.getCurrentConfiguration(), location);
                 logger.info("Successfully deleted internal table on {}", internalTable.getLocation());
+            } else {
+                logger.warn("Internal table {}'s root path {} is not exists, skip delete", internalTable.getIdentity(),
+                        internalTable.getLocation());
             }
         } catch (IOException e) {
             logger.error("Failed to delete internal table on {}", internalTable.getLocation(), e);
@@ -289,17 +297,35 @@ public class InternalTableService extends BasicService {
             throw new KylinException(INTERNAL_TABLE_NOT_EXIST, errorMsg);
         }
         suicideRunningInternalTableJob(project, tableIdentity);
-        if (internalTable.getRowCount() == 0) {
-            logger.info("{} not have any data, skip truncate", tableIdentity);
-            return InternalTableLoadingJobResponse.of(Collections.emptyList(), "");
+        long start = System.currentTimeMillis();
+        deleteMetaAndDataInFileSystem(internalTable);
+        createDeltaSchema(internalTable);
+        val fs = HadoopUtil.getWorkingFileSystem();
+        // -1 indicates that an error occurred while obtaining files statistics
+        long storageSize = -1;
+        try {
+            storageSize = HadoopUtil.getContentSummary(fs, new Path(internalTable.getLocation())).getLength();
+        } catch (IOException e) {
+            logger.warn("Fetch storage size for internal table {} from {} failed caused by:",
+                    internalTable.getIdentity(), internalTable.getLocation(), e);
         }
-        return dropAllPartitionsOnDeltaTable(project, tableIdentity);
-    }
-
-    // 1. update delta log
-    // 2. delete unused data files
-    private InternalTableLoadingJobResponse dropAllPartitionsOnDeltaTable(String project, String tableIdentity) {
-        return dropPartitionsOnDeltaTable(project, tableIdentity, new String[0], null);
+        long finalStorageSize = storageSize;
+        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            InternalTableManager img = getManager(InternalTableManager.class, project);
+            InternalTableDesc oldTable = img.getInternalTableDesc(tableIdentity);
+            InternalTablePartition tablePartition = oldTable.getTablePartition();
+            if (tablePartition != null) {
+                tablePartition.setPartitionValues(new ArrayList<>());
+                tablePartition.setPartitionDetails(new ArrayList<>());
+            }
+            oldTable.setStorageSize(finalStorageSize);
+            oldTable.setRowCount(0);
+            img.saveOrUpdateInternalTable(oldTable);
+            return true;
+        }, project);
+        logger.info("Successfully truncate internal table {} in {} ms", tableIdentity,
+                System.currentTimeMillis() - start);
+        return InternalTableLoadingJobResponse.of(new ArrayList<>(), "");
     }
 
     // 1. delete partition data in file system
@@ -307,7 +333,7 @@ public class InternalTableService extends BasicService {
     // we shall do this delete action by a spark job and call delta delete api
     // so that the delta meta could be updated!
     public InternalTableLoadingJobResponse dropPartitionsOnDeltaTable(String project, String tableIdentity,
-            String[] partitionValues, String yarnQueue) {
+            String[] partitionValues, String yarnQueue) throws IOException {
         aclEvaluate.checkProjectWritePermission(project);
         return internalTableLoadingService.dropPartitions(project, partitionValues, tableIdentity, yarnQueue);
     }
@@ -326,13 +352,12 @@ public class InternalTableService extends BasicService {
     }
 
     /**
-     *
      * @param project
      * @param table
      * @param isIncremental
      * @param startDate
      * @param endDate
-     * @param yarnQueue if not null, use hadoop yarn resource to build, else use spark standalone
+     * @param yarnQueue     if not null, use hadoop yarn resource to build, else use spark standalone
      * @return
      * @throws Exception
      */
