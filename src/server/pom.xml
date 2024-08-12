@@ -35,22 +35,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.kyligence.ke</groupId>
-            <artifactId>ke-common-server</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.kyligence.ke</groupId>
-            <artifactId>ke-smart-server</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.kyligence.ke</groupId>
-            <artifactId>ke-enterprise-service</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-data-loading-server</artifactId>
         </dependency>
