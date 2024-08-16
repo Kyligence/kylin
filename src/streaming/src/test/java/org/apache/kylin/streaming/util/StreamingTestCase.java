@@ -52,7 +52,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class StreamingTestCase extends NLocalFileMetadataTestCase {
     protected static String MODEL_ALIAS = "stream_merge1";
-    
+
     @Override
     public void createTestMetadata(String... overlay) {
         super.createTestMetadata(overlay);

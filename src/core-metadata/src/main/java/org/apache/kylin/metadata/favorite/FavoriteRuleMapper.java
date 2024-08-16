@@ -20,7 +20,6 @@ package org.apache.kylin.metadata.favorite;
 
 import java.util.List;
 
-import io.kyligence.kap.metadata.favorite.FavoriteRule;
 import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.InsertProvider;
 import org.apache.ibatis.annotations.Mapper;
@@ -55,7 +54,7 @@ public interface FavoriteRuleMapper {
             @Result(column = "enabled", property = "enabled", jdbcType = JdbcType.BOOLEAN),
             @Result(column = "update_time", property = "updateTime", jdbcType = JdbcType.BIGINT),
             @Result(column = "create_time", property = "createTime", jdbcType = JdbcType.BIGINT),
-            @Result(column = "mvcc", property = "mvcc", jdbcType = JdbcType.BIGINT)})
+            @Result(column = "mvcc", property = "mvcc", jdbcType = JdbcType.BIGINT) })
     FavoriteRule selectOne(SelectStatementProvider selectStatement);
 
     @SelectProvider(type = SqlProviderAdapter.class, method = "select")

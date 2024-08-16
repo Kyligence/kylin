@@ -93,7 +93,7 @@ public class JdbcJobScheduler implements JobScheduler {
 
     private ThreadPoolExecutor executorPool;
 
-    private int consumerMaxThreads;
+    private final int consumerMaxThreads;
 
     public JdbcJobScheduler(JobContext jobContext) {
         this.jobContext = jobContext;
@@ -141,7 +141,7 @@ public class JdbcJobScheduler implements JobScheduler {
     public boolean isMaster() {
         return isMaster.get();
     }
-    
+
     @Override
     public String getJobMaster() {
         return jobContext.getJobLockMapper().selectByJobId(MASTER_SCHEDULER).getLockNode();
@@ -164,13 +164,14 @@ public class JdbcJobScheduler implements JobScheduler {
         subscribeJob();
     }
 
+    // for UT
     public void destroy() {
 
         if (Objects.nonNull(masterLock)) {
             try {
                 masterLock.tryRelease();
             } catch (LockException e) {
-                logger.error("Something's wrong when removing master lock", e);
+                logger.warn("Something's wrong when removing master lock");
             }
         }
 
@@ -296,13 +297,13 @@ public class JdbcJobScheduler implements JobScheduler {
                     logger.error("Create job lock for [{}] failed!", jobId);
                     return false;
                 }
-                ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), jobInfo.getProject())
-                        .publishJob(jobId, (AbstractExecutable) getJobExecutable(jobInfo));
+                ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), jobInfo.getProject()).publishJob(jobId,
+                        (AbstractExecutable) getJobExecutable(jobInfo));
                 logger.debug("Job {} has bean produced successfully", jobInfo.getJobId());
                 return true;
             });
         } catch (Exception e) {
-            logger.error("Failed to produce job: " + jobInfo.getJobId(), e);
+            logger.error("Failed to produce job: {}", jobInfo.getJobId(), e);
             return false;
         }
     }
@@ -317,9 +318,7 @@ public class JdbcJobScheduler implements JobScheduler {
 
     private void addReadyJobToCache(JobInfo jobInfo) {
         String project = jobInfo.getProject();
-        if (null == readyJobCache.get(project)) {
-            readyJobCache.put(project, new PriorityQueue<>());
-        }
+        readyJobCache.computeIfAbsent(project, k -> new PriorityQueue<>());
         if (!readyJobCache.get(project).contains(jobInfo)) {
             readyJobCache.get(project).add(jobInfo);
         }
@@ -351,7 +350,7 @@ public class JdbcJobScheduler implements JobScheduler {
             // skip license check
             return true;
         }
-        CheckResult checkResult = null;
+        CheckResult checkResult;
         try {
             checkResult = licenseChecker.check();
         } catch (Exception e) {
@@ -482,7 +481,7 @@ public class JdbcJobScheduler implements JobScheduler {
             AbstractJobExecutable jobExecutable = getJobExecutable(jobInfo);
             return new Pair<>(jobInfo, jobExecutable);
         } catch (Exception e) {
-            logger.error("Fetch job failed, job id: " + jobId, e);
+            logger.error("Fetch job failed, job id: {}", jobId, e);
             return null;
         }
     }
@@ -500,7 +499,7 @@ public class JdbcJobScheduler implements JobScheduler {
                 return false;
             }
         } catch (Exception e) {
-            logger.error("Error when preparing to submit job: " + jobId, e);
+            logger.error("Error when preparing to submit job: {}", jobId, e);
             return false;
         }
         return true;
@@ -539,7 +538,7 @@ public class JdbcJobScheduler implements JobScheduler {
             // heavy action
             jobExecutor.execute();
         } catch (Exception e) {
-            logger.error("Execute job failed " + jobExecutable.getJobId(), e);
+            logger.error("Execute job failed {}", jobExecutable.getJobId(), e);
         } finally {
             if (jobLock != null) {
                 stopJobLockRenewAfterExecute(jobLock);
@@ -615,9 +614,9 @@ public class JdbcJobScheduler implements JobScheduler {
         }
     }
 
+    @Getter
     private static class JobAcquireListener implements LockAcquireListener {
 
-        @Getter
         private final AbstractJobExecutable jobExecutable;
 
         JobAcquireListener(AbstractJobExecutable jobExecutable) {

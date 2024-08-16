@@ -45,6 +45,7 @@ import org.apache.kylin.guava30.shaded.common.cache.Cache;
 import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.tool.util.LdapUtils;
 import org.slf4j.Logger;
@@ -57,8 +58,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.ldap.SpringSecurityLdapTemplate;
 import org.springframework.security.ldap.userdetails.LdapUserDetailsService;
 import org.springframework.util.CollectionUtils;
-
-import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class LdapUserService implements UserService {
 
@@ -76,13 +75,13 @@ public class LdapUserService implements UserService {
             new ArrayBlockingQueue<>(1), Executors.defaultThreadFactory(), (r, e) -> {
             });
 
-    private static final Cache<String, Map<String, ManagedUser>> ldapUsersCache = CacheBuilder
-            .newBuilder().maximumSize(KylinConfig.getInstanceFromEnv().getServerUserCacheMaxEntries())
+    private static final Cache<String, Map<String, ManagedUser>> ldapUsersCache = CacheBuilder.newBuilder()
+            .maximumSize(KylinConfig.getInstanceFromEnv().getServerUserCacheMaxEntries())
             .expireAfterWrite(KylinConfig.getInstanceFromEnv().getServerUserCacheExpireSeconds(), TimeUnit.SECONDS)
             .build();
 
-    private static final Cache<String, Map<String, String>> LDAP_VALID_DN_MAP_CACHE = CacheBuilder
-            .newBuilder().maximumSize(KylinConfig.getInstanceFromEnv().getServerUserCacheMaxEntries())
+    private static final Cache<String, Map<String, String>> LDAP_VALID_DN_MAP_CACHE = CacheBuilder.newBuilder()
+            .maximumSize(KylinConfig.getInstanceFromEnv().getServerUserCacheMaxEntries())
             .expireAfterWrite(KylinConfig.getInstanceFromEnv().getServerUserCacheExpireSeconds(), TimeUnit.SECONDS)
             .build();
 

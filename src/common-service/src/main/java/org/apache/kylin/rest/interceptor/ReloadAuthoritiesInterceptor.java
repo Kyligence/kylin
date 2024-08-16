@@ -31,6 +31,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.response.ErrorResponse;
 import org.apache.kylin.rest.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

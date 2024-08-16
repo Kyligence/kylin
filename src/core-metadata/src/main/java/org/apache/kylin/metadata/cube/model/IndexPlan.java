@@ -35,7 +35,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -66,8 +65,6 @@ import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
-import org.apache.kylin.metadata.model.TableDesc;
-import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
@@ -182,17 +179,13 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
     @JsonProperty("base_agg_index_reduce_high_cardinality_dim")
     private boolean baseAggIndexReduceHighCardinalityDim;
 
-    public static final String STORAGE_V3_MODEL_DEFAULT_PARTITION_BY_CONF_KEY =
-            "kylin.model.layout.storage.v3-partition-by-columns";
+    public static final String STORAGE_V3_MODEL_DEFAULT_PARTITION_BY_CONF_KEY = "kylin.model.layout.storage.v3-partition-by-columns";
 
-    public static final String STORAGE_V3_MODEL_DEFAULT_ZORDER_BY_CONF_KEY =
-            "kylin.model.layout.storage.v3-zorder-by-columns";
+    public static final String STORAGE_V3_MODEL_DEFAULT_ZORDER_BY_CONF_KEY = "kylin.model.layout.storage.v3-zorder-by-columns";
 
-    public static final String STORAGE_V3_MODEL_DEFAULT_MAX_FILE_SIZE_CONF_KEY =
-            "kylin.model.layout.storage.v3-max-file-size-in-bytes";
+    public static final String STORAGE_V3_MODEL_DEFAULT_MAX_FILE_SIZE_CONF_KEY = "kylin.model.layout.storage.v3-max-file-size-in-bytes";
 
-    public static final String STORAGE_V3_MODEL_DEFAULT_MIN_FILE_SIZE_CONF_KEY =
-            "kylin.model.layout.storage.v3-min-file-size-in-bytes";
+    public static final String STORAGE_V3_MODEL_DEFAULT_MIN_FILE_SIZE_CONF_KEY = "kylin.model.layout.storage.v3-min-file-size-in-bytes";
 
     public static final String STORAGE_V3_CONFIG_COLUMN_SEPARATOR = "\u0001";
 
@@ -886,19 +879,6 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
                 getRuleBaseLayouts().stream().map(LayoutEntity::getId).collect(Collectors.toSet()), layoutIds));
     }
 
-    private boolean isHighCardinalityDim(NTableMetadataManager tableManager, TblColRef colRef) {
-        String tableIdentity = colRef.getTableRef().getTableIdentity();
-        TableDesc tableDesc = tableManager.getTableDesc(tableIdentity);
-        TableExtDesc tableExtIfExists = tableManager.getTableExtIfExists(tableDesc);
-        TableExtDesc.ColumnStats columnStats = tableExtIfExists.getColumnStatsByName(colRef.getName());
-
-        if (Objects.isNull(columnStats)) {
-            return false;
-        }
-
-        return (double) (columnStats.getCardinality()) / tableExtIfExists.getTotalRows() > 0.2;
-    }
-
     private void removeLayouts(Collection<IndexEntity> indexes, Set<Long> layoutIds, boolean deleteAuto,
             boolean deleteManual) {
         checkIsNotCachedAndShared();
@@ -977,7 +957,7 @@ public class IndexPlan extends RootPersistentEntity implements Serializable, IEn
             List<Integer> list = new ArrayList<>();
             for (Integer dimId : model.getEffectiveDimensions().keySet()) {
                 TblColRef colRef = model.getColRef(dimId);
-                if (!isHighCardinalityDim(tableManager, colRef)) {
+                if (!tableManager.isHighCardinalityDim(colRef)) {
                     list.add(dimId);
                 }
             }

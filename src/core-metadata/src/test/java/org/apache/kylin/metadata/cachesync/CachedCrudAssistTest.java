@@ -21,11 +21,10 @@ package org.apache.kylin.metadata.cachesync;
 import static org.apache.kylin.common.util.TestUtils.getTestConfig;
 
 import org.apache.kylin.junit.annotation.MetadataInfo;
+import org.apache.kylin.metadata.user.ManagedUser;
+import org.apache.kylin.metadata.user.NKylinUserManager;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
 
 @MetadataInfo(onlyProps = true)
 class CachedCrudAssistTest {

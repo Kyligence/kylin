@@ -22,6 +22,7 @@ import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
 import org.apache.kylin.junit.rule.TransactionExceptedException;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.AclUtil;
@@ -40,7 +41,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

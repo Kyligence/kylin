@@ -29,6 +29,7 @@ import org.apache.kylin.engine.spark.utils.SparkJobFactoryUtils;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -52,9 +53,10 @@ public class SourceTestCase extends NLocalFileMetadataTestCase {
 
     @Before
     public void setUp() {
+        JobContextUtil.cleanUp();
         SparkJobFactoryUtils.initJobFactory();
+        JobContextUtil.cleanUp();
         createTestMetadata();
-        KylinConfig config = KylinConfig.getInstanceFromEnv();
         Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -135,4 +137,3 @@ public class SourceTestCase extends NLocalFileMetadataTestCase {
     }
 
 }
-

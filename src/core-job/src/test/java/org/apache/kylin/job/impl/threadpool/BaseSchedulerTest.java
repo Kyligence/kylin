@@ -52,6 +52,7 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
 
     @Before
     public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         createTestMetadata();
         killProcessCount = new AtomicInteger();
         val originExecutableManager = ExecutableManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
@@ -66,7 +67,6 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
     }
 
     void startScheduler() {
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
     }
 
@@ -75,7 +75,7 @@ public abstract class BaseSchedulerTest extends NLocalFileMetadataTestCase {
         JobContext jobContext = JobContextUtil.getJobContext(KylinConfig.getInstanceFromEnv());
         JobContextUtil.cleanUp();
         cleanupTestMetadata();
-        await().atMost(30, TimeUnit.SECONDS).until(() -> jobContext.getJobScheduler().getRunningJob().size() == 0);
+        await().atMost(30, TimeUnit.SECONDS).until(() -> jobContext.getJobScheduler().getRunningJob().isEmpty());
     }
 
     protected void waitForJobFinish(String jobId) {

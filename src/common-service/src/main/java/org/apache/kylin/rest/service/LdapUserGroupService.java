@@ -42,6 +42,7 @@ import org.apache.kylin.guava30.shaded.common.cache.Cache;
 import org.apache.kylin.guava30.shaded.common.cache.CacheBuilder;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.metadata.usergroup.UserGroup;
 import org.apache.kylin.rest.response.UserGroupResponseKI;
 import org.apache.kylin.rest.security.AdminUserSyncEventNotifier;
@@ -57,8 +58,6 @@ import org.springframework.ldap.core.support.SingleContextSource;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.ldap.SpringSecurityLdapTemplate;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
-
 public class LdapUserGroupService extends NUserGroupService {
 
     private static final Logger logger = LoggerFactory.getLogger(LdapUserGroupService.class);
@@ -72,13 +71,13 @@ public class LdapUserGroupService extends NUserGroupService {
             .expireAfterWrite(KylinConfig.getInstanceFromEnv().getServerUserCacheExpireSeconds(), TimeUnit.SECONDS)
             .build();
 
-    private static final Cache<String, List<ManagedUser>> ldapGroupsMembersCache = CacheBuilder
-            .newBuilder().maximumSize(KylinConfig.getInstanceFromEnv().getServerUserCacheMaxEntries())
+    private static final Cache<String, List<ManagedUser>> ldapGroupsMembersCache = CacheBuilder.newBuilder()
+            .maximumSize(KylinConfig.getInstanceFromEnv().getServerUserCacheMaxEntries())
             .expireAfterWrite(KylinConfig.getInstanceFromEnv().getServerUserCacheExpireSeconds(), TimeUnit.SECONDS)
             .build();
 
-    private static final Cache<String, List<String>> ldapGroupsAndMembersCache = CacheBuilder
-            .newBuilder().maximumSize(KylinConfig.getInstanceFromEnv().getServerUserCacheMaxEntries())
+    private static final Cache<String, List<String>> ldapGroupsAndMembersCache = CacheBuilder.newBuilder()
+            .maximumSize(KylinConfig.getInstanceFromEnv().getServerUserCacheMaxEntries())
             .expireAfterWrite(KylinConfig.getInstanceFromEnv().getServerUserCacheExpireSeconds(), TimeUnit.SECONDS)
             .build();
 

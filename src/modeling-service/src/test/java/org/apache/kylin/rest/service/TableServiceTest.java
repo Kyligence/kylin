@@ -71,7 +71,9 @@ import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.AutoMergeRequest;
@@ -106,8 +108,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;

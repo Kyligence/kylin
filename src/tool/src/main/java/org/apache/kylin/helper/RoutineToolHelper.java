@@ -34,6 +34,7 @@ import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.query.util.QueryHisStoreUtil;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.metadata.streaming.util.StreamingJobRecordStoreUtil;
 import org.apache.kylin.metadata.streaming.util.StreamingJobStatsStoreUtil;
 import org.apache.kylin.tool.constant.StringConstant;
@@ -44,7 +45,6 @@ import org.apache.kylin.tool.garbage.PriorityExecutor;
 import org.apache.kylin.tool.garbage.SourceUsageCleaner;
 import org.apache.kylin.tool.garbage.StorageCleaner;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
@@ -59,28 +59,27 @@ public class RoutineToolHelper {
 
     public static CompletableFuture<Void> cleanQueryHistoriesAsync(long timeout, TimeUnit timeUnit) {
         tryInitCleanTaskExecutorService();
-        return CleanTaskExecutorService.getInstance().submit(
-            new AbstractComparableCleanTask() {
-                @Override
-                public String getName() {
-                    return "cleanQueryHistoriesForAllProjects";
-                }
+        return CleanTaskExecutorService.getInstance().submit(new AbstractComparableCleanTask() {
+            @Override
+            public String getName() {
+                return "cleanQueryHistoriesForAllProjects";
+            }
 
-                @Override
-                protected void doRun() {
-                    QueryHisStoreUtil.cleanQueryHistory();
-                }
+            @Override
+            protected void doRun() {
+                QueryHisStoreUtil.cleanQueryHistory();
+            }
 
-                @Override
-                public StorageCleaner.CleanerTag getCleanerTag() {
-                    return StorageCleaner.CleanerTag.ROUTINE;
-                }
-            }, timeout, timeUnit);
+            @Override
+            public StorageCleaner.CleanerTag getCleanerTag() {
+                return StorageCleaner.CleanerTag.ROUTINE;
+            }
+        }, timeout, timeUnit);
     }
 
     public static CompletableFuture<Void> cleanQueryHistoriesAsync() {
-        return cleanQueryHistoriesAsync(
-            KylinConfig.getInstanceFromEnv().getStorageCleanTaskTimeout(), TimeUnit.MILLISECONDS);
+        return cleanQueryHistoriesAsync(KylinConfig.getInstanceFromEnv().getStorageCleanTaskTimeout(),
+                TimeUnit.MILLISECONDS);
     }
 
     public enum CleanType {
@@ -126,7 +125,7 @@ public class RoutineToolHelper {
         CleanTaskExecutorService.getInstance().bindWorkingPool(() -> {
             log.warn("Init the cleaning task thread pool from thread {}.", Thread.currentThread().getName());
             return PriorityExecutor.newWorkingThreadPool("routine-tool-helper-pool",
-                KylinConfig.getInstanceFromEnv().getStorageCleanTaskConcurrency());
+                    KylinConfig.getInstanceFromEnv().getStorageCleanTaskConcurrency());
         });
     }
 

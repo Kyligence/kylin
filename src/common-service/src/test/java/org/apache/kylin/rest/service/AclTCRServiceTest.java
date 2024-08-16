@@ -47,6 +47,8 @@ import org.apache.kylin.metadata.acl.SensitiveDataMaskInfo;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.user.ManagedUser;
+import org.apache.kylin.metadata.user.NKylinUserManager;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.AccessRequest;
 import org.apache.kylin.rest.request.AclTCRRequest;
@@ -87,8 +89,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 import lombok.var;
 

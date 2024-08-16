@@ -41,7 +41,7 @@ import lombok.val;
 
 public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
 
-    private String dfName = "cce7b90d-c1ac-49ef-abc3-f8971eb91544";
+    private final String dfName = "cce7b90d-c1ac-49ef-abc3-f8971eb91544";
 
     @Override
     @Before
@@ -67,7 +67,7 @@ public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
     }
 
     @Test
-    public void testQueryPartialMatchIndex() throws Exception {
+    public void testQueryPartialMatchIndex() {
         NDataflowManager dsMgr = NDataflowManager.getInstance(getTestConfig(), "kylin");
         NDataflow df = dsMgr.getDataflow(dfName);
         String sql = "select count(*) from TEST_KYLIN_FACT where cal_dt > '2012-01-01' and cal_dt < '2014-01-01'";
@@ -84,7 +84,7 @@ public class NQueryPartialMatchIndexTest extends NLocalWithSparkSessionTest {
     }
 
     @Test
-    public void testQueryPartialMatchIndexWhenPushdown() throws Exception {
+    public void testQueryPartialMatchIndexWhenPushdown() {
         NDataflowManager dsMgr = NDataflowManager.getInstance(getTestConfig(), "kylin");
 
         NDataflow df = dsMgr.getDataflow(dfName);

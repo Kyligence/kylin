@@ -29,12 +29,11 @@ import java.util.List;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.metadata.asynctask.AbstractAsyncTask;
+import org.apache.kylin.metadata.favorite.AsyncTaskManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.kyligence.kap.metadata.favorite.AsyncTaskManager;
 
 public class AsyncTaskTool {
     private static final Logger logger = LoggerFactory.getLogger("diag");

@@ -34,7 +34,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 public class TimedJsonStreamParserTest {
     private static final String jsonFilePath = "src/test/resources/message.json";
     private static final String dupKeyJsonFilePath = "src/test/resources/message_with_dup_key.json";
-    private static final String className = "io.kyligence.kap.parser.TimedJsonStreamParser";
+    private static final String className = "org.apache.kylin.parser.TimedJsonStreamParser";
 
     @Test
     public void testFlattenMessage() throws Exception {

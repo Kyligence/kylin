@@ -22,12 +22,11 @@
 
 package io.kyligence.kap.it
 
-import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
-import io.kyligence.kap.query.{QueryConstants, QueryFetcher}
-import io.netty.util.internal.ThrowableUtil
+import java.io.File
+
 import org.apache.kylin.common.KylinConfig
 import org.apache.kylin.common.persistence.transaction.UnitOfWork
-import org.apache.kylin.common.util.TestUtils
+import org.apache.kylin.common.util.{TestUtils, TimeZoneUtils}
 import org.apache.kylin.engine.spark.IndexDataWarehouse
 import org.apache.kylin.metadata.cube.model.NDataflowManager.NDataflowUpdater
 import org.apache.kylin.metadata.cube.model.{NDataflow, NDataflowManager}
@@ -39,7 +38,9 @@ import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.apache.spark.sql.execution.{KylinFileSourceScanExec, LayoutFileSourceScanExec}
 import org.apache.spark.sql.{DataFrame, SparderEnv}
 
-import java.io.File
+import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
+import io.kyligence.kap.query.{QueryConstants, QueryFetcher}
+import io.netty.util.internal.ThrowableUtil
 
 class TestQueryAndBuildFunSuite
   extends SparderBaseFunSuite
@@ -140,7 +141,7 @@ class TestQueryAndBuildFunSuite
     overwriteSystemProp("kylin.snapshot.version-ttl", "0")
     overwriteSystemProp("kylin.snapshot.max-versions", "1")
     overwriteSystemProp("kylin.engine.persist-flat-use-snapshot-enabled", "false")
-
+    TimeZoneUtils.setDefaultTimeZone(KylinConfig.getInstanceFromEnv)
     UnitOfWork.doInTransactionWithRetry(() => {
       NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv, DEFAULT_PROJECT)
         .updateDataflow(DF_NAME, Updater(RealizationStatusEnum.OFFLINE))

@@ -67,7 +67,7 @@ public class KafkaSourceHandler implements StreamingSourceHandler {
 
     private static final String DEFAULT_CONSUMER_GROUP = "sample";
     private static final String DEFAULT_TOPIC = "__consumer_offsets";
-    public static final String DEFAULT_PARSER = "io.kyligence.kap.parser.TimedJsonStreamParser";
+    public static final String DEFAULT_PARSER = "org.apache.kylin.parser.TimedJsonStreamParser";
 
     private static final String COL_PATTERN = "^(?!\\d+|_)([0-9a-zA-Z_]{1,}$)";
     private static final String UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";

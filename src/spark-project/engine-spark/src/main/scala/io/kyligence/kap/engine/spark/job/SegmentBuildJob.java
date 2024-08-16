@@ -143,9 +143,13 @@ public class SegmentBuildJob extends SegmentJob {
                 BUILD_LAYER.createStage(this, seg, buildParam, exec);
                 REFRESH_COLUMN_BYTES.createStage(this, seg, buildParam, exec);
 
-                if (KylinBuildEnv.get().buildJobInfos().getSegmentId().equals(seg.getId())) {
+                KylinBuildEnv kylinBuildEnv = KylinBuildEnv.get();
+                if (kylinBuildEnv == null) {
+                    throw new IllegalStateException("KylinBuildEnv is null");
+                }
+                if (StringUtils.equals(kylinBuildEnv.buildJobInfos().getSegmentId(), seg.getId())) {
                     log.info("Segment[{}] build failed, rebuild with new parms", seg.getId());
-                    seg.setExtraBuildOptions((KylinBuildEnv.get().buildJobInfos().getJobRetryInfosForSegmentParam()));
+                    seg.setExtraBuildOptions((kylinBuildEnv.buildJobInfos().getJobRetryInfosForSegmentParam()));
                 }
                 buildSegment(seg, exec);
 

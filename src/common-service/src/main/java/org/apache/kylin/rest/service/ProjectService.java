@@ -94,6 +94,8 @@ import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.cube.storage.ProjectStorageInfoCollector;
 import org.apache.kylin.metadata.cube.storage.StorageInfoEnum;
+import org.apache.kylin.metadata.favorite.FavoriteRuleManager;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffsetManager;
 import org.apache.kylin.metadata.model.ISourceAware;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
@@ -101,6 +103,7 @@ import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
+import org.apache.kylin.metadata.recommendation.candidate.RawRecManager;
 import org.apache.kylin.rest.aspect.Transaction;
 import org.apache.kylin.rest.config.initialize.ProjectDropListener;
 import org.apache.kylin.rest.constant.Constant;
@@ -148,9 +151,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
 import lombok.SneakyThrows;
 import lombok.val;
 

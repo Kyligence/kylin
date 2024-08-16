@@ -25,6 +25,7 @@ import java.nio.charset.Charset;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.metadata.user.NKylinUserManager;
 import org.apache.kylin.tool.constant.StringConstant;
 import org.junit.After;
 import org.junit.Assert;
@@ -34,7 +35,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 
 public class AdminUserInitCLITest extends NLocalFileMetadataTestCase {

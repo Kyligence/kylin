@@ -141,6 +141,7 @@ import org.apache.kylin.metadata.model.schema.SchemaUtil;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.recommendation.ref.OptRecManagerV2;
 import org.apache.kylin.metadata.sourceusage.SourceUsageManager;
 import org.apache.kylin.metadata.streaming.DataParserManager;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
@@ -180,7 +181,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import io.kyligence.kap.metadata.recommendation.ref.OptRecManagerV2;
 import lombok.val;
 import lombok.var;
 

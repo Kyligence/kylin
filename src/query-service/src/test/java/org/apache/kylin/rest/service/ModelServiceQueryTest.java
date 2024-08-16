@@ -31,6 +31,7 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.query.QueryTimesResponse;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.constant.ModelAttributeEnum;
@@ -55,7 +56,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.val;
 
 public class ModelServiceQueryTest extends SourceTestCase {
@@ -234,9 +234,9 @@ public class ModelServiceQueryTest extends SourceTestCase {
         Assert.assertEquals(5, modelList5.getValue().size());
         getTestConfig().setProperty("kylin.metadata.semi-automatic-mode", "true");
         ModelQueryParams request6 = new ModelQueryParams(null, null, true, project, "ADMIN", Lists.newArrayList(), "",
-                1, 6, "", true, null, Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING,
-                        ModelAttributeEnum.HYBRID),
-                null, null, false, false);
+                1, 6, "", true, null,
+                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID), null,
+                null, false, false);
         val modelList6 = modelService.getModels(request6);
         Assert.assertEquals(5, modelList6.getValue().size());
 
@@ -300,8 +300,8 @@ public class ModelServiceQueryTest extends SourceTestCase {
         String modelName2 = "model_streaming";
         ModelQueryParams liteRequest = new ModelQueryParams("4965c827-fbb4-4ea1-a744-3f341a3b030d", modelName2, true,
                 project, "ADMIN", Lists.newArrayList(), "", 0, 10, "last_modify", true, null,
-                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID),
-                null, null, true, true);
+                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID), null,
+                null, true, true);
 
         DataResult<List<NDataModel>> modelResult2 = modelService.getModels(liteRequest);
         List<NDataModel> models2 = modelResult2.getValue();
@@ -313,8 +313,8 @@ public class ModelServiceQueryTest extends SourceTestCase {
 
         ModelQueryParams request = new ModelQueryParams("4965c827-fbb4-4ea1-a744-3f341a3b030d", modelName2, true,
                 project, "ADMIN", Lists.newArrayList(), "", 0, 10, "last_modify", true, null,
-                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID),
-                null, null, true, false);
+                Arrays.asList(ModelAttributeEnum.BATCH, ModelAttributeEnum.STREAMING, ModelAttributeEnum.HYBRID), null,
+                null, true, false);
         DataResult<List<NDataModel>> modelResult3 = modelService.getModels(request);
         List<NDataModel> models3 = modelResult3.getValue();
         FusionModelResponse model3 = (FusionModelResponse) models3.get(0);

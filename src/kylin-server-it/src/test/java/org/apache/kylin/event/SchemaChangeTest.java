@@ -61,6 +61,7 @@ import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.SQLRequest;
 import org.apache.kylin.rest.service.QueryService;
@@ -87,7 +88,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;

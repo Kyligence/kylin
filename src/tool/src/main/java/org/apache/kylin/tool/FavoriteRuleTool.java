@@ -43,13 +43,12 @@ import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.favorite.FavoriteRule;
+import org.apache.kylin.metadata.favorite.FavoriteRuleManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.kyligence.kap.metadata.favorite.FavoriteRule;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
 
 public class FavoriteRuleTool extends CancelableTask {
     private static final Logger logger = LoggerFactory.getLogger("diag");

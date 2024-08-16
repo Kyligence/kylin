@@ -18,8 +18,8 @@
 
 package org.apache.kylin.rest.service.task;
 
-import static io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset.OffsetType.META;
 import static org.apache.kylin.job.factory.JobFactoryConstant.META_JOB_FACTORY;
+import static org.apache.kylin.metadata.favorite.QueryHistoryIdOffset.OffsetType.META;
 
 import java.util.List;
 import java.util.Locale;
@@ -47,6 +47,8 @@ import org.apache.kylin.job.factory.JobFactory;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.optimization.FrequencyMap;
+import org.apache.kylin.metadata.favorite.AccelerateRuleUtil;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffsetManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
@@ -58,8 +60,6 @@ import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
 import org.apache.kylin.rest.service.IUserGroupService;
 import org.apache.kylin.rest.util.SpringContext;
 
-import io.kyligence.kap.metadata.favorite.AccelerateRuleUtil;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 import lombok.Data;
 import lombok.Getter;
 import lombok.val;
@@ -94,8 +94,7 @@ public class QueryHistoryMetaUpdateScheduler {
     }
 
     public void init() {
-        taskScheduler = Executors.newScheduledThreadPool(1,
-                new NamedThreadFactory("QueryHistoryMetaUpdateWorker"));
+        taskScheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory("QueryHistoryMetaUpdateWorker"));
         taskScheduler.scheduleWithFixedDelay(this::checkAndSubmitJob, 0,
                 KylinConfig.getInstanceFromEnv().getQueryHistoryStatMetaUpdateInterval(), TimeUnit.MINUTES);
 
@@ -295,7 +294,7 @@ public class QueryHistoryMetaUpdateScheduler {
 
     }
 
-    private abstract class QueryHistoryTask implements Runnable {
+    private abstract static class QueryHistoryTask implements Runnable {
         protected final String project;
 
         public QueryHistoryTask(String project) {

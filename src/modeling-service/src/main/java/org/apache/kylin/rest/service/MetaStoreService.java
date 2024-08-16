@@ -106,6 +106,11 @@ import org.apache.kylin.metadata.model.schema.SchemaUtil;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
+import org.apache.kylin.metadata.recommendation.candidate.RawRecItem;
+import org.apache.kylin.metadata.recommendation.candidate.RawRecManager;
+import org.apache.kylin.metadata.recommendation.entity.RecItemSet;
+import org.apache.kylin.metadata.recommendation.ref.OptRecManagerV2;
 import org.apache.kylin.metadata.view.LogicalView;
 import org.apache.kylin.metadata.view.LogicalViewManager;
 import org.apache.kylin.rest.aspect.Transaction;
@@ -131,11 +136,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
-import io.kyligence.kap.metadata.recommendation.entity.RecItemSet;
-import io.kyligence.kap.metadata.recommendation.ref.OptRecManagerV2;
 import lombok.Setter;
 import lombok.val;
 import lombok.var;
@@ -330,7 +330,7 @@ public class MetaStoreService extends BasicService {
         }
         return byteArrayOutputStream;
     }
-    
+
     private void addComputedColumns(String project, List<String> modelList, ResourceStore newResourceStore)
             throws JsonProcessingException {
         ComputedColumnManager ccManager = modelService.getManager(ComputedColumnManager.class, project);

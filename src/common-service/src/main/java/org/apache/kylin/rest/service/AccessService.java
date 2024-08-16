@@ -84,6 +84,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.MetadataConstants;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.aspect.Transaction;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.AccessRequest;
@@ -124,7 +125,6 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.SneakyThrows;
 import lombok.val;
 
@@ -965,9 +965,8 @@ public class AccessService extends BasicService {
     }
 
     @Transaction
-    public void updateAccess(AccessGrantEventNotifier grantNotifier,
-                             AccessBatchGrantEventNotifier batchGrantNotifier, AccessRevokeEventNotifier revokeNotifier)
-            throws IOException {
+    public void updateAccess(AccessGrantEventNotifier grantNotifier, AccessBatchGrantEventNotifier batchGrantNotifier,
+            AccessRevokeEventNotifier revokeNotifier) throws IOException {
         if (grantNotifier != null) {
             AclEntity ae = getAclEntity(AclEntityType.PROJECT_INSTANCE, grantNotifier.getEntityId());
             grant(ae, grantNotifier.getIdentifier(), grantNotifier.getIsPrincipal(), grantNotifier.getPermission());

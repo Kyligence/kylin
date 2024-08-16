@@ -67,16 +67,16 @@ import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
+import org.apache.kylin.metadata.recommendation.candidate.RawRecItem;
+import org.apache.kylin.metadata.recommendation.entity.DimensionRecItemV2;
+import org.apache.kylin.metadata.recommendation.entity.LayoutRecItemV2;
+import org.apache.kylin.metadata.recommendation.entity.MeasureRecItemV2;
+import org.apache.kylin.metadata.recommendation.entity.RecItemSet;
+import org.apache.kylin.metadata.recommendation.entity.RecItemV2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
-import io.kyligence.kap.metadata.recommendation.entity.DimensionRecItemV2;
-import io.kyligence.kap.metadata.recommendation.entity.LayoutRecItemV2;
-import io.kyligence.kap.metadata.recommendation.entity.MeasureRecItemV2;
-import io.kyligence.kap.metadata.recommendation.entity.RecItemSet;
-import io.kyligence.kap.metadata.recommendation.entity.RecItemV2;
 import lombok.Getter;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;

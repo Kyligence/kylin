@@ -39,6 +39,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.controller.NBasicController;
 import org.apache.kylin.rest.response.AccessEntryResponse;
@@ -64,7 +65,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import io.swagger.annotations.ApiOperation;
 
 @Controller

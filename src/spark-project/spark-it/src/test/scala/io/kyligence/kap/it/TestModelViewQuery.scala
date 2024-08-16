@@ -25,6 +25,8 @@ package io.kyligence.kap.it
 import java.sql.SQLException
 import java.util.TimeZone
 
+import org.apache.kylin.common.KylinConfig
+import org.apache.kylin.common.util.TimeZoneUtils
 import org.apache.kylin.engine.spark.utils.LogEx
 import org.apache.kylin.metadata.realization.NoRealizationFoundException
 import org.apache.spark.sql._
@@ -73,7 +75,7 @@ class TestModelViewQuery
     overwriteSystemProp("kylin.query.pushdown.runner-class-name", "")
     overwriteSystemProp("kylin.query.pushdown-enabled", "false")
     overwriteSystemProp("kylin.snapshot.parallel-build-enabled", "true")
-
+    TimeZoneUtils.setDefaultTimeZone(KylinConfig.getInstanceFromEnv)
     build()
   }
 

@@ -41,6 +41,9 @@ import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
+import org.apache.kylin.metadata.recommendation.candidate.RawRecItem;
+import org.apache.kylin.metadata.recommendation.entity.CCRecItemV2;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -53,9 +56,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
-import io.kyligence.kap.metadata.recommendation.entity.CCRecItemV2;
 import lombok.val;
 import net.jcip.annotations.NotThreadSafe;
 
@@ -175,7 +175,8 @@ public class RecCandidateToolTest extends NLocalFileMetadataTestCase {
         jdbcRawRecStore.deleteAll();
         assertEquals(0, jdbcRawRecStore.queryAll().size());
         tool = new RecCandidateTool();
-        tool.execute(new String[] { "-restore", "-dir", file.getAbsolutePath(), "-table", "test_opt_rec_candidate_v2" });
+        tool.execute(
+                new String[] { "-restore", "-dir", file.getAbsolutePath(), "-table", "test_opt_rec_candidate_v2" });
         assertEquals(3, jdbcRawRecStore.queryAll().size());
     }
 
@@ -197,7 +198,8 @@ public class RecCandidateToolTest extends NLocalFileMetadataTestCase {
         jdbcRawRecStore.deleteAll();
         assertEquals(0, jdbcRawRecStore.queryAll().size());
         tool = new RecCandidateTool();
-        tool.execute(new String[] { "-restore", "-dir", file.getAbsolutePath(), "-table", "test_opt_rec_candidate_v2" });
+        tool.execute(
+                new String[] { "-restore", "-dir", file.getAbsolutePath(), "-table", "test_opt_rec_candidate_v2" });
         assertEquals(3, jdbcRawRecStore.queryAll().size());
     }
 

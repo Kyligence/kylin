@@ -48,6 +48,8 @@ import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.MetadataConstants;
+import org.apache.kylin.metadata.user.ManagedUser;
+import org.apache.kylin.metadata.user.NKylinUserManager;
 import org.apache.kylin.metadata.usergroup.NUserGroupManager;
 import org.apache.kylin.metadata.usergroup.UserGroup;
 import org.apache.kylin.rest.aspect.Transaction;
@@ -61,8 +63,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 
 @Component("nUserGroupService")

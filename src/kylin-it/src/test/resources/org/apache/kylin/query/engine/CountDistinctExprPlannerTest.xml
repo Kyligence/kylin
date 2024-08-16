@@ -56,6 +56,22 @@ OlapToEnumerableConverter
           OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
 ]]>
         </Resource>
+        <Resource name="query00-if.planBefore">
+            <![CDATA[
+OlapToEnumerableConverter
+  OlapAggregateRel(group-set=[[]], groups=[null], EXPR$0=[COUNT(DISTINCT $0)], ctx=[])
+    OlapProjectRel($f0=[IF(=($2, 2012-10-30), $8, null:NULL)], ctx=[])
+      OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+]]>
+        </Resource>
+        <Resource name="query00-if.planAfter">
+            <![CDATA[
+OlapToEnumerableConverter
+  OlapAggregateRel(group-set=[[]], groups=[null], EXPR$0=[COUNT(DISTINCT $0)], ctx=[])
+    OlapProjectRel($f0=[IF(=($2, 2012-10-30), $8, null:NULL)], ctx=[])
+      OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+]]>
+        </Resource>
         <Resource name="query01.planBefore">
             <![CDATA[
 OlapToEnumerableConverter
@@ -416,12 +432,12 @@ OlapToEnumerableConverter
   OlapLimitRel(ctx=[], fetch=[500])
     OlapProjectRel(EXPR$0=[/($0, $1)], ctx=[])
       OlapAggregateRel(group-set=[[]], groups=[null], agg#0=[COUNT(DISTINCT $0)], agg#1=[COUNT(DISTINCT $1)], ctx=[])
-        OlapProjectRel($f0=[CASE(=($2, 'BRAZIL   3'), $0, null:INTEGER)], LO_CUSTKEY=[$0], ctx=[])
-          OlapJoinRel(condition=[=($0, $1)], joinType=[inner], ctx=[])
-            OlapProjectRel(LO_CUSTKEY=[$2], ctx=[])
-              OlapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
-            OlapProjectRel(C_CUSTKEY=[$0], C_CITY=[$3], ctx=[])
-              OlapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
+        OlapProjectRel($f0=[CASE(=($4, 'BRAZIL   3'), $1, null:DECIMAL(19, 4))], ITEM_COUNT=[$2], ctx=[])
+          OlapJoinRel(condition=[=($0, $3)], joinType=[inner], ctx=[])
+            OlapProjectRel(ORDER_ID=[$1], PRICE=[$8], ITEM_COUNT=[$9], ctx=[])
+              OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+            OlapProjectRel(ORDER_ID=[$0], TEST_EXTENDED_COLUMN=[$4], ctx=[])
+              OlapTableScan(table=[[DEFAULT, TEST_ORDER]], ctx=[], fields=[[0, 1, 2, 3, 4]])
 ]]>
         </Resource>
         <Resource name="query14.planAfter">
@@ -432,21 +448,21 @@ OlapToEnumerableConverter
       OlapProjectRel(AGG$0=[$1], $f0=[$0], ctx=[])
         OlapJoinRel(condition=[true], joinType=[inner], ctx=[])
           OlapAggregateRel(group-set=[[]], groups=[null], agg#0=[COUNT(DISTINCT $1)], ctx=[])
-            OlapProjectRel($f0=[0], LO_CUSTKEY=[$0], ctx=[])
-              OlapJoinRel(condition=[=($0, $1)], joinType=[inner], ctx=[])
-                OlapProjectRel(LO_CUSTKEY=[$2], ctx=[])
-                  OlapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
-                OlapProjectRel(C_CUSTKEY=[$0], C_CITY=[$3], ctx=[])
-                  OlapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
+            OlapProjectRel($f0=[0:DECIMAL(19, 4)], ITEM_COUNT=[$2], ctx=[])
+              OlapJoinRel(condition=[=($0, $3)], joinType=[inner], ctx=[])
+                OlapProjectRel(ORDER_ID=[$1], PRICE=[$8], ITEM_COUNT=[$9], ctx=[])
+                  OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+                OlapProjectRel(ORDER_ID=[$0], TEST_EXTENDED_COLUMN=[$4], ctx=[])
+                  OlapTableScan(table=[[DEFAULT, TEST_ORDER]], ctx=[], fields=[[0, 1, 2, 3, 4]])
           OlapAggregateRel(group-set=[[]], groups=[null], AGG$0=[BITMAP_COUNT($0)], ctx=[])
-            OlapProjectRel($f0=[CASE(=($0, 'BRAZIL   3'), $1, null:INTEGER)], ctx=[])
+            OlapProjectRel($f0=[CASE(=($0, 'BRAZIL   3'), $1, null:DECIMAL(19, 4))], ctx=[])
               OlapAggregateRel(group-set=[[0]], groups=[null], COUNT_DISTINCT_CASE$0$0=[BITMAP_UUID($1)], ctx=[])
-                OlapProjectRel(C_CITY=[$2], LO_CUSTKEY=[$0], $f2=[0:BIGINT], ctx=[])
-                  OlapJoinRel(condition=[=($0, $1)], joinType=[inner], ctx=[])
-                    OlapProjectRel(LO_CUSTKEY=[$2], ctx=[])
-                      OlapTableScan(table=[[SSB, LINEORDER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]])
-                    OlapProjectRel(C_CUSTKEY=[$0], C_CITY=[$3], ctx=[])
-                      OlapTableScan(table=[[SSB, CUSTOMER]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7]])
+                OlapProjectRel(TEST_EXTENDED_COLUMN=[$4], PRICE=[$1], $f2=[0:BIGINT], ctx=[])
+                  OlapJoinRel(condition=[=($0, $3)], joinType=[inner], ctx=[])
+                    OlapProjectRel(ORDER_ID=[$1], PRICE=[$8], ITEM_COUNT=[$9], ctx=[])
+                      OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+                    OlapProjectRel(ORDER_ID=[$0], TEST_EXTENDED_COLUMN=[$4], ctx=[])
+                      OlapTableScan(table=[[DEFAULT, TEST_ORDER]], ctx=[], fields=[[0, 1, 2, 3, 4]])
 ]]>
         </Resource>
     </TestCase>

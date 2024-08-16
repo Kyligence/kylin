@@ -27,7 +27,7 @@ public class DataParserInfoTest {
     public void testCreate() {
         {
             String project = "streaming_test";
-            String defaultClassName = "io.kyligence.kap.parser.TimedJsonStreamParser";
+            String defaultClassName = "org.apache.kylin.parser.TimedJsonStreamParser";
             String jarName = "default";
             DataParserInfo dataParserInfo = new DataParserInfo(project, defaultClassName, jarName);
             dataParserInfo.getStreamingTables().add("table1");
@@ -35,9 +35,9 @@ public class DataParserInfoTest {
             Assert.assertEquals(defaultClassName, dataParserInfo.getClassName());
             Assert.assertEquals(jarName, dataParserInfo.getJarName());
             Assert.assertNotNull(dataParserInfo.getStreamingTables().get(0));
-            Assert.assertEquals("streaming_test.io.kyligence.kap.parser.TimedJsonStreamParser",
+            Assert.assertEquals("streaming_test.org.apache.kylin.parser.TimedJsonStreamParser",
                     dataParserInfo.resourceName());
-            Assert.assertEquals("DATA_PARSER/streaming_test.io.kyligence.kap.parser.TimedJsonStreamParser",
+            Assert.assertEquals("DATA_PARSER/streaming_test.org.apache.kylin.parser.TimedJsonStreamParser",
                     dataParserInfo.getResourcePath());
         }
 

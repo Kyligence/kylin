@@ -29,6 +29,7 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.junit.rule.ClearKEPropertiesRule;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.controller.NUserController;
 import org.apache.kylin.rest.request.CachedUserUpdateRequest;
@@ -62,7 +63,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.accept.ContentNegotiationManager;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 
 public class OpenUserControllerTest extends NLocalFileMetadataTestCase {

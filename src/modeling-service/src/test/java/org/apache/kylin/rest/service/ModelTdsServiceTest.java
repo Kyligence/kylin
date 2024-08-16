@@ -50,6 +50,7 @@ import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.model.TblColRef;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.ModelRequest;
 import org.apache.kylin.rest.util.AclEvaluate;
@@ -70,7 +71,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 

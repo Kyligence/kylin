@@ -29,6 +29,7 @@ import java.util.TreeSet;
 
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.controller.NBasicController;
 import org.apache.kylin.rest.response.EnvelopeResponse;
@@ -43,7 +44,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import io.swagger.annotations.ApiOperation;
 
 @Controller

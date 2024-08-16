@@ -386,6 +386,8 @@
         <module>src/datasource-sdk</module>
         <module>src/streaming-sdk</module>
         <module>src/modeling-service</module>
+        <module>src/rec-service</module>
+        <module>src/rec-server</module>
         <module>src/query-service</module>
         <module>src/datasource-service</module>
         <module>src/data-loading-service</module>
@@ -409,6 +411,8 @@
         <module>src/query-booter</module>
         <module>src/common-booter</module>
         <module>src/metadata-feign-api</module>
+        <module>src/rec-booter</module>
+        <module>src/rec-feign-api</module>
     </modules>
 
     <dependencyManagement>
@@ -602,6 +606,26 @@
             <dependency>
                 <groupId>org.apache.kylin</groupId>
                 <artifactId>kylin-core-metrics</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kylin</groupId>
+                <artifactId>kylin-rec-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kylin</groupId>
+                <artifactId>kylin-rec-booter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kylin</groupId>
+                <artifactId>kylin-rec-feign-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kylin</groupId>
+                <artifactId>kylin-rec-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

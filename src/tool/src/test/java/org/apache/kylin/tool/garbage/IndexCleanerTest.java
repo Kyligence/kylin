@@ -31,12 +31,12 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.recommendation.candidate.RawRecManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
 import lombok.var;
 
 public class IndexCleanerTest extends NLocalFileMetadataTestCase {

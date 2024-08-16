@@ -830,6 +830,7 @@ public class FileSystemMetadataStore extends MetadataStore {
         } else {
             try {
                 if (!lock.tryLock(1, TimeUnit.MINUTES)) {
+                    log.debug("LOCK: failed to lock for " + lockPath);
                     throw new LockTimeoutException(lockPath);
                 }
             } catch (InterruptedException e) {

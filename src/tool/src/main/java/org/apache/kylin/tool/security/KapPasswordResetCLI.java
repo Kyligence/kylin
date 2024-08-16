@@ -24,6 +24,7 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.Unsafe;
+import org.apache.kylin.metadata.user.NKylinUserManager;
 import org.apache.kylin.tool.MetadataTool;
 import org.apache.kylin.tool.constant.StringConstant;
 import org.apache.kylin.util.PasswordEncodeFactory;
@@ -31,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 
 public class KapPasswordResetCLI {

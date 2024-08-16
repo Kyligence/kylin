@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.controller.v2.NUserControllerV2;
 import org.apache.kylin.rest.response.DataResult;
@@ -56,8 +57,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
-
-import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class NUserControllerV2Test extends NLocalFileMetadataTestCase {
 

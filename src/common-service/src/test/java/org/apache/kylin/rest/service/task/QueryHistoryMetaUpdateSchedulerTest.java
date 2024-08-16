@@ -18,7 +18,7 @@
 
 package org.apache.kylin.rest.service.task;
 
-import static io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset.OffsetType.META;
+import static org.apache.kylin.metadata.favorite.QueryHistoryIdOffset.OffsetType.META;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -33,9 +33,12 @@ import org.apache.kylin.common.util.TimeUtil;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.junit.TimeZoneTestRunner;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
+import org.apache.kylin.metadata.favorite.AccelerateRuleUtil;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffsetManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.metadata.query.QueryHistory;
@@ -64,8 +67,6 @@ import org.springframework.security.acls.domain.PermissionFactory;
 import org.springframework.security.acls.model.PermissionGrantingStrategy;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.favorite.AccelerateRuleUtil;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 import lombok.val;
 import lombok.var;
 
@@ -98,6 +99,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         PowerMockito.mockStatic(UserGroupInformation.class);
         UserGroupInformation userGroupInformation = Mockito.mock(UserGroupInformation.class);
         PowerMockito.when(UserGroupInformation.getCurrentUser()).thenReturn(userGroupInformation);
+        JobContextUtil.cleanUp();
         createTestMetadata();
         ApplicationContext applicationContext = PowerMockito.mock(ApplicationContext.class);
         PowerMockito.when(SpringContext.getApplicationContext()).thenReturn(applicationContext);
@@ -286,7 +288,7 @@ public class QueryHistoryMetaUpdateSchedulerTest extends NLocalFileMetadataTestC
         {
             var streamingDataflow = manager.getDataflow("b05034a8-c037-416b-aa26-9e6b4a41ee40");
             Assert.assertEquals(1, countDateFrequency(streamingDataflow, LAYOUT3));
-            
+
             ReflectionTestUtils.invokeMethod(metaUpdateRunner, "updateStatMeta", streamingModelQueryHistory());
             streamingDataflow = manager.getDataflow("b05034a8-c037-416b-aa26-9e6b4a41ee40");
             Assert.assertEquals(2, countDateFrequency(streamingDataflow, LAYOUT3));

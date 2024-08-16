@@ -39,6 +39,7 @@ import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.metadata.model.ComputedColumnDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.query.KylinTestBase;
 import org.apache.kylin.rest.request.PrepareSqlRequest;
 import org.apache.kylin.rest.service.UserGrantedAuthority;
@@ -58,7 +59,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.jayway.jsonpath.JsonPath;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 
 public class NQueryControllerTest extends AbstractMVCIntegrationTestCase {
@@ -71,6 +71,30 @@ public class NQueryControllerTest extends AbstractMVCIntegrationTestCase {
         super.setUp();
         userService.createUser(new ManagedUser("ADMIN", "KYLIN", false,
                 Collections.singletonList(new UserGrantedAuthority("ROLE_ADMIN"))));
+    }
+
+    @Test
+    public void testGetDashboardStatistics() throws Exception {
+        String project = "gc_test";
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/projects/statistics").contentType(MediaType.APPLICATION_JSON)
+                .param("project", project).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    public void testIsAccelerating() throws Exception {
+        String project = "gc_test";
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/projects/acceleration").contentType(MediaType.APPLICATION_JSON)
+                .param("project", project).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    public void testAccelerate() throws Exception {
+        String project = "gc_test";
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/projects/acceleration").contentType(MediaType.APPLICATION_JSON)
+                .param("project", project).accept(MediaType.parseMediaType(HTTP_VND_APACHE_KYLIN_JSON)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test

@@ -46,7 +46,7 @@ public class DataParserManager {
     private CachedCrudAssist<DataParserInfo> crud;
 
     private static final String DEFAULT_JAR_NAME = "default";
-    private static final String DEFAULT_PARSER_NAME = "io.kyligence.kap.parser.TimedJsonStreamParser";
+    private static final String DEFAULT_PARSER_NAME = "org.apache.kylin.parser.TimedJsonStreamParser";
 
     public static DataParserManager getInstance(KylinConfig kylinConfig, String project) {
         return kylinConfig.getManager(project, DataParserManager.class);

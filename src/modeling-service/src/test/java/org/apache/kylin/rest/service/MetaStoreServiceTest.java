@@ -83,6 +83,8 @@ import org.apache.kylin.metadata.model.schema.SchemaChangeCheckResult;
 import org.apache.kylin.metadata.model.schema.SchemaNodeType;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
+import org.apache.kylin.metadata.recommendation.candidate.RawRecItem;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.ModelConfigRequest;
 import org.apache.kylin.rest.request.ModelImportRequest;
@@ -110,8 +112,6 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecItem;
 import lombok.val;
 import lombok.var;
 
@@ -293,7 +293,8 @@ public class MetaStoreServiceTest extends ServiceTestBase {
         Assert.assertTrue(ArrayUtils.isNotEmpty(byteArrayOutputStream.toByteArray()));
         val rawResourceMap = getRawResourceFromZipFile(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
 
-        String recPath = String.format(Locale.ROOT, MODEL_REC_PATH, PROJECT_DEFAULT, "1af229fb-bb2c-42c5-9663-2bd92b50a861");
+        String recPath = String.format(Locale.ROOT, MODEL_REC_PATH, PROJECT_DEFAULT,
+                "1af229fb-bb2c-42c5-9663-2bd92b50a861");
         RawResource rawResource = rawResourceMap.get(recPath);
         Assert.assertNotNull(rawResource);
 
@@ -640,7 +641,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testCheckModelMetadataModelMultiplePartitionColumnsChanged() throws IOException {
         val file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/conflict_multiple_partition_project/target_project_model_metadata_2020_12_02_17_27_25_DF9679B582150A5597CB7D4683FE0A0B.zip");
+                "src/test/resources/ut_meta/schema_utils/conflict_multiple_partition_project/target_project_model_metadata_2020_12_02_17_27_25_DF9679B582150A5597CB7D4683FE0A0B.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         val metadataCheckResponse = metaStoreService.checkModelMetadata("original_project", multipartFile, null);
@@ -658,7 +659,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testCheckModelMetadataModelMultiplePartition() throws IOException {
         val file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_different_multiple_partition_project/target_project_model_metadata_2020_12_02_20_50_10_5F5B27368F5F4EA718B4297DE5F261E9.zip");
+                "src/test/resources/ut_meta/schema_utils/model_different_multiple_partition_project/target_project_model_metadata_2020_12_02_20_50_10_5F5B27368F5F4EA718B4297DE5F261E9.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         val metadataCheckResponse = metaStoreService.checkModelMetadata("original_project", multipartFile, null);
@@ -682,7 +683,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testCheckModelMetadataModelEmptyMultiplePartitionValues() throws IOException {
         val file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_empty_multiple_partition_value/model_empty_multiple_partition_value_2021_01_18_11_10_11_91E72B2EF5A6D8F818FA5F55009A9E16.zip");
+                "src/test/resources/ut_meta/schema_utils/model_empty_multiple_partition_value/model_empty_multiple_partition_value_2021_01_18_11_10_11_91E72B2EF5A6D8F818FA5F55009A9E16.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         val metadataCheckResponse = metaStoreService.checkModelMetadata("original_project", multipartFile, null);
@@ -697,7 +698,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testCheckModelMetadataModelDifferentMultiplePartitionColumnWithEmptyValue() throws IOException {
         val file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_different_multiple_column_with_empty_partition_value/model_different_multiple_column_with_empty_partition_value_2021_01_18_11_30_10_C21557AD200F8B6EF17DEE5F5AD35DF9.zip");
+                "src/test/resources/ut_meta/schema_utils/model_different_multiple_column_with_empty_partition_value/model_different_multiple_column_with_empty_partition_value_2021_01_18_11_30_10_C21557AD200F8B6EF17DEE5F5AD35DF9.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         val metadataCheckResponse = metaStoreService.checkModelMetadata("original_project", multipartFile, null);
@@ -719,7 +720,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testCheckModelMetadataModelMultiplePartitionWithDifferentPartitionValueOrder() throws IOException {
         val file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_different_multiple_partition_with_different_partition_value_order_project/target_project_model_metadata_2020_12_02_20_50_10_04A9FB74DE74189500A908F56DBCF933.zip");
+                "src/test/resources/ut_meta/schema_utils/model_different_multiple_partition_with_different_partition_value_order_project/target_project_model_metadata_2020_12_02_20_50_10_04A9FB74DE74189500A908F56DBCF933.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         val metadataCheckResponse = metaStoreService.checkModelMetadata("original_project", multipartFile, null);
@@ -734,7 +735,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testCheckModelMetadataModelMultiplePartitionWithPartitionValueReduce() throws IOException {
         val file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_different_multiple_partition_with_partition_value_reduce_project/target_project_model_metadata_2020_12_02_20_50_10_3A88090D810EFB0FDAC1FFAEB80D9933.zip");
+                "src/test/resources/ut_meta/schema_utils/model_different_multiple_partition_with_partition_value_reduce_project/target_project_model_metadata_2020_12_02_20_50_10_3A88090D810EFB0FDAC1FFAEB80D9933.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         val metadataCheckResponse = metaStoreService.checkModelMetadata("original_project", multipartFile, null);
@@ -948,7 +949,6 @@ public class MetaStoreServiceTest extends ServiceTestBase {
 
         request.setModels(models);
 
-
         UnitOfWork.doInTransactionWithRetry(
                 () -> NProjectManager.getInstance(getTestConfig())
                         .updateProject("original_project", copyForWrite -> copyForWrite
@@ -1123,7 +1123,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     public void testImportModelMetadataWithMultiplePartitionValue() throws Exception {
         KylinConfig testConfig = getTestConfig();
         File file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_different_multiple_partition_with_partition_value_reduce_project/target_project_model_metadata_2020_12_02_20_50_10_3A88090D810EFB0FDAC1FFAEB80D9933.zip");
+                "src/test/resources/ut_meta/schema_utils/model_different_multiple_partition_with_partition_value_reduce_project/target_project_model_metadata_2020_12_02_20_50_10_3A88090D810EFB0FDAC1FFAEB80D9933.zip");
         var multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         NDataModelManager dataModelManager = NDataModelManager.getInstance(testConfig, "original_project");
@@ -1179,7 +1179,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     public void testImportModelMetadataWithoutMultiplePartitionValue() throws Exception {
         KylinConfig testConfig = getTestConfig();
         File file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_empty_multiple_partition_value/model_empty_multiple_partition_value_2021_01_18_11_10_11_91E72B2EF5A6D8F818FA5F55009A9E16.zip");
+                "src/test/resources/ut_meta/schema_utils/model_empty_multiple_partition_value/model_empty_multiple_partition_value_2021_01_18_11_10_11_91E72B2EF5A6D8F818FA5F55009A9E16.zip");
         var multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         NDataModelManager dataModelManager = NDataModelManager.getInstance(testConfig, "original_project");
@@ -1428,7 +1428,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testReduceColumn() throws Exception {
         val file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_reduce_column_table/model_reduce_column_model_metadata_2020_11_14_17_11_19_7E0BD7CB6DB0FF36846254464AA167C2.zip");
+                "src/test/resources/ut_meta/schema_utils/model_reduce_column_table/model_reduce_column_model_metadata_2020_11_14_17_11_19_7E0BD7CB6DB0FF36846254464AA167C2.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         val metadataCheckResponse = metaStoreService.checkModelMetadata("original_project", multipartFile, null);
@@ -1447,7 +1447,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     public void testMissTable() throws IOException {
         String table = "SSB.CUSTOMER_NEW";
         val file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/model_missing_table_update/model_table_missing_update_model_metadata_2020_11_16_02_37_33_35ACA82A376E4D5418B96444DA5CC657.zip");
+                "src/test/resources/ut_meta/schema_utils/model_missing_table_update/model_table_missing_update_model_metadata_2020_11_16_02_37_33_35ACA82A376E4D5418B96444DA5CC657.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
         val checkResult = metaStoreService.checkModelMetadata("original_project", multipartFile, null);
@@ -1491,7 +1491,7 @@ public class MetaStoreServiceTest extends ServiceTestBase {
     @Test
     public void testGetModelMetadataProjectName() throws IOException {
         File file = new File(
-                "../../../kyligence/src/core-metadata-extensions/src/test/resources/ut_meta/schema_utils/conflict_dim_table_project/conflict_dim_table_project_model_metadata_2020_11_14_16_20_06_2241FB33CC2A33D4033214E73BEFBCE6.zip");
+                "src/test/resources/ut_meta/schema_utils/conflict_dim_table_project/conflict_dim_table_project_model_metadata_2020_11_14_16_20_06_2241FB33CC2A33D4033214E73BEFBCE6.zip");
         val multipartFile = new MockMultipartFile(file.getName(), file.getName(), null,
                 Files.newInputStream(file.toPath()));
 

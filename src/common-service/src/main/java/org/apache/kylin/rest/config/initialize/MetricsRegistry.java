@@ -61,6 +61,8 @@ import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.user.ManagedUser;
+import org.apache.kylin.metadata.user.NKylinUserManager;
 import org.apache.kylin.query.util.LoadCounter;
 import org.apache.kylin.query.util.LoadDesc;
 import org.apache.kylin.rest.service.ProjectService;
@@ -72,8 +74,6 @@ import org.slf4j.LoggerFactory;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;

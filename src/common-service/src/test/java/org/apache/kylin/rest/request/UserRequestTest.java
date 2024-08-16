@@ -18,14 +18,13 @@
 
 package org.apache.kylin.rest.request;
 
-import static io.kyligence.kap.metadata.user.ManagedUser.DISABLED_ROLE;
+import static org.apache.kylin.metadata.user.ManagedUser.DISABLED_ROLE;
 import static org.apache.kylin.rest.constant.Constant.GROUP_ALL_USERS;
 
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.junit.Assert;
 import org.junit.Test;
-
-import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class UserRequestTest {
 

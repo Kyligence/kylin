@@ -55,6 +55,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 import lombok.extern.slf4j.Slf4j;
+import scala.Option;
 
 @Slf4j
 public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase implements Serializable {
@@ -117,12 +118,24 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
                 "org.apache.spark.sql.execution.datasources.v2.kyinternal.KyinternalCatalog");
 
         GlutenTestConfig.configGluten(sparkConf);
-
+        cleanupAnyExistingSession();
         ss = SparkSession.builder().withExtensions(ext -> {
             ext.injectOptimizerRule(ss -> new ConvertInnerJoinToSemiJoin());
             return null;
         }).config(sparkConf).getOrCreate();
         SparderEnv.setSparkSession(ss);
+    }
+
+    static void cleanupAnyExistingSession() {
+        Option<SparkSession> session = SparkSession.getActiveSession();
+        if (!session.isDefined()) {
+            session = SparkSession.getDefaultSession();
+        }
+        if (session.isDefined()) {
+            session.get().stop();
+            SparkSession.clearActiveSession();
+            SparkSession.clearDefaultSession();
+        }
     }
 
     @AfterClass
@@ -140,6 +153,7 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
 
     @Before
     public void setUp() throws Exception {
+        JobContextUtil.cleanUp();
         init();
         overwriteSystemProp("kylin.build.resource.consecutive-idle-state-num", "1");
         overwriteSystemProp("kylin.build.resource.state-check-interval-seconds", "1s");

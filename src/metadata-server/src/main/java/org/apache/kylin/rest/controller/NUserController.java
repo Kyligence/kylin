@@ -57,6 +57,7 @@ import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.MetadataConstants;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.config.initialize.AfterMetadataReadyEvent;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.exception.UnauthorizedException;
@@ -104,7 +105,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import io.swagger.annotations.ApiOperation;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -495,8 +495,7 @@ public class NUserController extends NBasicController implements ApplicationList
         completeAuthorities(existingUser);
         userService.updateUser(existingUser);
         if (MapUtils.isNotEmpty(sessionRepository.findByPrincipalName(existingUser.getUsername()))) {
-            sessionRegistry.getAllSessions(existingUser, false)
-                    .forEach(SessionInformation::expireNow);
+            sessionRegistry.getAllSessions(existingUser, false).forEach(SessionInformation::expireNow);
         }
         // update authentication
         if (StringUtils.equals(getPrincipal(), user.getUsername())) {

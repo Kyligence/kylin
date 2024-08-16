@@ -206,7 +206,7 @@ public class SparkDDLTest extends NLocalFileMetadataTestCase {
   private void testLogicalView() throws Exception {
     SparkSession spark = SparderEnv.getSparkSession();
     // Logical View DDL
-    assertRuntimeExeption(() -> spark.sql(SELECT_LOGICAL_VIEW_SQL), "");
+    assertRuntimeException(() -> spark.sql(SELECT_LOGICAL_VIEW_SQL), "");
     ddlService.executeSQL(new ViewRequest("ssb", CREATE_LOGICAL_VIEW_SQL1, LOGICAL_VIEW));
     ddlService.executeSQL(new ViewRequest("ssb", CREATE_LOGICAL_VIEW_SQL2, LOGICAL_VIEW));
     ddlService.executeSQL(new ViewRequest("demo", CREATE_LOGICAL_VIEW_SQL4, LOGICAL_VIEW));

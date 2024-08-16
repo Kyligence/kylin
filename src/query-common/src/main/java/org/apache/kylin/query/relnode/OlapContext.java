@@ -19,6 +19,7 @@
 package org.apache.kylin.query.relnode;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -73,6 +74,8 @@ public class OlapContext {
 
     private static final Logger logger = LoggerFactory.getLogger(OlapContext.class);
     public static final String PRM_ACCEPT_PARTIAL_RESULT = "AcceptPartialResult";
+    public static final HashSet<String> UNSUPPORTED_FUNCTION_IN_LOOKUP = new HashSet<>(
+            Collections.singleton(FunctionDesc.FUNC_INTERSECT_COUNT));
 
     private final int id;
     private final StorageContext storageContext;
@@ -416,7 +419,10 @@ public class OlapContext {
 
     public NLookupCandidate.Type deduceLookupTableType() {
         NLookupCandidate.Type type = NLookupCandidate.Type.NONE;
-        if (getSQLDigest().getJoinDescs().isEmpty()) {
+        boolean noUnsupportedAgg = getSQLDigest().getAggregations().stream()
+                .noneMatch(fun -> UNSUPPORTED_FUNCTION_IN_LOOKUP.contains(fun.getExpression()));
+        boolean noCc = getSQLDigest().getAllColumns().stream().noneMatch(col -> col.getColumnDesc().isComputedColumn());
+        if (noUnsupportedAgg && noCc && getSQLDigest().getJoinDescs().isEmpty()) {
             KylinConfig olapConfig = olapSchema.getConfig();
             String project = olapSchema.getProject();
             String factTable = getSQLDigest().getFactTable();

@@ -34,6 +34,7 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.AclTCRRevokeEventNotifier;
 import org.apache.kylin.common.scheduler.EventBusFactory;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.metadata.usergroup.UserGroup;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.UpdateGroupRequest;
@@ -59,7 +60,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import io.swagger.annotations.ApiOperation;
 import lombok.val;
 

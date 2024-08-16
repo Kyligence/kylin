@@ -33,10 +33,10 @@ import org.apache.kylin.common.util.ExecutableApplication;
 import org.apache.kylin.common.util.OptionBuilder;
 import org.apache.kylin.common.util.OptionsHelper;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
+import org.apache.kylin.metadata.recommendation.util.RawRecStoreUtil;
 import org.apache.kylin.tool.util.MetadataUtil;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.metadata.recommendation.util.RawRecStoreUtil;
 import lombok.extern.slf4j.Slf4j;
 
 /**
