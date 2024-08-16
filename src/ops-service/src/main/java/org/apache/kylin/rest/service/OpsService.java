@@ -48,6 +48,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.helper.MetadataToolHelper;
 import org.apache.kylin.metadata.asynctask.AbstractAsyncTask;
 import org.apache.kylin.metadata.asynctask.MetadataRestoreTask;
+import org.apache.kylin.metadata.favorite.AsyncTaskManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.rest.reponse.MetadataBackupResponse;
@@ -60,7 +61,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import io.kyligence.kap.metadata.favorite.AsyncTaskManager;
 import lombok.Getter;
 import lombok.Setter;
 

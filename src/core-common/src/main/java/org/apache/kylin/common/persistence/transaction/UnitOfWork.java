@@ -44,7 +44,6 @@ import org.apache.kylin.common.persistence.event.StartUnit;
 import org.apache.kylin.common.persistence.lock.DeadLockException;
 import org.apache.kylin.common.persistence.lock.LockInterruptException;
 import org.apache.kylin.common.persistence.lock.TransactionLock;
-import org.apache.kylin.common.persistence.metadata.FileSystemMetadataStore;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
 import org.apache.kylin.common.scheduler.EventBusFactory;
 import org.apache.kylin.common.util.Pair;
@@ -110,10 +109,6 @@ public class UnitOfWork {
             if (params.isRetryMoreTimeForDeadLockException()) {
                 KylinConfig config = KylinConfig.getInstanceFromEnv();
                 params.setRetryUntil(System.currentTimeMillis() + config.getMaxSecondsForDeadLockRetry() * 1000);
-            }
-            if (ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv())
-                    .getMetadataStore() instanceof FileSystemMetadataStore) {
-                params.setMaxRetry(1);
             }
             while (retry++ < params.getMaxRetry()) {
 

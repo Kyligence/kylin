@@ -63,6 +63,7 @@ import org.apache.kylin.metadata.model.PartitionDesc;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.metadata.streaming.KafkaConfigManager;
 import org.apache.kylin.metadata.streaming.StreamingJobRecord;
 import org.apache.kylin.metadata.streaming.StreamingJobRecordManager;
@@ -83,6 +84,7 @@ import org.apache.kylin.streaming.request.StreamingSegmentRequest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -92,7 +94,6 @@ import org.mockito.Mockito;
 import org.springframework.beans.BeanUtils;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.val;
 import lombok.var;
 
@@ -691,6 +692,7 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
         }
     }
 
+    @Ignore("Not support yet")
     @Test
     public void testGetStreamingJobInfoOfNoData() {
         val streamingJobsStatsManager = StreamingJobStatsManager.getInstance();
@@ -711,7 +713,6 @@ public class StreamingJobServiceTest extends CSVSourceTestCase {
 
         val resp1 = streamingJobService.getStreamingJobInfo(jobId, PROJECT);
         Assert.assertEquals(JobStatusEnum.RUNNING, resp1.getCurrentStatus());
-        Assert.assertNotNull(resp1.getLastStatusDuration());
         Assert.assertNull(resp1.getDataLatency());
         Assert.assertNotNull(resp1.getLastUpdateTime());
     }

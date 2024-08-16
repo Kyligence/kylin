@@ -43,8 +43,8 @@ public class JobMailUtilTest extends NLocalFileMetadataTestCase {
 
     @Before
     public void setup() throws Exception {
-        createTestMetadata();
         JobContextUtil.cleanUp();
+        createTestMetadata();
         JobContextUtil.getJobInfoDao(getTestConfig());
     }
 

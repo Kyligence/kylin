@@ -155,6 +155,8 @@ import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.query.QueryTimesResponse;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.constant.Constant;
@@ -206,8 +208,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;
@@ -1552,8 +1552,8 @@ public class ModelServiceTest extends SourceTestCase {
         update2.setToAddOrUpdateLayouts(layouts.toArray(new NDataLayout[0]));
         dfManager.updateDataflow(update2);
         // mark a layout tobedelete
-        indexManager.updateIndexPlan(modelId, copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId,
-                Sets.newHashSet(tobeDeleteLayoutId)));
+        indexManager.updateIndexPlan(modelId,
+                copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId, Sets.newHashSet(tobeDeleteLayoutId)));
         Assert.assertFalse(
                 NDataflowManager.getInstance(getTestConfig(), project).getDataflow(modelId).getSegments().isEmpty());
         modelService.purgeModel(modelId, project);
@@ -1595,8 +1595,8 @@ public class ModelServiceTest extends SourceTestCase {
         long tobeDeleteLayoutId = 20000000001L;
 
         // mark a layout tobedelete
-        indexManager.updateIndexPlan(modelId, copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId,
-                Sets.newHashSet(tobeDeleteLayoutId)));
+        indexManager.updateIndexPlan(modelId,
+                copyForWrite -> copyForWrite.markWhiteIndexToBeDelete(modelId, Sets.newHashSet(tobeDeleteLayoutId)));
         Assert.assertFalse(indexManager.getIndexPlan(modelId).getToBeDeletedIndexes().isEmpty());
 
         //remove tobedelete layout from seg1

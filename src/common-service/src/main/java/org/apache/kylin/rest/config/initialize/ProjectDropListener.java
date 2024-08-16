@@ -29,15 +29,15 @@ import org.apache.kylin.common.metrics.MetricsGroup;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffsetManager;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
+import org.apache.kylin.metadata.recommendation.candidate.RawRecManager;
 import org.apache.kylin.rest.cluster.ClusterManager;
 import org.apache.kylin.rest.response.ServerInfoResponse;
 import org.apache.kylin.streaming.manager.StreamingJobManager;
 import org.apache.kylin.tool.restclient.RestClient;
 import org.springframework.http.HttpHeaders;
 
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
-import io.kyligence.kap.metadata.recommendation.candidate.RawRecManager;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 

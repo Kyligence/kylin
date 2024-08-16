@@ -18,7 +18,7 @@
 
 package org.apache.kylin.rest.service;
 
-import static io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset.OffsetType.ACCELERATE;
+import static org.apache.kylin.metadata.favorite.QueryHistoryIdOffset.OffsetType.ACCELERATE;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -45,6 +45,10 @@ import org.apache.kylin.job.mapper.JobInfoMapper;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.job.util.JobInfoUtil;
 import org.apache.kylin.metadata.asynctask.MetadataRestoreTask.MetadataRestoreStatus;
+import org.apache.kylin.metadata.favorite.FavoriteRule;
+import org.apache.kylin.metadata.favorite.FavoriteRuleManager;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffset;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffsetManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.rest.MockClusterManager;
 import org.apache.kylin.rest.cluster.ClusterManager;
@@ -63,11 +67,6 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-
-import io.kyligence.kap.metadata.favorite.FavoriteRule;
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ ClusterManager.class, JobInfoTool.class, MetadataTool.class, QueryHistoryOffsetTool.class })

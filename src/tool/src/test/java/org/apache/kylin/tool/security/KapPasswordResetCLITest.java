@@ -30,6 +30,8 @@ import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.metadata.jdbc.AuditLogRowMapper;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.LogOutputTestCase;
+import org.apache.kylin.metadata.user.ManagedUser;
+import org.apache.kylin.metadata.user.NKylinUserManager;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.tool.constant.StringConstant;
 import org.junit.After;
@@ -41,8 +43,6 @@ import org.junit.rules.TemporaryFolder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
-import io.kyligence.kap.metadata.user.NKylinUserManager;
 import lombok.val;
 
 public class KapPasswordResetCLITest extends LogOutputTestCase {

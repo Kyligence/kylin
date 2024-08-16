@@ -115,6 +115,7 @@ public class QueryHisStoreUtil {
                         String.format(Locale.ROOT, properties.getProperty(CREATE_QUERY_HISTORY_TABLE), qhTableName)
                                 .getBytes(DEFAULT_CHARSET)),
                         DEFAULT_CHARSET));
+                log.info("Succeed to create query history table: {}", qhTableName);
             }
         }
         // create index for query history table

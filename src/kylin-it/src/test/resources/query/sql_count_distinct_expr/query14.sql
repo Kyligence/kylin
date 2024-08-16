@@ -15,5 +15,5 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-SELECT count(distinct case when c.C_CITY='BRAZIL   3' then l.LO_CUSTKEY else null  end)/count(distinct l.LO_CUSTKEY)
-FROM SSB.LINEORDER l JOIN SSB.CUSTOMER c ON l.LO_CUSTKEY= c.C_CUSTKEY limit 500
+SELECT count(distinct case when c.TEST_EXTENDED_COLUMN='BRAZIL   3' then l.price else null  end)/count(distinct l.item_count)
+FROM TEST_KYLIN_FACT l JOIN TEST_ORDER c ON l.ORDER_ID= c.ORDER_ID limit 500

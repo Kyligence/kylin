@@ -31,13 +31,12 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
+import org.apache.kylin.metadata.favorite.FavoriteRule.AbstractCondition;
 import org.mybatis.dynamic.sql.SqlColumn;
 import org.mybatis.dynamic.sql.SqlTable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-
-import io.kyligence.kap.metadata.favorite.FavoriteRule.AbstractCondition;
 
 public class FavoriteRuleTable extends SqlTable {
     public final SqlColumn<Integer> id = column("id", JDBCType.INTEGER);

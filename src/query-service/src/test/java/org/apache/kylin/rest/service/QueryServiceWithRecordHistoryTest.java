@@ -46,6 +46,7 @@ import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.QueryMetricsContext;
 import org.apache.kylin.metadata.realization.IRealization;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.engine.QueryRoutingEngine;
 import org.apache.kylin.query.engine.data.QueryResult;
@@ -80,7 +81,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 
 /**

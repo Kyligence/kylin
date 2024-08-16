@@ -77,6 +77,7 @@ public class ComputedColumnDesc extends RootPersistentEntity implements Serializ
     @JsonProperty
     private String expression;
     @JsonProperty
+    @EqualsAndHashCode.Exclude
     private String innerExpression; // QueryUtil massaged expression
     @JsonProperty
     private String datatype;

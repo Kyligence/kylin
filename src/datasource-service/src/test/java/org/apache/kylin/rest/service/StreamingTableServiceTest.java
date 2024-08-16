@@ -36,6 +36,7 @@ import org.apache.kylin.metadata.model.ColumnDesc;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.metadata.streaming.KafkaConfig;
 import org.apache.kylin.metadata.streaming.KafkaConfigManager;
 import org.apache.kylin.rest.constant.Constant;
@@ -56,7 +57,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.val;
 
 public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
@@ -138,8 +138,9 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
 
         val config = getTestConfig();
         try {
-            val tableDescList = tableService.getTableDesc(PROJECT, true, "P_LINEORDER_STR", database, false,
-                    Collections.emptyList(), 10).getFirst();
+            val tableDescList = tableService
+                    .getTableDesc(PROJECT, true, "P_LINEORDER_STR", database, false, Collections.emptyList(), 10)
+                    .getFirst();
             Assert.assertEquals(1, tableDescList.size());
             val tableDesc = tableDescList.get(0);
             val tableExtDesc = tableService.getOrCreateTableExt(PROJECT, tableDesc);
@@ -156,8 +157,8 @@ public class StreamingTableServiceTest extends NLocalFileMetadataTestCase {
         val database = "DEFAULT";
 
         try {
-            val tableDescList = tableService.getTableDesc(PROJECT, true, "", database, true,
-                    Collections.emptyList(), 10).getFirst();
+            val tableDescList = tableService
+                    .getTableDesc(PROJECT, true, "", database, true, Collections.emptyList(), 10).getFirst();
             Assert.assertEquals(2, tableDescList.size());
             val tableDesc = tableDescList.get(0);
             val tableExtDesc = tableService.getOrCreateTableExt(PROJECT, tableDesc);

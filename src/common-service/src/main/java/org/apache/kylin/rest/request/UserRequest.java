@@ -18,8 +18,8 @@
 
 package org.apache.kylin.rest.request;
 
-import static io.kyligence.kap.metadata.user.ManagedUser.DEFAULT_GROUP;
-import static io.kyligence.kap.metadata.user.ManagedUser.DISABLED_ROLE;
+import static org.apache.kylin.metadata.user.ManagedUser.DEFAULT_GROUP;
+import static org.apache.kylin.metadata.user.ManagedUser.DISABLED_ROLE;
 
 import java.util.List;
 import java.util.Objects;
@@ -30,12 +30,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.util.ArgsTypeJsonDeserializer;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.insensitive.UserInsensitiveRequest;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.Data;
 
 @SuppressWarnings("serial")

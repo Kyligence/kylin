@@ -63,6 +63,8 @@ import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffset;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffsetManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -86,8 +88,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 import lombok.val;
 
 @Component("queryHistoryService")
@@ -172,9 +172,9 @@ public class QueryHistoryService extends BasicService implements AsyncTaskQueryH
             return ImmutableMap.of("total_scan_count", 0L, "source_result_count", 0L, "total_scan_bytes", 0L);
         }
 
-        return ImmutableMap.of("total_scan_count", queryHistories.get(0).getTotalScanCount(),
-                "source_result_count", queryHistories.get(0).getQueryHistoryInfo().getSourceResultCount(),
-                "total_scan_bytes", queryHistories.get(0).getTotalScanBytes());
+        return ImmutableMap.of("total_scan_count", queryHistories.get(0).getTotalScanCount(), "source_result_count",
+                queryHistories.get(0).getQueryHistoryInfo().getSourceResultCount(), "total_scan_bytes",
+                queryHistories.get(0).getTotalScanBytes());
     }
 
     private void processRequestParams(QueryHistoryRequest request) {
@@ -324,8 +324,8 @@ public class QueryHistoryService extends BasicService implements AsyncTaskQueryH
     public long getQueryCountToAccelerate(String project) {
         Preconditions.checkArgument(StringUtils.isNotEmpty(project));
         aclEvaluate.checkProjectReadPermission(project);
-        QueryHistoryIdOffset queryHistoryIdOffset = QueryHistoryIdOffsetManager
-                .getInstance(project).get(QueryHistoryIdOffset.OffsetType.ACCELERATE);
+        QueryHistoryIdOffset queryHistoryIdOffset = QueryHistoryIdOffsetManager.getInstance(project)
+                .get(QueryHistoryIdOffset.OffsetType.ACCELERATE);
         long idOffset = queryHistoryIdOffset.getOffset();
         QueryHistoryDAO queryHistoryDao = getQueryHistoryDao();
         return queryHistoryDao.getQueryHistoryCountBeyondOffset(idOffset, project);

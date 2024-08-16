@@ -25,10 +25,12 @@ import java.util.LinkedList;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.junit.rule.TransactionExceptedException;
+import org.apache.kylin.metadata.favorite.FavoriteRuleManager;
 import org.apache.kylin.metadata.model.MultiPartitionDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.UpdateImpact;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.request.ModelRequest;
 import org.apache.kylin.rest.util.AclEvaluate;
@@ -43,9 +45,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import io.kyligence.kap.metadata.favorite.FavoriteRuleManager;
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 
 public class ModelServiceBrokenRepairTest extends SourceTestCase {
 

@@ -59,6 +59,7 @@ import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.query.pushdown.PushDownRunnerSparkImpl;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.GarbageCleanUpConfigRequest;
@@ -98,7 +99,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;
@@ -565,7 +565,6 @@ public class ProjectServiceTest extends NLocalFileMetadataTestCase {
             Assert.assertTrue(e instanceof KylinException);
             Assert.assertTrue(e.getMessage().contains("must be a positive number"));
         }
-
 
     }
 

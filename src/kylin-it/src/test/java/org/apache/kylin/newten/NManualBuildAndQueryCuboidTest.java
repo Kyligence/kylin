@@ -90,7 +90,6 @@ public class NManualBuildAndQueryCuboidTest extends NManualBuildAndQueryTest {
     @Test
     @GlutenDisabled("incorrect answer, null and empty string are different, need to fix it.")
     public void testBasics() throws Exception {
-        final KylinConfig config = KylinConfig.getInstanceFromEnv();
         buildCubes();
         compareCuboidParquetWithSparkSql("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
         compareCuboidParquetWithSparkSql("741ca86a-1f13-46da-a59f-95fb68615e3a");
@@ -115,8 +114,8 @@ public class NManualBuildAndQueryCuboidTest extends NManualBuildAndQueryTest {
             Set<Integer> rowKeys = cuboid.getLayout().getOrderedDimensions().keySet();
             Dataset<Row> layoutDataset = StorageFactory
                     .createEngineAdapter(cuboid.getLayout(), NSparkCubingEngine.NSparkCubingStorage.class)
-                    .getFrom(storageStore.getStoragePath(cuboid.getSegDetails().getDataSegment(),
-                            cuboid.getLayoutId()), ss);
+                    .getFrom(storageStore.getStoragePath(cuboid.getSegDetails().getDataSegment(), cuboid.getLayoutId()),
+                            ss);
             layoutDataset = layoutDataset.select(NSparkCubingUtil.getColumns(rowKeys, chooseMeas(cuboid)))
                     .sort(NSparkCubingUtil.getColumns(rowKeys));
             logger.debug("Query cuboid ------------ " + cuboid.getLayoutId());

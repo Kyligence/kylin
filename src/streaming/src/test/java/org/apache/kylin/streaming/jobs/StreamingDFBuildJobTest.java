@@ -80,7 +80,7 @@ public class StreamingDFBuildJobTest extends StreamingTestCase {
         val source = createSparkKafkaSource(config);
         source.enableMemoryStream(false);
         source.post(StreamingTestConstant.KAP_SSB_STREAMING_JSON_FILE());
-        final val mgr = NDataflowManager.getInstance(config, PROJECT);
+        NDataflowManager mgr = NDataflowManager.getInstance(config, PROJECT);
         var df = mgr.getDataflow(DATAFLOW_ID);
 
         val update = new NDataflowUpdate(df.getUuid());
@@ -141,9 +141,7 @@ public class StreamingDFBuildJobTest extends StreamingTestCase {
             Assert.assertTrue(newDataflow.getSegment(seg1.getId()).getStorageFileCount() > oldFileCount);
             Assert.assertTrue(newDataflow.getSegment(seg1.getId()).getStorageBytesSize() > oldByteSize);
 
-            dfMgr.updateDataflow(batchBuildJob.dataflowId(), updater -> {
-                updater.setStatus(RealizationStatusEnum.OFFLINE);
-            });
+            dfMgr.updateDataflow(batchBuildJob.dataflowId(), cp -> cp.setStatus(RealizationStatusEnum.OFFLINE));
             Mockito.when(builder.createRestSupport()).thenReturn(new RestSupport(config) {
                 public RestResponse execute(HttpRequestBase httpReqBase, Object param) {
                     dfMgr.updateDataflow(batchBuildJob.dataflowId(), updater -> {

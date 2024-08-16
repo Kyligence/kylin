@@ -38,6 +38,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.ExecutableManager;
+import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.project.NProjectManager;
@@ -90,6 +91,7 @@ public class RouteServiceTest {
 
     @Before
     public void before() throws Exception {
+        JobContextUtil.cleanUp();
         Field field = ReflectionUtils.findField(RouteService.class, "restTemplate", RestTemplate.class);
         if (field == null) {
             throw new IllegalArgumentException(
@@ -158,9 +160,7 @@ public class RouteServiceTest {
             asyncFutures.put(futureTask, startTime.getMillis());
         }
         routeService.cancelTimeoutAsyncTask(kylinConfig, asyncFutures, dateTime.getMillis(), "test");
-        asyncFutures.keySet().forEach(future -> {
-            Assert.assertTrue(future.isDone());
-        });
+        asyncFutures.keySet().forEach(future -> Assert.assertTrue(future.isDone()));
     }
 
     @Test

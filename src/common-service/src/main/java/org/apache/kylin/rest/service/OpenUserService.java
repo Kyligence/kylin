@@ -23,9 +23,8 @@ import java.util.Locale;
 
 import org.apache.kylin.common.annotation.ThirdPartyDependencies;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import io.kyligence.kap.metadata.user.ManagedUser;
 
 @ThirdPartyDependencies({ @ThirdPartyDependencies.ThirdPartyDependent(repository = "static-user-manager", classes = {
         "StaticUserService" }) })

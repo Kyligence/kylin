@@ -43,7 +43,7 @@ public class DataParserManagerTest extends NLocalFileMetadataTestCase {
 
     private DataParserManager manager;
     private static final String project = "streaming_test";
-    private static final String defaultClassName = "io.kyligence.kap.parser.TimedJsonStreamParser";
+    private static final String defaultClassName = "org.apache.kylin.parser.TimedJsonStreamParser";
     private static final String jarName = "default";
     private static final String test = "test";
     private static final String usingTable = "DEFAULT.SSB_STREAMING";

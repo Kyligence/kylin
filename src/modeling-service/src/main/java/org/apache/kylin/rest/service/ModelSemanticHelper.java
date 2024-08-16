@@ -100,6 +100,7 @@ import org.apache.kylin.metadata.model.util.scd2.Scd2Simplifier;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinDesc;
 import org.apache.kylin.metadata.model.util.scd2.SimplifiedJoinTableDesc;
 import org.apache.kylin.metadata.project.NProjectManager;
+import org.apache.kylin.metadata.recommendation.ref.OptRecManagerV2;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.relnode.OlapContext;
 import org.apache.kylin.query.util.PushDownUtil;
@@ -112,7 +113,6 @@ import org.apache.kylin.rest.util.SCD2SimplificationConvertUtil;
 import org.apache.kylin.source.SourceFactory;
 import org.springframework.stereotype.Service;
 
-import io.kyligence.kap.metadata.recommendation.ref.OptRecManagerV2;
 import lombok.val;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;
@@ -162,8 +162,8 @@ public class ModelSemanticHelper extends BasicService {
             allTablesMap.put(factTableIdentity, extendTable);
         }
         dataModel.setUuid(modelRequest.getUuid() != null ? modelRequest.getUuid() : RandomUtil.randomUUIDStr());
-        dataModel.setDescription(modelRequest.getDescription() != null ? modelRequest.getDescription()
-                : StringUtils.EMPTY);
+        dataModel.setDescription(
+                modelRequest.getDescription() != null ? modelRequest.getDescription() : StringUtils.EMPTY);
         dataModel.setProject(modelRequest.getProject());
         dataModel.setAllMeasures(convertMeasure(simplifiedMeasures));
         dataModel.setAllNamedColumns(convertNamedColumns(modelRequest.getProject(), dataModel, modelRequest));

@@ -514,7 +514,7 @@ public class StreamingJobLauncherTest extends NLocalFileMetadataTestCase {
         val mockup = new MockupSparkLauncher();
         ReflectionTestUtils.setField(launcher, "launcher", mockup);
         val mockLaunch = PowerMockito.spy(launcher);
-        PowerMockito.when(mockLaunch, "getParserName").thenReturn("io.kyligence.kap.parser.TimedJsonStreamParser2");
+        PowerMockito.when(mockLaunch, "getParserName").thenReturn("org.apache.kylin.parser.TimedJsonStreamParser2");
         DataParserInfo dataParserInfo = new DataParserInfo(PROJECT, DEFAULT_PARSER_NAME, "default");
         PowerMockito.when(mockLaunch, "getDataParser", Mockito.anyString()).thenReturn(dataParserInfo);
         PowerMockito.doReturn("default").when(mockLaunch, "getParserJarPath", dataParserInfo);

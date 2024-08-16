@@ -45,7 +45,6 @@ import org.mybatis.dynamic.sql.update.render.UpdateStatementProvider;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
-import io.kyligence.kap.metadata.favorite.FavoriteRule;
 import lombok.Getter;
 import lombok.var;
 import lombok.extern.slf4j.Slf4j;

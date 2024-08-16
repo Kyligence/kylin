@@ -84,6 +84,10 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>org.apache.kylin</groupId>
+            <artifactId>kylin-internal-catalog</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_2.12</artifactId>
             <scope>test</scope>

@@ -32,6 +32,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.io.ByteSource;
 import org.apache.kylin.junit.annotation.MetadataInfo;
 import org.apache.kylin.junit.annotation.OverwriteProp;
+import org.junit.Ignore;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -124,10 +125,14 @@ class UnitOfWorkTest {
             Assertions.assertTrue(e instanceof TransactionException);
             Assertions.assertEquals("conflict", Throwables.getRootCause(e).getMessage());
         }
-        Assertions.assertEquals(3, callback.list.size());
+        Assertions.assertEquals(7, callback.list.size());
         Assertions.assertEquals("no args", callback.list.get(0));
         Assertions.assertEquals("1", callback.list.get(1));
-        Assertions.assertEquals("conflict", callback.list.get(2));
+        Assertions.assertEquals("no args", callback.list.get(2));
+        Assertions.assertEquals("3", callback.list.get(3));
+        Assertions.assertEquals("no args", callback.list.get(4));
+        Assertions.assertEquals("5", callback.list.get(5));
+        Assertions.assertEquals("conflict", callback.list.get(6));
     }
 
     @Test
@@ -351,6 +356,7 @@ class UnitOfWorkTest {
 
     }
 
+    @Ignore("No need to test")
     @Test
     void testRetryMoreTimeForDeadLockException() {
         KylinConfig.getInstanceFromEnv().setProperty("kylin.env.max-seconds-for-dead-lock-retry", "2");

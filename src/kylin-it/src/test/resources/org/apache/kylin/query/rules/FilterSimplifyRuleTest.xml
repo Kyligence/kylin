@@ -99,5 +99,21 @@ OlapToEnumerableConverter
               OlapTableScan(table=[[DEFAULT, TEST_ORDER]], ctx=[], fields=[[0, 1, 2, 3, 4]])
 ]]>
         </Resource>
+        <Resource name="query03.planBefore">
+            <![CDATA[
+OlapToEnumerableConverter
+  OlapFilterRel(condition=[=($3, 'Auction')], ctx=[])
+    OlapProjectRel(TRANS_ID=[$0], ORDER_ID=[$1], CAL_DT=[$2], LSTG_FORMAT_NAME=[$3], LEAF_CATEG_ID=[$4], LSTG_SITE_ID=[$5], SLR_SEGMENT_CD=[$6], SELLER_ID=[$7], PRICE=[$8], ITEM_COUNT=[$9], TEST_COUNT_DISTINCT_BITMAP=[$10], IS_EFFECTUAL=[$11], ctx=[])
+      OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+]]>
+        </Resource>
+        <Resource name="query03.planAfter">
+            <![CDATA[
+OlapToEnumerableConverter
+  OlapFilterRel(condition=[=($3, 'Auction')], ctx=[])
+    OlapProjectRel(TRANS_ID=[$0], ORDER_ID=[$1], CAL_DT=[$2], LSTG_FORMAT_NAME=[$3], LEAF_CATEG_ID=[$4], LSTG_SITE_ID=[$5], SLR_SEGMENT_CD=[$6], SELLER_ID=[$7], PRICE=[$8], ITEM_COUNT=[$9], TEST_COUNT_DISTINCT_BITMAP=[$10], IS_EFFECTUAL=[$11], ctx=[])
+      OlapTableScan(table=[[DEFAULT, TEST_KYLIN_FACT]], ctx=[], fields=[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]])
+]]>
+        </Resource>
     </TestCase>
 </Root>

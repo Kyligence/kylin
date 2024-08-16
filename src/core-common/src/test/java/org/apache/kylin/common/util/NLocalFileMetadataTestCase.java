@@ -19,7 +19,6 @@
 package org.apache.kylin.common.util;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -55,12 +54,8 @@ public class NLocalFileMetadataTestCase extends AbstractTestCase {
         overwriteSystemProp("needCheckCC", "true");
     }
 
-    public static File getTempMetadataDirectory() {
-        return tempMetadataDirectory;
-    }
-
     protected String[] getOverlay() {
-        return new String[]{};
+        return new String[] {};
     }
 
     public static ConcurrentHashMap<Class, ConcurrentHashMap<String, Object>> getInstanceByProjectFromSingleton()
@@ -156,7 +151,7 @@ public class NLocalFileMetadataTestCase extends AbstractTestCase {
         val kylinHomePath = new File(getTestConfig().getMetadataUrl().toString()).getParentFile().getAbsolutePath();
         overwriteSystemProp("KYLIN_HOME", kylinHomePath);
         val jobJar = org.apache.kylin.common.util.FileUtils.findFile(
-                new File(kylinHomePath, "../../../assembly/target/").getAbsolutePath(), "ke-assembly(.*?)\\.jar");
+                new File(kylinHomePath, "../../../assembly/target/").getAbsolutePath(), "kylin-assembly(.*?)\\.jar");
         getTestConfig().setProperty("kylin.engine.spark.job-jar", jobJar == null ? "" : jobJar.getAbsolutePath());
         getTestConfig().setProperty("kylin.query.security.acl-tcr-enabled", "false");
         getTestConfig().setProperty("kylin.streaming.enabled", "true");
@@ -234,17 +229,6 @@ public class NLocalFileMetadataTestCase extends AbstractTestCase {
 
     }
 
-    public static String getLocalWorkingDirectory() {
-        String dir = KylinConfig.getInstanceFromEnv().getHdfsWorkingDirectory();
-        if (dir.startsWith("file://"))
-            dir = dir.substring("file://".length());
-        try {
-            return new File(dir).getCanonicalPath();
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
     protected ResourceStore getStore() {
         return ResourceStore.getKylinMetaStore(KylinConfig.getInstanceFromEnv());
     }
@@ -275,7 +259,7 @@ public class NLocalFileMetadataTestCase extends AbstractTestCase {
         }
     }
 
-    public void assertRuntimeExeption(UserFunction f, String msg) {
+    public void assertRuntimeException(UserFunction f, String msg) {
         try {
             f.process();
             Assert.fail();
@@ -285,7 +269,7 @@ public class NLocalFileMetadataTestCase extends AbstractTestCase {
             }
         }
     }
-    
+
     // provide beans without @RunWith(SpringRunner.class) or @RunWith(SpringJUnit4ClassRunner.class)
     public void prepareBeans(Object... beans) {
         ApplicationContext applicationContext = Mockito.spy(ApplicationContext.class);

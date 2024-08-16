@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -90,7 +91,8 @@ public class NTableMetadataManager {
     // ============================================================================
 
     private void initSrcTable() {
-        this.srcTableCrud = new CachedCrudAssist<TableDesc>(getStore(), MetadataType.TABLE_INFO, project, TableDesc.class) {
+        this.srcTableCrud = new CachedCrudAssist<TableDesc>(getStore(), MetadataType.TABLE_INFO, project,
+                TableDesc.class) {
             @Override
             protected TableDesc initEntityAfterReload(TableDesc t, String resourceName) {
                 t.init(project);
@@ -204,7 +206,7 @@ public class NTableMetadataManager {
         copy.init(project);
         srcTableCrud.save(copy);
     }
-    
+
     public void createTableDesc(TableDesc srcTable) {
         srcTable.init(project);
         TableDesc copy = copyForWrite(srcTable);
@@ -265,6 +267,19 @@ public class NTableMetadataManager {
 
     public TableExtDesc getTableExtIfExists(TableDesc t) {
         return srcExtCrud.get(TableDesc.generateResourceName(project, t.getIdentity()));
+    }
+
+    public boolean isHighCardinalityDim(TblColRef colRef) {
+        String tableIdentity = colRef.getTableRef().getTableIdentity();
+        TableDesc tableDesc = getTableDesc(tableIdentity);
+        TableExtDesc tableExtIfExists = getOrCreateTableExt(tableDesc);
+        TableExtDesc.ColumnStats columnStats = tableExtIfExists.getColumnStatsByName(colRef.getName());
+
+        if (Objects.isNull(columnStats)) {
+            return false;
+        }
+
+        return (double) (columnStats.getCardinality()) / tableExtIfExists.getTotalRows() > 0.2;
     }
 
     // for test mostly

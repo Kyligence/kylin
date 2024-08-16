@@ -29,6 +29,7 @@ import java.util.Locale;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.GlobalAccessRequest;
 import org.apache.kylin.rest.request.GlobalBatchAccessRequest;
@@ -53,7 +54,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.SneakyThrows;
 
 public class UserAclServiceTest extends ServiceTestBase {

@@ -245,7 +245,8 @@ public class DefaultExecutable extends AbstractExecutable implements ChainedExec
             String output = null;
             String shortErrMsg = null;
             if (state == ExecutableState.ERROR) {
-                logger.warn("[UNEXPECTED_THINGS_HAPPENED] Unexpected ERROR state discovered here!!!");
+                logger.warn("[UNEXPECTED_THINGS_HAPPENED] Unexpected ERROR state discovered here!!! {}",
+                        result.getErrorMsg());
                 info = result.getExtraInfo();
                 output = result.getErrorMsg();
                 hook = this::onExecuteErrorHook;

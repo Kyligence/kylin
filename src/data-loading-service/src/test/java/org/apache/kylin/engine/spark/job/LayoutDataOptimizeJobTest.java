@@ -18,8 +18,6 @@
 
 package org.apache.kylin.engine.spark.job;
 
-import static org.awaitility.Awaitility.await;
-
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -34,7 +32,7 @@ import org.apache.kylin.job.common.ExecutableUtil;
 import org.apache.kylin.job.execution.ExecutableManager;
 import org.apache.kylin.job.execution.ExecutableState;
 import org.apache.kylin.job.execution.JobTypeEnum;
-import org.apache.kylin.job.handler.LayoutDataOptimizeJobHandler;
+import org.apache.kylin.job.handler.LayoutDataOptimizeJobHandler.LayoutDataOptimizeJobParam;
 import org.apache.kylin.job.model.JobParam;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.metadata.cube.cuboid.NCuboidLayoutChooser;
@@ -69,24 +67,23 @@ public class LayoutDataOptimizeJobTest extends NLocalWithSparkSessionTest {
         return "storage_v3_test";
     }
 
+    @Override
     @Before
-    public void setup() throws Exception {
+    public void setUp() throws Exception {
+        super.setUp();
         ss.sparkContext().setLogLevel("ERROR");
         overwriteSystemProp("kylin.engine.persist-flattable-threshold", "0");
         overwriteSystemProp("kylin.engine.persist-flatview", "true");
 
         config = getTestConfig();
-
-        JobContextUtil.cleanUp();
         JobContextUtil.getJobContext(config);
     }
 
+    @Override
     @After
-    public void after() throws Exception {
-        await().untilAsserted(() -> Assert
-                .assertFalse(JobContextUtil.getJobContext(getTestConfig()).getJobScheduler().hasRunningJob()));
+    public void tearDown() throws Exception {
         JobContextUtil.cleanUp();
-        cleanupTestMetadata();
+        super.tearDown();
     }
 
     @Test
@@ -139,9 +136,7 @@ public class LayoutDataOptimizeJobTest extends NLocalWithSparkSessionTest {
         jobParam.setJobId(jobId);
         jobParam.setModel(df.getId());
         ExecutableUtil.computeParams(jobParam);
-        LayoutDataOptimizeJobHandler.LayoutDataOptimizeJobParam
-                params = new LayoutDataOptimizeJobHandler.LayoutDataOptimizeJobParam(
-                jobParam);
+        LayoutDataOptimizeJobParam params = new LayoutDataOptimizeJobParam(jobParam);
         NSparkLayoutDataOptimizeJob job = NSparkLayoutDataOptimizeJob.create(params);
         execMgr.addJob(job);
         // wait job done

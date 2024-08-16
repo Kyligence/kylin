@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-
 package org.apache.kylin.server;
 
 import org.apache.curator.test.TestingServer;
 import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
+import org.apache.kylin.rest.service.ServiceTestBase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -41,19 +40,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
-
 @RunWith(SpringRunner.class)
-@ContextConfiguration(classes = IntegrationConfig.class)
-@WebAppConfiguration
+@ContextConfiguration(classes = ServiceTestBase.SpringConfig.class)
+@WebAppConfiguration(value = "../common-service/src/test/resources")
 @EnableWebMvc
 @WithMockUser(username = "ADMIN", roles = "ADMIN")
 @AutoConfigureMockMvc
-@TestPropertySource(properties = {"spring.cloud.nacos.discovery.enabled = false"})
+@TestPropertySource(properties = { "spring.cloud.nacos.discovery.enabled = false" })
 @ActiveProfiles({ "testing", "test" })
 public abstract class AbstractMVCIntegrationTestCase extends NLocalFileMetadataTestCase {
-
-    protected Logger logger = LoggerFactory.getLogger(getClass());
 
     @Autowired
     private WebApplicationContext wac;

@@ -19,10 +19,10 @@
 package org.apache.kylin.metadata.asynctask;
 
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.metadata.favorite.AsyncTaskManager;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.kyligence.kap.metadata.favorite.AsyncTaskManager;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

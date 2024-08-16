@@ -109,12 +109,21 @@ public class MetadataTestUtils {
         }, project);
     }
 
-    public static void toSemiAutoProjectMode(String project) {
+    public static void toSemiAutoMode(String project) {
         updateProjectConfig(project, "kylin.metadata.semi-automatic-mode", "true");
+    }
+
+    public static void toPureExpertMode(String project) {
+        updateProjectConfig(project, "kylin.metadata.semi-automatic-mode", "false");
     }
 
     public static KylinConfig turnOnExcludedTable(KylinConfig config) {
         config.setProperty("kylin.metadata.table-exclusion-enabled", "true");
+        return config;
+    }
+
+    public static KylinConfig turnOffExcludedTable(KylinConfig config) {
+        config.setProperty("kylin.metadata.table-exclusion-enabled", "false");
         return config;
     }
 
@@ -153,8 +162,7 @@ public class MetadataTestUtils {
         }, project);
     }
 
-    public static void createTable(String project, Class<?> clazz, String srcTableDir, String tableIdentity)
-            throws IOException {
+    public static void createTable(String project, Class<?> clazz, String srcTableDir, String tableIdentity) {
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             String tableJsonPath = concatTablePath(srcTableDir, tableIdentity);
             String fullPath = Objects.requireNonNull(clazz.getResource(tableJsonPath)).getPath();
@@ -172,8 +180,7 @@ public class MetadataTestUtils {
      * --- srcTableDir is `/data/tableDesc`
      * --- tableIdentity is `SSB.CUSTOMER`
      */
-    public static void replaceTable(String project, Class<?> clazz, String srcTableDir, String tableIdentity)
-            throws IOException {
+    public static void replaceTable(String project, Class<?> clazz, String srcTableDir, String tableIdentity) {
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
             String tableJsonPath = concatTablePath(srcTableDir, tableIdentity);
             String fullPath = Objects.requireNonNull(clazz.getResource(tableJsonPath)).getPath();

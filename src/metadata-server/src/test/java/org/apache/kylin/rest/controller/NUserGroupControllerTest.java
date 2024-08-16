@@ -29,6 +29,7 @@ import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.junit.annotation.MetadataInfo;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.metadata.usergroup.UserGroup;
 import org.apache.kylin.rest.request.UpdateGroupRequest;
 import org.apache.kylin.rest.request.UserGroupRequest;
@@ -62,7 +63,6 @@ import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 
 @MetadataInfo

@@ -50,6 +50,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Sets;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.AccessRequest;
 import org.apache.kylin.rest.response.AccessEntryResponse;
@@ -95,7 +96,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.kyligence.kap.metadata.user.ManagedUser;
 import lombok.val;
 
 @RunWith(PowerMockRunner.class)

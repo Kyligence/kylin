@@ -18,10 +18,9 @@
 
 package org.apache.kylin.rest.security;
 
+import org.apache.kylin.metadata.user.ManagedUser;
 import org.junit.Assert;
 import org.junit.Test;
-
-import io.kyligence.kap.metadata.user.ManagedUser;
 
 public class UserLockRuleUtilTest {
 

@@ -90,6 +90,7 @@ import org.apache.kylin.metadata.model.util.ExpandableMeasureUtil;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.query.QueryTimesResponse;
 import org.apache.kylin.metadata.realization.RealizationStatusEnum;
+import org.apache.kylin.metadata.recommendation.candidate.JdbcRawRecStore;
 import org.apache.kylin.query.util.PushDownUtil;
 import org.apache.kylin.rest.config.initialize.ModelBrokenListener;
 import org.apache.kylin.rest.request.ModelRequest;
@@ -121,7 +122,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import io.kyligence.kap.engine.spark.job.ExecutableAddCuboidHandler;
 import io.kyligence.kap.engine.spark.job.ExecutableAddSegmentHandler;
 import io.kyligence.kap.engine.spark.job.NSparkCubingJob;
-import io.kyligence.kap.metadata.recommendation.candidate.JdbcRawRecStore;
 import lombok.val;
 import lombok.var;
 

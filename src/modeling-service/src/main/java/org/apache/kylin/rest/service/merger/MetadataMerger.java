@@ -19,6 +19,7 @@
 package org.apache.kylin.rest.service.merger;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,6 +50,7 @@ import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.cube.model.PartitionStatusEnum;
 import org.apache.kylin.metadata.cube.model.SegmentPartition;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
+import org.apache.kylin.metadata.model.TableRef;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.jetbrains.annotations.TestOnly;
 import org.slf4j.Logger;
@@ -94,43 +96,45 @@ public abstract class MetadataMerger {
         if (!isSnapshotManualManagementEnabled(remoteResourceStore)) {
             val remoteTblMgr = NTableMetadataManager.getInstance(remoteResourceStore.getConfig(), getProject());
             val localTblMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
-            dataflow.getModel().getLookupTables().forEach(remoteTableRef -> {
-                val tableName = remoteTableRef.getTableIdentity();
-                val localTbDesc = localTblMgr.getTableDesc(tableName);
-                val remoteTbDesc = remoteTblMgr.getTableDesc(tableName);
-                if (remoteTbDesc == null) {
-                    return;
-                }
+            dataflow.getModel().getLookupTables().stream().sorted(Comparator.comparing(TableRef::getTableIdentity))
+                    .forEach(remoteTableRef -> {
+                        val tableName = remoteTableRef.getTableIdentity();
+                        val localTbDesc = localTblMgr.getTableDesc(tableName);
+                        val remoteTbDesc = remoteTblMgr.getTableDesc(tableName);
+                        if (remoteTbDesc == null) {
+                            return;
+                        }
 
-                val copy = localTblMgr.copyForWrite(localTbDesc);
-                copy.setLastSnapshotPath(remoteTbDesc.getLastSnapshotPath());
-                copy.setLastSnapshotSize(remoteTbDesc.getLastSnapshotSize());
-                copy.setSnapshotLastModified(remoteTbDesc.getSnapshotLastModified());
-                copy.setSnapshotTotalRows(remoteTbDesc.getSnapshotTotalRows());
-                localTblMgr.updateTableDesc(copy);
-            });
+                        val copy = localTblMgr.copyForWrite(localTbDesc);
+                        copy.setLastSnapshotPath(remoteTbDesc.getLastSnapshotPath());
+                        copy.setLastSnapshotSize(remoteTbDesc.getLastSnapshotSize());
+                        copy.setSnapshotLastModified(remoteTbDesc.getSnapshotLastModified());
+                        copy.setSnapshotTotalRows(remoteTbDesc.getSnapshotTotalRows());
+                        localTblMgr.updateTableDesc(copy);
+                    });
         }
     }
 
     protected void mergeTableExtMeta(NDataflow dataflow, ResourceStore remoteResourceStore) {
         val remoteTblMgr = NTableMetadataManager.getInstance(remoteResourceStore.getConfig(), getProject());
         val localTblMgr = NTableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
-        dataflow.getModel().getLookupTables().forEach(remoteTableRef -> {
-            val tableName = remoteTableRef.getTableIdentity();
-            val localTbDesc = localTblMgr.getTableDesc(tableName);
-            val remoteTbDesc = remoteTblMgr.getTableDesc(tableName);
-            if (remoteTbDesc == null) {
-                return;
-            }
+        dataflow.getModel().getLookupTables().stream().sorted(Comparator.comparing(TableRef::getTableIdentity))
+                .forEach(remoteTableRef -> {
+                    val tableName = remoteTableRef.getTableIdentity();
+                    val localTbDesc = localTblMgr.getTableDesc(tableName);
+                    val remoteTbDesc = remoteTblMgr.getTableDesc(tableName);
+                    if (remoteTbDesc == null) {
+                        return;
+                    }
 
-            val remoteTblExtDesc = remoteTblMgr.getOrCreateTableExt(remoteTbDesc);
-            val copyExt = localTblMgr.copyForWrite(localTblMgr.getOrCreateTableExt(localTbDesc));
-            if (remoteTblExtDesc.getOriginalSize() != -1) {
-                copyExt.setOriginalSize(remoteTblExtDesc.getOriginalSize());
-            }
-            copyExt.setTotalRows(remoteTblExtDesc.getTotalRows());
-            localTblMgr.saveTableExt(copyExt);
-        });
+                    val remoteTblExtDesc = remoteTblMgr.getOrCreateTableExt(remoteTbDesc);
+                    val copyExt = localTblMgr.copyForWrite(localTblMgr.getOrCreateTableExt(localTbDesc));
+                    if (remoteTblExtDesc.getOriginalSize() != -1) {
+                        copyExt.setOriginalSize(remoteTblExtDesc.getOriginalSize());
+                    }
+                    copyExt.setTotalRows(remoteTblExtDesc.getTotalRows());
+                    localTblMgr.saveTableExt(copyExt);
+                });
     }
 
     protected boolean isSnapshotManualManagementEnabled(ResourceStore configStore) {

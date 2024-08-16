@@ -21,6 +21,8 @@ package io.kyligence.kap.metadata.user;
 import java.util.Arrays;
 
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
+import org.apache.kylin.metadata.user.ManagedUser;
+import org.apache.kylin.metadata.user.NKylinUserManager;
 import org.apache.kylin.rest.constant.Constant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;

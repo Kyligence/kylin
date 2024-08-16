@@ -44,13 +44,12 @@ import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffset;
+import org.apache.kylin.metadata.favorite.QueryHistoryIdOffsetManager;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffset;
-import io.kyligence.kap.metadata.favorite.QueryHistoryIdOffsetManager;
 
 public class QueryHistoryOffsetTool extends CancelableTask {
     private static final Logger logger = LoggerFactory.getLogger("diag");

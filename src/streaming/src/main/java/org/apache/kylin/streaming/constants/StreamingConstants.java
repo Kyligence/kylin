@@ -60,7 +60,7 @@ public class StreamingConstants {
     public static final String SPARK_STREAMING_MERGE_ENTRY = "org.apache.kylin.streaming.app.StreamingMergeEntry";
 
     // default parser
-    public static final String DEFAULT_PARSER_NAME = "io.kyligence.kap.parser.TimedJsonStreamParser";
+    public static final String DEFAULT_PARSER_NAME = "org.apache.kylin.parser.TimedJsonStreamParser";
 
     // hadoop conf
     public static final String HADOOP_CONF_DIR = "HADOOP_CONF_DIR";

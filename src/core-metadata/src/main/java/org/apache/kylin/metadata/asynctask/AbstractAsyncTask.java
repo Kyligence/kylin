@@ -18,11 +18,12 @@
 
 package org.apache.kylin.metadata.asynctask;
 
+import org.apache.kylin.metadata.favorite.AsyncAccelerationTask;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import io.kyligence.kap.metadata.favorite.AsyncAccelerationTask;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
