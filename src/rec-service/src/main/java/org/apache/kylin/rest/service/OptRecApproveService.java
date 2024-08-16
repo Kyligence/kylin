@@ -725,22 +725,23 @@ public class OptRecApproveService extends BasicService {
             throw new KylinException(STREAMING_INDEX_UPDATE_DISABLE, MsgPicker.getMsg().getStreamingIndexesApprove());
         }
 
+        OptRecResponse response = new OptRecResponse();
         BaseIndexUpdateHelper baseIndexUpdater = new BaseIndexUpdateHelper(
                 getManager(NDataModelManager.class, project).getDataModelDesc(modelId), false);
         Map<Integer, String> userDefinedRecNameMap = request.getNames();
-        RecApproveContext approveContext = new RecApproveContext(project, modelId, userDefinedRecNameMap);
         EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
+            RecApproveContext approveContext = new RecApproveContext(project, modelId, userDefinedRecNameMap);
             approveRecItemsToRemoveLayout(request, approveContext);
             approveRecItemsToAddLayout(request, approveContext);
             updateRecommendationCount(project, modelId);
+
+            response.setProject(request.getProject());
+            response.setModelId(request.getModelId());
+            response.setAddedLayouts(approveContext.addedLayoutIdList);
+            response.setRemovedLayouts(approveContext.removedLayoutIdList);
             return null;
         }, project);
 
-        OptRecResponse response = new OptRecResponse();
-        response.setProject(request.getProject());
-        response.setModelId(request.getModelId());
-        response.setAddedLayouts(approveContext.addedLayoutIdList);
-        response.setRemovedLayouts(approveContext.removedLayoutIdList);
         response.setBaseIndexInfo(baseIndexUpdater.update(indexPlanService, false));
 
         return response;

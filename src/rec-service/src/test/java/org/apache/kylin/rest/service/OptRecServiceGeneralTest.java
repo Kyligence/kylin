@@ -21,8 +21,6 @@ package org.apache.kylin.rest.service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableList;
@@ -35,7 +33,6 @@ import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.optimization.FrequencyMap;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
-import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.recommendation.candidate.RawRecItem;
 import org.apache.kylin.rest.feign.MetadataInvoker;
 import org.apache.kylin.rest.request.OptRecRequest;
@@ -206,45 +203,19 @@ public class OptRecServiceGeneralTest extends OptRecV2TestBase {
         checkIndexPlan(layoutColOrder, getIndexPlan());
     }
 
-    private void asyncApprove(CountDownLatch countDownLatch, OptRecRequest recRequest) throws Exception {
-        new Thread(() -> {
-            try {
-                optRecApproveService.approve(getProject(), recRequest);
-            } finally {
-                countDownLatch.countDown();
-            }
-        }).start();
-    }
-
-    private long workTime(long ms) {
-        final long l = System.currentTimeMillis();
-        while (System.currentTimeMillis() <= l + ms) {
-            return System.currentTimeMillis();
-        }
-        return l;
-    }
-
     @Test
     public void testApproveConcurrentBatch() throws Exception {
         List<Integer> addLayoutId = Lists.newArrayList(3, 6);
         prepare(addLayoutId);
         OptRecRequest recRequest = buildOptRecRequest(addLayoutId);
-        Semaphore semaphore = new Semaphore(0);
-        new Thread(() -> {
-            semaphore.release();
-            EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-                workTime(3000L);
-                return null;
-            }, getProject());
-        }).start();
+        Thread thread1 = new Thread(() -> optRecApproveService.approve(getProject(), recRequest));
+        Thread thread2 = new Thread(() -> optRecApproveService.approve(getProject(), recRequest));
+        thread1.start();
+        thread2.start();
 
-        semaphore.acquire();
-        int times = 2;
-        CountDownLatch countDownLatch = new CountDownLatch(times);
-        for (int i = 0; i < times; i++) {
-            asyncApprove(countDownLatch, recRequest);
-        }
-        countDownLatch.await();
+        thread1.join();
+        thread2.join();
+
         NDataModel dataModel = getModel();
         Assert.assertEquals(ImmutableSet.of(0, 1, 11), dataModel.getEffectiveDimensions().keySet());
         Assert.assertEquals(ImmutableSet.of(100000, 100001, 100002), dataModel.getEffectiveMeasures().keySet());
