@@ -91,6 +91,7 @@ public class QueryGroupingSetsTest extends SemiAutoTestBase {
     @InjectMocks
     private final QueryRoutingEngine queryRoutingEngine = Mockito.spy(QueryRoutingEngine.class);
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();

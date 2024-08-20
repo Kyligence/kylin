@@ -83,7 +83,6 @@ public class AutoBuildAndQueryDerivedDimsTest extends SuggestTestBase {
     public void testScd2FlatTableSql() {
         overwriteSystemProp("kylin.query.use-tableindex-answer-non-raw-query", "true");
         overwriteSystemProp("kylin.query.non-equi-join-model-enabled", "TRUE");
-        //        overwriteSystemProp("kylin.query.print-logical-plan", "TRUE");
         overwriteSystemProp("kylin.model.non-equi-join-recommendation-enabled", "TRUE");
 
         String[] sqls = new String[] {
@@ -255,7 +254,7 @@ public class AutoBuildAndQueryDerivedDimsTest extends SuggestTestBase {
         AbstractContext context = proposeWithSmartMaster(getProject(), Lists
                 .newArrayList(new TestScenario(CompareLevel.NONE, testFolder, joinType, startIndex, startIndex + 1)));
 
-        Assert.assertEquals(context.getModelContexts().size(), 1);
+        Assert.assertEquals(1, context.getModelContexts().size());
         return context.getModelContexts().get(0).getTargetModel();
     }
 }

@@ -65,7 +65,7 @@ public class IndexMasterTest extends AutoTestOnLearnKylinData {
                     Assert.assertSame(c12.getIndex(), c);
                     Assert.assertEquals(4, c12.getColOrder().size());
 
-                } else if (c.getLayouts().size() == 1 && c.getMeasures().size() > 0) {
+                } else if (c.getLayouts().size() == 1 && !c.getMeasures().isEmpty()) {
                     Assert.assertFalse(c.isTableIndex());
                     Assert.assertEquals(1, c.getDimensions().size());
                     Assert.assertEquals(2, c.getMeasures().size());
@@ -74,7 +74,7 @@ public class IndexMasterTest extends AutoTestOnLearnKylinData {
                     LayoutEntity c21 = c.getLayouts().get(0);
                     Assert.assertSame(c21.getIndex(), c);
                     Assert.assertEquals(3, c21.getColOrder().size());
-                    Assert.assertEquals(new Integer(7), c21.getColOrder().get(0));
+                    Assert.assertEquals(7, c21.getColOrder().get(0).intValue());
                     Assert.assertEquals("eq", c21.getColIndexType(0));
 
                 } else if (c.getLayouts().size() == 1 && c.getDimensions().size() == 4) {
@@ -85,7 +85,7 @@ public class IndexMasterTest extends AutoTestOnLearnKylinData {
                     LayoutEntity c31 = c.getLayouts().get(0);
                     Assert.assertSame(c31.getIndex(), c);
                     Assert.assertEquals(4, c31.getColOrder().size());
-                    Assert.assertEquals(new Integer(7), c31.getColOrder().get(0));
+                    Assert.assertEquals(7, c31.getColOrder().get(0).intValue());
                     Assert.assertEquals("eq", c31.getColIndexType(0));
 
                 } else if (c.getLayouts().size() == 1) {
@@ -97,7 +97,7 @@ public class IndexMasterTest extends AutoTestOnLearnKylinData {
                     LayoutEntity c41 = c.getLayouts().get(0);
                     Assert.assertSame(c41.getIndex(), c);
                     Assert.assertEquals(3, c41.getColOrder().size());
-                    Assert.assertEquals(new Integer(7), c41.getColOrder().get(0));
+                    Assert.assertEquals(7, c41.getColOrder().get(0).intValue());
                     Assert.assertEquals("eq", c41.getColIndexType(0));
 
                 } else {

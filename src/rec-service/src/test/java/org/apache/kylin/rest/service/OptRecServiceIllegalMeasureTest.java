@@ -71,6 +71,7 @@ public class OptRecServiceIllegalMeasureTest extends OptRecV2TestBase {
     @Spy
     MetadataInvoker modelMetadataInvoker = Mockito.spy(new MetadataInvoker());
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -83,6 +84,7 @@ public class OptRecServiceIllegalMeasureTest extends OptRecV2TestBase {
         MetadataInvoker.setDelegate(modelService);
     }
 
+    @Override
     @After
     public void tearDown() throws Exception {
         super.tearDown();

@@ -34,10 +34,12 @@ public class NDataModelWrapper extends NDataModel {
     @EqualsAndHashCode.Include
     @JsonGetter("computed_columns")
     @JsonInclude(JsonInclude.Include.NON_NULL) // output to frontend
+    @Override
     public List<ComputedColumnDesc> getComputedColumnDescs() {
         return this.computedColumnDescs;
     }
 
+    @Override
     @JsonSetter("computed_columns")
     public void setComputedColumnDescs(List<ComputedColumnDesc> computedColumnDescs) {
         this.computedColumnDescs = computedColumnDescs;

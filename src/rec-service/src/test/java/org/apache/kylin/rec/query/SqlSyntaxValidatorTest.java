@@ -32,11 +32,6 @@ import org.junit.Test;
 public class SqlSyntaxValidatorTest extends SqlValidateTestBase {
 
     @Test
-    public void setUp() throws Exception {
-        super.setUp();
-    }
-
-    @Test
     public void testGoodCases() {
 
         String[] goodSqls = new String[] { //

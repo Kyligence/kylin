@@ -93,6 +93,7 @@ public abstract class SuggestTestBase extends NLocalWithSparkSessionTest {
     private JdbcTemplate jdbcTemplate;
     protected Set<String> excludedSqlPatterns = Sets.newHashSet();
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -542,7 +543,7 @@ public abstract class SuggestTestBase extends NLocalWithSparkSessionTest {
             if (!allFailedQueries.isEmpty()) {
                 long failedCnt = allFailedQueries.values().stream().mapToLong(Set::size).sum();
                 throw new IllegalStateException(String.format(Locale.ROOT,
-                        "Total query count: %d, failed count: %d, failed queries as follows:\n%s", allQuerySize,
+                        "Total query count: %d, failed count: %d, failed queries as follows:%n%s", allQuerySize,
                         failedCnt, StringUtils.join(allFailedQueries, "\n")));
             }
             log.info("compare result cost {} ms", System.currentTimeMillis() - startTime);

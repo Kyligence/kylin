@@ -65,6 +65,7 @@ import org.junit.Test;
 
 import lombok.val;
 
+@SuppressWarnings("squid:S2699")
 public class AutoBasicTest extends SuggestTestBase {
 
     @Test
@@ -106,8 +107,6 @@ public class AutoBasicTest extends SuggestTestBase {
             IndexPlan indexPlan = modelContext.getTargetIndexPlan();
             Assert.assertNotNull(indexPlan);
         }
-
-        //FileUtils.deleteQuietly(new File("../kylin-it/metastore_db"));
 
         // 3. Auto suggested model is able to serve related query
         {

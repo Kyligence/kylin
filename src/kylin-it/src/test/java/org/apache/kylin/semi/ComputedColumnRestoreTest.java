@@ -58,6 +58,7 @@ public class ComputedColumnRestoreTest extends SemiAutoTestBase {
         return "ssb";
     }
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -99,7 +100,7 @@ public class ComputedColumnRestoreTest extends SemiAutoTestBase {
 
         MetadataTestUtils.toSemiAutoMode(getProject());
 
-        //  select sum(hour_1 + 1) from ssb.customer;
+        //  select sum(hour_1 + 1) from ssb.customer
         //  propose cc using the column named by keyword
         String[] sql = new String[] { String.join("", "SELECT SUM(", ccName, " + 1) from SSB.CUSTOMER") };
         AbstractContext context2 = AccelerationUtil.genOptRec(getTestConfig(), getProject(), sql);

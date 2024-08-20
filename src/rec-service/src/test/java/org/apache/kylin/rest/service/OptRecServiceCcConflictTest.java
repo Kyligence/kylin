@@ -31,7 +31,6 @@ import org.apache.kylin.metadata.model.ComputedColumnDesc;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.rest.feign.MetadataInvoker;
 import org.apache.kylin.rest.request.OptRecRequest;
-import org.apache.kylin.rest.response.OptRecResponse;
 import org.apache.kylin.rest.util.AclEvaluate;
 import org.apache.kylin.rest.util.AclUtil;
 import org.junit.Assert;
@@ -57,6 +56,7 @@ public class OptRecServiceCcConflictTest extends OptRecV2TestBase {
     @Spy
     MetadataInvoker modelMetadataInvoker = Mockito.spy(MetadataInvoker.class);
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -74,7 +74,7 @@ public class OptRecServiceCcConflictTest extends OptRecV2TestBase {
         List<Integer> addLayoutId = Lists.newArrayList(3, 8, 13);
         prepare(addLayoutId);
         OptRecRequest recRequest = buildOptRecRequest(addLayoutId);
-        OptRecResponse optRecResponse = optRecApproveService.approve(getProject(), recRequest);
+        optRecApproveService.approve(getProject(), recRequest);
 
         NDataModel dataModel = getModel();
         Assert.assertFalse(dataModel.getComputedColumnDescs().isEmpty());
@@ -104,14 +104,6 @@ public class OptRecServiceCcConflictTest extends OptRecV2TestBase {
 
     private OptRecRequest buildOptRecRequest(List<Integer> addLayoutId) {
         return buildOptRecRequest(addLayoutId, ImmutableList.of(), ImmutableMap.of());
-    }
-
-    private OptRecRequest buildOptRecRequest(List<Integer> addLayoutId, Map<Integer, String> nameMap) {
-        return buildOptRecRequest(addLayoutId, ImmutableList.of(), nameMap);
-    }
-
-    private OptRecRequest buildOptRecRequest(List<Integer> addLayoutId, List<Integer> removeLayoutId) {
-        return buildOptRecRequest(addLayoutId, removeLayoutId, ImmutableMap.of());
     }
 
     private OptRecRequest buildOptRecRequest(List<Integer> addLayoutId, List<Integer> removeLayoutId,

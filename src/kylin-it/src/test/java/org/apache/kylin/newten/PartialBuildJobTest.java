@@ -104,6 +104,7 @@ public class PartialBuildJobTest extends SemiAutoTestBase {
         return "ssb";
     }
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -180,7 +181,6 @@ public class PartialBuildJobTest extends SemiAutoTestBase {
             copyForWrite.setRuleBasedIndex(newRule);
         });
         IndexDependencyParser parser = new IndexDependencyParser(originModel);
-        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(kylinConfig, getProject());
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(originModel.getId());
         Assert.assertEquals(4, indexPlan.getAllLayouts().size());
 
@@ -231,7 +231,6 @@ public class PartialBuildJobTest extends SemiAutoTestBase {
 
         NDataModel originModel = NDataModelManager.getInstance(getTestConfig(), getProject()).getDataModelDesc(modelId);
         IndexDependencyParser parser = new IndexDependencyParser(originModel);
-        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(kylinConfig, getProject());
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(originModel.getId());
         Assert.assertEquals(2, indexPlan.getAllLayouts().size());
 
@@ -278,7 +277,6 @@ public class PartialBuildJobTest extends SemiAutoTestBase {
 
         NDataModel originModel = NDataModelManager.getInstance(getTestConfig(), getProject()).getDataModelDesc(modelId);
         IndexDependencyParser parser = new IndexDependencyParser(originModel);
-        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(kylinConfig, getProject());
         IndexPlan indexPlan = indexPlanManager.getIndexPlan(originModel.getId());
         Assert.assertEquals(2, indexPlan.getAllLayouts().size());
 
@@ -417,7 +415,7 @@ public class PartialBuildJobTest extends SemiAutoTestBase {
                 IndexBuildParams.builder().project(req.getProject()).modelId(modelId).segmentIds(req.getSegmentIds())
                         .layoutIds(req.getIndexIds()).parallelBuildBySegment(req.isParallelBuildBySegment())
                         .priority(req.getPriority()).partialBuild(req.isPartialBuild()).build());
-        Assert.assertEquals(rs.getJobs().size(), 1);
+        Assert.assertEquals(1, rs.getJobs().size());
         val execMgr = ExecutableManager.getInstance(getTestConfig(), getProject());
         NSparkCubingJob job = (NSparkCubingJob) execMgr.getJob(rs.getJobs().get(0).getJobId());
         ExecutableState status = null;
@@ -441,7 +439,7 @@ public class PartialBuildJobTest extends SemiAutoTestBase {
                         .withPartialBuild(true) //
                         .withBatchIndexIds(layoutIds)),
                 getProject());
-        Assert.assertEquals(rs.size(), 1);
+        Assert.assertEquals(1, rs.size());
         val execMgr = ExecutableManager.getInstance(getTestConfig(), getProject());
         NSparkCubingJob job = (NSparkCubingJob) execMgr.getJob(rs.get(0).getJobId());
         ExecutableState status = null;

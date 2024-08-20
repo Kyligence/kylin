@@ -62,6 +62,7 @@ public class OptRecServiceCCTest extends OptRecV2TestBase {
                 new String[] { "6b9a6f00-2154-479d-b68f-34e49e7f2389", "7de7c2e8-3be0-4081-ad88-3e1a34ca038e" });
     }
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();

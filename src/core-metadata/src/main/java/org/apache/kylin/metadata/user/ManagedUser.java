@@ -188,12 +188,11 @@ public class ManagedUser extends RootPersistentEntity implements UserDetails, Us
     }
 
     public void increaseWrongTime() {
-        int wrongTime = this.getWrongTime();
-        if (wrongTime >= 2) {
+        if (getWrongTime() >= 2) {
             this.setLocked(true);
             this.lockedTime = System.currentTimeMillis();
         }
-        this.wrongTime = wrongTime + 1;
+        this.wrongTime += 1;
     }
 
     public void authenticateFail() {

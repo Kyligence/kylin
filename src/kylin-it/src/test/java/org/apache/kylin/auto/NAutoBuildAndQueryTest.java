@@ -52,6 +52,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  */
 @Slf4j
+@SuppressWarnings("squid:S2699")
 @RunWith(Parameterized.class)
 public class NAutoBuildAndQueryTest extends SuggestTestBase {
 
@@ -359,7 +360,6 @@ public class NAutoBuildAndQueryTest extends SuggestTestBase {
     public void testTemp() throws Exception {
         KylinConfig.getInstanceFromEnv().setProperty("kylin.query.calcite.extras-props.conformance", "DEFAULT");
         overwriteSystemProp("kylin.query.metadata.expose-computed-column", "FALSE");
-        Set<String> exclusionList = Sets.newHashSet();
         overwriteSystemProp("calcite.debug", "true");
         new TestScenario(CompareLevel.SAME_ROWCOUNT, "query/temp").execute();
     }
@@ -439,7 +439,6 @@ public class NAutoBuildAndQueryTest extends SuggestTestBase {
     @Test
     public void testNotSupported() throws Exception {
 
-        // FIXME  https://github.com/Kyligence/KAP/issues/8090
         // percentile and sql_intersect_count do not support
         // new TestScenario(CompareLevel.SAME, "sql_intersect_count")
         // new TestScenario(CompareLevel.SAME, "sql_percentile")//,

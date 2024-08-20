@@ -88,6 +88,7 @@ public class ExcludedCheckerBasicCiTest extends SemiAutoTestBase {
         return "ssb";
     }
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();

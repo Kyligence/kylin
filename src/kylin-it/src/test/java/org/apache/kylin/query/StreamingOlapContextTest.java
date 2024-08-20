@@ -71,14 +71,14 @@ public class StreamingOlapContextTest extends NLocalWithSparkSessionTest {
         ContextUtil.registerContext(context);
 
         val nativeQueryRealizations = ContextUtil.getNativeRealizations();
-        Assert.assertEquals(nativeQueryRealizations.size(), 2);
+        Assert.assertEquals(2, nativeQueryRealizations.size());
 
         val modelIdAliasMap = nativeQueryRealizations.stream()
                 .collect(Collectors.toMap(NativeQueryRealization::getModelId, NativeQueryRealization::getModelAlias));
 
-        Assert.assertEquals(modelIdAliasMap.size(), 2);
-        Assert.assertEquals(modelIdAliasMap.get("4965c827-fbb4-4ea1-a744-3f341a3b030d"), "model_streaming");
-        Assert.assertEquals(modelIdAliasMap.get("cd2b9a23-699c-4699-b0dd-38c9412b3dfd"), "model_streaming");
+        Assert.assertEquals(2, modelIdAliasMap.size());
+        Assert.assertEquals("model_streaming", modelIdAliasMap.get("4965c827-fbb4-4ea1-a744-3f341a3b030d"));
+        Assert.assertEquals("model_streaming", modelIdAliasMap.get("cd2b9a23-699c-4699-b0dd-38c9412b3dfd"));
     }
 
     @Test
@@ -101,12 +101,12 @@ public class StreamingOlapContextTest extends NLocalWithSparkSessionTest {
         ContextUtil.registerContext(context);
 
         val nativeQueryRealizations = ContextUtil.getNativeRealizations();
-        Assert.assertEquals(nativeQueryRealizations.size(), 1);
+        Assert.assertEquals(1, nativeQueryRealizations.size());
 
         val nativeQueryRealization = nativeQueryRealizations.get(0);
 
-        Assert.assertEquals(nativeQueryRealization.getModelId(), "cd2b9a23-699c-4699-b0dd-38c9412b3dfd");
-        Assert.assertEquals(nativeQueryRealization.getModelAlias(), "model_streaming");
+        Assert.assertEquals("cd2b9a23-699c-4699-b0dd-38c9412b3dfd", nativeQueryRealization.getModelId());
+        Assert.assertEquals("model_streaming", nativeQueryRealization.getModelAlias());
     }
 
     private void setExecutor(OlapContext context) {

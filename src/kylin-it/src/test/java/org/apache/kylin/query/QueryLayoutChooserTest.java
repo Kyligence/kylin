@@ -167,7 +167,7 @@ public class QueryLayoutChooserTest extends SuggestTestBase {
     public void testGetNativeRealizationsWhenThruDerivedDimsFromFactTable() throws Exception {
         val sql1 = new String[] {
                 "select TEST_ORDER.ORDER_ID from TEST_KYLIN_FACT inner join TEST_ORDER on TEST_KYLIN_FACT.ORDER_ID = TEST_ORDER.ORDER_ID" };
-        val context = AccelerationUtil.runWithSmartContext(getTestConfig(), getProject(), sql1, true);
+        AccelerationUtil.runWithSmartContext(getTestConfig(), getProject(), sql1, true);
         buildAllModels(getTestConfig(), getProject());
 
         val sql2 = "select TEST_KYLIN_FACT.ORDER_ID from TEST_KYLIN_FACT inner join TEST_ORDER on TEST_KYLIN_FACT.ORDER_ID = TEST_ORDER.ORDER_ID";

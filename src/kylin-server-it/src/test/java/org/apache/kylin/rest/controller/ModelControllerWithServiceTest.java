@@ -251,7 +251,7 @@ public class ModelControllerWithServiceTest extends ServiceTestBase {
     }
 
     @Test
-    @Ignore
+    @Ignore("Seems no need")
     public void testSuggestModels() throws Exception {
         MetadataTestUtils.toSemiAutoMode("default");
 

@@ -313,7 +313,6 @@ public class SemiV2CITest extends SemiAutoTestBase {
         Assert.assertEquals(6, rawRecItems.size());
 
         // mock model broken and delete outdated recommendations
-        NDataModelManager modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), getProject());
         NDataModel backupModel = modelManager.copyBySerialization(modelManager.getDataModelDesc(modelID));
 
         modelManager.updateDataModel(modelID, copyForWrite -> {
@@ -322,9 +321,7 @@ public class SemiV2CITest extends SemiAutoTestBase {
         });
 
         Assert.assertTrue(modelManager.getDataModelDesc(modelID).isBroken());
-        val jdbcRawRecStore = new JdbcRawRecStore(KylinConfig.getInstanceFromEnv());
         jdbcRawRecStore.deleteOutdated();
-        //        RawRecManager.getInstance(getProject()).deleteAllOutDated(getProject());
         Assert.assertEquals(6, jdbcRawRecStore.queryAll().size());
 
         // mock not broken and delete outdated recommendations
@@ -421,7 +418,6 @@ public class SemiV2CITest extends SemiAutoTestBase {
         MetadataTestUtils.toSemiAutoMode(getProject());
 
         // remove measure of sum(price + 1)
-        NDataModelManager modelManager = NDataModelManager.getInstance(getTestConfig(), getProject());
         ComputedColumnManager ccManager = ComputedColumnManager.getInstance(getTestConfig(), getProject());
         modelManager.updateDataModel(modelID, copyForWrite -> {
             List<NDataModel.Measure> allMeasures = copyForWrite.getAllMeasures();
@@ -503,8 +499,6 @@ public class SemiV2CITest extends SemiAutoTestBase {
         NDataModel targetModel = modelContexts.get(0).getTargetModel();
 
         // assert initial result
-        NDataModelManager modelManager = NDataModelManager.getInstance(getTestConfig(), project);
-        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), project);
         NDataModel dataModel = modelManager.getDataModelDesc(targetModel.getUuid());
         List<NDataModel.NamedColumn> allNamedColumns = dataModel.getAllNamedColumns();
         long dimensionCount = allNamedColumns.stream().filter(NDataModel.NamedColumn::isDimension).count();
@@ -565,8 +559,6 @@ public class SemiV2CITest extends SemiAutoTestBase {
         NDataModel targetModel = modelContexts.get(0).getTargetModel();
 
         // assert initial result
-        NDataModelManager modelManager = NDataModelManager.getInstance(getTestConfig(), project);
-        NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getTestConfig(), project);
         NDataModel dataModel = modelManager.getDataModelDesc(targetModel.getUuid());
         List<NDataModel.NamedColumn> allNamedColumns = dataModel.getAllNamedColumns();
         long dimensionCount = allNamedColumns.stream().filter(NDataModel.NamedColumn::isDimension).count();
@@ -881,12 +873,16 @@ public class SemiV2CITest extends SemiAutoTestBase {
         modelService.batchCreateModel(getProject(), newModelRequests, reusedModelRequests);
 
         // assert model optimization result
+        assertAfterResult(modelID, newModelResponse);
+    }
+
+    private void assertAfterResult(String modelID, SuggestionResponse.ModelRecResponse newModelResponse) {
         NDataModel reusedModelAfter = modelManager.getDataModelDesc(modelID);
         Assert.assertEquals(2, reusedModelAfter.getComputedColumnDescs().size());
         Assert.assertEquals(14, reusedModelAfter.getAllNamedColumns().size());
         Assert.assertEquals(3, reusedModelAfter.getAllMeasures().size());
         Assert.assertEquals(3, reusedModelAfter.getAllNamedColumns().stream()//
-                .filter(NDataModel.NamedColumn::isDimension).count());
+                .filter(NamedColumn::isDimension).count());
         IndexPlan indexPlanAfter = indexPlanManager.getIndexPlan(modelID);
         Assert.assertEquals(2, indexPlanAfter.getAllLayouts().size());
         String newModelID = newModelResponse.getIndexPlan().getUuid();
@@ -895,7 +891,7 @@ public class SemiV2CITest extends SemiAutoTestBase {
         Assert.assertEquals(113, newModel.getAllNamedColumns().size());
         Assert.assertEquals(2, newModel.getAllMeasures().size());
         Assert.assertEquals(2, newModel.getAllNamedColumns().stream()//
-                .filter(NDataModel.NamedColumn::isDimension).count());
+                .filter(NamedColumn::isDimension).count());
         IndexPlan newIndexPlan = indexPlanManager.getIndexPlan(newModelID);
         Assert.assertEquals(1, newIndexPlan.getAllLayouts().size());
     }
@@ -1088,8 +1084,8 @@ public class SemiV2CITest extends SemiAutoTestBase {
         val dataflow = dataflowManager.getDataflow(modelID);
         Assert.assertEquals(0, dataflow.getSegments().size());
 
-        val modelManager = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-        val model = modelManager.getDataModelDesc(modelID);
+        val modelMgr = NDataModelManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
+        val model = modelMgr.getDataModelDesc(modelID);
         Assert.assertEquals(2, model.getAllMeasures().size());
         Assert.assertEquals(19, model.getAllNamedColumns().size());
         Assert.assertEquals(NDataModel.ColumnStatus.DIMENSION, model.getAllNamedColumns().get(1).getStatus());

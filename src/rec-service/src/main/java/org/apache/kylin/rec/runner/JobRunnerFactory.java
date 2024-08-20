@@ -31,6 +31,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigBase;
+import org.apache.kylin.common.exception.KylinRuntimeException;
 import org.apache.kylin.common.persistence.RawResource;
 import org.apache.kylin.common.persistence.ResourceStore;
 import org.apache.kylin.common.persistence.metadata.MetadataStore;
@@ -102,7 +103,7 @@ public class JobRunnerFactory {
 
         protected void attachMetadataAndKylinProps(boolean kylinPropsOnly) throws IOException {
             if (StringUtils.isEmpty(metaDumpUrl)) {
-                throw new RuntimeException("Missing metaUrl");
+                throw new KylinRuntimeException("Missing metaUrl");
             }
 
             File tmpDir = File.createTempFile("kylin_job_meta", "");

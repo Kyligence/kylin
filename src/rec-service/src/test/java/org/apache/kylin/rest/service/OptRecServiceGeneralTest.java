@@ -60,6 +60,7 @@ public class OptRecServiceGeneralTest extends OptRecV2TestBase {
     @Spy
     MetadataInvoker modelMetadataInvoker = Mockito.spy(MetadataInvoker.class);
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();

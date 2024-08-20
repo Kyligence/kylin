@@ -33,6 +33,7 @@ public class QueryHistoryIdOffsetManager {
     private final QueryHistoryIdOffsetStore jdbcIdOffsetStore;
     private final String project;
 
+    @SuppressWarnings("unused")
     private QueryHistoryIdOffsetManager(String project) throws Exception {
         this.project = project;
         this.jdbcIdOffsetStore = new QueryHistoryIdOffsetStore(KylinConfig.getInstanceFromEnv());

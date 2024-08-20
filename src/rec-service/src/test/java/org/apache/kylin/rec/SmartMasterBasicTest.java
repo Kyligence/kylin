@@ -28,7 +28,6 @@ import org.apache.kylin.metadata.cube.model.IndexPlan;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NDataModel;
-import org.apache.kylin.metadata.model.NDataModelManager;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.TableDesc;
 import org.apache.kylin.rec.common.AccelerateInfo;
@@ -46,7 +45,6 @@ public class SmartMasterBasicTest extends AutoTestOnLearnKylinData {
     private NTableMetadataManager tableMetadataManager;
     private NIndexPlanManager indexPlanManager;
     private NDataflowManager dataflowManager;
-    private NDataModelManager modelManager;
 
     @Before
     public void setupManagers() throws Exception {
@@ -55,7 +53,6 @@ public class SmartMasterBasicTest extends AutoTestOnLearnKylinData {
         tableMetadataManager = NTableMetadataManager.getInstance(kylinConfig, proj);
         indexPlanManager = NIndexPlanManager.getInstance(kylinConfig, proj);
         dataflowManager = NDataflowManager.getInstance(kylinConfig, proj);
-        modelManager = NDataModelManager.getInstance(kylinConfig, proj);
     }
 
     @Test

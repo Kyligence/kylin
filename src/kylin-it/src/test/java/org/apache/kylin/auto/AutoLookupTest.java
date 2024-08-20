@@ -74,7 +74,7 @@ public class AutoLookupTest extends SuggestTestBase {
     }
 
     @Test
-    @Ignore
+    @Ignore("Seems no need")
     public void testLookupByStep() {
         {
             String modelQuery = "select sum(ITEM_COUNT) as ITEM_CNT\n" //

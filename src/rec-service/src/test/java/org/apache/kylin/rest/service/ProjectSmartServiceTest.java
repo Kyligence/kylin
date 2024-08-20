@@ -76,9 +76,6 @@ public class ProjectSmartServiceTest extends NLocalFileMetadataTestCase {
     @Spy
     private final AclUtil aclUtil = Mockito.spy(AclUtil.class);
 
-    @Spy
-    private final TopRecsUpdateScheduler topRecsUpdateScheduler = Mockito.spy(new TopRecsUpdateScheduler());
-
     @Before
     public void setUp() throws Exception {
         overwriteSystemProp("HADOOP_USER_NAME", "root");

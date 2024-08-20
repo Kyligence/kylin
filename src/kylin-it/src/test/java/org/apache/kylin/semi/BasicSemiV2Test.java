@@ -113,6 +113,7 @@ public class BasicSemiV2Test extends SemiAutoTestBase {
 
     private TimeZone defaultTimeZone;
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -211,11 +212,6 @@ public class BasicSemiV2Test extends SemiAutoTestBase {
         Assert.assertEquals(0, modelContext.getDimensionRecItemMap().size());
         Assert.assertEquals(0, modelContext.getMeasureRecItemMap().size());
         Assert.assertEquals(0, modelContext.getIndexRexItemMap().size());
-    }
-
-    @Test
-    public void testCollectRecItemWhenDifferenceBatch() {
-
     }
 
     @Test

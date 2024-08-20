@@ -40,6 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TableAliasGenerator {
 
+    private TableAliasGenerator() {
+    }
+
     private static final String UNKNOWN_SCHEMA = "N/A";
     private static final String KEY = "_KEY_";
     private static final String TO = "__TO__";

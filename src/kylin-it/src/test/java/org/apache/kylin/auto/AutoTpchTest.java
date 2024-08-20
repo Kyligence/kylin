@@ -36,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+@SuppressWarnings("squid:S2699")
 public class AutoTpchTest extends SuggestTestBase {
 
     @Test
@@ -125,7 +126,7 @@ public class AutoTpchTest extends SuggestTestBase {
     }
 
     @Test
-    @Ignore
+    @Ignore("For development")
     public void testTemp() throws Exception {
         new TestScenario(CompareLevel.SAME, "query/temp").execute();
 

@@ -38,6 +38,7 @@ import org.junit.Test;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+@Ignore("For development")
 @Slf4j
 public class AutoSqlFunctionsValidationTest extends SuggestTestBase {
 
@@ -73,7 +74,6 @@ public class AutoSqlFunctionsValidationTest extends SuggestTestBase {
         addConditionFunctions();
     }
 
-    @Ignore
     @Test
     public void testProposeComputedColumnWithFunctionsInManual() throws InterruptedException {
         Set<String> measures = generateAllMeasures();

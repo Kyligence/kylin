@@ -100,6 +100,7 @@ public class AntiFlatCheckerCiTest extends SemiAutoTestBase {
         return "ssb";
     }
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -411,7 +412,7 @@ public class AntiFlatCheckerCiTest extends SemiAutoTestBase {
 
                 } else if (join.getTable().equals("SSB.LINEORDER")) {
                     join.setFlattenable(JoinTableDesc.FLATTEN);
-                    //join.setJoinRelationTypeEnum(ModelJoinRelationTypeEnum.MANY_TO_MANY);
+                    //join.setJoinRelationTypeEnum(ModelJoinRelationTypeEnum.MANY_TO_MANY)
                 }
             });
         });

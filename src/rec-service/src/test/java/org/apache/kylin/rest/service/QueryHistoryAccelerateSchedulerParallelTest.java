@@ -222,11 +222,7 @@ public class QueryHistoryAccelerateSchedulerParallelTest extends NLocalFileMetad
         return scheduler.new QueryHistoryAccelerateRunner(isManual) {
             @Override
             public void accelerateAndUpdateMetadata(Pair<List<QueryHistory>, String> pair) {
-                try {
-                    TimeUnit.SECONDS.sleep(1);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                await().pollDelay(1, TimeUnit.SECONDS).until(() -> true);
                 super.accelerateAndUpdateMetadata(pair);
             }
         };

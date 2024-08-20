@@ -32,16 +32,12 @@ import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import lombok.val;
 
 @Clarification(priority = Clarification.Priority.MAJOR, msg = "Enterprise")
 public class FavoriteRuleManager {
-
-    private static final Logger logger = LoggerFactory.getLogger(FavoriteRuleManager.class);
 
     private final FavoriteRuleStore favoriteRuleStore;
     private final String project;
@@ -50,6 +46,7 @@ public class FavoriteRuleManager {
         return Singletons.getInstance(project, FavoriteRuleManager.class);
     }
 
+    @SuppressWarnings("unused")
     private FavoriteRuleManager(String project) throws Exception {
         this.project = project;
         this.favoriteRuleStore = new FavoriteRuleStore(KylinConfig.getInstanceFromEnv());

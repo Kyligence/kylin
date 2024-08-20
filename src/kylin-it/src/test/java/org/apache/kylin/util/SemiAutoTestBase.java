@@ -45,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SemiAutoTestBase extends SuggestTestBase {
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -83,6 +84,7 @@ public class SemiAutoTestBase extends SuggestTestBase {
         return map;
     }
 
+    @Override
     protected void buildAndCompare(TestScenario... testScenarios) throws Exception {
         try {
             buildAllModels(kylinConfig, getProject());

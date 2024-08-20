@@ -44,6 +44,7 @@ public class AsyncTaskManager {
     private final AsyncTaskStore asyncTaskStore;
     private final String project;
 
+    @SuppressWarnings("unused")
     private AsyncTaskManager(String project) throws Exception {
         this.project = project;
         this.asyncTaskStore = new AsyncTaskStore(KylinConfig.getInstanceFromEnv());
