@@ -61,6 +61,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -457,6 +458,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
         Assertions.assertEquals(-1, afterTruncateTable.getStorageSize());
     }
 
+    @Disabled("gluten not support deltaLake yet.")
     @Test
     void testTruncatePartitionDeltaInternalTable() throws Exception {
         KylinConfig config = KylinConfig.getInstanceFromEnv();
