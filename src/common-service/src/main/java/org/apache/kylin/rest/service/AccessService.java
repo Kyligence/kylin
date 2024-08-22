@@ -940,6 +940,7 @@ public class AccessService extends BasicService {
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#ae, 'ADMINISTRATION')")
+    @Transaction
     public boolean grantAccess(AclEntity ae, String identifier, Boolean isPrincipal, String permission)
             throws IOException {
         AccessGrantEventNotifier notifier = new AccessGrantEventNotifier(UnitOfWork.GLOBAL_UNIT, ae.getId(), identifier,
@@ -949,6 +950,7 @@ public class AccessService extends BasicService {
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#ae, 'ADMINISTRATION')")
+    @Transaction
     public boolean batchGrantAccess(List<AccessRequest> requests, AclEntity ae) throws IOException {
         AccessBatchGrantEventNotifier notifier = new AccessBatchGrantEventNotifier(UnitOfWork.GLOBAL_UNIT, ae.getId(),
                 JsonUtil.writeValueAsString(requests));
@@ -957,6 +959,7 @@ public class AccessService extends BasicService {
     }
 
     @PreAuthorize(Constant.ACCESS_HAS_ROLE_ADMIN + " or hasPermission(#ae, 'ADMINISTRATION')")
+    @Transaction
     public boolean revokeAccess(AclEntity ae, String name, boolean principal) throws IOException {
         AccessRevokeEventNotifier notifier = new AccessRevokeEventNotifier(UnitOfWork.GLOBAL_UNIT, ae.getId(), name,
                 principal);

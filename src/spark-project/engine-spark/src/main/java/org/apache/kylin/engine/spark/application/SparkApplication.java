@@ -339,7 +339,8 @@ public abstract class SparkApplication implements Application {
                 Unsafe.setProperty("kylin.env", config.getDeployEnv());
             }
 
-            if (!getParam(NBatchConstants.P_CLASS_NAME).equals(InternalTableLoadJob.class.getName())) {
+            String className = getParam(NBatchConstants.P_CLASS_NAME);
+            if (className != null && !className.equals(InternalTableLoadJob.class.getName())) {
                 ss.sparkContext().setLocalProperty("gluten.enabledForCurrentThread", "false");
                 logger.info("Disable gluten for normal build");
             }
