@@ -223,7 +223,7 @@ public class InternalTableService extends BasicService {
             internalTable.setTblProperties(tblProperties);
             internalTable.optimizeTblProperties();
             internalTable.setStorageType(storageType);
-            suicideRunningInternalTableJob(project, table);
+            suicideRunningInternalTableJob(project, dbTblName);
             deleteMetaAndDataInFileSystem(internalTable);
             createDeltaSchema(internalTable);
             internalTableManager.saveOrUpdateInternalTable(internalTable);
