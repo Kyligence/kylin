@@ -186,4 +186,8 @@ public class NDataLayoutDetails extends RootPersistentEntity implements Serializ
             return this.minCompactionFileSizeInBytes;
         }
     }
+
+    public String getRelativeStoragePath() {
+        return project + "/delta/" + getModelId() + "/" + getLayoutId();
+    }
 }
