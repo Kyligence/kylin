@@ -2353,15 +2353,7 @@ public class ModelService extends AbstractModelService
         aclEvaluate.checkProjectWritePermission(project);
         checkModelPermission(project, modelId);
 
-        Set<Long> targetLayout = Sets.newHashSet();
-
-        Set<Long> toOptimizeModelLayouts = updateModelOptimizeSettings(project, modelId,
-                request.getModelOptimizationSetting());
-        targetLayout.addAll(toOptimizeModelLayouts);
-
-        Set<Long> toOptimizeLayouts = updateLayoutOptimizeSettings(project, modelId,
-                request.getLayoutOptimizationSettingList());
-        targetLayout.addAll(toOptimizeLayouts);
+        Set<Long> targetLayout = updateOptimizeSettings(project, modelId, request);
 
         JobParam jobParam = new JobParam(modelId, BasicService.getUsername()).withProject(project)
                 .withJobTypeEnum(JobTypeEnum.LAYOUT_DATA_OPTIMIZE).withPriority(request.getPriority())
@@ -2375,34 +2367,46 @@ public class ModelService extends AbstractModelService
         return jobInfoResponse;
     }
 
+    public Set<Long> updateOptimizeSettings(String project, String modelId, OptimizeLayoutDataRequest request) {
+        Set<Long> targetLayout = Sets.newHashSet();
+
+        Set<Long> toOptimizeModelLayouts = updateModelOptimizeSettings(project, modelId,
+                request.getModelOptimizationSetting());
+        targetLayout.addAll(toOptimizeModelLayouts);
+
+        Set<Long> toOptimizeLayouts = updateLayoutOptimizeSettings(project, modelId,
+                request.getLayoutDataOptimizationSettingList());
+        targetLayout.addAll(toOptimizeLayouts);
+        return targetLayout;
+    }
+
     private Set<Long> updateModelOptimizeSettings(String project, String modelId,
             OptimizeLayoutDataRequest.DataOptimizationSetting modelSettings) {
         NIndexPlanManager indexPlanManager = NIndexPlanManager.getInstance(getConfig(), project);
         HashSet<Long> toOptimizeLayouts = Sets.newHashSet();
         AtomicReference<Boolean> modelConfigChange = new AtomicReference<>(false);
         if (modelSettings != null) {
-            OptimizeLayoutDataRequest.DataOptimizationSetting modelSetting = modelSettings;
             indexPlanManager.updateIndexPlan(modelId, indexPlan -> {
                 LinkedHashMap<String, String> oldProps = indexPlan.getOverrideProps();
-                List<String> partitionByCols = modelSetting.getRepartitionByColumns();
-                List<String> zorderByCols = modelSetting.getZorderByColumns();
-                long maxFileSize = modelSetting.getMaxCompactionFileSize();
-                long minFileSize = modelSetting.getMinCompactionFileSize();
-                if (partitionByCols != null && !partitionByCols.isEmpty()) {
+                List<String> partitionByCols = modelSettings.getRepartitionByColumns();
+                List<String> zorderByCols = modelSettings.getZorderByColumns();
+                long maxFileSize = modelSettings.getMaxCompactionFileSize();
+                long minFileSize = modelSettings.getMinCompactionFileSize();
+                if (partitionByCols != null) {
                     oldProps.put(IndexPlan.STORAGE_V3_MODEL_DEFAULT_PARTITION_BY_CONF_KEY,
                             String.join(IndexPlan.STORAGE_V3_CONFIG_COLUMN_SEPARATOR, partitionByCols));
                     modelConfigChange.set(true);
                 }
-                if (zorderByCols != null && zorderByCols.isEmpty()) {
+                if (zorderByCols != null) {
                     oldProps.put(IndexPlan.STORAGE_V3_MODEL_DEFAULT_ZORDER_BY_CONF_KEY,
                             String.join(IndexPlan.STORAGE_V3_CONFIG_COLUMN_SEPARATOR, zorderByCols));
                     modelConfigChange.set(true);
                 }
-                if (maxFileSize >= 0) {
+                if (maxFileSize > 0) {
                     oldProps.put(IndexPlan.STORAGE_V3_MODEL_DEFAULT_MAX_FILE_SIZE_CONF_KEY, Long.toString(maxFileSize));
                     modelConfigChange.set(true);
                 }
-                if (minFileSize >= 0) {
+                if (minFileSize > 0) {
                     oldProps.put(IndexPlan.STORAGE_V3_MODEL_DEFAULT_MIN_FILE_SIZE_CONF_KEY, Long.toString(minFileSize));
                     modelConfigChange.set(true);
                 }
@@ -2417,32 +2421,43 @@ public class ModelService extends AbstractModelService
     }
 
     private Set<Long> updateLayoutOptimizeSettings(String project, String modelId,
-            List<OptimizeLayoutDataRequest.LayoutOptimizationSetting> layoutSettings) {
+            List<OptimizeLayoutDataRequest.LayoutDataOptimizationSetting> layoutSettings) {
         NDataLayoutDetailsManager layoutDetailsManager = NDataLayoutDetailsManager.getInstance(getConfig(), project);
         HashSet<Long> toOptimizeLayouts = Sets.newHashSet();
+        if (layoutSettings == null) {
+            return toOptimizeLayouts;
+        }
         layoutSettings.forEach(optimizeRequest -> {
             optimizeRequest.getLayoutIdList().forEach(layoutId -> {
-                OptimizeLayoutDataRequest.DataOptimizationSetting layoutSetting = optimizeRequest.getSetting();
-                layoutDetailsManager.updateLayoutDetails(modelId, layoutId, (copy) -> {
-                    if (layoutSetting.getMinCompactionFileSize() > 0) {
-                        copy.setMaxCompactionFileSizeInBytes(layoutSetting.getMaxCompactionFileSize());
-                    }
-                    if (layoutSetting.getMaxCompactionFileSize() > 0) {
-                        copy.setMaxCompactionFileSizeInBytes(layoutSetting.getMaxCompactionFileSize());
-                    }
-                    if (layoutSetting.getZorderByColumns() != null && !layoutSetting.getZorderByColumns().isEmpty()) {
-                        copy.setZorderByColumns(layoutSetting.getZorderByColumns());
-                    }
-                    if (layoutSetting.getRepartitionByColumns() != null
-                            && !layoutSetting.getRepartitionByColumns().isEmpty()) {
-                        copy.setPartitionColumns(layoutSetting.getRepartitionByColumns());
-                    }
-                    copy.setCompactionAfterUpdate(layoutSetting.isCompaction());
-                    toOptimizeLayouts.add(layoutId);
-                });
+                if (optimizeRequest.getSetting() != null) {
+                    updateLayoutOptimizeSettings(optimizeRequest.getSetting(), modelId, layoutId, layoutDetailsManager,
+                            toOptimizeLayouts);
+                }
             });
         });
         return toOptimizeLayouts;
+    }
+
+    private void updateLayoutOptimizeSettings(OptimizeLayoutDataRequest.DataOptimizationSetting layoutSetting,
+                                              String modelId, Long layoutId,
+                                              NDataLayoutDetailsManager layoutDetailsManager,
+                                              HashSet<Long> toOptimizeLayouts) {
+        layoutDetailsManager.updateLayoutDetails(modelId, layoutId, (copy) -> {
+            if (layoutSetting.getMinCompactionFileSize() > 0) {
+                copy.setMinCompactionFileSizeInBytes(layoutSetting.getMinCompactionFileSize());
+            }
+            if (layoutSetting.getMaxCompactionFileSize() > 0) {
+                copy.setMaxCompactionFileSizeInBytes(layoutSetting.getMaxCompactionFileSize());
+            }
+            if (layoutSetting.getZorderByColumns() != null) {
+                copy.setZorderByColumns(layoutSetting.getZorderByColumns());
+            }
+            if (layoutSetting.getRepartitionByColumns() != null) {
+                copy.setPartitionColumns(layoutSetting.getRepartitionByColumns());
+            }
+            copy.setCompactionAfterUpdate(layoutSetting.isCompaction());
+            toOptimizeLayouts.add(layoutId);
+        });
     }
 
     @Transaction(project = 0)

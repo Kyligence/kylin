@@ -128,6 +128,8 @@ public class LayoutDataOptimizeJobTest extends NLocalWithSparkSessionTest {
                 .collect(Collectors.toList());
         manager.updateLayoutDetails(df.getId(), zorderLayoutId, (copy) -> {
             copy.setZorderByColumns(zorderColIds);
+            copy.setMinCompactionFileSizeInBytes(1);
+            copy.setMaxCompactionFileSizeInBytes(10000);
         });
 
         String jobId = "layout-data-optimize-job";

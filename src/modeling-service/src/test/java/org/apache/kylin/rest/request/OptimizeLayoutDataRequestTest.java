@@ -28,10 +28,9 @@ public class OptimizeLayoutDataRequestTest {
     public void testBasic() {
         val template = OptimizeLayoutDataRequest.template;
         val modelSetting = template.getModelOptimizationSetting();
-        val layoutSettings = template.getLayoutOptimizationSettingList().get(0).getSetting();
+        val layoutSettings = template.getLayoutDataOptimizationSettingList().get(0).getSetting();
 
         Assert.assertEquals("", template.getProject());
-        Assert.assertEquals("", template.getModelId());
 
         Assert.assertEquals(0, modelSetting.getMaxCompactionFileSize());
         Assert.assertEquals(0, modelSetting.getMinCompactionFileSize());

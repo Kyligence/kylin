@@ -42,12 +42,10 @@ class LayoutDataCompactionOptimize(layoutDataOptimizeJob: LayoutDataOptimizeJob)
       layoutDataOptimizeJob.getLayoutDetails()
         .filter(_.isCompactionAfterUpdate)
         .foreach(layoutDetail => {
-          if (StringUtils.isNotEmpty(layoutDetail.getRangeFilterExpr)) {
-            val repartitionFuture = Future {
-              compactionLayout(layoutDetail)
-            }(OptimizeExecutionContext.futureExecutionContext)
-            pipe.offer(repartitionFuture)
-          }
+          val repartitionFuture = Future {
+            compactionLayout(layoutDetail)
+          }(OptimizeExecutionContext.futureExecutionContext)
+          pipe.offer(repartitionFuture)
         })
       drain[CompactionOptimizeResult]()
     } else {
@@ -57,11 +55,11 @@ class LayoutDataCompactionOptimize(layoutDataOptimizeJob: LayoutDataOptimizeJob)
 
   private def compactionLayout(layoutDetail: NDataLayoutDetails): CompactionOptimizeResult = {
     val layoutTablePath = layoutDetail.getLocation
-    if (layoutDetail.getMaxCompactionFileSizeInBytes != 0) {
+    if (layoutDetail.getMaxCompactionFileSizeInBytes > 0) {
       getJobContext.getSparkSession.sessionState.conf.setLocalProperty("spark.databricks.delta.optimize.maxFileSize",
         layoutDetail.getMaxCompactionFileSizeInBytes.toString)
     }
-    if (layoutDetail.getMinCompactionFileSizeInBytes != 0) {
+    if (layoutDetail.getMinCompactionFileSizeInBytes > 0) {
       getJobContext.getSparkSession.sessionState.conf.setLocalProperty("spark.databricks.delta.optimize.minFileSize",
         layoutDetail.getMinCompactionFileSizeInBytes.toString)
     }

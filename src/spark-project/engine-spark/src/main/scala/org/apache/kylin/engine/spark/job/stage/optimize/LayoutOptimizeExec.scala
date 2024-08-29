@@ -34,9 +34,9 @@ trait LayoutOptimizeExec extends StageExec {
 
   def drain[T](timeout: Long = 1, unit: TimeUnit = TimeUnit.SECONDS): Unit = {
     val awaitPermission = null.asInstanceOf[scala.concurrent.CanAwait]
-    do {
+    while (!pipe.isEmpty) {
       val entry = pipe.poll(timeout, unit)
       entry.result(Duration.Inf)(awaitPermission).asInstanceOf[T]
-    } while (!pipe.isEmpty)
+    }
   }
 }

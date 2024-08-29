@@ -48,12 +48,10 @@ class LayoutDataRepartitionOptimize(layoutDataOptimizeJob: LayoutDataOptimizeJob
         .filter(_.getPartitionColumns.size() > 0)
         .foreach(
           layoutDetail => {
-            if (StringUtils.isNotEmpty(layoutDetail.getRangeFilterExpr)) {
-              val repartitionFuture = Future {
-                layoutRepartition(layoutDetail)
-              }(OptimizeExecutionContext.futureExecutionContext)
-              pipe.offer(repartitionFuture)
-            }
+            val repartitionFuture = Future {
+              layoutRepartition(layoutDetail)
+            }(OptimizeExecutionContext.futureExecutionContext)
+            pipe.offer(repartitionFuture)
           })
       drain[RepartitionOptimizeResult]()
     } else {
