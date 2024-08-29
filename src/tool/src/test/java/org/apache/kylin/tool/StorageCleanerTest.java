@@ -113,7 +113,19 @@ public class StorageCleanerTest extends NLocalFileMetadataTestCase {
         val config = getTestConfig();
         FileUtils.copyDirectory(new File("src/test/resources/ut_storage/delta_storage_cleaner_test"),
                 new File(config.getHdfsWorkingDirectory().replace("file://", "")));
+        val baseDir = new File(getTestConfig().getMetadataUrl().getIdentifier()).getParentFile();
+        val files = FileUtils.listFiles(new File(baseDir, "working-dir"), null, true);
+        val garbageFiles = files.stream().filter(f -> f.getAbsolutePath().contains("invalid")
+                        && f.getAbsolutePath().contains("storage_v3_test"))
+                .map(f -> FilenameUtils.normalize(f.getParentFile().getAbsolutePath())).collect(Collectors.toSet());
         cleaner.execute();
+        val outDateItem = cleaner.getOutdatedItems().stream()
+                .filter(out -> out.getPath().contains("storage_v3_test"))
+                .collect(Collectors.toSet());
+        Assert.assertEquals(garbageFiles.size(), outDateItem.size());
+        for (String outdatedItem : normalizeGarbages(outDateItem)) {
+            Assert.assertTrue(outdatedItem + " not in garbageFiles", garbageFiles.contains(outdatedItem));
+        }
     }
 
     @Test

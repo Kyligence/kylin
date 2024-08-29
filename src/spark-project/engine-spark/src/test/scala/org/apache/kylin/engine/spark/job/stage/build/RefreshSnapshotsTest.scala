@@ -29,6 +29,7 @@ class RefreshSnapshotsTest extends AnyFunSuite {
     val segmentJob = Mockito.mock(classOf[SegmentJob])
 
     val refreshSnapshots = new RefreshSnapshots(segmentJob)
+    refreshSnapshots.execute()
     Assert.assertEquals("RefreshSnapshots", refreshSnapshots.getStageName)
   }
 }

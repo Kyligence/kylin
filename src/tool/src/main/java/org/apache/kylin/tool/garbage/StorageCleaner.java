@@ -699,8 +699,8 @@ public class StorageCleaner implements GarbageCleaner {
             val deltaDataFlow = NDataflowManager.getInstance(config, project).listAllDataflows().stream()
                     .filter(df -> df.getModel().getStorageType().isDeltaStorage())
                     .map(RootPersistentEntity::getId).collect(Collectors.toSet());
-            val dataLayoutDetails = NDataflowManager.getInstance(config, project).listAllDataflows().stream()
-                    .flatMap(df -> df.listAllLayoutDetails().stream().map(NDataLayoutDetails::getResourcePath))
+            val activeDeltaLayoutData = NDataflowManager.getInstance(config, project).listAllDataflows().stream()
+                    .flatMap(df -> df.listAllLayoutDetails().stream().map(NDataLayoutDetails::getRelativeStoragePath))
                     .collect(Collectors.toSet());
             // set activeSegmentFlatTableDataPath, by iterating segments
             dataflowManager.listAllDataflows().forEach(df -> df.getSegments().stream() //
@@ -722,7 +722,7 @@ public class StorageCleaner implements GarbageCleaner {
                 item.getProject(project).getDataflows().removeIf(node -> dataflows.contains(node.getName()));
                 item.getProject(project).getDeltaDataFlows().removeIf(node -> deltaDataFlow.contains(node.getName()));
                 item.getProject(project).getDeltaDataLayouts().removeIf(node ->
-                        dataLayoutDetails.contains(node.getRelativePath()));
+                        activeDeltaLayoutData.contains(node.getRelativePath()));
                 item.getProject(project).getSegments()
                         .removeIf(node -> activeSegmentPath.contains(node.getRelativePath()));
                 item.getProject(project).getLayouts()

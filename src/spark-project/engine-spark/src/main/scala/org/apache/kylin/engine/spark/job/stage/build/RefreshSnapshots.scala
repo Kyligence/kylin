@@ -40,8 +40,8 @@ class RefreshSnapshots(jobContext: SegmentJob) extends StageExec {
   }
 
   override def execute(): Unit = {
-    (jobContext.getDataflow(jobContext.getDataflowId).getModel.getStorageType, jobContext) match {
-      case (storageType, job: SegmentBuildJob) if storageType.isV1Storage =>
+    jobContext match {
+      case job: SegmentBuildJob =>
         job.tryRefreshSnapshots(this)
       case _ =>
     }
