@@ -164,6 +164,7 @@ import org.apache.kylin.rest.constant.ModelStatusToDisplayEnum;
 import org.apache.kylin.rest.request.ModelConfigRequest;
 import org.apache.kylin.rest.request.ModelRequest;
 import org.apache.kylin.rest.request.MultiPartitionMappingRequest;
+import org.apache.kylin.rest.request.OptimizeLayoutDataRequest;
 import org.apache.kylin.rest.request.OwnerChangeRequest;
 import org.apache.kylin.rest.request.UpdateRuleBasedCuboidRequest;
 import org.apache.kylin.rest.response.CheckSegmentResponse;
@@ -5271,5 +5272,86 @@ public class ModelServiceTest extends SourceTestCase {
         modelService.setStorageType(project, modelId, 3);
         Assert.assertEquals(3, df.getModel().getStorageTypeValue());
         Assert.assertEquals(3, df.getIndexPlan().getAllLayouts().get(0).getStorageType());
+    }
+
+    @Test
+    public void testOptimizeLayoutData() {
+        val project = "storage_v3_test";
+        val modelId = "7d840904-7b34-4edd-aabd-79df992ef32e";
+        NDataflowManager dataflowManager = NDataflowManager.getInstance(getTestConfig(), project);
+        NDataflow dataflow = dataflowManager.getDataflow(modelId);
+        dataflow.listAllLayoutDetails().forEach(layoutEntity -> {
+            Assert.assertTrue(layoutEntity.getPartitionColumns().isEmpty());
+            Assert.assertTrue(layoutEntity.getZorderByColumns().isEmpty());
+            Assert.assertEquals(0, layoutEntity.getMaxCompactionFileSizeInBytes());
+            Assert.assertEquals(0, layoutEntity.getMinCompactionFileSizeInBytes());
+        });
+        OptimizeLayoutDataRequest optimizeLayoutDataRequest = new OptimizeLayoutDataRequest();
+        OptimizeLayoutDataRequest.DataOptimizationSetting modelSetting =
+                new OptimizeLayoutDataRequest.DataOptimizationSetting();
+        modelSetting.setRepartitionByColumns(Lists.newArrayList("TEST_SITES.SITE_NAME"));
+        modelSetting.setZorderByColumns(Lists.newArrayList("TEST_KYLIN_FACT.CAL_DT"));
+        modelSetting.setMinCompactionFileSize(1);
+        modelSetting.setMaxCompactionFileSize(2);
+
+        OptimizeLayoutDataRequest.DataOptimizationSetting layoutSetting =
+                new OptimizeLayoutDataRequest.DataOptimizationSetting();
+        layoutSetting.setRepartitionByColumns(Lists.newArrayList("TEST_SITES.SITE_NAME",
+                "TEST_KYLIN_FACT.CAL_DT"));
+        layoutSetting.setZorderByColumns(Lists.newArrayList("TEST_SITES.SITE_NAME", "TEST_KYLIN_FACT.CAL_DT"));
+        layoutSetting.setMinCompactionFileSize(3);
+        layoutSetting.setMaxCompactionFileSize(4);
+        OptimizeLayoutDataRequest.LayoutDataOptimizationSetting layoutDataOptimizationSetting =
+                new OptimizeLayoutDataRequest.LayoutDataOptimizationSetting();
+        layoutDataOptimizationSetting.setLayoutIdList(Lists.newArrayList(20001L));
+        layoutDataOptimizationSetting.setSetting(layoutSetting);
+        optimizeLayoutDataRequest.setModelOptimizationSetting(modelSetting);
+        optimizeLayoutDataRequest.setLayoutDataOptimizationSettingList(
+                Lists.newArrayList(layoutDataOptimizationSetting));
+
+        modelService.updateOptimizeSettings(project, modelId, optimizeLayoutDataRequest);
+
+        dataflow.listAllLayoutDetails().forEach(layoutEntity -> {
+            if (layoutEntity.getLayoutId() == 20001L) {
+                Assert.assertEquals(Lists.newArrayList("TEST_SITES.SITE_NAME",
+                        "TEST_KYLIN_FACT.CAL_DT"), layoutEntity.getPartitionColumns());
+                Assert.assertEquals(Lists.newArrayList("TEST_SITES.SITE_NAME",
+                        "TEST_KYLIN_FACT.CAL_DT"), layoutEntity.getZorderByColumns());
+                Assert.assertEquals(3, layoutEntity.getMinCompactionFileSizeInBytes());
+                Assert.assertEquals(4, layoutEntity.getMaxCompactionFileSizeInBytes());
+            } else {
+                Assert.assertEquals(Lists.newArrayList("TEST_SITES.SITE_NAME"),
+                        layoutEntity.getPartitionColumns());
+                Assert.assertEquals(Lists.newArrayList("TEST_KYLIN_FACT.CAL_DT"),
+                        layoutEntity.getZorderByColumns());
+                Assert.assertEquals(1, layoutEntity.getMinCompactionFileSizeInBytes());
+                Assert.assertEquals(2, layoutEntity.getMaxCompactionFileSizeInBytes());
+            }
+        });
+
+        OptimizeLayoutDataRequest optimizeLayoutDataRequest2 = new OptimizeLayoutDataRequest();
+        OptimizeLayoutDataRequest.DataOptimizationSetting modelSetting2 =
+                new OptimizeLayoutDataRequest.DataOptimizationSetting();
+        modelSetting2.setRepartitionByColumns(Lists.newArrayList());
+        modelSetting2.setZorderByColumns(Lists.newArrayList("TEST_KYLIN_FACT.CAL_DT"));
+        optimizeLayoutDataRequest2.setModelOptimizationSetting(modelSetting2);
+        modelService.updateOptimizeSettings(project, modelId, optimizeLayoutDataRequest2);
+
+        dataflow.listAllLayoutDetails().forEach(layoutEntity -> {
+            if (layoutEntity.getLayoutId() == 20001L) {
+                Assert.assertEquals(Lists.newArrayList("TEST_SITES.SITE_NAME",
+                        "TEST_KYLIN_FACT.CAL_DT"), layoutEntity.getPartitionColumns());
+                Assert.assertEquals(Lists.newArrayList("TEST_SITES.SITE_NAME",
+                        "TEST_KYLIN_FACT.CAL_DT"), layoutEntity.getZorderByColumns());
+                Assert.assertEquals(3, layoutEntity.getMinCompactionFileSizeInBytes());
+                Assert.assertEquals(4, layoutEntity.getMaxCompactionFileSizeInBytes());
+            } else {
+                Assert.assertEquals(Lists.newArrayList(), layoutEntity.getPartitionColumns());
+                Assert.assertEquals(Lists.newArrayList("TEST_KYLIN_FACT.CAL_DT"),
+                        layoutEntity.getZorderByColumns());
+                Assert.assertEquals(1, layoutEntity.getMinCompactionFileSizeInBytes());
+                Assert.assertEquals(2, layoutEntity.getMaxCompactionFileSizeInBytes());
+            }
+        });
     }
 }

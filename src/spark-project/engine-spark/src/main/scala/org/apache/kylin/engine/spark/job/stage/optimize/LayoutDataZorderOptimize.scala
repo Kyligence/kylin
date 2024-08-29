@@ -44,12 +44,10 @@ class LayoutDataZorderOptimize(layoutDataOptimizeJob: LayoutDataOptimizeJob) ext
         .filter(_.getZorderByColumns != null)
         .filter(_.getZorderByColumns.size() > 0)
         .foreach(layoutDetail => {
-          if (StringUtils.isNotEmpty(layoutDetail.getRangeFilterExpr)) {
-            val repartitionFuture = Future {
-              zorderLayout(layoutDetail)
-            }(OptimizeExecutionContext.futureExecutionContext)
-            pipe.offer(repartitionFuture)
-          }
+          val repartitionFuture = Future {
+            zorderLayout(layoutDetail)
+          }(OptimizeExecutionContext.futureExecutionContext)
+          pipe.offer(repartitionFuture)
         })
       drain[ZorderOptimizeResult]()
     } else {

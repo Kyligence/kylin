@@ -41,19 +41,17 @@ public class OptimizeLayoutDataRequest {
     @JsonProperty("project")
     private String project;
 
-    @JsonProperty("model_id")
-    private String modelId;
-
     @JsonProperty("model_optimization_setting")
     private DataOptimizationSetting modelOptimizationSetting;
 
     @JsonProperty("layout_optimization_settings")
-    private List<LayoutOptimizationSetting> layoutOptimizationSettingList;
+    private List<LayoutDataOptimizationSetting> layoutDataOptimizationSettingList;
 
     @Data
-    public static class LayoutOptimizationSetting{
+    public static class LayoutDataOptimizationSetting {
         @JsonProperty("layout_id_list")
         private List<Long> layoutIdList;
+
         @JsonProperty("optimization_setting")
         private DataOptimizationSetting setting;
     }
@@ -85,24 +83,23 @@ public class OptimizeLayoutDataRequest {
     static {
         template = new OptimizeLayoutDataRequest();
         template.setProject("");
-        template.setModelId("");
-        OptimizeLayoutDataRequest.DataOptimizationSetting modelSetting =
-                new OptimizeLayoutDataRequest.DataOptimizationSetting();
+        DataOptimizationSetting modelSetting =
+                new DataOptimizationSetting();
         modelSetting.setMaxCompactionFileSize(0);
         modelSetting.setMinCompactionFileSize(0);
         modelSetting.setRepartitionByColumns(Lists.newArrayList("TABLE_NAME.COLUMN_NAME"));
         modelSetting.setZorderByColumns(Lists.newArrayList("TABLE_NAME.COLUMN_NAME"));
         template.setModelOptimizationSetting(modelSetting);
-        LayoutOptimizationSetting layoutSetting =
-                new OptimizeLayoutDataRequest.LayoutOptimizationSetting();
-        OptimizeLayoutDataRequest.DataOptimizationSetting setting =
-                new OptimizeLayoutDataRequest.DataOptimizationSetting();
+        LayoutDataOptimizationSetting layoutSetting =
+                new LayoutDataOptimizationSetting();
+        DataOptimizationSetting setting =
+                new DataOptimizationSetting();
         setting.setMaxCompactionFileSize(0);
         setting.setMinCompactionFileSize(0);
         setting.setRepartitionByColumns(Lists.newArrayList("TABLE_NAME.COLUMN_NAME"));
         setting.setZorderByColumns(Lists.newArrayList("TABLE_NAME.COLUMN_NAME"));
         layoutSetting.setLayoutIdList(Lists.newArrayList(0L));
         layoutSetting.setSetting(setting);
-        template.setLayoutOptimizationSettingList(Lists.newArrayList(layoutSetting));
+        template.setLayoutDataOptimizationSettingList(Lists.newArrayList(layoutSetting));
     }
 }
