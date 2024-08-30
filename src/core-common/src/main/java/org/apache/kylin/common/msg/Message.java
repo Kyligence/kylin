@@ -451,6 +451,10 @@ public class Message {
         return "Can’t find internal table \"%s\". Please check and try again.";
     }
 
+    public String getTimeExceedPartitionRange() {
+        return "Refresh time exceed loaded range :\"%s\" ~ \"%s\", Please check and try again. ";
+    }
+
     public String getNotInternalTable() {
         return "Table \"%s\" is not an internal table. Please check and try again.";
     }

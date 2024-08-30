@@ -20,15 +20,18 @@ package org.apache.kylin.job.service;
 
 import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_ERROR;
 import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_NOT_EXIST;
+import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_INTERNAL_TABLE_PARAMETER;
 import static org.apache.kylin.job.execution.JobTypeEnum.INTERNAL_TABLE_BUILD;
 import static org.apache.kylin.job.execution.JobTypeEnum.INTERNAL_TABLE_REFRESH;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.exception.KylinException;
 import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.util.TimeUtil;
@@ -50,6 +53,7 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import io.kyligence.kap.engine.spark.job.InternalTableLoadJob;
 
@@ -67,12 +71,31 @@ public class InternalTableLoadingService extends BasicService {
             JobStatisticsManager jobStatisticsManager = JobStatisticsManager.getInstance(getConfig(), project);
             jobStatisticsManager.updateStatistics(TimeUtil.getDayStart(System.currentTimeMillis()), 0, 0, 1);
             InternalTableDesc internalTable = checkAndGetInternalTables(project, table, database);
-            if (isIncremental && (Objects.isNull(internalTable.getTablePartition().getPartitionColumns())
+            if (isIncremental && (Objects.isNull(internalTable.getTablePartition())
+                    || Objects.isNull(internalTable.getTablePartition().getPartitionColumns())
                     || internalTable.getTablePartition().getPartitionColumns().length == 0)) {
                 throw new KylinException(INTERNAL_TABLE_ERROR,
                         "Incremental build is not supported for unPartitioned table");
             }
             // check refresh time exceed loaded range
+            InternalTablePartition tablePartition = internalTable.getTablePartition();
+            if (jobType == INTERNAL_TABLE_REFRESH && !Objects.isNull(tablePartition)
+                    && StringUtils.isNotEmpty(tablePartition.getDatePartitionFormat())
+                    && !CollectionUtils.isEmpty(tablePartition.getPartitionValues())) {
+                // List is sorted in ascending order
+                List<String> partitionValues = tablePartition.getPartitionValues();
+                SimpleDateFormat formatter = new SimpleDateFormat(tablePartition.getDatePartitionFormat(), Locale.ROOT);
+                long rangeStart = formatter.parse(partitionValues.get(0)).getTime();
+                long rangeEnd = formatter.parse(partitionValues.get(partitionValues.size() - 1)).getTime();
+                if ((StringUtils.isNotEmpty(startDate)
+                        && (Long.parseLong(startDate) < rangeStart || Long.parseLong(startDate) > rangeEnd))
+                        || (StringUtils.isNotEmpty(endDate)
+                                && (Long.parseLong(endDate) > rangeEnd || Long.parseLong(endDate) < rangeStart))) {
+                    String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getTimeExceedPartitionRange(),
+                            partitionValues.get(0), partitionValues.get(partitionValues.size() - 1));
+                    throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
+                }
+            }
 
             logger.info(
                     "create internal table loading job for table: {}, isIncrementBuild: {}, startTime: {}, endTime: {}",

@@ -1036,6 +1036,11 @@ public class CnMessage extends Message {
     }
 
     @Override
+    public String getTimeExceedPartitionRange() {
+        return "刷新时间超出已加载范围 :\"%s\" ~ \"%s\"，请检查后重试。 ";
+    }
+
+    @Override
     public String getNotInternalTable() {
         return "表 \"%s\" 不是一个内表。 请检查后重试。";
     }
@@ -1393,6 +1398,7 @@ public class CnMessage extends Message {
     public String getQueryHistoryColumnMeta() {
         return "查询开始时间,查询耗时,查询 ID,SQL 语句,查询对象,查询状态,查询节点,查询用户,查询信息\n";
     }
+
     @Override
     public String getJobPauseFailed() {
         return "该类型任务不支持暂停操作";
@@ -1462,6 +1468,7 @@ public class CnMessage extends Message {
     public String getStreamingIndexesConvert() {
         return "流数据模型暂无法转换为优化建议。";
     }
+
     @Override
     public String getParameterEmpty() {
         return PARAMETER_EMPTY;

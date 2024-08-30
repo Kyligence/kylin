@@ -128,9 +128,9 @@ public class InternalTableService extends BasicService {
             internalTable.optimizeTblProperties();
             internalTable.setStorageType(storageType);
             internalTable.setLocation(internalTable.generateInternalTableLocation());
+            createDeltaSchema(internalTable);
             tableMetadataManager.updateTableDesc(originTable.getIdentity(),
                     copyForWrite -> copyForWrite.setHasInternal(true));
-            createDeltaSchema(internalTable);
             internalTableManager.saveOrUpdateInternalTable(internalTable);
             return true;
         }, projectName);
@@ -173,14 +173,20 @@ public class InternalTableService extends BasicService {
         }
     }
 
-    public void createDeltaSchema(InternalTableDesc internalTable) throws IOException {
-        if (internalTable.getStorageType() == InternalTableDesc.StorageType.GLUTEN
-                || internalTable.getStorageType() == InternalTableDesc.StorageType.DELTALAKE) {
-            Option<SparkSession> defaultSession = SparkSession.getDefaultSession();
-            InternalTableLoader internalTableLoader = new InternalTableLoader();
-            internalTableLoader.onlyLoadSchema(true);
-            internalTableLoader.loadInternalTable(defaultSession.get(), internalTable, "true", "", "",
-                    KylinConfig.getInstanceFromEnv().getGlutenStoragePolicy(), false);
+    public void createDeltaSchema(InternalTableDesc internalTable) throws Exception {
+        try {
+            if (internalTable.getStorageType() == InternalTableDesc.StorageType.GLUTEN
+                    || internalTable.getStorageType() == InternalTableDesc.StorageType.DELTALAKE) {
+                Option<SparkSession> defaultSession = SparkSession.getDefaultSession();
+                InternalTableLoader internalTableLoader = new InternalTableLoader();
+                internalTableLoader.onlyLoadSchema(true);
+                internalTableLoader.loadInternalTable(defaultSession.get(), internalTable, "true", "", "",
+                        KylinConfig.getInstanceFromEnv().getGlutenStoragePolicy(), false);
+            }
+        } catch (Exception e) {
+            // delete delta log on hdfs
+            HadoopUtil.deletePath(HadoopUtil.getCurrentConfiguration(), new Path(internalTable.getLocation()));
+            throw e;
         }
     }
 
