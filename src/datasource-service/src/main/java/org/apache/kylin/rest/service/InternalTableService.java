@@ -406,7 +406,11 @@ public class InternalTableService extends BasicService {
         InternalTableManager internalTableManager = getManager(InternalTableManager.class, project);
         String tableIdentity = databaseName + "." + tableName;
         InternalTableDesc internalTableDesc = internalTableManager.getInternalTableDesc(tableIdentity);
-        if (internalTableDesc == null || internalTableDesc.getTablePartition() == null) {
+        if (internalTableDesc == null) {
+            throw new KylinException(INTERNAL_TABLE_NOT_EXIST,
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getInternalTableNotFound(), tableIdentity));
+        }
+        if (internalTableDesc.getTablePartition() == null) {
             return null;
         }
         return internalTableDesc.getTablePartition().getPartitionDetails();

@@ -506,9 +506,17 @@ public class InternalTableServiceTest extends AbstractTestCase {
         NTableMetadataManager tManager = NTableMetadataManager.getInstance(config, PROJECT);
         TableDesc table = tManager.getTableDesc(TABLE_INDENTITY);
         when(tableService.getPartitionColumnFormat(any(), any(), any(), any())).thenReturn("yyyy-MM-dd");
-        List<InternalTablePartitionDetail> details = internalTableService.getTableDetail(PROJECT, table.getDatabase(),
-                table.getName());
+
+        List<InternalTablePartitionDetail> details = null;
+        KylinException notExistException = null;
+        try {
+            details = internalTableService.getTableDetail(PROJECT, table.getDatabase(), table.getName());
+        } catch (KylinException e) {
+            notExistException = e;
+        }
         Assertions.assertNull(details);
+        Assertions.assertTrue(
+                null != notExistException && notExistException.getErrorCode().getCodeString().equals("KE-010007014"));
 
         internalTableService.createInternalTable(PROJECT, table.getName(), table.getDatabase(), null, null,
                 new HashMap<>(), InternalTableDesc.StorageType.PARQUET.name());
