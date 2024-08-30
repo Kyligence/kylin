@@ -21,6 +21,7 @@ package org.apache.kylin.rest.service;
 import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_ERROR;
 import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_NOT_EXIST;
+import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_RELOAD_ERROR;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_INTERNAL_TABLE_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.TABLE_NOT_EXIST;
 
@@ -128,9 +129,9 @@ public class InternalTableService extends BasicService {
             internalTable.optimizeTblProperties();
             internalTable.setStorageType(storageType);
             internalTable.setLocation(internalTable.generateInternalTableLocation());
+            createDeltaSchema(internalTable);
             tableMetadataManager.updateTableDesc(originTable.getIdentity(),
                     copyForWrite -> copyForWrite.setHasInternal(true));
-            createDeltaSchema(internalTable);
             internalTableManager.saveOrUpdateInternalTable(internalTable);
             return true;
         }, projectName);
@@ -138,12 +139,15 @@ public class InternalTableService extends BasicService {
 
     public void checkParameters(String[] partitionCols, TableDesc originTable, String datePartitionFormat)
             throws Exception {
-        if (!Objects.isNull(partitionCols)) {
+        if ((!Objects.isNull(partitionCols) && partitionCols.length > 0) || !StringUtils.isEmpty(datePartitionFormat)) {
+            if (Objects.isNull(partitionCols)) {
+                partitionCols = new String[] {};
+            }
             List<ColumnDesc> partitionColList = Arrays.stream(partitionCols)
                     .map(col -> originTable.findColumnByName(col)).filter(col -> col != null)
                     .collect(Collectors.toList());
             // exist unmatched partition columns
-            if (partitionCols.length != partitionColList.size()) {
+            if (partitionCols.length != partitionColList.size() || partitionColList.size() == 0) {
                 String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getPartitionColumnNotExist(),
                         originTable.getIdentity());
                 throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
@@ -153,34 +157,48 @@ public class InternalTableService extends BasicService {
             if (StringUtils.isEmpty(datePartitionFormat) && dateCol.isPresent()) {
                 throw new KylinException(EMPTY_PARAMETER, "date_partition_format can not be null, please check again");
             }
+            if (!StringUtils.isEmpty(datePartitionFormat) && !dateCol.isPresent()) {
+                throw new KylinException(EMPTY_PARAMETER,
+                        "couldn't find date_col present in partition_cols, please check again");
+            }
+            checkIfFormatMatchCol(dateCol, originTable, datePartitionFormat);
+        }
+    }
 
-            if (dateCol.isPresent() && !StringUtils.isEmpty(datePartitionFormat)) {
-                boolean isFormatMatchRealDataFormat = true;
-                try {
-                    // If the source table is empty, the true format cannot be obtained
-                    isFormatMatchRealDataFormat = tableService.getPartitionColumnFormat(originTable.getProject(),
-                            originTable.getIdentity(), dateCol.get().getName(), null).equals(datePartitionFormat);
-                } catch (KylinException kylinException) {
-                    logger.warn("Cannot get the real data format, skip the date format check", kylinException);
-                    // other non kylin-exception will throw out
-                }
-                if (!isFormatMatchRealDataFormat) {
-                    String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getIncorrectDateformat(),
-                            datePartitionFormat);
-                    throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
-                }
+    private void checkIfFormatMatchCol(Optional<ColumnDesc> dateCol, TableDesc originTable, String datePartitionFormat)
+            throws Exception {
+        if (dateCol.isPresent() && !StringUtils.isEmpty(datePartitionFormat)) {
+            boolean isFormatMatchRealDataFormat = true;
+            try {
+                // If the source table is empty, the true format cannot be obtained
+                isFormatMatchRealDataFormat = tableService.getPartitionColumnFormat(originTable.getProject(),
+                        originTable.getIdentity(), dateCol.get().getName(), null).equals(datePartitionFormat);
+            } catch (KylinException kylinException) {
+                logger.warn("Cannot get the real data format, skip the date format check", kylinException);
+                // other non kylin-exception will throw out
+            }
+            if (!isFormatMatchRealDataFormat) {
+                String errorMsg = String.format(Locale.ROOT, MsgPicker.getMsg().getIncorrectDateformat(),
+                        datePartitionFormat);
+                throw new KylinException(INVALID_INTERNAL_TABLE_PARAMETER, errorMsg);
             }
         }
     }
 
-    public void createDeltaSchema(InternalTableDesc internalTable) throws IOException {
-        if (internalTable.getStorageType() == InternalTableDesc.StorageType.GLUTEN
-                || internalTable.getStorageType() == InternalTableDesc.StorageType.DELTALAKE) {
-            Option<SparkSession> defaultSession = SparkSession.getDefaultSession();
-            InternalTableLoader internalTableLoader = new InternalTableLoader();
-            internalTableLoader.onlyLoadSchema(true);
-            internalTableLoader.loadInternalTable(defaultSession.get(), internalTable, "true", "", "",
-                    KylinConfig.getInstanceFromEnv().getGlutenStoragePolicy(), false);
+    public void createDeltaSchema(InternalTableDesc internalTable) throws Exception {
+        try {
+            if (internalTable.getStorageType() == InternalTableDesc.StorageType.GLUTEN
+                    || internalTable.getStorageType() == InternalTableDesc.StorageType.DELTALAKE) {
+                Option<SparkSession> defaultSession = SparkSession.getDefaultSession();
+                InternalTableLoader internalTableLoader = new InternalTableLoader();
+                internalTableLoader.onlyLoadSchema(true);
+                internalTableLoader.loadInternalTable(defaultSession.get(), internalTable, "true", "", "",
+                        KylinConfig.getInstanceFromEnv().getGlutenStoragePolicy(), false);
+            }
+        } catch (Exception e) {
+            // delete delta log on hdfs
+            HadoopUtil.deletePath(HadoopUtil.getCurrentConfiguration(), new Path(internalTable.getLocation()));
+            throw e;
         }
     }
 
@@ -294,8 +312,7 @@ public class InternalTableService extends BasicService {
 
     // 1. delete data in file system
     // 2. clear partition values in internal table meta
-    public InternalTableLoadingJobResponse truncateInternalTable(String project, String tableIdentity)
-            throws Exception {
+    public void truncateInternalTable(String project, String tableIdentity) throws Exception {
         aclEvaluate.checkProjectWritePermission(project);
         InternalTableManager internalTableManager = getManager(InternalTableManager.class, project);
         InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(tableIdentity);
@@ -332,25 +349,27 @@ public class InternalTableService extends BasicService {
         }, project);
         logger.info("Successfully truncate internal table {} in {} ms", tableIdentity,
                 System.currentTimeMillis() - start);
-        return InternalTableLoadingJobResponse.of(new ArrayList<>(), "");
     }
 
     // 1. delete partition data in file system
     // 2. update partition values in internal table meta
     // we shall do this delete action by a spark job and call delta delete api
     // so that the delta meta could be updated!
-    public InternalTableLoadingJobResponse dropPartitionsOnDeltaTable(String project, String tableIdentity,
-            String[] partitionValues, String yarnQueue) throws IOException {
+    public void dropPartitionsOnDeltaTable(String project, String tableIdentity, String[] partitionValues,
+            String yarnQueue) throws IOException {
         aclEvaluate.checkProjectWritePermission(project);
-        return internalTableLoadingService.dropPartitions(project, partitionValues, tableIdentity, yarnQueue);
+        internalTableLoadingService.dropPartitions(project, partitionValues, tableIdentity, yarnQueue);
     }
 
-    // TODO need fix
     public void reloadInternalTableSchema(String project, String tableIdentity) throws Exception {
         aclEvaluate.checkProjectWritePermission(project);
         InternalTableManager internalTableManager = getManager(InternalTableManager.class, project);
         InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(tableIdentity);
         if (internalTable != null) {
+            if (internalTable.getRowCount() != 0) {
+                throw new KylinException(INTERNAL_TABLE_RELOAD_ERROR, String.format(Locale.ROOT,
+                        MsgPicker.getMsg().getFailedReloadNoneEmptyInternalTable(), tableIdentity));
+            }
             dropInternalTable(project, tableIdentity);
             createInternalTable(project, tableIdentity, internalTable.getPartitionColumns(),
                     internalTable.getDatePartitionFormat(), internalTable.getTblProperties(),
@@ -406,7 +425,11 @@ public class InternalTableService extends BasicService {
         InternalTableManager internalTableManager = getManager(InternalTableManager.class, project);
         String tableIdentity = databaseName + "." + tableName;
         InternalTableDesc internalTableDesc = internalTableManager.getInternalTableDesc(tableIdentity);
-        if (internalTableDesc == null || internalTableDesc.getTablePartition() == null) {
+        if (internalTableDesc == null) {
+            throw new KylinException(INTERNAL_TABLE_NOT_EXIST,
+                    String.format(Locale.ROOT, MsgPicker.getMsg().getInternalTableNotFound(), tableIdentity));
+        }
+        if (internalTableDesc.getTablePartition() == null) {
             return null;
         }
         return internalTableDesc.getTablePartition().getPartitionDetails();

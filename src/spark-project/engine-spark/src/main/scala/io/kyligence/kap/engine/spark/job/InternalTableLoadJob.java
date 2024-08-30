@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -171,7 +170,7 @@ public class InternalTableLoadJob extends SparkApplication {
                 String partitionValue = row.getString(0);
                 long partitionStorageSize = row.getLong(1);
                 long fileSize = row.getLong(2);
-                val subPath = partitionCol.toLowerCase(Locale.ROOT) + "=" + partitionValue;
+                val subPath = partitionCol + "=" + partitionValue;
                 val partitionsPath = new Path(internalTable.getLocation(), subPath);
                 partitionValues.add(partitionValue);
                 detail.setSizeInBytes(partitionStorageSize);

@@ -451,6 +451,18 @@ public class Message {
         return "Can’t find internal table \"%s\". Please check and try again.";
     }
 
+    public String getTimeExceedPartitionRange() {
+        return "Refresh time exceed loaded range :\"%s\" ~ \"%s\", Please check and try again. ";
+    }
+
+    public String getInternalTablePartitionNotFound() {
+        return "Can't find internal table partitions: %s. Please check and try again.";
+    }
+
+    public String getFailedReloadNoneEmptyInternalTable() {
+        return "Can't reload none empty internal table \"%s\". Please truncate table first and try again.";
+    }
+
     public String getNotInternalTable() {
         return "Table \"%s\" is not an internal table. Please check and try again.";
     }
@@ -962,6 +974,10 @@ public class Message {
         return "Table name can’t be empty. Please check and try again.";
     }
 
+    public String getTableOrDatabaseNameCannotEmpty() {
+        return "Table or database can not be null, please check again.";
+    }
+
     public String getFileNotExist() {
         return "Cannot find file [%s]";
     }
@@ -1383,6 +1399,7 @@ public class Message {
     public String getCannotForceToBothPushdodwnAndIndex() {
         return "Cannot force the query to pushdown and index at the same time. Only one of the parameter “forcedToPushDown“ and “forced_to_index” could be used. Please check and try again.";
     }
+
     public String getParameterEmpty() {
         return PARAMETER_EMPTY;
     }
