@@ -1046,6 +1046,11 @@ public class CnMessage extends Message {
     }
 
     @Override
+    public String getInternalTablePartitionNotFound() {
+        return "无法找到内表分区：%s。 请检查后重试。";
+    }
+
+    @Override
     public String getNotInternalTable() {
         return "表 \"%s\" 不是一个内表。 请检查后重试。";
     }

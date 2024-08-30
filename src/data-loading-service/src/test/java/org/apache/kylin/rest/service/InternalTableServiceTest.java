@@ -433,6 +433,13 @@ public class InternalTableServiceTest extends AbstractTestCase {
         long newCount = ss.sql(BASE_SQL).count();
         Assertions.assertTrue(newCount > 0 && newCount < count);
 
+        // remove partitions not exist in table
+        String[] toDeletePartitionsNotExist = new String[] { "2013-01-03", "2013-01-04" };
+        Assert.assertThrows(KylinException.class, () -> {
+            internalTableService.dropPartitionsOnDeltaTable(PROJECT, TABLE_INDENTITY, toDeletePartitionsNotExist,
+                    null);
+        });
+
         // check delete table
         internalTableService.dropInternalTable(PROJECT, TABLE_INDENTITY);
         Assertions.assertFalse(internalTableFolder.exists());
@@ -454,7 +461,7 @@ public class InternalTableServiceTest extends AbstractTestCase {
                 InternalTableDesc.StorageType.PARQUET.name());
         String[] toDeletePartitions = new String[] { "2012-01-03", "2012-01-04" };
         Assert.assertThrows(KylinException.class, () -> {
-            internalTableService.dropPartitionsOnDeltaTable(PROJECT, "DEFAULT.TEST_KYLIN_FACT_NOT", toDeletePartitions,
+            internalTableService.dropPartitionsOnDeltaTable(PROJECT, "DEFAULT.TEST_KYLIN_FACT", toDeletePartitions,
                     null);
         });
     }
