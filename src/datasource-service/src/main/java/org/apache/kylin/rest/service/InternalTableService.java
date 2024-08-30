@@ -345,10 +345,10 @@ public class InternalTableService extends BasicService {
     // 2. update partition values in internal table meta
     // we shall do this delete action by a spark job and call delta delete api
     // so that the delta meta could be updated!
-    public InternalTableLoadingJobResponse dropPartitionsOnDeltaTable(String project, String tableIdentity,
+    public void dropPartitionsOnDeltaTable(String project, String tableIdentity,
             String[] partitionValues, String yarnQueue) throws IOException {
         aclEvaluate.checkProjectWritePermission(project);
-        return internalTableLoadingService.dropPartitions(project, partitionValues, tableIdentity, yarnQueue);
+        internalTableLoadingService.dropPartitions(project, partitionValues, tableIdentity, yarnQueue);
     }
 
     // TODO need fix

@@ -115,7 +115,7 @@ public class InternalTableLoadingService extends BasicService {
         return InternalTableLoadingJobResponse.of(jobIds, jobName);
     }
 
-    public InternalTableLoadingJobResponse dropPartitions(String project, String[] partitionValues,
+    public void dropPartitions(String project, String[] partitionValues,
             String tableIdentity, String yarnQueue) throws IOException {
         // If internal table can not be obtained, will throw a kylin exception
         InternalTableDesc internalTable = checkAndGetInternalTables(project, tableIdentity);
@@ -141,7 +141,6 @@ public class InternalTableLoadingService extends BasicService {
 
         logger.info("Successfully drop partition[{}] for table {} in {} ms", toBeDelete, tableIdentity,
                 System.currentTimeMillis() - start);
-        return InternalTableLoadingJobResponse.of(new ArrayList<>(), "");
     }
 
     private InternalTableDesc checkAndGetInternalTables(String project, String tableIdentity) {

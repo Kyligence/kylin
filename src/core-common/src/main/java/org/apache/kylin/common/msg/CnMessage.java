@@ -1026,6 +1026,11 @@ public class CnMessage extends Message {
     }
 
     @Override
+    public String getTableOrDatabaseNameCannotEmpty() {
+        return "数据库名与表名不能为空。请检查后重试。";
+    }
+
+    @Override
     public String getTableNotFound() {
         return "无法找到表 \"%s\" 。请检查后重试。";
     }

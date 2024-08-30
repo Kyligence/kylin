@@ -966,6 +966,10 @@ public class Message {
         return "Table name can’t be empty. Please check and try again.";
     }
 
+    public String getTableOrDatabaseNameCannotEmpty() {
+        return "Table or database can not be null, please check again.";
+    }
+
     public String getFileNotExist() {
         return "Cannot find file [%s]";
     }
@@ -1387,6 +1391,7 @@ public class Message {
     public String getCannotForceToBothPushdodwnAndIndex() {
         return "Cannot force the query to pushdown and index at the same time. Only one of the parameter “forcedToPushDown“ and “forced_to_index” could be used. Please check and try again.";
     }
+
     public String getParameterEmpty() {
         return PARAMETER_EMPTY;
     }

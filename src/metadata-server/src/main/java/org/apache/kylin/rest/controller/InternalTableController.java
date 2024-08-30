@@ -105,7 +105,7 @@ public class InternalTableController extends NBasicController {
     @ApiOperation(value = "drop_table_partitions", tags = { "AI" })
     @DeleteMapping(value = "/partitions", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
-    public EnvelopeResponse<InternalTableLoadingJobResponse> dropPartitions(
+    public EnvelopeResponse<String> dropPartitions(
             @RequestParam(value = "project") String project, @RequestParam(value = "table") String table,
             @RequestParam(value = "partitions") String[] partitionValues) throws Exception {
         checkProjectName(project);
@@ -114,9 +114,9 @@ public class InternalTableController extends NBasicController {
         }
         // If partitionValues is null, all files will be cleared
         // otherwise only files in the specified partition will be cleared.
-        InternalTableLoadingJobResponse response = internalTableService.dropPartitionsOnDeltaTable(project, table,
+        internalTableService.dropPartitionsOnDeltaTable(project, table,
                 partitionValues, null);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, null, "");
     }
 
     @ApiOperation(value = "load_into_internal", tags = { "AI" })
