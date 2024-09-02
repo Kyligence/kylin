@@ -331,6 +331,13 @@ public class InternalTableServiceTest extends AbstractTestCase {
 
         internalTableService.reloadInternalTableSchema(PROJECT, TABLE_INDENTITY);
         Assertions.assertEquals(0, internalTableFolder.list().length);
+        InternalTableManager internalTableManager = InternalTableManager.getInstance(config, PROJECT);
+        InternalTableDesc internalTableDesc = internalTableManager.getInternalTableDesc(TABLE_INDENTITY);
+        internalTableDesc.setRowCount(1);
+        internalTableManager.saveOrUpdateInternalTable(internalTableDesc);
+        Assert.assertThrows(KylinException.class,
+                () -> internalTableService.reloadInternalTableSchema(PROJECT, TABLE_INDENTITY));
+
     }
 
     @Test

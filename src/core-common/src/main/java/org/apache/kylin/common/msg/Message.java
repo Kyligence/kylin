@@ -459,6 +459,10 @@ public class Message {
         return "Can't find internal table partitions: %s. Please check and try again.";
     }
 
+    public String getFailedReloadNoneEmptyInternalTable() {
+        return "Can't reload none empty internal table \"%s\". Please truncate table first and try again.";
+    }
+
     public String getNotInternalTable() {
         return "Table \"%s\" is not an internal table. Please check and try again.";
     }

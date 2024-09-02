@@ -21,6 +21,7 @@ package org.apache.kylin.rest.service;
 import static org.apache.kylin.common.exception.ServerErrorCode.EMPTY_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_ERROR;
 import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_NOT_EXIST;
+import static org.apache.kylin.common.exception.ServerErrorCode.INTERNAL_TABLE_RELOAD_ERROR;
 import static org.apache.kylin.common.exception.ServerErrorCode.INVALID_INTERNAL_TABLE_PARAMETER;
 import static org.apache.kylin.common.exception.ServerErrorCode.TABLE_NOT_EXIST;
 
@@ -351,12 +352,16 @@ public class InternalTableService extends BasicService {
         internalTableLoadingService.dropPartitions(project, partitionValues, tableIdentity, yarnQueue);
     }
 
-    // TODO need fix
     public void reloadInternalTableSchema(String project, String tableIdentity) throws Exception {
         aclEvaluate.checkProjectWritePermission(project);
         InternalTableManager internalTableManager = getManager(InternalTableManager.class, project);
         InternalTableDesc internalTable = internalTableManager.getInternalTableDesc(tableIdentity);
         if (internalTable != null) {
+            if (internalTable.getRowCount() != 0) {
+                throw new KylinException(INTERNAL_TABLE_RELOAD_ERROR,
+                        String.format(Locale.ROOT,
+                                MsgPicker.getMsg().getFailedReloadNoneEmptyInternalTable(), tableIdentity));
+            }
             dropInternalTable(project, tableIdentity);
             createInternalTable(project, tableIdentity, internalTable.getPartitionColumns(),
                     internalTable.getDatePartitionFormat(), internalTable.getTblProperties(),

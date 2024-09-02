@@ -1051,6 +1051,11 @@ public class CnMessage extends Message {
     }
 
     @Override
+    public String getFailedReloadNoneEmptyInternalTable() {
+        return "无法重载非空内表 \"%s\". 请清理数据后重试.";
+    }
+
+    @Override
     public String getNotInternalTable() {
         return "表 \"%s\" 不是一个内表。 请检查后重试。";
     }
