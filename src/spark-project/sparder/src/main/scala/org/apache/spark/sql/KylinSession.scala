@@ -114,7 +114,10 @@ class KylinSession(
 object KylinSession extends Logging {
   val NORMAL_FAIR_SCHEDULER_FILE_NAME: String = "/fairscheduler.xml"
   val QUERY_LIMIT_FAIR_SCHEDULER_FILE_NAME: String = "/query-limit-fair-scheduler.xml"
+  val SPARK_MASTER = "spark.master"
   val SPARK_PLUGINS_KEY = "spark.plugins"
+  val SPARK_YARN_DIST_FILE = "spark.yarn.dist.files"
+  val SPARK_EXECUTOR_JAR_PATH = "spark.gluten.sql.executor.jar.path"
 
   implicit class KylinBuilder(builder: Builder) {
     var queryCluster: Boolean = true
@@ -249,7 +252,7 @@ object KylinSession extends Logging {
       }
 
       // the length of the `podNamePrefix` needs to be less than or equal to 47
-      sparkConf.get("spark.master") match {
+      sparkConf.get(SPARK_MASTER) match {
         case v if v.startsWith("k8s") =>
           val appName = sparkConf.get("spark.app.name", System.getenv("HOSTNAME"))
           val podNamePrefix = generateExecutorPodNamePrefixForK8s(appName)
@@ -292,7 +295,7 @@ object KylinSession extends Logging {
       }
 
       if (!"true".equalsIgnoreCase(System.getProperty("spark.local"))) {
-        if (sparkConf.get("spark.master").startsWith("yarn")) {
+        if (sparkConf.get(SPARK_MASTER).startsWith("yarn")) {
           // TODO Less elegant implementation.
           val applicationJar = KylinConfig.getInstanceFromEnv.getKylinJobJarPath
           val yarnDistJarsConf = "spark.yarn.dist.jars"
@@ -302,14 +305,14 @@ object KylinSession extends Logging {
             applicationJar
           }
           sparkConf.set(yarnDistJarsConf, distJars)
-          sparkConf.set("spark.yarn.dist.files", kapConfig.sparderFiles())
+          sparkConf.set(SPARK_YARN_DIST_FILE, kapConfig.sparderFiles())
         } else {
           sparkConf.set("spark.jars", kapConfig.sparderJars)
           sparkConf.set("spark.files", kapConfig.sparderFiles())
         }
 
         // spark on k8s with client mode, set the spark.driver.host = local ip
-        if (sparkConf.get("spark.master").startsWith("k8s") && "client".equals(sparkConf.get("spark.submit.deployMode", "client"))) {
+        if (sparkConf.get(SPARK_MASTER).startsWith("k8s") && "client".equals(sparkConf.get("spark.submit.deployMode", "client"))) {
           if (!sparkConf.contains("spark.driver.host")) {
             sparkConf.set("spark.driver.host", AddressUtil.getLocalHostExactAddress)
           }
@@ -317,7 +320,20 @@ object KylinSession extends Logging {
 
         var extraJars = Paths.get(KylinConfig.getInstanceFromEnv.getKylinJobJarPath).getFileName.toString
         if (KylinConfig.getInstanceFromEnv.queryUseGlutenEnabled) {
-          extraJars = "gluten.jar:" + extraJars
+          if (sparkConf.get(SPARK_MASTER).startsWith("yarn")) {
+            val distFiles = sparkConf.get(SPARK_YARN_DIST_FILE)
+            if (distFiles.isEmpty) {
+              sparkConf.set(SPARK_YARN_DIST_FILE,
+                sparkConf.get(SPARK_EXECUTOR_JAR_PATH))
+            } else {
+              sparkConf.set(SPARK_YARN_DIST_FILE,
+                sparkConf.get(SPARK_EXECUTOR_JAR_PATH) + "," + distFiles)
+            }
+            extraJars = "gluten.jar" + File.pathSeparator + extraJars
+          } else {
+            extraJars = sparkConf.get(SPARK_EXECUTOR_JAR_PATH) +
+              File.pathSeparator + extraJars
+          }
         }
         sparkConf.set("spark.executor.extraClassPath", extraJars)
 

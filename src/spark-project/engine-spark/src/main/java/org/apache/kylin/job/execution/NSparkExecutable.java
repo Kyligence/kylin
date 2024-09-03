@@ -888,12 +888,16 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         // (assembled in the kylinJobJar)
         // will be in NM container's classpath.
 
+        Set<String> sparkJars = Sets.newLinkedHashSet();
+        boolean glutenEnabled = Boolean.parseBoolean(sparkConf.get("spark.gluten.enabled"));
         // Cluster mode.
         if (isClusterMode(sparkConf)) {
             // On yarn cluster mode,
             // application jar (kylinJobJar here) would ln as '__app__.jar'.
-            Set<String> sparkJars = Sets.newLinkedHashSet();
             sparkJars.add(APP_JAR_NAME);
+            if (glutenEnabled) {
+                sparkJars.add("gluten.jar");
+            }
             sparkJars.addAll(getSparkJars(kylinConf, sparkConf));
             final String jointJarNames = sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString()).sorted()
                     .collect(Collectors.joining(COLON));
@@ -903,12 +907,33 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         }
 
         // Client mode.
-        Set<String> sparkJars = getSparkJars(kylinConf, sparkConf);
-        sparkConf.put(DRIVER_EXTRA_CLASSPATH,
-                sparkJars.stream().sorted(Comparator.comparing(jar -> jar.substring(jar.lastIndexOf(PATH_DELIMITER))))
-                        .collect(Collectors.joining(COLON)));
-        sparkConf.put(EXECUTOR_EXTRA_CLASSPATH, sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString())
-                .sorted().collect(Collectors.joining(COLON)));
+        sparkJars.addAll(getSparkJars(kylinConf, sparkConf));
+        if (sparkConf.get(SPARK_MASTER).startsWith("yarn")) {
+            if (glutenEnabled) {
+                sparkJars.add(sparkConf.get("spark.gluten.sql.driver.jar.path"));
+            }
+            sparkConf.put(DRIVER_EXTRA_CLASSPATH,
+                sparkJars.stream().sorted(
+                    Comparator.comparing(jar -> jar.substring(jar.lastIndexOf(PATH_DELIMITER))))
+                    .collect(Collectors.joining(COLON)));
+            sparkConf.put(EXECUTOR_EXTRA_CLASSPATH,
+                sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString())
+                    .sorted().collect(Collectors.joining(COLON)));
+        } else {
+            String driverCp = sparkJars.stream().sorted(
+                Comparator.comparing(jar -> jar.substring(jar.lastIndexOf(PATH_DELIMITER))))
+                .collect(Collectors.joining(COLON));
+            String executorCp = sparkJars.stream()
+                .map(jar -> Paths.get(jar).getFileName().toString())
+                .sorted().collect(Collectors.joining(COLON));
+            if (glutenEnabled) {
+                driverCp = sparkConf.get("spark.gluten.sql.driver.jar.path") + COLON + driverCp;
+                executorCp = sparkConf.get("spark.gluten.sql.executor.jar.path")
+                    + COLON + executorCp;
+            }
+            sparkConf.put(DRIVER_EXTRA_CLASSPATH, driverCp);
+            sparkConf.put(EXECUTOR_EXTRA_CLASSPATH, executorCp);
+        }
     }
 
     private void rewriteDriverLog4jConf(StringBuilder sb, KylinConfig config, Map<String, String> sparkConf) {
@@ -958,6 +983,11 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
         }
         filePaths.add(sparkConf.get(SPARK_FILES_1));
         filePaths.add(sparkConf.get(SPARK_FILES_2));
+
+        if (sparkConf.get(SPARK_MASTER).startsWith("yarn")
+                && Boolean.parseBoolean(sparkConf.get("spark.gluten.enabled"))) {
+            filePaths.add(sparkConf.get("spark.gluten.sql.driver.jar.path"));
+        }
 
         LinkedHashSet<String> sparkFiles = filePaths.stream() //
                 .filter(StringUtils::isNotEmpty) //

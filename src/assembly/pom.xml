@@ -58,6 +58,16 @@
         <dependency>
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-engine-spark</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>delta-core_2.12</artifactId>
+                    <groupId>io.delta</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>delta-storage</artifactId>
+                    <groupId>io.delta</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.kylin</groupId>
@@ -82,6 +92,12 @@
         <dependency>
             <groupId>org.apache.kylin</groupId>
             <artifactId>kylin-sparder</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>delta-core_2.12</artifactId>
+                    <groupId>io.delta</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.kylin</groupId>

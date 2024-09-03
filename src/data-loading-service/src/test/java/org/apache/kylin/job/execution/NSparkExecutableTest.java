@@ -154,7 +154,7 @@ public class NSparkExecutableTest extends NLocalFileMetadataTestCase {
             String cmd = (String) sparkExecutable.sparkJobHandler.generateSparkCmd(kylinConfig, desc);
 
             Assert.assertNotNull(cmd);
-            Assert.assertTrue(cmd.contains("spark.plugins=" + BuildAsyncProfilerSparkPlugin.class.getCanonicalName()));
+            Assert.assertTrue(cmd.contains("spark.plugins=," + BuildAsyncProfilerSparkPlugin.class.getCanonicalName()));
         }
 
         overwriteSystemProp("kylin.engine.spark-conf.spark.plugins",
@@ -180,7 +180,7 @@ public class NSparkExecutableTest extends NLocalFileMetadataTestCase {
             String cmd = (String) sparkExecutable.sparkJobHandler.generateSparkCmd(kylinConfig, desc);
 
             Assert.assertNotNull(cmd);
-            Assert.assertFalse(cmd.contains("spark.plugins=" + BuildAsyncProfilerSparkPlugin.class.getCanonicalName()));
+            Assert.assertFalse(cmd.contains("spark.plugins=," + BuildAsyncProfilerSparkPlugin.class.getCanonicalName()));
         }
 
         overwriteSystemProp("kylin.engine.spark-conf.spark.driver.extraJavaOptions",
