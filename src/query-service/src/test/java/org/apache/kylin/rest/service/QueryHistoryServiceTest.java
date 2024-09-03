@@ -41,13 +41,13 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.NativeQueryRealization;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.ProcessUtils;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NDataModelManager;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryHistoryRequest;
@@ -76,7 +76,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import lombok.val;
 import lombok.var;
-
 
 public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
     private static final String PROJECT = "default";
@@ -394,8 +393,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         QueryMetrics.RealizationMetrics nullQueryMetrics2 = new QueryMetrics.RealizationMetrics("1", "Agg Index",
                 "89af4ee2-2cdb-4b07-b39e-4c29856309aa", Lists.newArrayList(new String[] {}));
         QueryHistoryInfo queryHistoryInfo = new QueryHistoryInfo();
-        queryHistoryInfo.setRealizationMetrics(
-                Lists.newArrayList(new QueryMetrics.RealizationMetrics[] { nullQueryMetrics1, nullQueryMetrics2 }));
+        queryHistoryInfo.setRealizationMetrics(Lists.newArrayList(nullQueryMetrics1, nullQueryMetrics2));
         layoutNullQuery.setQueryHistoryInfo(queryHistoryInfo);
 
         // accelerated query
@@ -420,7 +418,7 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         List<QueryHistory> queryHistories = (List<QueryHistory>) result.get("query_histories");
         Assert.assertEquals(2, queryHistories.size());
         Assert.assertNull(queryHistories.get(0).getNativeQueryRealizations().get(0).getLayoutId());
-        Assert.assertNull(queryHistories.get(0).getNativeQueryRealizations().get(0).getIndexType());
+        Assert.assertNull(queryHistories.get(0).getNativeQueryRealizations().get(0).getType());
         Assert.assertEquals("nmodel_basic", queryHistories.get(0).getNativeQueryRealizations().get(1).getModelAlias());
         Assert.assertEquals(1L, (long) queryHistories.get(1).getNativeQueryRealizations().get(0).getLayoutId());
         Assert.assertEquals(1L, (long) queryHistories.get(1).getNativeQueryRealizations().get(1).getLayoutId());
@@ -472,8 +470,8 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals("nmodel_basic", queryHistories.get(0).getNativeQueryRealizations().get(1).getModelAlias());
         Assert.assertEquals(1L, (long) queryHistories.get(1).getNativeQueryRealizations().get(0).getLayoutId());
         Assert.assertEquals(1L, (long) queryHistories.get(1).getNativeQueryRealizations().get(1).getLayoutId());
-        Assert.assertEquals(0, queryHistories.get(0).getNativeQueryRealizations().get(0).getSnapshots().size());
-        Assert.assertEquals(1, queryHistories.get(0).getNativeQueryRealizations().get(1).getSnapshots().size());
+        Assert.assertEquals(0, queryHistories.get(0).getNativeQueryRealizations().get(0).getLookupTables().size());
+        Assert.assertEquals(1, queryHistories.get(0).getNativeQueryRealizations().get(1).getLookupTables().size());
     }
 
     @Test
@@ -512,10 +510,10 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(1, queryHistories.size());
         Assert.assertEquals("nmodel_basic", queryHistories.get(0).getNativeQueryRealizations().get(1).getModelAlias());
         Assert.assertEquals(1L, (long) queryHistories.get(0).getNativeQueryRealizations().get(1).getLayoutId());
-        Assert.assertEquals(true, queryHistories.get(0).getNativeQueryRealizations().get(0).getSnapshots().isEmpty());
-        Assert.assertEquals(2, queryHistories.get(0).getNativeQueryRealizations().get(1).getSnapshots().size());
+        Assert.assertTrue(queryHistories.get(0).getNativeQueryRealizations().get(0).getLookupTables().isEmpty());
+        Assert.assertEquals(2, queryHistories.get(0).getNativeQueryRealizations().get(1).getLookupTables().size());
         Assert.assertNull(queryHistories.get(0).getNativeQueryRealizations().get(2).getLayoutId());
-        Assert.assertNull(queryHistories.get(0).getNativeQueryRealizations().get(2).getIndexType());
+        Assert.assertNull(queryHistories.get(0).getNativeQueryRealizations().get(2).getType());
     }
 
     @Test
@@ -546,8 +544,8 @@ public class QueryHistoryServiceTest extends NLocalFileMetadataTestCase {
         Assert.assertEquals(1, queryHistories.size());
         Assert.assertEquals("nmodel_basic", queryHistories.get(0).getNativeQueryRealizations().get(1).getModelAlias());
         Assert.assertEquals(1L, (long) queryHistories.get(0).getNativeQueryRealizations().get(1).getLayoutId());
-        Assert.assertEquals(true, queryHistories.get(0).getNativeQueryRealizations().get(0).getSnapshots().isEmpty());
-        Assert.assertEquals(2, queryHistories.get(0).getNativeQueryRealizations().get(1).getSnapshots().size());
+        Assert.assertTrue(queryHistories.get(0).getNativeQueryRealizations().get(0).getLookupTables().isEmpty());
+        Assert.assertEquals(2, queryHistories.get(0).getNativeQueryRealizations().get(1).getLookupTables().size());
     }
 
     @Test

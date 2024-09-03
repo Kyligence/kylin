@@ -308,6 +308,10 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
         return getStatus() == RealizationStatusEnum.ONLINE;
     }
 
+    public boolean isOffline() {
+        return getStatus() == RealizationStatusEnum.OFFLINE;
+    }
+
     @Override
     public String getCanonicalName() {
         return getType() + "[name=" + getModel().getAlias() + "]";
@@ -544,18 +548,18 @@ public class NDataflow extends RootPersistentEntity implements Serializable, IRe
     }
 
     public long getStorageBytesSize() {
-    long bytesSize = 0L;
-    if (!getModel().isBroken() && getModel().getStorageType().isV3Storage()) {
-        for (val detail : listAllLayoutDetails()) {
-            bytesSize += detail.getSizeInBytes();
+        long bytesSize = 0L;
+        if (!getModel().isBroken() && getModel().getStorageType().isV3Storage()) {
+            for (val detail : listAllLayoutDetails()) {
+                bytesSize += detail.getSizeInBytes();
+            }
+        } else {
+            for (val segment : getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING)) {
+                bytesSize += segment.getStorageBytesSize();
+            }
         }
-    } else {
-        for (val segment : getSegments(SegmentStatusEnum.READY, SegmentStatusEnum.WARNING)) {
-            bytesSize += segment.getStorageBytesSize();
-        }
+        return bytesSize;
     }
-    return bytesSize;
-}
 
     public long getSourceBytesSize() {
         long bytesSize = 0L;

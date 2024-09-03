@@ -51,7 +51,6 @@ import org.apache.kylin.guava30.shaded.common.annotations.VisibleForTesting;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.project.NProjectLoader;
 import org.apache.kylin.metadata.project.NProjectManager;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.StructField;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
@@ -240,14 +239,7 @@ public class QueryRoutingEngine {
     @VisibleForTesting
     public QueryResult execute(String correctedSql, QueryExec queryExec) throws SQLException {
         QueryResult queryResult = queryExec.executeQuery(correctedSql);
-
-        List<QueryContext.NativeQueryRealization> nativeQueryRealizationList = Lists.newArrayList();
-        for (NativeQueryRealization nqReal : ContextUtil.getNativeRealizations()) {
-            nativeQueryRealizationList.add(new QueryContext.NativeQueryRealization(nqReal.getModelId(),
-                    nqReal.getModelAlias(), nqReal.getLayoutId(), nqReal.getIndexType(), nqReal.isPartialMatchModel(),
-                    nqReal.isValid(), nqReal.isLayoutExist(), nqReal.isStreamingLayout(), nqReal.getSnapshots()));
-        }
-        QueryContext.current().setNativeQueryRealizationList(nativeQueryRealizationList);
+        QueryContext.current().setQueryRealizations(ContextUtil.getNativeRealizations());
 
         return queryResult;
     }

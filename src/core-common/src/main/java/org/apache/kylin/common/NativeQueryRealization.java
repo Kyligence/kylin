@@ -16,14 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.kylin.metadata.query;
+package org.apache.kylin.common;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.kylin.metadata.acl.NDataModelAclParams;
-
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -38,53 +35,51 @@ public class NativeQueryRealization implements Serializable {
     private String modelId;
     private String modelAlias;
     private Long layoutId;
-    private String indexType;
+    private String type;
     private int storageType;
     private boolean isPartialMatchModel;
     private boolean isValid = true;
     private boolean isLayoutExist = true;
     private boolean isStreamingLayout = false;
-    private List<String> snapshots;
+    private List<String> lookupTables = new ArrayList<>();
     private long lastDataRefreshTime;
     private boolean isLoadingData;
     private boolean isBuildingIndex;
 
-    @JsonUnwrapped
-    @Getter
-    @Setter
-    private NDataModelAclParams aclParams;
-
-    public NativeQueryRealization(String modelId, String modelAlias, Long layoutId, String indexType,
-            boolean isPartialMatchModel, List<String> snapshots) {
-        this(modelId, layoutId, indexType, isPartialMatchModel);
-        this.modelAlias = modelAlias;
-        this.snapshots = snapshots;
-    }
-
-    public NativeQueryRealization(List<String> snapshots) {
-        this("null", -1L, QueryMetrics.TABLE_SNAPSHOT, false);
-        this.modelAlias = "null";
-        this.snapshots = snapshots;
-    }
-
-    public NativeQueryRealization(String modelId, Long layoutId, String indexType) {
-        this(modelId, layoutId, indexType, false);
-    }
-
-    public NativeQueryRealization(String modelId, Long layoutId, String indexType, List<String> snapshots) {
-        this(modelId, layoutId, indexType, false);
-        this.snapshots = snapshots;
-    }
-
-    public NativeQueryRealization(String modelId, String modelAlias, Long layoutId, String indexType) {
-        this(modelId, layoutId, indexType, false);
+    public NativeQueryRealization(String modelId, String modelAlias, Long layoutId, String type,
+            boolean isPartialMatchModel) {
+        this(modelId, layoutId, type, isPartialMatchModel);
         this.modelAlias = modelAlias;
     }
 
-    public NativeQueryRealization(String modelId, Long layoutId, String indexType, boolean isPartialMatchModel) {
+    public NativeQueryRealization(String lookupTable, String type) {
+        this("null", lookupTable, -1L, type, false);
+    }
+
+    public NativeQueryRealization(String modelId, Long layoutId, String type) {
+        this(modelId, layoutId, type, false);
+    }
+
+    public NativeQueryRealization(String modelId, Long layoutId, String type, List<String> lookupTables) {
+        this(modelId, layoutId, type, false);
+        this.lookupTables = lookupTables;
+    }
+
+    public NativeQueryRealization(String modelId, Long layoutId, String type, boolean isPartialMatchModel) {
         this.modelId = modelId;
         this.layoutId = layoutId != null && layoutId == -1L ? null : layoutId;
-        this.indexType = indexType;
+        this.type = type;
         this.isPartialMatchModel = isPartialMatchModel;
+    }
+
+    public NativeQueryRealization(String modelId, String modelAlias, long layoutId, String type, boolean isPartialMatch,
+            boolean isValid, boolean isLayoutExist) {
+        this.modelId = modelId;
+        this.modelAlias = modelAlias;
+        this.layoutId = layoutId;
+        this.type = type;
+        this.isPartialMatchModel = isPartialMatch;
+        this.isValid = isValid;
+        this.isLayoutExist = isLayoutExist;
     }
 }

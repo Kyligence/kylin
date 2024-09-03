@@ -33,7 +33,6 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -382,21 +381,7 @@ public class QueryContext implements Closeable {
 
     @Getter
     @Setter
-    private List<NativeQueryRealization> nativeQueryRealizationList = Lists.newArrayList();
-
-    @AllArgsConstructor
-    @Getter
-    public static class NativeQueryRealization {
-        private String modelId;
-        private String modelAlias;
-        private Long layoutId;
-        private String indexType;
-        private boolean isPartialMatchModel;
-        private boolean isValid;
-        private boolean isLayoutExist;
-        private boolean isStreamingLayout;
-        private List<String> snapshots;
-    }
+    private List<NativeQueryRealization> queryRealizations = Lists.newArrayList();
 
     @Getter
     @Setter

@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.NativeQueryRealization;
 import org.apache.kylin.common.Singletons;
 import org.apache.kylin.common.constant.LogConstant;
 import org.apache.kylin.common.logging.SetLogCategory;
@@ -54,7 +55,6 @@ import org.apache.kylin.metadata.model.TableExtDesc;
 import org.apache.kylin.metadata.project.EnhancedUnitOfWork;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.project.ProjectInstance;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.RDBMSQueryHistoryDAO;
 import org.apache.kylin.rest.service.IUserGroupService;
@@ -203,7 +203,7 @@ public class QueryHistoryMetaUpdateScheduler {
                 if (CollectionUtils.isEmpty(realizations)) {
                     continue;
                 }
-                val realizationList = realizations.stream().filter(this::isValidRealization)
+                val realizationList = realizations.stream().filter(this::isIndexRealization)
                         .collect(Collectors.toList());
                 for (val realization : realizationList) {
                     String modelId = realization.getModelId();
@@ -217,7 +217,7 @@ public class QueryHistoryMetaUpdateScheduler {
             return result;
         }
 
-        private boolean isValidRealization(NativeQueryRealization realization) {
+        private boolean isIndexRealization(NativeQueryRealization realization) {
             val config = KylinConfig.getInstanceFromEnv();
             val dfManager = NDataflowManager.getInstance(config, project);
             return dfManager.getDataflow(realization.getModelId()) != null && realization.getLayoutId() != null;

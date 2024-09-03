@@ -24,9 +24,9 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kylin.common.NativeQueryRealization;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.querymeta.SelectedColumnMeta;
 import org.slf4j.Logger;
@@ -207,10 +207,10 @@ public class SQLResponseV2 implements Serializable {
             return "";
         }
         List<String> relatedModelAlias = realizations.stream()
-                .filter(e -> !QueryMetrics.TABLE_INDEX.equals(e.getIndexType()))
+                .filter(e -> !QueryMetrics.TABLE_INDEX.equals(e.getType()))
                 .map(e -> "CUBE[name=" + e.getModelAlias() + "]").distinct().collect(Collectors.toList());
         List<String> relateIndexModelAlias = realizations.stream()
-                .filter(e -> QueryMetrics.TABLE_INDEX.equals(e.getIndexType()))
+                .filter(e -> QueryMetrics.TABLE_INDEX.equals(e.getType()))
                 .map(e -> "INVERTED_INDEX[name=" + e.getModelAlias() + "]").distinct().collect(Collectors.toList());
         StringBuilder stringBuilder = new StringBuilder();
         String join1 = String.join(",", relatedModelAlias);
