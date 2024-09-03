@@ -126,6 +126,18 @@ public class NLocalWithSparkSessionTestBase extends NLocalFileMetadataTestCase i
         SparderEnv.setSparkSession(ss);
     }
 
+    static void cleanupAnyExistingSession() {
+        Option<SparkSession> session = SparkSession.getActiveSession();
+        if (!session.isDefined()) {
+            session = SparkSession.getDefaultSession();
+        }
+        if (session.isDefined()) {
+            session.get().stop();
+            SparkSession.clearActiveSession();
+            SparkSession.clearDefaultSession();
+        }
+    }
+
     @AfterClass
     public static void afterClass() {
         if (ss != null) {
