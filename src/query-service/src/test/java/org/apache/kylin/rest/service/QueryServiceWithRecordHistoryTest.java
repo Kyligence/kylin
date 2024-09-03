@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.NativeQueryRealization;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.ImmutableBiMap;
@@ -41,7 +42,6 @@ import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryHistoryInfo;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.query.QueryMetricsContext;
@@ -228,7 +228,10 @@ public class QueryServiceWithRecordHistoryTest extends NLocalFileMetadataTestCas
     }
 
     private void mockQueryWithSqlMassage() throws Exception {
-        Mockito.doAnswer(invocation -> new QueryResult()).when(queryService.queryRoutingEngine)
+        Mockito.doAnswer(invocation -> {
+                    QueryContext.current().setQueryRealizations(ContextUtil.getNativeRealizations());
+                    return new QueryResult();
+                }).when(queryService.queryRoutingEngine)
                 .queryWithSqlMassage(Mockito.any());
     }
 
@@ -266,9 +269,8 @@ public class QueryServiceWithRecordHistoryTest extends NLocalFileMetadataTestCas
         final SQLResponse firstSuccess = queryService.queryWithCache(request);
         Assert.assertEquals(expectedQueryID, firstSuccess.getQueryId());
         Assert.assertEquals(2, firstSuccess.getNativeRealizations().size());
-        Assert.assertEquals(QueryMetricsContext.AGG_INDEX, firstSuccess.getNativeRealizations().get(0).getIndexType());
-        Assert.assertEquals(QueryMetricsContext.TABLE_INDEX,
-                firstSuccess.getNativeRealizations().get(1).getIndexType());
+        Assert.assertEquals(QueryMetricsContext.AGG_INDEX, firstSuccess.getNativeRealizations().get(0).getType());
+        Assert.assertEquals(QueryMetricsContext.TABLE_INDEX, firstSuccess.getNativeRealizations().get(1).getType());
         Assert.assertEquals(Lists.newArrayList("mock_model_alias1", "mock_model_alias2"),
                 firstSuccess.getNativeRealizations().stream().map(NativeQueryRealization::getModelAlias)
                         .collect(Collectors.toList()));

@@ -43,19 +43,21 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
+import org.apache.kylin.common.NativeQueryRealization;
+import org.apache.kylin.guava30.shaded.common.collect.ImmutableMap;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
+import org.apache.kylin.metadata.cube.cuboid.NLookupCandidate;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.model.TblColRef;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryMetrics;
 import org.apache.kylin.metadata.realization.HybridRealization;
 import org.apache.kylin.metadata.realization.IRealization;
 import org.apache.kylin.query.util.RexUtils;
-import org.apache.kylin.storage.StorageContext;
 import org.apache.kylin.util.CalciteSystemProperty;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.kyligence.kap.fileseg.FileSegments;
 import lombok.val;
@@ -67,6 +69,10 @@ public class ContextUtil {
 
     static final ThreadLocal<Map<String, String>> _localParameters = new ThreadLocal<>();
     static final ThreadLocal<Map<Integer, OlapContext>> _localContexts = new ThreadLocal<>();
+
+    static final Map<NLookupCandidate.Type, String> TYPE_MAPPING = ImmutableMap.of(NLookupCandidate.Type.SNAPSHOT,
+            QueryMetrics.TABLE_SNAPSHOT, NLookupCandidate.Type.INTERNAL_TABLE, QueryMetrics.INTERNAL_TABLE);
+    private static final Logger log = LoggerFactory.getLogger(ContextUtil.class);
 
     private ContextUtil() {
     }
@@ -181,70 +187,77 @@ public class ContextUtil {
         // contexts can be null in case of 'explain plan for'
         Collection<OlapContext> threadLocalContexts = ContextUtil.getThreadLocalContexts();
         for (OlapContext ctx : threadLocalContexts) {
-            Set<String> tableSets = Sets.newHashSet();
-            final String realizationType = detectType(ctx, tableSets);
-            List<String> snapshots = Lists.newArrayList(tableSets);
+            Map<String, NLookupCandidate.Type> lookupTables = new HashMap<>();
+            final String realizationType = detectType(ctx, lookupTables);
             IRealization realization = ctx.getRealization();
             if (realization != null) {
                 // try to use fusion model alias
                 String modelId = realization.getModel().getUuid();
                 String modelAlias = realization.getModel().getFusionModelAlias();
                 if (!ctx.getStorageContext().getStreamCandidate().isEmpty()) {
-                    realizations.add(streamRlz(ctx.getStorageContext(), realizationType,
-                            modelId, modelAlias, snapshots));
+                    realizations.add(streamRlz(ctx, realizationType, modelId, modelAlias, lookupTables));
                     if (ctx.getRealization() instanceof HybridRealization) {
                         modelId = ((HybridRealization) ctx.getRealization()).getBatchRealization().getUuid();
                     }
                 }
                 if (!ctx.getStorageContext().getBatchCandidate().isEmpty()) {
-                    realizations.add(batchRlz(ctx, realizationType, modelId, modelAlias, snapshots));
+                    realizations.add(batchRlz(ctx, realizationType, modelId, modelAlias, lookupTables));
                 }
             }
 
-            if (realizations.isEmpty() && !snapshots.isEmpty()) {
-                realizations.add(new NativeQueryRealization(snapshots));
+            if (!lookupTables.isEmpty()) {
+                lookupTables.forEach((lookup, type) -> {
+                    String lookupRealizationType = TYPE_MAPPING.get(type);
+                    NativeQueryRealization lookupRealization =
+                            new NativeQueryRealization(lookup, lookupRealizationType);
+                    lookupRealization.setLookupTables(Lists.newArrayList(lookup));
+                    realizations.add(lookupRealization);
+                });
             }
         }
         return realizations;
     }
 
-    private static String detectType(OlapContext ctx, Set<String> tableSets) {
+    private static String detectType(OlapContext ctx, Map<String, NLookupCandidate.Type> lookupMap) {
         String realizationType;
-        StorageContext storageCtx = ctx.getStorageContext();
-        if (storageCtx.isDataSkipped() && storageCtx.isFilterCondAlwaysFalse()) {
+        if (ctx.getStorageContext().isDataSkipped() && ctx.getStorageContext().isFilterCondAlwaysFalse()) {
             realizationType = QueryMetrics.FILTER_CONFLICT;
-        } else if (storageCtx.getLookupCandidate() != null) {
+        } else if (ctx.getStorageContext().getLookupCandidate() != null) {
             realizationType = QueryMetrics.TABLE_SNAPSHOT;
-            tableSets.add(ctx.getFirstTableIdentity());
-        } else if (storageCtx.getBatchCandidate().isTableIndex()) {
+            lookupMap.put(ctx.getFirstTableIdentity(), ctx.getStorageContext().getLookupCandidate().getType());
+        } else if (ctx.getStorageContext().getBatchCandidate().isTableIndex()) {
             realizationType = QueryMetrics.TABLE_INDEX;
-            addTableSnapshots(tableSets, ctx);
         } else {
             realizationType = QueryMetrics.AGG_INDEX;
-            addTableSnapshots(tableSets, ctx);
         }
         return realizationType;
     }
 
-    private static NativeQueryRealization streamRlz(StorageContext storageContext, String realizationType,
-            String modelId, String modelAlias, List<String> snapshots) {
+    private static NativeQueryRealization streamRlz(OlapContext ctx, String realizationType, String modelId,
+            String modelAlias, Map<String, NLookupCandidate.Type> lookupTables) {
         NativeQueryRealization streamingRealization = new NativeQueryRealization(modelId, modelAlias,
-                storageContext.getStreamCandidate().getLayoutId(), realizationType, storageContext.isPartialMatch(),
-                snapshots);
+                ctx.getStorageContext().getStreamCandidate().getLayoutId(), realizationType,
+                ctx.getStorageContext().isPartialMatch());
         streamingRealization.setStreamingLayout(true);
+        // TODO
+        log.debug(lookupTables.toString());
         return streamingRealization;
     }
 
     private static NativeQueryRealization batchRlz(OlapContext ctx, String realizationType, String modelId,
-            String modelAlias, List<String> snapshots) {
+            String modelAlias, Map<String, NLookupCandidate.Type> lookupTables) {
         val realization = new NativeQueryRealization(modelId, modelAlias,
                 ctx.getStorageContext().getBatchCandidate().getLayoutId(), realizationType,
-                ctx.getStorageContext().isPartialMatch(), snapshots);
+                ctx.getStorageContext().isPartialMatch());
 
         // lastDataLoadTime & isLoadingData
         if (ctx.getRealization() instanceof NDataflow) {
             NDataflow df = (NDataflow) ctx.getRealization();
             realization.setStorageType(df.getStorageType());
+            NLookupCandidate.Type type = NLookupCandidate.getType(df.getConfig());
+            for (String derivedLookup : ctx.getStorageContext().getBatchCandidate().getDerivedLookups()) {
+                lookupTables.put(derivedLookup, type);
+            }
             if (df.getModel().isFilePartitioned()) {
                 boolean isLoadingData = df.getSegments().stream()
                         .anyMatch(seg -> seg.getStatus() == SegmentStatusEnum.NEW);
@@ -255,11 +268,6 @@ public class ContextUtil {
         }
 
         return realization;
-    }
-
-    private static void addTableSnapshots(Set<String> tableSets, OlapContext ctx) {
-        tableSets.addAll(ctx.getStorageContext().getBatchCandidate().getDerivedLookups());
-        tableSets.addAll(ctx.getStorageContext().getStreamCandidate().getDerivedLookups());
     }
 
     public static RexInputRef createUniqueInputRefAmongTables(OlapTableScan table, int columnIdx,

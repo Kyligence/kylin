@@ -55,7 +55,6 @@ public class SourceTestCase extends NLocalFileMetadataTestCase {
     public void setUp() {
         JobContextUtil.cleanUp();
         SparkJobFactoryUtils.initJobFactory();
-        JobContextUtil.cleanUp();
         createTestMetadata();
         Authentication authentication = new TestingAuthenticationToken("ADMIN", "ADMIN", Constant.ROLE_ADMIN);
         SecurityContextHolder.getContext().setAuthentication(authentication);

@@ -380,10 +380,7 @@ public class KylinTableChooserRule extends PruningRule {
             result.incapableCause = CapabilityResult.IncapableCause.unmatchedDimensions(unmatchedCols);
             return null;
         } else {
-            NLookupCandidate.Type type = dataflow.getConfig().isInternalTableEnabled()
-                    ? NLookupCandidate.Type.INTERNAL_TABLE
-                    : NLookupCandidate.Type.SNAPSHOT;
-            return new NLookupCandidate(digest.getFactTable(), type);
+            return new NLookupCandidate(digest.getFactTable(), NLookupCandidate.getType(dataflow.getConfig()));
         }
     }
 

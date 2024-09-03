@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.NativeQueryRealization;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.cube.model.NDataLayout;
@@ -33,7 +34,6 @@ import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.model.NTableMetadataManager;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryMetricsContext;
 import org.apache.kylin.rest.response.SQLResponse;
 import org.apache.kylin.rest.service.CacheSignatureQuerySupporter;
@@ -98,8 +98,10 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
                 new NativeQueryRealization(modelId, 10002L, "TEST", Lists.newArrayList()));
         response.setNativeRealizations(multiRealizations);
         String cacheSignature = QueryCacheSignatureUtil.createCacheSignature(response, project);
-        Assert.assertEquals("1538323200000_1538323200000", cacheSignature.split(",")[1].split(";")[0]);
-        Assert.assertEquals("1538323300000_1538323300000", cacheSignature.split(",")[2].split(";")[0]);
+        Assert.assertEquals("2", cacheSignature.split(",")[1].split(";")[0]);
+        Assert.assertEquals("1538323200000_1538323200000", cacheSignature.split(",")[1].split(";")[1]);
+        Assert.assertEquals("2", cacheSignature.split(",")[2].split(";")[0]);
+        Assert.assertEquals("1538323300000_1538323300000", cacheSignature.split(",")[2].split(";")[1]);
     }
 
     @Test
@@ -112,14 +114,16 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
         NDataflowUpdate update = new NDataflowUpdate(modelId);
         update.setToRemoveLayouts(dataflowManager.getDataflow(modelId).getFirstSegment().getLayout(10002L));
         update.setToRemoveLayouts(dataflowManager.getDataflow(modelId).getLastSegment().getLayout(10002L));
-        dataflowManager.updateDataflow(update);
         response.setSignature(QueryCacheSignatureUtil.createCacheSignature(response, project));
+        dataflowManager.updateDataflow(update);
         Assert.assertTrue(QueryCacheSignatureUtil.checkCacheExpired(response, project));
     }
 
     @Test
     public void testCreateCacheSignature() {
-        Assert.assertEquals("1538323200000_1538323200000", response.getSignature().split(",")[1].split(";")[0]);
+        String[] splits = response.getSignature().split(",")[1].split(";");
+        Assert.assertEquals("2", splits[0]);
+        Assert.assertEquals("1538323200000_1538323200000", splits[1]);
     }
 
     @Test
@@ -134,7 +138,7 @@ public class QueryCacheSignatureUtilTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testCheckCacheExpiredWhenUpdateOtherLayout() throws InterruptedException {
-        Long otherLayout = 10002L;
+        long otherLayout = 10002L;
         NDataLayout layout = NDataLayout.newDataLayout(dataflow, dataflow.getSegments().getFirstSegment().getId(),
                 otherLayout);
         NDataflowUpdate update = new NDataflowUpdate(modelId);

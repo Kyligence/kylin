@@ -18,6 +18,7 @@
 
 package org.apache.kylin.metadata.cube.cuboid;
 
+import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.metadata.realization.IRealizationCandidate;
 
 import lombok.Getter;
@@ -47,5 +48,9 @@ public class NLookupCandidate implements IRealizationCandidate {
         INTERNAL_TABLE,
 
         NONE
+    }
+
+    public static Type getType(KylinConfig config) {
+        return config.isInternalTableEnabled() ? Type.INTERNAL_TABLE : Type.SNAPSHOT;
     }
 }

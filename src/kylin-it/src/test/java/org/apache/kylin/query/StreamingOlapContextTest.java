@@ -22,9 +22,9 @@ import java.util.stream.Collectors;
 
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rex.RexExecutorImpl;
+import org.apache.kylin.common.NativeQueryRealization;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTest;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.query.engine.QueryExec;
 import org.apache.kylin.query.engine.TypeSystem;
 import org.apache.kylin.query.engine.meta.SimpleDataContext;

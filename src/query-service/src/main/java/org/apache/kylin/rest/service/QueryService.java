@@ -60,6 +60,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.NativeQueryRealization;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.constant.LogConstant;
@@ -104,7 +105,6 @@ import org.apache.kylin.metadata.model.TblColRef;
 import org.apache.kylin.metadata.model.tool.CalciteParser;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.query.BigQueryThresholdUpdater;
-import org.apache.kylin.metadata.query.NativeQueryRealization;
 import org.apache.kylin.metadata.query.QueryHistory;
 import org.apache.kylin.metadata.query.QueryHistorySql;
 import org.apache.kylin.metadata.query.QueryHistorySqlParam;
@@ -358,7 +358,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
             snapShotFilters = Lists.newArrayList();
         } else {
             snapShots = response.getNativeRealizations().stream()
-                    .flatMap(nativeQueryRealization -> nativeQueryRealization.getSnapshots().stream()).distinct()
+                    .flatMap(nativeQueryRealization -> nativeQueryRealization.getLookupTables().stream()).distinct()
                     .collect(Collectors.toList());
             snapShotFilters = ContextUtil
                     .listContexts().stream().flatMap(ctx -> ctx.getFilterColumns().stream()
@@ -760,17 +760,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         queryContext.getMetrics().setScanBytes(sqlResponse.getScanBytes());
         queryContext.getMetrics().setScanRows(sqlResponse.getScanRows());
         queryContext.getMetrics().setResultRowCount(sqlResponse.getResultRowCount());
-
-        List<QueryContext.NativeQueryRealization> nativeQueryRealizationList = Lists.newArrayList();
-        if (sqlResponse.getNativeRealizations() != null) {
-            for (NativeQueryRealization nqReal : sqlResponse.getNativeRealizations()) {
-                nativeQueryRealizationList.add(new QueryContext.NativeQueryRealization(nqReal.getModelId(),
-                        nqReal.getModelAlias(), nqReal.getLayoutId(), nqReal.getIndexType(),
-                        nqReal.isPartialMatchModel(), nqReal.isValid(), nqReal.isLayoutExist(),
-                        nqReal.isStreamingLayout(), nqReal.getSnapshots()));
-            }
-        }
-        queryContext.setNativeQueryRealizationList(nativeQueryRealizationList);
+        queryContext.setQueryRealizations(sqlResponse.getNativeRealizations());
     }
 
     private String getDefaultServer() {
@@ -1406,7 +1396,7 @@ public class QueryService extends BasicService implements CacheSignatureQuerySup
         QueryContext queryContext = QueryContext.current();
 
         response.wrapResultOfQueryContext(queryContext);
-        response.setNativeRealizations(ContextUtil.getNativeRealizations());
+        response.setNativeRealizations(queryContext.getQueryRealizations());
         response.updateDataFetchTime(queryContext);
         if (queryContext.isExplainSql()) {
             response.setQueryPlan(queryContext.getQueryPlan());

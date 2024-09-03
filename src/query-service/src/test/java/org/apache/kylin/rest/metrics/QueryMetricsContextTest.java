@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.NativeQueryRealization;
 import org.apache.kylin.common.QueryContext;
 import org.apache.kylin.common.QueryTrace;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
@@ -302,12 +303,11 @@ public class QueryMetricsContextTest extends NLocalFileMetadataTestCase {
         queryContext.getMetrics().setCorrectedSql(massageSql(queryContext));
         queryContext.getQueryTagInfo().setPushdown(false);
 
-        QueryContext.NativeQueryRealization aggIndex = new QueryContext.NativeQueryRealization("mocked_model_id",
-                "mocked_model", 1L, QueryMetricsContext.AGG_INDEX, false, false, false, false, Lists.newArrayList());
-        QueryContext.NativeQueryRealization tableIndex = new QueryContext.NativeQueryRealization("mocked_model_id",
-                "mocked_model", IndexEntity.TABLE_INDEX_START_ID + 2, QueryMetricsContext.TABLE_INDEX, false, false,
-                false, false, Lists.newArrayList());
-        queryContext.setNativeQueryRealizationList(Lists.newArrayList(aggIndex, tableIndex));
+        NativeQueryRealization aggIndex = new NativeQueryRealization("mocked_model_id", "mocked_model", 1L,
+                QueryMetricsContext.AGG_INDEX, false, false, false);
+        NativeQueryRealization tableIndex = new NativeQueryRealization("mocked_model_id", "mocked_model",
+                IndexEntity.TABLE_INDEX_START_ID + 2, QueryMetricsContext.TABLE_INDEX, false, false, false);
+        queryContext.setQueryRealizations(Lists.newArrayList(aggIndex, tableIndex));
 
         final QueryMetricsContext metricsContext = QueryMetricsContext.collect(queryContext);
 
@@ -479,9 +479,9 @@ public class QueryMetricsContextTest extends NLocalFileMetadataTestCase {
         queryContext.setPushdownEngine("HIVE");
         queryContext.getQueryTagInfo().setHitExceptionCache(true);
 
-        QueryContext.NativeQueryRealization aggIndex = new QueryContext.NativeQueryRealization("mocked_model_id",
-                "mocked_model", null, null, false, false, false, false, Lists.newArrayList());
-        queryContext.setNativeQueryRealizationList(Lists.newArrayList(aggIndex));
+        NativeQueryRealization aggIndex = new NativeQueryRealization("mocked_model_id", "mocked_model", -1, null, false,
+                false, false);
+        queryContext.setQueryRealizations(Lists.newArrayList(aggIndex));
 
         final QueryMetricsContext metricsContext = QueryMetricsContext.collect(queryContext);
         Assert.assertEquals(startTime, metricsContext.getQueryTime());
