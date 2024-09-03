@@ -913,23 +913,20 @@ public class NSparkExecutable extends AbstractExecutable implements ChainedStage
                 sparkJars.add(sparkConf.get("spark.gluten.sql.driver.jar.path"));
             }
             sparkConf.put(DRIVER_EXTRA_CLASSPATH,
-                sparkJars.stream().sorted(
-                    Comparator.comparing(jar -> jar.substring(jar.lastIndexOf(PATH_DELIMITER))))
-                    .collect(Collectors.joining(COLON)));
-            sparkConf.put(EXECUTOR_EXTRA_CLASSPATH,
-                sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString())
-                    .sorted().collect(Collectors.joining(COLON)));
+                    sparkJars.stream()
+                            .sorted(Comparator.comparing(jar -> jar.substring(jar.lastIndexOf(PATH_DELIMITER))))
+                            .collect(Collectors.joining(COLON)));
+            sparkConf.put(EXECUTOR_EXTRA_CLASSPATH, sparkJars.stream()
+                    .map(jar -> Paths.get(jar).getFileName().toString()).sorted().collect(Collectors.joining(COLON)));
         } else {
-            String driverCp = sparkJars.stream().sorted(
-                Comparator.comparing(jar -> jar.substring(jar.lastIndexOf(PATH_DELIMITER))))
-                .collect(Collectors.joining(COLON));
-            String executorCp = sparkJars.stream()
-                .map(jar -> Paths.get(jar).getFileName().toString())
-                .sorted().collect(Collectors.joining(COLON));
+            String driverCp = sparkJars.stream()
+                    .sorted(Comparator.comparing(jar -> jar.substring(jar.lastIndexOf(PATH_DELIMITER))))
+                    .collect(Collectors.joining(COLON));
+            String executorCp = sparkJars.stream().map(jar -> Paths.get(jar).getFileName().toString()).sorted()
+                    .collect(Collectors.joining(COLON));
             if (glutenEnabled) {
                 driverCp = sparkConf.get("spark.gluten.sql.driver.jar.path") + COLON + driverCp;
-                executorCp = sparkConf.get("spark.gluten.sql.executor.jar.path")
-                    + COLON + executorCp;
+                executorCp = sparkConf.get("spark.gluten.sql.executor.jar.path") + COLON + executorCp;
             }
             sparkConf.put(DRIVER_EXTRA_CLASSPATH, driverCp);
             sparkConf.put(EXECUTOR_EXTRA_CLASSPATH, executorCp);

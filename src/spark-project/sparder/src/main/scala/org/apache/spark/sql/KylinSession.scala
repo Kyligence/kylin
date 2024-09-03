@@ -312,10 +312,10 @@ object KylinSession extends Logging {
         }
 
         // spark on k8s with client mode, set the spark.driver.host = local ip
-        if (sparkConf.get(SPARK_MASTER).startsWith("k8s") && "client".equals(sparkConf.get("spark.submit.deployMode", "client"))) {
-          if (!sparkConf.contains("spark.driver.host")) {
-            sparkConf.set("spark.driver.host", AddressUtil.getLocalHostExactAddress)
-          }
+        if (sparkConf.get(SPARK_MASTER).startsWith("k8s")
+          && "client".equals(sparkConf.get("spark.submit.deployMode", "client"))
+          && !sparkConf.contains("spark.driver.host")) {
+          sparkConf.set("spark.driver.host", AddressUtil.getLocalHostExactAddress)
         }
 
         var extraJars = Paths.get(KylinConfig.getInstanceFromEnv.getKylinJobJarPath).getFileName.toString
