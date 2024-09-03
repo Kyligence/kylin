@@ -35,7 +35,7 @@ import org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanHelper
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
+import io.kyligence.kap.common.{JobSupport, QuerySupport, SSSource}
 import io.kyligence.kap.query.QueryFetcher
 
 // scalastyle:off
@@ -44,7 +44,6 @@ class TestModelViewQuery
     with LocalMetadata
     with JobSupport
     with QuerySupport
-    with CompareSupport
     with SSSource
     with AdaptiveSparkPlanHelper
     with LogEx {
@@ -68,7 +67,7 @@ class TestModelViewQuery
 
   override def beforeAll(): Unit = {
     appendMetadata("src/test/resources/ut_meta/modelViewQuery")
-    super.beforeAll()
+    super[SSSource].beforeAll()
     overwriteSystemProp("calcite.keep-in-clause", "true")
     overwriteSystemProp("kylin.dictionary.null-encoding-opt-threshold", "1")
     overwriteSystemProp("kylin.web.timezone", "GMT+8")

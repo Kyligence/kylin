@@ -759,7 +759,13 @@
                 <version>${lettuce.version}</version>
             </dependency>
 
-            <!--KAP test scope-->
+            <!--kylin test scope-->
+            <dependency>
+                <groupId>org.apache.kylin</groupId>
+                <artifactId>kylin-rec-service</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
             <dependency>
                 <groupId>org.apache.kylin</groupId>
                 <artifactId>kylin-it</artifactId>

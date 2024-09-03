@@ -29,8 +29,10 @@ import org.apache.kylin.common.util.TempMetadataBuilder
 import org.apache.kylin.metadata.model.NTableMetadataManager
 import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.kylin.query.util.{PushDownUtil, QueryParams}
+import org.apache.spark.sql.SparderEnv
 import org.apache.spark.sql.common.{LocalMetadata, SharedSparkSession}
 import org.apache.spark.sql.execution.utils.SchemaProcessor
+import org.apache.spark.sql.udf.UdfManager
 import org.scalatest.Suite
 
 import org.apache.kylin.guava30.shaded.common.base.Preconditions
@@ -42,6 +44,8 @@ trait SSSource extends SharedSparkSession with LocalMetadata {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    UdfManager.create(spark)
+    SparderEnv.setSparkSession(spark)
     val project = getProject
     import org.apache.kylin.metadata.project.NProjectManager
     val kylinConf = KylinConfig.getInstanceFromEnv

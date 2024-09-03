@@ -38,7 +38,7 @@ import org.apache.spark.sql.execution.utils.SchemaProcessor
 import org.apache.spark.sql.execution.{KylinFileSourceScanExec, LayoutFileSourceScanExec}
 import org.apache.spark.sql.{DataFrame, SparderEnv}
 
-import io.kyligence.kap.common.{CompareSupport, JobSupport, QuerySupport, SSSource}
+import io.kyligence.kap.common.{JobSupport, QuerySupport, SSSource}
 import io.kyligence.kap.query.{QueryConstants, QueryFetcher}
 import io.netty.util.internal.ThrowableUtil
 
@@ -47,7 +47,6 @@ class TestQueryAndBuildFunSuite
     with LocalMetadata
     with JobSupport
     with QuerySupport
-    with CompareSupport
     with SSSource
     with AdaptiveSparkPlanHelper
     with Logging {
