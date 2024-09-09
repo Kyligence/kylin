@@ -49,12 +49,14 @@ import org.apache.kylin.metadata.model.SegmentRange;
 import org.apache.kylin.rest.constant.Constant;
 import org.apache.kylin.rest.request.JobErrorRequest;
 import org.apache.kylin.rest.request.JobUpdateRequest;
+import org.apache.kylin.rest.request.LoadGlutenCacheRequest;
 import org.apache.kylin.rest.request.SparkJobTimeRequest;
 import org.apache.kylin.rest.request.SparkJobUpdateRequest;
 import org.apache.kylin.rest.request.StageRequest;
 import org.apache.kylin.rest.response.ExecutableResponse;
 import org.apache.kylin.rest.response.ExecutableStepResponse;
 import org.apache.kylin.rest.service.JobService;
+import org.apache.kylin.rest.service.RouteService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -66,6 +68,7 @@ import org.mockito.MockitoAnnotations;
 import org.sparkproject.guava.collect.Sets;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -88,6 +91,8 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
 
     @Mock
     private JobService jobService;
+    @Mock
+    private RouteService routeService;
 
     @Mock
     private JobInfoService jobInfoService;
@@ -111,6 +116,8 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
         ReflectionTestUtils.setField(jobController, "jobContext", jobContext);
 
         jobInfoDao = JobContextUtil.getJobInfoDao(getTestConfig());
+
+        ReflectionTestUtils.setField(jobController, "routeService", routeService);
     }
 
     @After
@@ -602,5 +609,17 @@ public class JobControllerTest extends NLocalFileMetadataTestCase {
                 Sets.newLinkedHashSet(layouts), "ADMIN", JobTypeEnum.INDEX_BUILD, jobId, null, null, null, null, null));
         ExecutableManager.getInstance(getTestConfig(), "default").addJob(job);
         return ExecutableManager.getInstance(getTestConfig(), "default").getExecutablePO(jobId);
+    }
+
+    @Test
+    public void routeGlutenCache() throws Exception {
+        val servletRequest = new MockHttpServletRequest();
+        val request = new LoadGlutenCacheRequest("default", Lists.newArrayList("test command"));
+        Mockito.when(routeService.routeGlutenCache(request.getCacheCommands(), servletRequest)).thenReturn(true);
+        val mvcResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/jobs/gluten_cache") //
+                .contentType(MediaType.APPLICATION_JSON).content(JsonUtil.writeValueAsString(request)))
+                .andExpect(MockMvcResultMatchers.status().isOk()).andReturn();
+
+        Mockito.verify(jobController).routeGlutenCache(request, mvcResult.getRequest());
     }
 }

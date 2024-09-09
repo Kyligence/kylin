@@ -114,7 +114,7 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
         NSparkCubingJob sparkCubingJob = innerCreate(jobBuildParams);
 
         if (jobBuildParams instanceof AddIndexHandler.AddIndexJobBuildParams) {
-            boolean layoutsDeletableAfterBuild =((AddIndexHandler.AddIndexJobBuildParams) jobBuildParams)
+            boolean layoutsDeletableAfterBuild = ((AddIndexHandler.AddIndexJobBuildParams) jobBuildParams)
                     .isLayoutsDeletableAfterBuild();
             sparkCubingJob.setParam(NBatchConstants.P_LAYOUTS_DELETABLE_AFTER_BUILD,
                     String.valueOf(layoutsDeletableAfterBuild));
@@ -188,6 +188,9 @@ public class NSparkCubingJob extends DefaultExecutableOnModel {
         JobStepType.UPDATE_METADATA.createStep(job, config);
         initCleanUpTransactionalTable(kylinConfig, df, job, config);
 
+        if (config.isIndexPreloadCacheEnabled()) {
+            JobStepType.LOAD_GLUTEN_CACHE.createStep(job, config);
+        }
         return job;
     }
 

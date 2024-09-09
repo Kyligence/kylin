@@ -31,7 +31,6 @@ import org.apache.kylin.metadata.cube.model.LayoutEntity;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
-import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.model.SegmentRange;
 import org.junit.After;
 import org.junit.Assert;
@@ -66,13 +65,12 @@ public class ResourceDetectBeforeCubingJobTest extends NLocalWithSparkSessionTes
 
     @Test
     public void testDoExecute() throws InterruptedException {
+        val dfId = "89af4ee2-2cdb-4b07-b39e-4c29856309aa";
+        cleanupSegments(dfId, getProject());
         ExecutableManager execMgr = ExecutableManager.getInstance(config, getProject());
 
         NDataflowManager dsMgr = NDataflowManager.getInstance(config, getProject());
-        NDataflow df = dsMgr.getDataflow("89af4ee2-2cdb-4b07-b39e-4c29856309aa");
-        val dfUpdate = new NDataflowUpdate(df.getId());
-        dfUpdate.setToRemoveSegs(df.getSegments().toArray(new NDataSegment[0]));
-        dsMgr.updateDataflow(dfUpdate);
+        NDataflow df = dsMgr.getDataflow(dfId);
 
         NDataSegment oneSeg = dsMgr.appendSegment(df, new SegmentRange.TimePartitionedSegmentRange(
                 SegmentRange.dateToLong("2012-01-01"), SegmentRange.dateToLong("2012-02-01")));

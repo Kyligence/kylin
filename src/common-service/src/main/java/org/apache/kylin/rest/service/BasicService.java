@@ -116,6 +116,16 @@ public abstract class BasicService {
 
     private ResponseEntity<byte[]> getHttpResponse(final HttpServletRequest request, String url) throws IOException {
         val body = IOUtils.toByteArray(request.getInputStream());
+        return getHttpResponse(request, url, body);
+    }
+
+    public <T> EnvelopeResponse<T> generateTaskForRemoteHost(final HttpServletRequest request, String url, byte[] body)
+            throws Exception {
+        val response = getHttpResponse(request, url, body);
+        return JsonUtil.readValue(response.getBody(), EnvelopeResponse.class);
+    }
+
+    private ResponseEntity<byte[]> getHttpResponse(final HttpServletRequest request, String url, byte[] body) {
         HttpHeaders headers = new HttpHeaders();
         Collections.list(request.getHeaderNames())
                 .forEach(k -> headers.put(k, Collections.list(request.getHeaders(k))));

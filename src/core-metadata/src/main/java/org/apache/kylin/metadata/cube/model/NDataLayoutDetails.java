@@ -20,9 +20,11 @@ package org.apache.kylin.metadata.cube.model;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.KylinConfigExt;
 import org.apache.kylin.common.persistence.MetadataType;
@@ -113,6 +115,16 @@ public class NDataLayoutDetails extends RootPersistentEntity implements Serializ
 
     public KylinConfig getConfig() {
         return config == null ? KylinConfig.getInstanceFromEnv() : config;
+    }
+
+    public String getLocation() {
+        String result = location;
+        if (StringUtils.isBlank(location)) {
+            String hdfsWorkingDir = KapConfig.wrap(getConfig()).getMetadataWorkingDirectory();
+            String storagePath1WithoutPrefix = String.format(Locale.ROOT, "%s/delta/%s/%s", project, modelId, layoutId);
+            result = hdfsWorkingDir + storagePath1WithoutPrefix;
+        }
+        return result;
     }
 
     public String genRangerFilterExpr() {

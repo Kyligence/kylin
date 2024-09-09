@@ -48,9 +48,10 @@ public class InternalTableDesc extends ATable implements Serializable {
 
     private static final String BUCKET_COLUMN = "bucketCol";
     private static final String BUCKET_NUM = "bucketNum";
+    private static final String PRELOADED_CACHE = "preloadedCache";
     private static final String PRIMARY_KEY = "primaryKey";
     private static final String SORT_BY_KEY = "sortByKey";
-    public static final  int INIT_SIZE = 0;
+    public static final int INIT_SIZE = 0;
 
     @Getter
     public enum StorageType {
@@ -169,9 +170,13 @@ public class InternalTableDesc extends ATable implements Serializable {
                 .collect(Collectors.toList());
     }
 
+    public boolean isPreloadedCacheEnable() {
+        return Boolean.parseBoolean(tblProperties.getOrDefault(PRELOADED_CACHE, KylinConfig.FALSE));
+    }
+
     public String generateInternalTableLocation() {
         String workingDir = KylinConfig.getInstanceFromEnv().getHdfsWorkingDirectory();
-        return workingDir + "/" + project + "/Internal/" + getDatabase() + "/" + getName();
+        return workingDir + project + "/Internal/" + getDatabase() + "/" + getName();
     }
 
     public StorageType getStorageType() {

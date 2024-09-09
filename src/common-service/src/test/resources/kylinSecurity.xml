@@ -288,6 +288,7 @@
             <scr:intercept-url pattern="/api/jobs/stage/status" access="permitAll"/>
             <scr:intercept-url pattern="/api/jobs/error" access="permitAll"/>
             <scr:intercept-url pattern="/api/jobs/wait_and_run_time" access="permitAll"/>
+            <scr:intercept-url pattern="/api/jobs/gluten_cache" access="permitAll"/>
             <scr:intercept-url pattern="/api/snapshots/source_table_stats" access="permitAll"/>
             <scr:intercept-url pattern="/api/snapshots/auto_refresh" access="permitAll"/>
             <scr:intercept-url pattern="/api/snapshots/view_mapping" access="permitAll"/>
