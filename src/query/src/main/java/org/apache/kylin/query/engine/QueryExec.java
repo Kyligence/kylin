@@ -44,6 +44,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.query.StructField;
 import org.apache.kylin.metadata.realization.NoRealizationFoundException;
+import org.apache.kylin.query.calcite.KylinSumSplitter;
 import org.apache.kylin.query.engine.data.QueryResult;
 import org.apache.kylin.query.engine.exec.CalcitePlanExec;
 import org.apache.kylin.query.engine.exec.ExecuteResult;
@@ -265,6 +266,7 @@ public class QueryExec {
         postOptRules.add(UnionTypeCastRule.INSTANCE);
         if (kylinConfig.isConvertSumExpressionEnabled()) {
             postOptRules.addAll(HepUtils.SumExprRules);
+            KylinSumSplitter.registerRexImpTable();
         }
         if (kylinConfig.isConvertCountDistinctExpressionEnabled()) {
             postOptRules.addAll(HepUtils.CountDistinctExprRules);
