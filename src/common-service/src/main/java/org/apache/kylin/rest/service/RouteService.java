@@ -18,6 +18,8 @@
 
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.common.exception.ServerErrorCode.PERMISSION_DENIED;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,7 +37,12 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.constant.LogConstant;
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.logging.SetLogCategory;
+import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
+import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.NamedThreadFactory;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.base.Preconditions;
@@ -50,14 +57,22 @@ import org.apache.kylin.metadata.resourcegroup.KylinInstance;
 import org.apache.kylin.metadata.resourcegroup.RequestTypeEnum;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupManager;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupMappingInfo;
+import org.apache.kylin.rest.response.EnvelopeResponse;
+import org.apache.kylin.rest.response.GlutenCacheResponse;
+import org.apache.kylin.rest.response.ServerInfoResponse;
+import org.apache.kylin.rest.util.GlutenCacheRequestLimits;
 import org.springframework.stereotype.Service;
 
 import lombok.val;
+import lombok.var;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class RouteService extends BasicService {
+
+    public static final String CACHE_GLUTEN_API = "/kylin/api/cache/gluten_cache";
+    public static final String CACHE_GLUTEN_ASYNC_API = "/kylin/api/cache/gluten_cache_async";
     private final ExecutorService asyncExecutors = new ThreadPoolExecutor(20, 20, 30, TimeUnit.MINUTES,
             new LinkedBlockingQueue<>(), new NamedThreadFactory("RouteScheduler"));
 
@@ -214,5 +229,87 @@ public class RouteService extends BasicService {
     private NDataModel getMatchModels(String modelAlias, String projectName) {
         return getManager(NDataModelManager.class, projectName).listAllModels().stream()
                 .filter(model -> model.getAlias().equalsIgnoreCase(modelAlias)).findFirst().orElse(null);
+    }
+
+    public boolean routeGlutenCache(List<String> cacheCommands, HttpServletRequest servletRequest) throws Exception {
+        try (SetLogCategory ignore = new SetLogCategory(LogConstant.BUILD_CATEGORY)) {
+            return routeGlutenCacheInner(cacheCommands, servletRequest, CACHE_GLUTEN_API, false);
+        }
+    }
+
+    public boolean routeGlutenCacheInner(List<String> cacheCommands, HttpServletRequest servletRequest, String url,
+            boolean checkLimits) throws Exception {
+        if (CollectionUtils.isEmpty(cacheCommands)) {
+            log.warn("route url[{}] but cacheCommands is empty !!!", url);
+            return true;
+        }
+        byte[] requestEntity = JsonUtil.writeValueAsBytes(cacheCommands);
+        Map<Future<?>, Long> asyncFutures = Maps.newConcurrentMap();
+        val queryServers = clusterManager.getQueryServers();
+        val result = new CountDownLatch(queryServers.size());
+        for (ServerInfoResponse queryServer : queryServers) {
+            executeAsyncTask(asyncFutures,
+                    () -> cacheGluten(queryServer.getHost(), servletRequest, url, requestEntity, result));
+        }
+        waitCacheRouteTaskDone(asyncFutures);
+        if (checkLimits && checkGlutenCacheLimits(asyncFutures)) {
+            throw new KylinException(PERMISSION_DENIED, MsgPicker.getMsg().getQueryTooManyRunning());
+        }
+        log.info("route url[{}] failed count is [{}]", url, result.getCount());
+        return result.getCount() == 0;
+    }
+
+    public EnvelopeResponse cacheGluten(String instance, HttpServletRequest request, String url, byte[] requestEntity,
+            CountDownLatch result) throws Exception {
+        try (SetLogCategory ignore = new SetLogCategory(LogConstant.BUILD_CATEGORY)) {
+            val fullUrl = "http://" + instance + url;
+            val response = generateTaskForRemoteHost(request, fullUrl, requestEntity);
+            log.info("cacheGluten instance is [{}], result is [{}]", instance, response);
+            if (StringUtils.equals(url, CACHE_GLUTEN_API)) {
+                val data = JsonUtil.convert(response.getData(), GlutenCacheResponse.class);
+                if (data.getResult()) {
+                    result.countDown();
+                }
+            } else if (StringUtils.equals(url, CACHE_GLUTEN_ASYNC_API)) {
+                result.countDown();
+            }
+            return response;
+        }
+    }
+
+    public void waitCacheRouteTaskDone(Map<Future<?>, Long> tasks) throws InterruptedException {
+        while (true) {
+            val doneCount = tasks.keySet().stream().filter(Future::isDone).count();
+            if (tasks.size() == doneCount) {
+                break;
+            }
+            TimeUnit.SECONDS.sleep(10);
+        }
+    }
+
+    public boolean checkGlutenCacheLimits(Map<Future<?>, Long> tasks) {
+        var limitFlag = false;
+        for (Future<?> doneTask : tasks.keySet()) {
+            try {
+                val response = (EnvelopeResponse) doneTask.get();
+                if (StringUtils.startsWith(response.getMsg(), PERMISSION_DENIED.toErrorCode().getCodeString())) {
+                    limitFlag = true;
+                    break;
+                }
+            } catch (InterruptedException e) {
+                log.error(e.getMessage(), e);
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+            }
+        }
+        return limitFlag;
+    }
+
+    public void routeGlutenCacheAsync(List<String> cacheCommands, HttpServletRequest servletRequest) throws Exception {
+        try (GlutenCacheRequestLimits ignored = new GlutenCacheRequestLimits();
+                SetLogCategory ignore = new SetLogCategory(LogConstant.QUERY_CATEGORY)) {
+            routeGlutenCacheInner(cacheCommands, servletRequest, CACHE_GLUTEN_ASYNC_API, true);
+        }
     }
 }

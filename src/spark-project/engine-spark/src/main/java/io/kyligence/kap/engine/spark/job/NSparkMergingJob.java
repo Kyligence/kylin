@@ -140,8 +140,12 @@ public class NSparkMergingJob extends DefaultExecutableOnModel {
         cleanStep.setParam(NBatchConstants.P_SEGMENT_IDS,
                 String.join(",", NSparkCubingUtil.toSegmentIds(mergingSegments)));
         JobStepType.UPDATE_METADATA.createStep(job, config);
+        if (config.isIndexPreloadCacheEnabled()) {
+            JobStepType.LOAD_GLUTEN_CACHE.createStep(job, config);
+        }
         return job;
     }
+
     @Override
     public Set<String> getMetadataDumpList(KylinConfig config) {
         final String dataflowId = getParam(NBatchConstants.P_DATAFLOW_ID);

@@ -18,21 +18,33 @@
 
 package org.apache.kylin.rest.service;
 
+import static org.apache.kylin.common.exception.ServerErrorCode.PERMISSION_DENIED;
+import static org.apache.kylin.rest.service.RouteService.CACHE_GLUTEN_API;
+import static org.apache.kylin.rest.service.RouteService.CACHE_GLUTEN_ASYNC_API;
+import static org.awaitility.Awaitility.await;
+
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.kylin.common.KapConfig;
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.exception.KylinException;
+import org.apache.kylin.common.msg.MsgPicker;
 import org.apache.kylin.common.persistence.transaction.UnitOfWork;
 import org.apache.kylin.common.response.RestResponse;
+import org.apache.kylin.common.util.ExecutorServiceUtil;
 import org.apache.kylin.common.util.JsonUtil;
+import org.apache.kylin.common.util.NamedThreadFactory;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
@@ -48,7 +60,12 @@ import org.apache.kylin.metadata.resourcegroup.RequestTypeEnum;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroup;
 import org.apache.kylin.metadata.resourcegroup.ResourceGroupManager;
 import org.apache.kylin.query.util.AsyncQueryUtil;
+import org.apache.kylin.rest.cluster.ClusterManager;
+import org.apache.kylin.rest.cluster.MockClusterManager;
+import org.apache.kylin.rest.response.EnvelopeResponse;
+import org.apache.kylin.rest.response.GlutenCacheResponse;
 import org.joda.time.DateTime;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,17 +105,24 @@ public class RouteServiceTest {
     private ResourceGroupManager rgManager = Mockito.mock(ResourceGroupManager.class);
     @Mock
     private KylinConfig kylinConfig = Mockito.mock(KylinConfig.class);
+    private ExecutorService executors;
+    private ClusterManager clusterManager = new MockClusterManager();
+
+    private void setField(String fieldName, Class fieldClass, Object fieldObject) {
+        Field field = ReflectionUtils.findField(RouteService.class, fieldName, fieldClass);
+        if (field == null) {
+            throw new IllegalArgumentException(
+                    String.format(Locale.ROOT, "Could not find field '%s' on %s", fieldName, "routeService"));
+        }
+        ReflectionUtils.makeAccessible(field);
+        ReflectionUtils.setField(field, routeService, fieldObject);
+    }
 
     @Before
     public void before() throws Exception {
         JobContextUtil.cleanUp();
-        Field field = ReflectionUtils.findField(RouteService.class, "restTemplate", RestTemplate.class);
-        if (field == null) {
-            throw new IllegalArgumentException(
-                    String.format(Locale.ROOT, "Could not find field '%s' on %s", "restTemplate", "routeService"));
-        }
-        ReflectionUtils.makeAccessible(field);
-        ReflectionUtils.setField(field, routeService, restTemplate);
+        setField("restTemplate", RestTemplate.class, restTemplate);
+        setField("clusterManager", ClusterManager.class, clusterManager);
 
         val restResult = JsonUtil.writeValueAsBytes(RestResponse.ok(true));
         val resp = new ResponseEntity<>(restResult, HttpStatus.OK);
@@ -116,7 +140,15 @@ public class RouteServiceTest {
         Mockito.when(rgManager.getResourceGroup())
                 .thenReturn(JsonUtil.readValue(resourceGroupJson, new TypeReference<ResourceGroup>() {
                 }));
+        executors = new ThreadPoolExecutor(20, 20, 30, TimeUnit.MINUTES, new LinkedBlockingQueue<>(),
+                new NamedThreadFactory("RouteScheduler"));
+    }
 
+    @After
+    public void after() {
+        if (Objects.nonNull(executors)) {
+            ExecutorServiceUtil.shutdownGracefully(executors, 10);
+        }
     }
 
     @Test
@@ -266,5 +298,100 @@ public class RouteServiceTest {
 
         project = routeService.getProjectByModelNameUseInFilter("test_model");
         Assert.assertEquals("default", project);
+    }
+
+    @Test
+    public void waitCacheRouteTaskDone() throws InterruptedException {
+        Map<Future<?>, Long> asyncFutures = Maps.newConcurrentMap();
+        for (int i = 0; i < 5; i++) {
+            val futureTask = new FutureTask<String>(() -> await().pollDelay(2, TimeUnit.SECONDS).until(() -> true),
+                    "test");
+            executors.submit(futureTask);
+            asyncFutures.put(futureTask, System.currentTimeMillis());
+        }
+        routeService.waitCacheRouteTaskDone(asyncFutures);
+        asyncFutures.keySet().forEach(future -> Assert.assertTrue(future.isDone()));
+    }
+
+    @Test
+    public void checkGlutenCacheLimits() {
+        {
+            Map<Future<?>, Long> asyncFutures = Maps.newConcurrentMap();
+            for (int i = 0; i < 5; i++) {
+                val response = i % 2 == 0 ? new EnvelopeResponse(KylinException.CODE_SUCCESS, "", "")
+                        : new EnvelopeResponse(KylinException.CODE_UNDEFINED, "",
+                                new KylinException(PERMISSION_DENIED, MsgPicker.getMsg().getQueryTooManyRunning())
+                                        .getLocalizedMessage());
+
+                val futureTask = new FutureTask<>(() -> {
+                }, response);
+                executors.submit(futureTask);
+                asyncFutures.put(futureTask, System.currentTimeMillis());
+            }
+            var result = routeService.checkGlutenCacheLimits(asyncFutures);
+            Assert.assertTrue(result);
+        }
+
+        {
+            Map<Future<?>, Long> asyncFutures = Maps.newConcurrentMap();
+            for (int i = 0; i < 5; i++) {
+                val response = new EnvelopeResponse(KylinException.CODE_SUCCESS, "", "");
+                val futureTask = new FutureTask<>(() -> {
+                }, response);
+                executors.submit(futureTask);
+                asyncFutures.put(futureTask, System.currentTimeMillis());
+            }
+            val result = routeService.checkGlutenCacheLimits(asyncFutures);
+            Assert.assertFalse(result);
+        }
+
+        {
+            Map<Future<?>, Long> asyncFutures = Maps.newConcurrentMap();
+            for (int i = 0; i < 5; i++) {
+                val futureTask = new FutureTask<>(() -> {
+                }, "test");
+                executors.submit(futureTask);
+                asyncFutures.put(futureTask, System.currentTimeMillis());
+            }
+            val result = routeService.checkGlutenCacheLimits(asyncFutures);
+            Assert.assertFalse(result);
+        }
+    }
+
+    private void testRouteGlutenCacheInner(String url, boolean checkLimits) throws Exception {
+        val request = new MockHttpServletRequest();
+        List<String> cacheCommands = Lists.newArrayList("test command");
+        val result = routeService.routeGlutenCacheInner(cacheCommands, request, url, checkLimits);
+        Assert.assertTrue(result);
+    }
+
+    @Test
+    public void routeGlutenCache() throws Exception {
+        val glutenResponse = new GlutenCacheResponse(true, Lists.newArrayList(), "");
+        val restResult = JsonUtil.writeValueAsBytes(RestResponse.ok(glutenResponse));
+        val resp = new ResponseEntity<>(restResult, HttpStatus.OK);
+        Mockito.when(restTemplate.exchange(ArgumentMatchers.anyString(), ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(), ArgumentMatchers.<Class<byte[]>> any())).thenReturn(resp);
+        testRouteGlutenCacheInner(CACHE_GLUTEN_API, true);
+        testRouteGlutenCacheInner(CACHE_GLUTEN_API, false);
+
+        val request = new MockHttpServletRequest();
+        List<String> cacheCommands = Lists.newArrayList();
+        val result = routeService.routeGlutenCache(cacheCommands, request);
+        Assert.assertTrue(result);
+    }
+
+    @Test
+    public void routeGlutenCacheAsync() throws Exception {
+        val restResult = JsonUtil.writeValueAsBytes(RestResponse.ok(""));
+        val resp = new ResponseEntity<>(restResult, HttpStatus.OK);
+        Mockito.when(restTemplate.exchange(ArgumentMatchers.anyString(), ArgumentMatchers.any(HttpMethod.class),
+                ArgumentMatchers.any(), ArgumentMatchers.<Class<byte[]>> any())).thenReturn(resp);
+        testRouteGlutenCacheInner(CACHE_GLUTEN_ASYNC_API, true);
+        testRouteGlutenCacheInner(CACHE_GLUTEN_ASYNC_API, false);
+
+        val request = new MockHttpServletRequest();
+        List<String> cacheCommands = Lists.newArrayList();
+        routeService.routeGlutenCacheAsync(cacheCommands, request);
     }
 }

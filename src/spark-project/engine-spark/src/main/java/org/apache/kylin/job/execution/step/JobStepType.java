@@ -42,20 +42,24 @@ import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.job.execution.AbstractExecutable;
 import org.apache.kylin.job.execution.DefaultExecutable;
 import org.apache.kylin.job.execution.DefaultExecutableOnModel;
+import org.apache.kylin.job.execution.DefaultExecutableOnTable;
 import org.apache.kylin.job.execution.NSparkExecutable;
 import org.apache.kylin.job.execution.handler.ExecutableHandlerFactory;
 
+import io.kyligence.kap.engine.spark.job.InternalTableLoadCacheStep;
 import io.kyligence.kap.engine.spark.job.InternalTableLoadingStep;
+import io.kyligence.kap.engine.spark.job.ModelIndexLoadCacheStep;
 import io.kyligence.kap.engine.spark.job.NResourceDetectStep;
 import io.kyligence.kap.engine.spark.job.NSparkCleanupAfterMergeStep;
 import io.kyligence.kap.engine.spark.job.NSparkCubingStep;
-import io.kyligence.kap.engine.spark.job.NSparkMergingStep;
 import io.kyligence.kap.engine.spark.job.NSparkLayoutDataOptimizeStep;
+import io.kyligence.kap.engine.spark.job.NSparkMergingStep;
 import io.kyligence.kap.engine.spark.job.NSparkSnapshotBuildingStep;
 import io.kyligence.kap.engine.spark.job.NSparkUpdateMetadataStep;
 import io.kyligence.kap.engine.spark.job.NTableSamplingJob;
 import io.kyligence.kap.engine.spark.job.SparkCleanupTransactionalTableStep;
 import lombok.extern.slf4j.Slf4j;
+
 @Slf4j
 public enum JobStepType {
     RESOURCE_DETECT {
@@ -69,6 +73,7 @@ public enum JobStepType {
 
         @Override
         protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
+            // just override
         }
     },
 
@@ -82,6 +87,7 @@ public enum JobStepType {
 
         @Override
         protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
+            // just override
         }
     },
     CUBING {
@@ -164,13 +170,14 @@ public enum JobStepType {
             if (!(parent instanceof DefaultExecutableOnModel)) {
                 throw new IllegalArgumentException();
             }
-            ((DefaultExecutableOnModel) parent).setHandler(
-                    ExecutableHandlerFactory.createExecutableHandler((DefaultExecutableOnModel) parent));
+            ((DefaultExecutableOnModel) parent)
+                    .setHandler(ExecutableHandlerFactory.createExecutableHandler((DefaultExecutableOnModel) parent));
             return new NSparkUpdateMetadataStep();
         }
 
         @Override
         protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
+            // just override
         }
     },
 
@@ -182,6 +189,21 @@ public enum JobStepType {
 
         @Override
         protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
+            // just override
+        }
+    },
+    LOAD_GLUTEN_CACHE {
+        @Override
+        protected AbstractExecutable create(DefaultExecutable parent, KylinConfig config) {
+            if (parent instanceof DefaultExecutableOnTable) {
+                return new InternalTableLoadCacheStep();
+            }
+            return new ModelIndexLoadCacheStep();
+        }
+
+        @Override
+        protected void addSubStage(NSparkExecutable parent, KylinConfig config) {
+            // just override
         }
     },
     LAYOUT_DATA_OPTIMIZE {

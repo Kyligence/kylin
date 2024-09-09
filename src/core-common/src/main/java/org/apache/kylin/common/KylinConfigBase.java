@@ -519,6 +519,10 @@ public abstract class KylinConfigBase implements Serializable {
         return Boolean.parseBoolean(getOptional("kylin.internal-table-enabled", FALSE));
     }
 
+    public boolean isInternalTablePreloadCacheEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.internal-table.preloaded-cache.enabled", TRUE));
+    }
+
     public int getQueryConcurrentRunningThresholdForProject() {
         // by default there's no limitation
         return Integer.parseInt(getOptional("kylin.query.project-concurrent-running-threshold", "0"));
@@ -2062,6 +2066,10 @@ public abstract class KylinConfigBase implements Serializable {
     // ============================================================================
     // Cache
     // ============================================================================
+
+    public int getConcurrentRunningThresholdForGlutenCache() {
+        return Integer.parseInt(getOptional("kylin.cache.gluten-cache-concurrent-running-threshold", "20"));
+    }
 
     public boolean isRedisEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.cache.redis.enabled", FALSE));
@@ -4194,6 +4202,10 @@ public abstract class KylinConfigBase implements Serializable {
     public String getKylinInfoExtensionFactory() {
         String defaultValue = "org.apache.kylin.common.extension.KylinInfoExtension$Factory";
         return getOptional("kylin.extension.info.factory", defaultValue);
+    }
+
+    public boolean isIndexPreloadCacheEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.index.preloaded-cache.enabled", TRUE));
     }
 
     public String[] getProjectsAggressiveOptimizationIndex() {

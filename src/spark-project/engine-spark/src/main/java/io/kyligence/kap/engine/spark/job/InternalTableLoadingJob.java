@@ -25,6 +25,7 @@ import org.apache.kylin.job.factory.JobFactory;
 import org.apache.kylin.job.factory.JobFactoryConstant;
 import org.apache.kylin.job.handler.InternalTableJobHandler.InternalTableJobBuildParam;
 import org.apache.kylin.metadata.cube.model.NBatchConstants;
+import org.apache.kylin.metadata.project.NProjectManager;
 import org.apache.kylin.metadata.table.InternalTableDesc;
 import org.apache.kylin.metadata.table.InternalTableManager;
 import org.sparkproject.guava.base.Preconditions;
@@ -44,8 +45,8 @@ public class InternalTableLoadingJob extends DefaultExecutableOnTable {
     }
 
     public static InternalTableLoadingJob create(InternalTableJobBuildParam param) {
-        InternalTableManager tableManager = InternalTableManager.getInstance(KylinConfig.getInstanceFromEnv(),
-                param.getProject());
+        KylinConfig projectConfig = NProjectManager.getProjectConfig(param.getProject());
+        InternalTableManager tableManager = InternalTableManager.getInstance(projectConfig, param.getProject());
         InternalTableDesc internalTable = tableManager.getInternalTableDesc(param.getTable());
         Preconditions.checkArgument(param.getSubmitter() != null);
         InternalTableLoadingJob job = new InternalTableLoadingJob();
@@ -68,12 +69,22 @@ public class InternalTableLoadingJob extends DefaultExecutableOnTable {
         job.setParam(NBatchConstants.P_DELETE_PARTITION, param.getDeletePartition());
         KylinConfig config = KylinConfig.getInstanceFromEnv();
         JobStepType.BUILD_INTERNAL.createStep(job, config);
+        if (isPreloadedCacheEnable(internalTable, projectConfig)) {
+            JobStepType.LOAD_GLUTEN_CACHE.createStep(job, config);
+        }
         return job;
+    }
+
+    private static boolean isPreloadedCacheEnable(InternalTableDesc internalTable, KylinConfig projectConfig) {
+        if (internalTable.isPreloadedCacheEnable()) {
+            return true;
+        }
+        return projectConfig.isInternalTablePreloadCacheEnabled();
     }
 
     public static class InternalTableJobFactory extends JobFactory {
 
-        protected InternalTableJobFactory(){
+        protected InternalTableJobFactory() {
         }
 
         @Override

@@ -50,6 +50,7 @@ import org.apache.kylin.job.service.JobInfoService;
 import org.apache.kylin.job.util.JobContextUtil;
 import org.apache.kylin.rest.request.JobErrorRequest;
 import org.apache.kylin.rest.request.JobUpdateRequest;
+import org.apache.kylin.rest.request.LoadGlutenCacheRequest;
 import org.apache.kylin.rest.request.SparkJobTimeRequest;
 import org.apache.kylin.rest.request.SparkJobUpdateRequest;
 import org.apache.kylin.rest.request.StageRequest;
@@ -60,6 +61,7 @@ import org.apache.kylin.rest.response.ExecutableResponse;
 import org.apache.kylin.rest.response.ExecutableStepResponse;
 import org.apache.kylin.rest.response.JobStatisticsResponse;
 import org.apache.kylin.rest.service.JobService;
+import org.apache.kylin.rest.service.RouteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,6 +81,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import io.swagger.annotations.ApiOperation;
+import lombok.val;
 
 @Controller
 @RequestMapping(value = "/api/jobs", produces = { HTTP_VND_APACHE_KYLIN_JSON, HTTP_VND_APACHE_KYLIN_V4_PUBLIC_JSON })
@@ -93,6 +96,9 @@ public class JobController extends BaseController {
 
     @Autowired
     private JobInfoService jobInfoService;
+
+    @Autowired
+    private RouteService routeService;
 
     @Override
     protected Logger getLogger() {
@@ -467,5 +473,20 @@ public class JobController extends BaseController {
         setDownloadResponse(jobOutputAndDownloadFile.getFirst(), jobOutputAndDownloadFile.getSecond(),
                 MediaType.APPLICATION_OCTET_STREAM_VALUE, response);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, "", "");
+    }
+
+    /**
+     * RPC Call
+     */
+    @PostMapping(value = "/gluten_cache")
+    @ApiOperation(value = "routeGlutenCache", tags = { "Gluten" })
+    @ResponseBody
+    public EnvelopeResponse<Boolean> routeGlutenCache(@RequestBody LoadGlutenCacheRequest request,
+            HttpServletRequest servletRequest) throws Exception {
+        logger.info("routeGlutenCache request is [{}]", request);
+        checkProjectName(request.getProject());
+        checkCollectionRequiredArg("cache_commands", request.getCacheCommands());
+        val result = routeService.routeGlutenCache(request.getCacheCommands(), servletRequest);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, result, "");
     }
 }

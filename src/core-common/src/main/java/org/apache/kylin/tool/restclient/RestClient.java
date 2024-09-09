@@ -83,6 +83,7 @@ public class RestClient {
 
     private static final String SCHEME_HTTP = "http://";
     private static final String KYLIN_API_PATH = "/kylin/api";
+
     public static boolean matchFullRestPattern(String uri) {
         return FULL_REST_PATTERN.matcher(uri).matches();
     }
@@ -168,7 +169,7 @@ public class RestClient {
         HttpResponse response = null;
         try {
             response = client.execute(post);
-            if (response.getStatusLine().getStatusCode() != 200) {
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                 String msg = EntityUtils.toString(response.getEntity());
                 logger.error("Invalid response {} with update user {}\n{}", response.getStatusLine().getStatusCode(),
                         url, msg);
@@ -187,7 +188,7 @@ public class RestClient {
         HttpResponse response = null;
         try {
             response = client.execute(put);
-            if (response.getStatusLine().getStatusCode() != 200) {
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                 String msg = EntityUtils.toString(response.getEntity());
                 logger.error("Invalid response: {} for refresh capacity: {} \n{}",
                         response.getStatusLine().getStatusCode(), url, msg);
@@ -206,7 +207,7 @@ public class RestClient {
         try {
             post.setEntity(new ByteArrayEntity(JsonUtil.writeValueAsBytes(notifier), ContentType.APPLICATION_JSON));
             response = client.execute(post);
-            if (response.getStatusLine().getStatusCode() != 200) {
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                 String msg = EntityUtils.toString(response.getEntity());
                 throw new KylinException(CommonErrorCode.FAILED_NOTIFY_CATCHUP, "Invalid response "
                         + response.getStatusLine().getStatusCode() + " with notify catch up url " + url + "\n" + msg);
@@ -226,7 +227,7 @@ public class RestClient {
         HttpResponse response = null;
         try {
             response = client.execute(get);
-            if (response.getStatusLine().getStatusCode() != 200) {
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                 String msg = EntityUtils.toString(response.getEntity());
                 throw new KylinException(CommonErrorCode.FAILED_FORWARD_METADATA_ACTION,
                         response.getStatusLine().getStatusCode() + "\n" + url + "\n" + msg);
@@ -250,7 +251,7 @@ public class RestClient {
         try {
             put.setEntity(new ByteArrayEntity(requestEntity, ContentType.APPLICATION_JSON));
             response = client.execute(put);
-            if (response.getStatusLine().getStatusCode() != 200) {
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                 String msg = EntityUtils.toString(response.getEntity());
                 throw new KylinException(CommonErrorCode.FAILED_FORWARD_METADATA_ACTION, "Invalid response "
                         + response.getStatusLine().getStatusCode() + " with url " + url + "\n" + msg);
@@ -282,13 +283,27 @@ public class RestClient {
         try {
             httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs, "UTF-8"));
             response = client.execute(httpPost);
-            if (response.getStatusLine().getStatusCode() != 200) {
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                 String msg = EntityUtils.toString(response.getEntity());
                 throw new KylinException(CommonErrorCode.FAILED_FORWARD_METADATA_ACTION, "Invalid response "
                         + response.getStatusLine().getStatusCode() + " with url " + url + "\n" + msg);
             }
         } finally {
             cleanup(httpPost, response);
+        }
+        return response;
+    }
+
+    public HttpResponse forwardPost(byte[] requestEntity, String targetUrl) throws IOException {
+        String url = baseUrl + targetUrl;
+        HttpPost httpPost = new HttpPost(url);
+        httpPost.addHeader(ROUTED, "true");
+        httpPost.setEntity(new ByteArrayEntity(requestEntity, ContentType.APPLICATION_JSON));
+        HttpResponse response = client.execute(httpPost);
+        if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+            String msg = EntityUtils.toString(response.getEntity());
+            throw new KylinException(CommonErrorCode.FAILED_FORWARD_METADATA_ACTION,
+                    "Invalid response " + response.getStatusLine().getStatusCode() + " with url " + url + "\n" + msg);
         }
         return response;
     }
@@ -348,7 +363,7 @@ public class RestClient {
         try {
             httpPost.setURI(new URI(url));
             response = client.execute(httpPost);
-            if (response.getStatusLine().getStatusCode() != 200) {
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                 String msg = EntityUtils.toString(response.getEntity());
                 throw new IOException("Invalid response " + response.getStatusLine().getStatusCode()
                         + " with health status url " + url + "\n" + msg);
@@ -369,7 +384,7 @@ public class RestClient {
         try {
             httpPost.setURI(new URI(url));
             response = client.execute(httpPost);
-            if (response.getStatusLine().getStatusCode() != 200) {
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                 String msg = EntityUtils.toString(response.getEntity());
                 throw new IOException("Invalid response " + response.getStatusLine().getStatusCode()
                         + " with downOrUpGradeKE url " + url + "\n" + msg);

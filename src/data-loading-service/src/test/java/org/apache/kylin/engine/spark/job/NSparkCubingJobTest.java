@@ -75,7 +75,6 @@ import org.apache.kylin.metadata.cube.model.NDataSegDetails;
 import org.apache.kylin.metadata.cube.model.NDataSegment;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
-import org.apache.kylin.metadata.cube.model.NDataflowUpdate;
 import org.apache.kylin.metadata.cube.model.NIndexPlanManager;
 import org.apache.kylin.metadata.model.NDataModel;
 import org.apache.kylin.metadata.model.NDataModelManager;
@@ -929,7 +928,7 @@ public class NSparkCubingJobTest extends NLocalWithSparkSessionTest {
         // }, project, UnitOfWork.DEFAULT_MAX_RETRY, UnitOfWork.DEFAULT_EPOCH_ID, job.getId());
         // // job wouldn't be resumable after restart
         // Assert.assertFalse(execMgr.getJobOutput(cubeStep.getId()).isResumable());
-        // 
+        //
         // wait(job);
 
         // checkpoints should not cross building jobs
@@ -1092,16 +1091,6 @@ public class NSparkCubingJobTest extends NLocalWithSparkSessionTest {
 
     private void cleanupSegments(String dfName) {
         cleanupSegments(dfName, getProject());
-    }
-
-    private void cleanupSegments(String dfName, String project) {
-        EnhancedUnitOfWork.doInTransactionWithCheckAndRetry(() -> {
-            NDataflowManager dsMgr = NDataflowManager.getInstance(KylinConfig.getInstanceFromEnv(), project);
-            NDataflow df = dsMgr.getDataflow(dfName);
-            NDataflowUpdate update = new NDataflowUpdate(df.getUuid());
-            update.setToRemoveSegs(df.getSegments().toArray(new NDataSegment[0]));
-            return dsMgr.updateDataflow(update);
-        }, project);
     }
 
     public static class MockParquetStorage extends ParquetStorage {

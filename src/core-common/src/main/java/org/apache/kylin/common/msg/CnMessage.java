@@ -896,6 +896,11 @@ public class CnMessage extends Message {
     }
 
     @Override
+    public String getGlutenCacheTooManyRunning() {
+        return "缓存请求数量超过上限，无法提交。请稍后再试，或联系项目管理员修改设置。";
+    }
+
+    @Override
     public String getAsyncQueryTooManyRunning() {
         return "查询失败，异步查询总数已达到管理员设置的上限，请等候并重试。";
     }

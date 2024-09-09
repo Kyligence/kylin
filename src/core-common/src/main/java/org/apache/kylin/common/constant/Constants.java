@@ -60,8 +60,14 @@ public class Constants {
     public static final String SNAPSHOT_JOB = "snapshot_job";
     public static final String MARK = "_mark";
     public static final String BACKSLASH = "/";
+    public static final String START = "*";
+    public static final String ASYNC = "ASYNC";
 
     public static final String METADATA_FILE = "metadata.zip";
 
     public static final String CORE_META_DIR = "core_meta";
+
+    public static final String CACHE_MODEL_COMMAND = "CACHE FILES %s SELECT * FROM '%s' CACHEPROPERTIES (recursive=true)";
+    public static final String CACHE_TABLE_COMMAND = "CACHE DATA %s SELECT %s FROM '%s' %s";
+    public static final String FILTER_COMMAND = "AFTER %s AS OF '%s'";
 }

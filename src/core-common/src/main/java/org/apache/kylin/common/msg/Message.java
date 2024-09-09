@@ -66,6 +66,11 @@ public class Message {
     private static final String DDL_RESTRICT = "Only support %s syntax";
     private static final String LOAD_LOGICAL_VIEW_ERROR = "Can't load table %s, table can only be loaded in project %s";
 
+    public static final String LOAD_GLUTEN_CACHE_EXECUTE_ERROR = "Load gluten cache execute has error. %s";
+    public static final String LOAD_GLUTEN_CACHE_ROUTE_ERROR = "route cache request has error, message is [%s]";
+    public static final String LOAD_GLUTEN_CACHE_ROUTE_EXECUTE_ERROR = "route cache has error, some query node cache failed";
+    public static final String LOAD_GLUTEN_CACHE_ROUTE_RESPONSE_EMPTY = "route cache request has error, response body is empty";
+
     protected Message() {
 
     }
@@ -489,6 +494,10 @@ public class Message {
 
     public String getQueryTooManyRunning() {
         return "Can’t submit query at the moment as there are too many ongoing queries. Please try again later, or contact project admin to adjust configuration.";
+    }
+
+    public String getGlutenCacheTooManyRunning() {
+        return "Can’t submit cache command at the moment as there are too many ongoing commands. Please try again later, or contact project admin to adjust configuration.";
     }
 
     public String getAsyncQueryTooManyRunning() {

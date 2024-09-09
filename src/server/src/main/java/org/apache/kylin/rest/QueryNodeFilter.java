@@ -156,6 +156,11 @@ public class QueryNodeFilter extends BaseFilter {
         notRoutePutApiSet.add("/kylin/api/jobs/stage/status");
         notRoutePutApiSet.add("/kylin/api/jobs/spark");
         notRoutePutApiSet.add("/kylin/api/jobs/wait_and_run_time");
+
+        // gluten cache
+        notRoutePostApiSet.add("/kylin/api/jobs/gluten_cache");
+        notRoutePostApiSet.add("/kylin/api/cache/gluten_cache");
+        notRoutePostApiSet.add("/kylin/api/cache/gluten_cache_async");
     }
 
     @Autowired
@@ -257,8 +262,7 @@ public class QueryNodeFilter extends BaseFilter {
                 || (method.equals("PUT") && notRoutePutApiSet.contains(uri))
                 || (method.equals("DELETE") && notRouteDeleteApiSet.contains(uri))
                 || TRUE.equalsIgnoreCase(servletRequest.getHeader(ROUTED))
-                || TRUE.equals(servletRequest.getAttribute(FILTER_PASS))
-                || KylinConfig.getInstanceFromEnv().isUTEnv();
+                || TRUE.equals(servletRequest.getAttribute(FILTER_PASS)) || KylinConfig.getInstanceFromEnv().isUTEnv();
     }
 
     /**

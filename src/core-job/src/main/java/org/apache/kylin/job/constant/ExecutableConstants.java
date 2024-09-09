@@ -93,4 +93,5 @@ public final class ExecutableConstants {
     public static final String STAGE_NAME_OPTIMIZE_LAYOUT_DATA_COMPACTION = "Optimize layout data by compaction";
     public static final String STAGE_NAME_INTERNAL_TABLE_LOAD = "Load Internal Table";
     public static final String STAGE_NAME_INTERNAL_TABLE_DROP_PARTITION = "Drop Internal Table Partition";
+    public static final String LOAD_GLUTEN_CACHE = "Load Gluten Cache";
 }
