@@ -366,10 +366,6 @@ public class InternalTableServiceTest extends AbstractTestCase {
         internalTableService.truncateInternalTable(PROJECT, TABLE_INDENTITY);
         Assertions.assertFalse(internalTableFolder.exists());
 
-        // double truncate
-        response = internalTableService.truncateInternalTable(PROJECT, TABLE_INDENTITY);
-        Assertions.assertTrue(response.getJobs().isEmpty());
-
         // test truncate nonexistent internal tables
         Assertions.assertThrows(KylinException.class,
                 () -> internalTableService.truncateInternalTable(PROJECT, TABLE_INDENTITY + "2"));

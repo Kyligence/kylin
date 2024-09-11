@@ -91,31 +91,32 @@ public class InternalTableController extends NBasicController {
     @ApiOperation(value = "truncate_internal_table", tags = { "AI" })
     @DeleteMapping(value = "/truncate_internal_table", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
-    public EnvelopeResponse<InternalTableLoadingJobResponse> truncateInternalTable(
-            @RequestParam(value = "project") String project, @RequestParam(value = "table") String table)
+    public EnvelopeResponse<String> truncateInternalTable(@RequestParam(value = "project") String project,
+            @RequestParam(value = "database") String database, @RequestParam(value = "table") String table)
             throws Exception {
         checkProjectName(project);
-        if (StringUtils.isEmpty(table)) {
-            throw new KylinException(INVALID_TABLE_NAME, MsgPicker.getMsg().getTableNameCannotEmpty());
+        if (StringUtils.isEmpty(StringUtils.trim(table)) || StringUtils.isEmpty(StringUtils.trim(database))) {
+            throw new KylinException(INVALID_TABLE_NAME, MsgPicker.getMsg().getTableOrDatabaseNameCannotEmpty());
         }
-        InternalTableLoadingJobResponse response = internalTableService.truncateInternalTable(project, table);
-        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, response, "");
+        String tableIdentity = database + "." + table;
+        internalTableService.truncateInternalTable(project, tableIdentity);
+        return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, null, "");
     }
 
     @ApiOperation(value = "drop_table_partitions", tags = { "AI" })
     @DeleteMapping(value = "/partitions", produces = { HTTP_VND_APACHE_KYLIN_JSON })
     @ResponseBody
-    public EnvelopeResponse<String> dropPartitions(
-            @RequestParam(value = "project") String project, @RequestParam(value = "table") String table,
+    public EnvelopeResponse<String> dropPartitions(@RequestParam(value = "project") String project,
+            @RequestParam(value = "database") String database, @RequestParam(value = "table") String table,
             @RequestParam(value = "partitions") String[] partitionValues) throws Exception {
         checkProjectName(project);
-        if (StringUtils.isEmpty(table)) {
-            throw new KylinException(INVALID_TABLE_NAME, MsgPicker.getMsg().getTableNameCannotEmpty());
+        if (StringUtils.isEmpty(StringUtils.trim(table)) || StringUtils.isEmpty(StringUtils.trim(database))) {
+            throw new KylinException(INVALID_TABLE_NAME, MsgPicker.getMsg().getTableOrDatabaseNameCannotEmpty());
         }
         // If partitionValues is null, all files will be cleared
         // otherwise only files in the specified partition will be cleared.
-        internalTableService.dropPartitionsOnDeltaTable(project, table,
-                partitionValues, null);
+        String tableIdentity = database + "." + table;
+        internalTableService.dropPartitionsOnDeltaTable(project, tableIdentity, partitionValues, null);
         return new EnvelopeResponse<>(KylinException.CODE_SUCCESS, null, "");
     }
 

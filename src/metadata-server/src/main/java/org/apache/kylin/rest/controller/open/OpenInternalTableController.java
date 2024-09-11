@@ -142,15 +142,14 @@ public class OpenInternalTableController extends NBasicController {
     @ApiOperation(value = "truncate_internal_table", tags = { "AI" })
     @DeleteMapping(value = "/truncate_internal_table")
     @ResponseBody
-    public EnvelopeResponse<InternalTableLoadingJobResponse> truncateInternalTable(
+    public EnvelopeResponse<String> truncateInternalTable(
             @RequestParam(value = "project") String project, @RequestParam(value = "database") String database,
             @RequestParam(value = "table") String table) throws Exception {
         String projectName = checkProjectName(project);
         if (StringUtils.isEmpty(StringUtils.trim(table)) || StringUtils.isEmpty(StringUtils.trim(database))) {
             throw new KylinException(INVALID_TABLE_NAME, MsgPicker.getMsg().getTableOrDatabaseNameCannotEmpty());
         }
-        String tableIdentity = database + "." + table;
-        return internalTableController.truncateInternalTable(projectName, tableIdentity);
+        return internalTableController.truncateInternalTable(projectName, database, table);
     }
 
     @ApiOperation(value = "drop_table_partitions", tags = { "AI" })
@@ -168,8 +167,7 @@ public class OpenInternalTableController extends NBasicController {
             throw new KylinException(EMPTY_PARAMETER,
                     String.format(Locale.ROOT, MsgPicker.getMsg().getParameterEmpty(), "partitions"));
         }
-        String tableIdentity = database + "." + table;
-        return internalTableController.dropPartitions(projectName, tableIdentity, partitionValues);
+        return internalTableController.dropPartitions(projectName, database, table, partitionValues);
     }
 
     @ApiOperation(value = "drop_internal_table", tags = { "AI" })

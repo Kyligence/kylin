@@ -301,7 +301,7 @@ public class InternalTableService extends BasicService {
 
     // 1. delete data in file system
     // 2. clear partition values in internal table meta
-    public InternalTableLoadingJobResponse truncateInternalTable(String project, String tableIdentity)
+    public void truncateInternalTable(String project, String tableIdentity)
             throws Exception {
         aclEvaluate.checkProjectWritePermission(project);
         InternalTableManager internalTableManager = getManager(InternalTableManager.class, project);
@@ -339,7 +339,6 @@ public class InternalTableService extends BasicService {
         }, project);
         logger.info("Successfully truncate internal table {} in {} ms", tableIdentity,
                 System.currentTimeMillis() - start);
-        return InternalTableLoadingJobResponse.of(new ArrayList<>(), "");
     }
 
     // 1. delete partition data in file system
