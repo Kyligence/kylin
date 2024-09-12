@@ -5,17 +5,15 @@ import static org.apache.kylin.common.persistence.metadata.mapper.StreamingJobDy
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.ibatis.annotations.InsertProvider;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.ResultMap;
 import org.apache.ibatis.annotations.Results;
-import org.apache.ibatis.annotations.SelectKey;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.kylin.common.persistence.metadata.jdbc.ContentTypeHandler;
 import org.apache.kylin.common.persistence.metadata.jdbc.SqlWithRecordLockProviderAdapter;
 import org.apache.kylin.common.persistence.resources.StreamingJobRawResource;
-import org.mybatis.dynamic.sql.insert.render.InsertStatementProvider;
+import org.mybatis.dynamic.sql.BasicColumn;
 import org.mybatis.dynamic.sql.select.SelectDSLCompleter;
 import org.mybatis.dynamic.sql.select.render.SelectStatementProvider;
 import org.mybatis.dynamic.sql.util.SqlProviderAdapter;
@@ -25,6 +23,11 @@ public interface StreamingJobMapper extends BasicMapper<StreamingJobRawResource>
     @Override
     default BasicSqlTable getSqlTable() {
         return sqlTable;
+    }
+
+    @Override
+    default BasicColumn[] getSelectList() {
+        return getSelectListWithAdditions(sqlTable.modelUuid);
     }
 
     @Override
@@ -39,6 +42,7 @@ public interface StreamingJobMapper extends BasicMapper<StreamingJobRawResource>
             @Result(column = "meta_key", property = "metaKey", jdbcType = JdbcType.VARCHAR),
             @Result(column = "project", property = "project", jdbcType = JdbcType.VARCHAR),
             @Result(column = "uuid", property = "uuid", jdbcType = JdbcType.CHAR),
+            @Result(column = "model_uuid", property = "modelUuid", jdbcType = JdbcType.CHAR),
             @Result(column = "mvcc", property = "mvcc", jdbcType = JdbcType.BIGINT),
             @Result(column = "ts", property = "ts", jdbcType = JdbcType.BIGINT),
             @Result(column = "reserved_filed_1", property = "reservedFiled1", jdbcType = JdbcType.VARCHAR),
