@@ -42,7 +42,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <arthas.version>3.6.8-kyarthas-r1</arthas.version>
-        <tomcat-embed.version>9.0.87</tomcat-embed.version>
+        <tomcat-embed.version>9.0.90</tomcat-embed.version>
 
         <!-- Keep same order with dependencyManagement -->
 
