@@ -521,7 +521,9 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     public boolean isInternalTablePreloadCacheEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.internal-table.preloaded-cache.enabled", TRUE));
+        boolean preloadCacheEnabled = Boolean
+                .parseBoolean(getOptional("kylin.internal-table.preloaded-cache.enabled", TRUE));
+        return preloadCacheEnabled && isInternalTableEnabled() && queryUseGlutenEnabled();
     }
 
     public int getQueryConcurrentRunningThresholdForProject() {
@@ -2075,6 +2077,11 @@ public abstract class KylinConfigBase implements Serializable {
 
     public int getConcurrentRunningThresholdForGlutenCache() {
         return Integer.parseInt(getOptional("kylin.cache.gluten-cache-concurrent-running-threshold", "20"));
+    }
+
+    public int getGlutenCacheRequestTimeout() {
+        return Math.toIntExact(TimeUtil.timeStringAs(getOptional("kylin.cache.gluten-cache-request-timeout", "1d"),
+                TimeUnit.MILLISECONDS));
     }
 
     public boolean isRedisEnabled() {
@@ -4230,7 +4237,8 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     public boolean isIndexPreloadCacheEnabled() {
-        return Boolean.parseBoolean(getOptional("kylin.index.preloaded-cache.enabled", TRUE));
+        boolean preloadCacheEnabled = Boolean.parseBoolean(getOptional("kylin.index.preloaded-cache.enabled", TRUE));
+        return preloadCacheEnabled && queryUseGlutenEnabled();
     }
 
     public String[] getProjectsAggressiveOptimizationIndex() {
