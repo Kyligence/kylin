@@ -50,10 +50,10 @@ import org.apache.kylin.metadata.cachesync.CachedCrudAssist;
 import org.apache.kylin.metadata.cube.model.NDataflow;
 import org.apache.kylin.metadata.cube.model.NDataflowManager;
 import org.apache.kylin.metadata.model.exception.ModelBrokenException;
+import org.apache.kylin.metadata.project.NProjectManager;
 
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kylin.metadata.project.NProjectManager;
 
 @Slf4j
 public class NDataModelManager {
@@ -197,16 +197,31 @@ public class NDataModelManager {
                 "alias", alias);
         return crud.listByFilter(filter).stream().findFirst().orElse(null);
     }
-    
+
     public List<String> getModelNamesByFuzzyName(String fuzzyName) {
         RawResourceFilter filter = RawResourceFilter.simpleFilter(RawResourceFilter.Operator.LIKE_CASE_INSENSITIVE,
                 "alias", fuzzyName);
         return crud.listByFilter(filter).stream().map(NDataModel::getAlias).collect(Collectors.toList());
     }
 
-    public NDataModel dropModel(NDataModel desc) {
-        crud.delete(desc);
-        return desc;
+    public NDataModel dropModel(NDataModel model) {
+        crud.delete(model);
+        dropRelatedCc(model);
+        return model;
+    }
+
+    private void dropRelatedCc(NDataModel model) {
+        // drop relations of model <-> cc
+        Manager<CcModelRelationDesc> relationManager = Manager.getInstance(config, project, CcModelRelationDesc.class);
+        List<CcModelRelationDesc> items = relationManager
+                .listByFilter(RawResourceFilter.equalFilter("modelUuid", model.getUuid()));
+        items.forEach(relationManager::delete);
+
+        // drop cc
+        Set<String> ccUuids = items.stream().map(CcModelRelationDesc::getCcUuid).collect(Collectors.toSet());
+        relationManager.listAll().stream().map(CcModelRelationDesc::getCcUuid).forEach(ccUuids::remove);
+        ComputedColumnManager ccManager = config.getManager(project, ComputedColumnManager.class);
+        ccUuids.forEach(cc -> ccManager.get(cc).ifPresent(ccManager::delete));
     }
 
     public NDataModel dropModel(String id) {
@@ -214,8 +229,7 @@ public class NDataModelManager {
         if (model == null) {
             return null;
         }
-        crud.delete(model);
-        return model;
+        return dropModel(model);
     }
 
     public Set<String> listAllModelAlias() {
@@ -342,8 +356,8 @@ public class NDataModelManager {
         ComputedColumnManager ccManager = config.getManager(project, ComputedColumnManager.class);
         Manager<CcModelRelationDesc> relationManager = Manager.getInstance(config, project, CcModelRelationDesc.class);
 
-        List<ComputedColumnDesc> newCC = model.getComputedColumnDescs().stream()
-                .map(ccManager::saveCCWithCheck).collect(Collectors.toList());
+        List<ComputedColumnDesc> newCC = model.getComputedColumnDescs().stream().map(ccManager::saveCCWithCheck)
+                .collect(Collectors.toList());
         model.setComputedColumnUuids(newCC.stream().map(ComputedColumnDesc::getUuid).collect(Collectors.toList()));
         model.setComputedColumnDescs(newCC);
 
@@ -424,7 +438,7 @@ public class NDataModelManager {
                 .filter(df -> !df.checkBrokenWithRelatedInfo()) //
                 .map(NDataflow::getModel).collect(Collectors.toList());
     }
-    
+
     private void lockModelsUnderProject() {
         getStore().batchLock(MetadataType.MODEL,
                 RawResourceFilter.simpleFilter(RawResourceFilter.Operator.EQUAL_CASE_INSENSITIVE, "project", project));

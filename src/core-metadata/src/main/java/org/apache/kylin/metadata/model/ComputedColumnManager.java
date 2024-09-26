@@ -46,7 +46,6 @@ public class ComputedColumnManager extends Manager<ComputedColumnDesc> {
         return ComputedColumnDesc.class;
     }
 
-    
     public ComputedColumnDesc saveCCWithCheck(ComputedColumnDesc entity) {
         ComputedColumnDesc existing = getByName(entity.getTableIdentity(), entity.getColumnName());
         if (existing == null) {
@@ -67,14 +66,13 @@ public class ComputedColumnManager extends Manager<ComputedColumnDesc> {
             });
         }
 
-        if (entity.getUuid() == null) {
-            entity.setUuid(RandomUtil.randomUUIDStr());
-        }
-        // reset mvcc for new cc
-        entity.setMvcc(-1);
-        return super.createAS(entity);
+        // reset mvcc and uuid for new cc
+        ComputedColumnDesc copied = this.copy(entity);
+        copied.setUuid(RandomUtil.randomUUIDStr());
+        copied.setMvcc(-1);
+        return super.createAS(copied);
     }
-    
+
     private boolean noNeedToUpdate(ComputedColumnDesc existing, ComputedColumnDesc entity) {
         return Objects.equals(existing.getDatatype(), entity.getDatatype())
                 && Objects.equals(existing.getTableAlias(), entity.getTableAlias())
