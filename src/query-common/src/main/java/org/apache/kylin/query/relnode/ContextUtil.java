@@ -70,8 +70,8 @@ public class ContextUtil {
     static final ThreadLocal<Map<String, String>> _localParameters = new ThreadLocal<>();
     static final ThreadLocal<Map<Integer, OlapContext>> _localContexts = new ThreadLocal<>();
 
-    static final Map<NLookupCandidate.Type, String> TYPE_MAPPING = ImmutableMap.of(NLookupCandidate.Type.SNAPSHOT,
-            QueryMetrics.TABLE_SNAPSHOT, NLookupCandidate.Type.INTERNAL_TABLE, QueryMetrics.INTERNAL_TABLE);
+    static final Map<NLookupCandidate.Policy, String> TYPE_MAPPING = ImmutableMap.of(NLookupCandidate.Policy.SNAPSHOT,
+            QueryMetrics.TABLE_SNAPSHOT, NLookupCandidate.Policy.INTERNAL_TABLE, QueryMetrics.INTERNAL_TABLE);
     private static final Logger log = LoggerFactory.getLogger(ContextUtil.class);
 
     private ContextUtil() {
@@ -187,7 +187,7 @@ public class ContextUtil {
         // contexts can be null in case of 'explain plan for'
         Collection<OlapContext> threadLocalContexts = ContextUtil.getThreadLocalContexts();
         for (OlapContext ctx : threadLocalContexts) {
-            Map<String, NLookupCandidate.Type> lookupTables = new HashMap<>();
+            Map<String, NLookupCandidate.Policy> lookupTables = new HashMap<>();
             final String realizationType = detectType(ctx, lookupTables);
             IRealization realization = ctx.getRealization();
             if (realization != null) {
@@ -211,8 +211,8 @@ public class ContextUtil {
             if (!lookupTables.isEmpty()) {
                 lookupTables.forEach((lookup, type) -> {
                     String lookupRealizationType = TYPE_MAPPING.get(type);
-                    NativeQueryRealization lookupRealization =
-                            new NativeQueryRealization(lookup, lookupRealizationType);
+                    NativeQueryRealization lookupRealization = new NativeQueryRealization(lookup,
+                            lookupRealizationType);
                     lookupRealization.setLookupTables(Lists.newArrayList(lookup));
                     realizations.add(lookupRealization);
                 });
@@ -221,7 +221,7 @@ public class ContextUtil {
         return realizations;
     }
 
-    private static String detectType(OlapContext ctx, Map<String, NLookupCandidate.Type> lookupMap) {
+    private static String detectType(OlapContext ctx, Map<String, NLookupCandidate.Policy> lookupMap) {
         String realizationType;
         if (ctx.getStorageContext().isDataSkipped()) {
             if (ctx.getStorageContext().isFilterCondAlwaysFalse()) {
@@ -231,7 +231,7 @@ public class ContextUtil {
             }
         } else if (ctx.getStorageContext().getLookupCandidate() != null) {
             realizationType = QueryMetrics.TABLE_SNAPSHOT;
-            lookupMap.put(ctx.getFirstTableIdentity(), ctx.getStorageContext().getLookupCandidate().getType());
+            lookupMap.put(ctx.getFirstTableIdentity(), ctx.getStorageContext().getLookupCandidate().getPolicy());
         } else if (ctx.getStorageContext().getBatchCandidate().isTableIndex()) {
             realizationType = QueryMetrics.TABLE_INDEX;
         } else {
@@ -241,7 +241,7 @@ public class ContextUtil {
     }
 
     private static NativeQueryRealization streamRlz(OlapContext ctx, String realizationType, String modelId,
-            String modelAlias, Map<String, NLookupCandidate.Type> lookupTables) {
+            String modelAlias, Map<String, NLookupCandidate.Policy> lookupTables) {
         NativeQueryRealization streamingRealization = new NativeQueryRealization(modelId, modelAlias,
                 ctx.getStorageContext().getStreamCandidate().getLayoutId(), realizationType,
                 ctx.getStorageContext().isPartialMatch());
@@ -252,7 +252,7 @@ public class ContextUtil {
     }
 
     private static NativeQueryRealization batchRlz(OlapContext ctx, String realizationType, String modelId,
-            String modelAlias, Map<String, NLookupCandidate.Type> lookupTables) {
+            String modelAlias, Map<String, NLookupCandidate.Policy> lookupTables) {
         val realization = new NativeQueryRealization(modelId, modelAlias,
                 ctx.getStorageContext().getBatchCandidate().getLayoutId(), realizationType,
                 ctx.getStorageContext().isPartialMatch());
@@ -261,9 +261,9 @@ public class ContextUtil {
         if (ctx.getRealization() instanceof NDataflow) {
             NDataflow df = (NDataflow) ctx.getRealization();
             realization.setStorageType(df.getStorageType());
-            NLookupCandidate.Type type = NLookupCandidate.getType(df.getConfig());
+            NLookupCandidate.Policy policy = NLookupCandidate.getDerivedPolicy(df.getConfig());
             for (String derivedLookup : ctx.getStorageContext().getBatchCandidate().getDerivedLookups()) {
-                lookupTables.put(derivedLookup, type);
+                lookupTables.put(derivedLookup, policy);
             }
             if (df.getModel().isFilePartitioned()) {
                 boolean isLoadingData = df.getSegments().stream()
