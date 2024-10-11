@@ -30,6 +30,7 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.apache.kylin.common.KylinConfig;
+import org.apache.kylin.common.persistence.metadata.jdbc.JdbcUtil;
 import org.apache.kylin.common.util.NLocalFileMetadataTestCase;
 import org.apache.kylin.common.util.TimeUtil;
 import org.apache.kylin.common.util.Unsafe;
@@ -76,7 +77,8 @@ public class ProjectStorageInfoCollectorTest extends NLocalFileMetadataTestCase 
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
+        JdbcUtil.getJdbcTemplate(getTestConfig()).batchUpdate("SHUTDOWN;");
         this.cleanupTestMetadata();
     }
 

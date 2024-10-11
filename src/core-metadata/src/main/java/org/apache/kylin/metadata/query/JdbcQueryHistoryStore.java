@@ -69,6 +69,7 @@ import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.metadata.query.util.QueryHisStoreUtil;
 import org.mybatis.dynamic.sql.BasicColumn;
 import org.mybatis.dynamic.sql.SqlBuilder;
+import org.mybatis.dynamic.sql.SqlColumn;
 import org.mybatis.dynamic.sql.delete.render.DeleteStatementProvider;
 import org.mybatis.dynamic.sql.insert.render.InsertStatementProvider;
 import org.mybatis.dynamic.sql.render.RenderingStrategies;
@@ -286,9 +287,9 @@ public class JdbcQueryHistoryStore {
             QueryHistoryMapper mapper = session.getMapper(QueryHistoryMapper.class);
             SelectStatementProvider statementProvider = select(queryHistoryTable.projectName,
                     count(queryHistoryTable.id).as(COUNT)) //
-                            .from(queryHistoryTable) //
-                            .groupBy(queryHistoryTable.projectName) //
-                            .build().render(RenderingStrategies.MYBATIS3);
+                    .from(queryHistoryTable) //
+                    .groupBy(queryHistoryTable.projectName) //
+                    .build().render(RenderingStrategies.MYBATIS3);
             projectInfos = mapper.selectByProject(statementProvider);
         }
         projectInfos.forEach(projectInfo -> projectCounts.put(projectInfo.getProjectName(), projectInfo.getCount()));
@@ -350,11 +351,11 @@ public class JdbcQueryHistoryStore {
             QueryStatisticsMapper mapper = session.getMapper(QueryStatisticsMapper.class);
             SelectStatementProvider statementProvider = select(count(queryHistoryTable.queryId).as(COUNT),
                     avg(queryHistoryTable.duration).as("mean")) //
-                            .from(queryHistoryTable) //
-                            .where(queryHistoryTable.queryTime, isGreaterThanOrEqualTo(startTime)) //
-                            .and(queryHistoryTable.queryTime, isLessThan(endTime)) //
-                            .and(queryHistoryTable.projectName, isEqualTo(project)) //
-                            .build().render(RenderingStrategies.MYBATIS3);
+                    .from(queryHistoryTable) //
+                    .where(queryHistoryTable.queryTime, isGreaterThanOrEqualTo(startTime)) //
+                    .and(queryHistoryTable.queryTime, isLessThan(endTime)) //
+                    .and(queryHistoryTable.projectName, isEqualTo(project)) //
+                    .build().render(RenderingStrategies.MYBATIS3);
             return mapper.selectMany(statementProvider);
         }
     }
@@ -364,12 +365,12 @@ public class JdbcQueryHistoryStore {
             QueryStatisticsMapper mapper = session.getMapper(QueryStatisticsMapper.class);
             SelectStatementProvider statementProvider = select(queryHistoryRealizationTable.model,
                     count(queryHistoryRealizationTable.queryId).as(COUNT)) //
-                            .from(queryHistoryRealizationTable) //
-                            .where(queryHistoryRealizationTable.queryTime, isGreaterThanOrEqualTo(startTime)) //
-                            .and(queryHistoryRealizationTable.queryTime, isLessThan(endTime)) //
-                            .and(queryHistoryRealizationTable.projectName, isEqualTo(project)) //
-                            .groupBy(queryHistoryRealizationTable.model) //
-                            .build().render(RenderingStrategies.MYBATIS3);
+                    .from(queryHistoryRealizationTable) //
+                    .where(queryHistoryRealizationTable.queryTime, isGreaterThanOrEqualTo(startTime)) //
+                    .and(queryHistoryRealizationTable.queryTime, isLessThan(endTime)) //
+                    .and(queryHistoryRealizationTable.projectName, isEqualTo(project)) //
+                    .groupBy(queryHistoryRealizationTable.model) //
+                    .build().render(RenderingStrategies.MYBATIS3);
             return mapper.selectMany(statementProvider);
         }
     }
@@ -431,12 +432,12 @@ public class JdbcQueryHistoryStore {
             QueryStatisticsMapper mapper = session.getMapper(QueryStatisticsMapper.class);
             SelectStatementProvider statementProvider = select(queryHistoryRealizationTable.model,
                     avg(queryHistoryRealizationTable.duration).as("mean")) //
-                            .from(queryHistoryRealizationTable) //
-                            .where(queryHistoryRealizationTable.queryTime, isGreaterThanOrEqualTo(startTime)) //
-                            .and(queryHistoryRealizationTable.queryTime, isLessThan(endTime)) //
-                            .and(queryHistoryRealizationTable.projectName, isEqualTo(project)) //
-                            .groupBy(queryHistoryRealizationTable.model) //
-                            .build().render(RenderingStrategies.MYBATIS3);
+                    .from(queryHistoryRealizationTable) //
+                    .where(queryHistoryRealizationTable.queryTime, isGreaterThanOrEqualTo(startTime)) //
+                    .and(queryHistoryRealizationTable.queryTime, isLessThan(endTime)) //
+                    .and(queryHistoryRealizationTable.projectName, isEqualTo(project)) //
+                    .groupBy(queryHistoryRealizationTable.model) //
+                    .build().render(RenderingStrategies.MYBATIS3);
             return mapper.selectMany(statementProvider);
         }
     }
@@ -581,6 +582,8 @@ public class JdbcQueryHistoryStore {
     }
 
     InsertStatementProvider<QueryMetrics> getInsertQhProvider(QueryMetrics queryMetrics) {
+        SqlColumn<String> monthColumn = KylinConfig.getInstanceFromEnv().isUTEnv() ? queryHistoryTable.month_h2
+                : queryHistoryTable.month;
         return SqlBuilder.insert(queryMetrics).into(queryHistoryTable).map(queryHistoryTable.queryId)
                 .toPropertyWhenPresent("queryId", queryMetrics::getQueryId) //
                 .map(queryHistoryTable.sql).toPropertyWhenPresent("sql", queryMetrics::getSql) //
@@ -600,7 +603,7 @@ public class JdbcQueryHistoryStore {
                 .map(queryHistoryTable.queryStatus).toPropertyWhenPresent("queryStatus", queryMetrics::getQueryStatus) //
                 .map(queryHistoryTable.indexHit).toPropertyWhenPresent("indexHit", queryMetrics::isIndexHit) //
                 .map(queryHistoryTable.queryTime).toPropertyWhenPresent("queryTime", queryMetrics::getQueryTime) //
-                .map(queryHistoryTable.month).toPropertyWhenPresent(MONTH, queryMetrics::getMonth) //
+                .map(monthColumn).toPropertyWhenPresent(MONTH, queryMetrics::getMonth) //
                 .map(queryHistoryTable.queryFirstDayOfMonth)
                 .toPropertyWhenPresent("queryFirstDayOfMonth", queryMetrics::getQueryFirstDayOfMonth) //
                 .map(queryHistoryTable.queryFirstDayOfWeek)
@@ -636,9 +639,8 @@ public class JdbcQueryHistoryStore {
         return select(getSelectFields(queryHistoryTable)).from(queryHistoryTable)
                 .join(filterByConditions(select(BasicColumn.columnList(queryHistoryTable.id)).from(queryHistoryTable),
                         request).orderBy(queryHistoryTable.queryTime.descending()) //
-                                .limit(limit) //
-                                .offset(offset),
-                        "idTable") //
+                        .limit(limit) //
+                        .offset(offset), "idTable") //
                 .on(queryHistoryTable.id.qualifiedWith(queryHistoryTable.tableNameAtRuntime()),
                         new EqualTo(queryHistoryTable.id.qualifiedWith("idTable")))
                 .orderBy(queryHistoryTable.queryTime.descending()) //
