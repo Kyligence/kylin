@@ -61,6 +61,7 @@ import lombok.Setter;
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE, setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class NDataSegment extends RootPersistentEntity implements ISegment, Serializable {
 
+    @Getter
     @JsonProperty("model_uuid")
     private String modelUuid;
     @JsonProperty("name")
