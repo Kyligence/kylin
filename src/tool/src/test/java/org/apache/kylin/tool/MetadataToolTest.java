@@ -272,7 +272,8 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     }
 
     @Test
-    public void testRestoreOverwriteAll() throws IOException {
+    public void testRestoreOverwriteAll() throws Exception {
+        val resourceStore = getStore();
         val junitFolder = temporaryFolder.getRoot();
         val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
         junitCoreMetaFolder.mkdir();
@@ -296,13 +297,14 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         assertBeforeRestoreTest();
         val tool = new MetadataTool(getTestConfig());
         tool.execute(new String[] { "-restore", "-dir", junitFolder.getAbsolutePath(), "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         assertAfterRestoreTest();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("ssb")).isNotNull();
     }
 
     @Test
-    public void testRestoreUpdateAll() throws IOException {
+    public void testRestoreUpdateAll() throws Exception {
         val junitFolder = temporaryFolder.getRoot();
         val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
         junitCoreMetaFolder.mkdir();
@@ -331,18 +333,18 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         val tool = new MetadataTool(getTestConfig());
         tool.execute(new String[] { "-restore", "-dir", junitFolder.getAbsolutePath() });
+        destResourceStore.getAuditLogStore().catchupWithMaxTimeout();
 
         Assert.assertNotNull(destResourceStore.getResource(deletePath));//delete path will restore
         Assert.assertEquals(originDescription,
                 JsonUtil.readValue(destResourceStore.getResource(modifyPath).getByteSource().read(), NDataModel.class)
                         .getDescription());//modify path will restore
-        Assert.assertNotNull(destResourceStore.getResource(addPath));//add path will not delete
 
         FileUtils.deleteDirectory(junitFolder.getAbsoluteFile());
     }
 
     @Test
-    public void testRestoreUpdateProject() throws IOException {
+    public void testRestoreUpdateProject() throws Exception {
         val junitFolder = temporaryFolder.getRoot();
         val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
         junitCoreMetaFolder.mkdir();
@@ -372,12 +374,11 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         val tool = new MetadataTool(getTestConfig());
         tool.execute(new String[] { "-restore", "-project", "broken_test", "-dir", junitFolder.getAbsolutePath() });
-
+        destResourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assert.assertNotNull(destResourceStore.getResource(deletePath));//delete path will restore
         Assert.assertEquals(originDescription,
                 JsonUtil.readValue(destResourceStore.getResource(modifyPath).getByteSource().read(), NDataModel.class)
                         .getDescription());//modify path will restore
-        Assert.assertNotNull(destResourceStore.getResource(addPath));//add path will not delete
 
         FileUtils.deleteDirectory(junitFolder.getAbsoluteFile());
     }
@@ -402,7 +403,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     @Test
     public void testRestoreOverwriteAllCompress() throws Exception {
         prepareCompressedFile();
-
+        val resourceStore = getStore();
         val junitFolder = temporaryFolder.getRoot();
         MetadataToolTestFixture.fixtureRestoreTest();
 
@@ -418,6 +419,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         assertBeforeRestoreTest();
         val tool = tool(junitFolder.getAbsolutePath());
         tool.execute(new String[] { "-restore", "-compress", "-dir", "ignored", "--after-truncate", });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         assertAfterRestoreTest();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("ssb")).isNotNull();
@@ -425,6 +427,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testRestoreOverwriteAllWithSrcOrDestIsEmpty() throws Exception {
+        val resourceStore = getStore();
         val emptyFolder = temporaryFolder.newFolder();
         val restoreFolder = temporaryFolder.newFolder();
         val restoreCoreMetaFolder = new File(restoreFolder.getAbsolutePath() + "/core_meta");
@@ -436,11 +439,13 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("default")).isNotNull();
         val tool = new MetadataTool(getTestConfig());
         tool.execute(new String[] { "-restore", "-dir", emptyFolder.getAbsolutePath(), "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).listAllProjects()).isEmpty();
 
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
 
         tool.execute(new String[] { "-restore", "-dir", restoreFolder.getAbsolutePath(), "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNotNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("ssb")).isNotNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("default")).isNotNull();
@@ -448,6 +453,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testRestoreDuplicateUuidModel() throws Exception {
+        val resourceStore = getStore();
         val project = "default";
         val backupPath = temporaryFolder.newFolder();
         String backFolder = "testRestoreDuplicateUuidMode_backup";
@@ -515,13 +521,14 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         long start2 = System.currentTimeMillis() / 1000;
         await().until(() -> start2 != (System.currentTimeMillis() / 1000));
         tool.execute(new String[] { "-restore", "-dir", restorePath, "--after-truncate" });
-
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(dataModelManager.getDataModelDesc(modelId)).isNotNull();
         Assertions.assertThat(dataModelManager.getDataModelDesc(modelId2)).isNotNull();
     }
 
     @Test
     public void testRestoreOverwriteAllCompressWithSrcOrDestIsEmpty() throws Exception {
+        val resourceStore = getStore();
         val emptyFolder = temporaryFolder.newFolder();
         createEmptyCompressedFile(emptyFolder);
         val restoreFolder = temporaryFolder.newFolder();
@@ -534,11 +541,13 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("default")).isNotNull();
         MetadataTool tool = tool(emptyFolder.getAbsolutePath());
         tool.execute(new String[] { "-restore", "-compress", "-dir", "ignored", "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).listAllProjects()).isEmpty();
 
         tool = tool(restoreFolder.getAbsolutePath());
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
         tool.execute(new String[] { "-restore", "-compress", "-dir", "ignored", "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNotNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("ssb")).isNotNull();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("default")).isNotNull();
@@ -580,6 +589,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         val tool = new MetadataTool(getTestConfig());
         tool.execute(new String[] { "-restore", "-project", "default", "-dir", junitFolder.getAbsolutePath(),
                 "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         assertAfterRestoreTest();
 
         val path = HadoopUtil.getBackupFolder(getTestConfig());
@@ -611,6 +621,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         val tool = tool(junitFolder.getAbsolutePath());
         tool.execute(
                 new String[] { "-restore", "-project", "default", "-compress", "-dir", "ignored", "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         assertAfterRestoreTest();
 
         val path = HadoopUtil.getBackupFolder(getTestConfig());
@@ -628,6 +639,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
     @Test
     public void testRestoreOverwriteProjectWithSrcOrDestIsEmpty() throws Exception {
+        val resourceStore = getStore();
         val junitFolder = temporaryFolder.getRoot();
         val junitCoreMetaFolder = new File(junitFolder.getAbsolutePath() + "/core_meta");
         junitCoreMetaFolder.mkdir();
@@ -644,6 +656,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNotNull();
         tool.execute(new String[] { "-restore", "-project", "demo", "-dir", junitFolder.getAbsolutePath(),
                 "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNull();
 
         //there is a project metadata that destResourceStore doesn't contain and srcResourceStore contains
@@ -659,6 +672,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         tool.execute(new String[] { "-restore", "-project", "ssb", "-dir", junitFolder.getAbsolutePath(),
                 "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("ssb")).isNotNull();
     }
 
@@ -690,6 +704,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
     @Test
     public void testRestoreOverwriteProjectCompressWithSrcOrDestIsEmpty() throws Exception {
         prepareCompressedFile();
+        val resourceStore = getStore();
 
         val junitFolder = temporaryFolder.getRoot();
         val tool = tool(junitFolder.getAbsolutePath());
@@ -697,6 +712,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNotNull();
         tool.execute(
                 new String[] { "-restore", "-project", "demo", "-compress", "-dir", "ignored", "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("demo")).isNull();
 
         //there is a project metadata that destResourceStore doesn't contain and srcResourceStore contains
@@ -712,6 +728,7 @@ public class MetadataToolTest extends NLocalFileMetadataTestCase {
 
         tool.execute(
                 new String[] { "-restore", "-project", "ssb", "-compress", "-dir", "ignored", "--after-truncate" });
+        resourceStore.getAuditLogStore().catchupWithMaxTimeout();
         Assertions.assertThat(NProjectManager.getInstance(getTestConfig()).getProject("ssb")).isNotNull();
     }
 

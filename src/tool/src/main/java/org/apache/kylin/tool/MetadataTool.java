@@ -183,7 +183,7 @@ public class MetadataTool extends ExecutableApplication {
             backupMetadata(project, path, folder, compress, excludeTableExd);
         } else if (optionsHelper.hasOption(OPERATE_RESTORE)) {
             boolean delete = optionsHelper.hasOption(OPTION_AFTER_TRUNCATE);
-            UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().processor(() -> {
+            UnitOfWork.doInTransactionWithRetry(UnitOfWorkParams.builder().skipReplay(true).processor(() -> {
                 restoreMetadata(project, path, delete);
                 return null;
             }).unitName(GLOBAL_UNIT).all(true).build());
