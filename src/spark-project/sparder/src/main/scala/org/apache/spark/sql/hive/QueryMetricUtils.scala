@@ -18,14 +18,16 @@
 
 package org.apache.spark.sql.hive
 
-import org.apache.gluten.execution.FileSourceScanExecTransformer
+import org.apache.gluten.execution.{BatchScanExecTransformer, FileSourceScanExecTransformer}
 
+import java.util.HashSet;
 import org.apache.spark.SparkContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.metrics.AppStatus
 import org.apache.spark.sql.execution.adaptive.{AdaptiveSparkPlanExec, ShuffleQueryStageExec}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.hive.execution.HiveTableScanExec
+import org.apache.spark.sql.execution.datasources.v2.BatchScanExec
 
 import scala.collection.JavaConverters._
 
@@ -44,7 +46,7 @@ object QueryMetricUtils extends Logging {
   }
 
   def collectAdaptiveSparkPlanExecMetrics(exec: SparkPlan, scanRow: scala.Long,
-       scanBytes: scala.Long): (scala.Long, scala.Long) = {
+                                          scanBytes: scala.Long): (scala.Long, scala.Long) = {
     exec match {
       case exec: LayoutFileSourceScanExec =>
         (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + exec.metrics.apply("readBytes").value)
@@ -58,6 +60,17 @@ object QueryMetricUtils extends Logging {
         (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + exec.metrics.apply("readBytes").value)
       case exec: HiveTableScanExec =>
         (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + exec.metrics.apply("readBytes").value)
+      case transformer: HiveTableScanExecTransformer =>
+        (scanRow + transformer.metrics.apply("numOutputRows").value, scanBytes + transformer.metrics.apply("outputBytes").value)
+      case exec: BatchScanExec =>
+        // avoid empty metrics
+        val readBytes = exec.metrics.get("readBytes").map(_.value).getOrElse(0L)
+        (scanRow + exec.metrics.apply("numOutputRows").value, scanBytes + readBytes)
+      case transformer: BatchScanExecTransformer =>
+        // avoid empty metrics
+        val numOutputRows = transformer.metrics.get("numOutputRows").map(_.value).getOrElse(0L)
+        val outputBytes = transformer.metrics.get("outputBytes").map(_.value).getOrElse(0L)
+        (scanRow + numOutputRows, scanBytes + outputBytes)
       case exec: ShuffleQueryStageExec =>
         collectAdaptiveSparkPlanExecMetrics(exec.plan, scanRow, scanBytes)
       case exec: AdaptiveSparkPlanExec =>
