@@ -525,6 +525,10 @@ public abstract class KylinConfigBase implements Serializable {
         return preloadCacheEnabled && isInternalTableEnabled() && queryUseGlutenEnabled();
     }
 
+    public boolean isInternalTableSortByPartitionEnabled() {
+        return Boolean.parseBoolean(getOptional("kylin.internal-table.sort-by-partition.enabled", TRUE));
+    }
+
     public int getQueryConcurrentRunningThresholdForProject() {
         // by default there's no limitation
         return Integer.parseInt(getOptional("kylin.query.project-concurrent-running-threshold", "0"));
