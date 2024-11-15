@@ -25,7 +25,7 @@ import org.apache.kylin.engine.spark.NSparkCubingEngine
 import org.apache.kylin.engine.spark.builder.CreateFlatTable
 import org.apache.kylin.engine.spark.source.SparkSqlUtil
 import org.apache.kylin.engine.spark.utils.SparkConfHelper
-import org.apache.kylin.metadata.model.TableDesc
+import org.apache.kylin.metadata.model.{ISourceAware, TableDesc}
 import org.apache.kylin.metadata.project.NProjectManager
 import org.apache.kylin.source.SourceFactory
 import org.apache.spark.application.NoRetryException
@@ -69,7 +69,7 @@ class TableAnalysisJob(tableDesc: TableDesc,
       throw new NoRetryException("Source table missing columns. Please reload table before sampling.")
     }
 
-    calculateViewMetasIfNeeded(tableDesc.getBackTickIdentity)
+    calculateViewMetasIfNeeded(tableDesc)
 
     val dat = dataFrame.localLimit(rowsTakenInEachPartition)
     val sampledDataset = CreateFlatTable.changeSchemaToAliasDotName(dat, tableDesc.getBackTickIdentity)
@@ -79,6 +79,15 @@ class TableAnalysisJob(tableDesc: TableDesc,
     val aggData = sampledDataset.agg(count(lit(1)), statsMetrics: _*).collect()
 
     aggData ++ sampledDataset.limit(10).collect()
+  }
+
+  def calculateViewMetasIfNeeded(tableDesc: TableDesc): Unit = {
+    val tableName = tableDesc.getBackTickIdentity
+    if (tableDesc.getSourceType == ISourceAware.ID_JDBC) {
+      logInfo(s"Table [$tableName] sourceType is JDBC, skip to calculate view meta")
+      return
+    }
+    calculateViewMetasIfNeeded(tableName)
   }
 
   def calculateViewMetasIfNeeded(tableName: String): Unit = {
