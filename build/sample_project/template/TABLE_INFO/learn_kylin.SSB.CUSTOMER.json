@@ -1,54 +1,49 @@
 {
-  "uuid" : "99f57020-140a-95df-5b92-d41459f3a99b",
+  "uuid" : "6ce4718b-ef9d-18ae-a1bf-5df2578eaa03",
   "last_modified" : 0,
-  "create_time" : 1632293817614,
+  "create_time" : 1632293818428,
   "version" : "%default_version%",
-  "name" : "PART",
+  "name" : "CUSTOMER",
   "columns" : [ {
     "id" : "1",
-    "name" : "P_PARTKEY",
+    "name" : "C_CUSTKEY",
     "datatype" : "integer",
-    "case_sensitive_name" : "p_partkey"
+    "case_sensitive_name" : "c_custkey"
   }, {
     "id" : "2",
-    "name" : "P_NAME",
+    "name" : "C_NAME",
     "datatype" : "varchar(4096)",
-    "case_sensitive_name" : "p_name"
+    "case_sensitive_name" : "c_name"
   }, {
     "id" : "3",
-    "name" : "P_MFGR",
+    "name" : "C_ADDRESS",
     "datatype" : "varchar(4096)",
-    "case_sensitive_name" : "p_mfgr"
+    "case_sensitive_name" : "c_address"
   }, {
     "id" : "4",
-    "name" : "P_CATEGORY",
+    "name" : "C_CITY",
     "datatype" : "varchar(4096)",
-    "case_sensitive_name" : "p_category"
+    "case_sensitive_name" : "c_city"
   }, {
     "id" : "5",
-    "name" : "P_BRAND",
+    "name" : "C_NATION",
     "datatype" : "varchar(4096)",
-    "case_sensitive_name" : "p_brand"
+    "case_sensitive_name" : "c_nation"
   }, {
     "id" : "6",
-    "name" : "P_COLOR",
+    "name" : "C_REGION",
     "datatype" : "varchar(4096)",
-    "case_sensitive_name" : "p_color"
+    "case_sensitive_name" : "c_region"
   }, {
     "id" : "7",
-    "name" : "P_TYPE",
+    "name" : "C_PHONE",
     "datatype" : "varchar(4096)",
-    "case_sensitive_name" : "p_type"
+    "case_sensitive_name" : "c_phone"
   }, {
     "id" : "8",
-    "name" : "P_SIZE",
-    "datatype" : "integer",
-    "case_sensitive_name" : "p_size"
-  }, {
-    "id" : "9",
-    "name" : "P_CONTAINER",
+    "name" : "C_MKTSEGMENT",
     "datatype" : "varchar(4096)",
-    "case_sensitive_name" : "p_container"
+    "case_sensitive_name" : "c_mktsegment"
   } ],
   "source_type" : 9,
   "table_type" : "EXTERNAL",
@@ -64,5 +59,6 @@
   "selected_snapshot_partition_col" : null,
   "temp_snapshot_path" : null,
   "snapshot_has_broken" : false,
-  "database" : "SSB"
+  "database" : "SSB",
+  "project" : "learn_kylin"
 }

@@ -2,7 +2,7 @@
   "uuid" : "2d07e878-da28-a203-2d2c-185b4c6656f1",
   "last_modified" : 1632293938765,
   "create_time" : 1632293935226,
-  "version" :  "%default_version%",
+  "version" : "%default_version%",
   "alias" : "sample_ssb",
   "owner" : "ADMIN",
   "config_last_modifier" : null,
@@ -366,7 +366,6 @@
     "id" : 100000
   } ],
   "recommendations_count" : 0,
-  "computed_columns" : [ ],
   "canvas" : {
     "coordinate" : {
       "P_LINEORDER" : {
@@ -404,5 +403,7 @@
   },
   "multi_partition_desc" : null,
   "multi_partition_key_mapping" : null,
-  "fusion_id" : null
+  "fusion_id" : null,
+  "computed_column_uuids" : [ ],
+  "project" : "learn_kylin"
 }

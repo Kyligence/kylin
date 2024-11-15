@@ -107,5 +107,6 @@
   "extend_partition_columns" : [ ],
   "layout_bucket_num" : { },
   "approved_additional_recs" : 0,
-  "approved_removal_recs" : 0
+  "approved_removal_recs" : 0,
+  "project" : "learn_kylin"
 }

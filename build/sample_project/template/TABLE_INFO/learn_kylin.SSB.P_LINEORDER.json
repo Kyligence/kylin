@@ -109,5 +109,6 @@
   "selected_snapshot_partition_col" : null,
   "temp_snapshot_path" : null,
   "snapshot_has_broken" : false,
-  "database" : "SSB"
+  "database" : "SSB",
+  "project" : "learn_kylin"
 }
