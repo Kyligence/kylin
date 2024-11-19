@@ -228,6 +228,13 @@ public class FileSystemMetadataStore extends MetadataStore {
         List<T> resList;
         val context = convertConditionsToFilter(filter, type);
         Class<T> resourceClass = (Class<T>) type.getResourceClass();
+        if (needLock) {
+            if (context.isWholePath()) {
+                lockResource(context.getResPath());
+            } else {
+                lockResource(type.name());
+            }
+        }
         try {
             if (this.type == Type.DIR) {
                 resList = getFromDir(context, needContent, resourceClass);
@@ -236,13 +243,6 @@ public class FileSystemMetadataStore extends MetadataStore {
             }
         } catch (IOException e) {
             throw new KylinRuntimeException("get resource fail", e);
-        }
-        if (needLock) {
-            if (context.isWholePath()) {
-                lockResource(context.getResPath());
-            } else {
-                lockResource(type.name());
-            }
         }
         return resList;
     }
