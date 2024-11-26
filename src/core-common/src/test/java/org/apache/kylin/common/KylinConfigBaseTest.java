@@ -36,6 +36,7 @@
 
 package org.apache.kylin.common;
 
+import static java.util.stream.Collectors.toSet;
 import static org.apache.kylin.common.KylinConfigBase.FALSE;
 import static org.apache.kylin.common.KylinConfigBase.PATH_DELIMITER;
 import static org.apache.kylin.common.KylinConfigBase.TRUE;
@@ -50,6 +51,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +62,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -1539,14 +1542,13 @@ class KylinConfigBaseTest {
         FileUtils.write(mysqlJar, "mysqlJar jar");
         val glutenCelebornJar = new File(libExtDir, "gluten-celeborn-clickhouse-jar-with-dependencies.jar");
         FileUtils.write(glutenCelebornJar, "gluten celeborn jar");
-
-        val withGluten = config.getKylinExtJarsPath(true);
-        val withGlutenExpected = "," + glutenJar.getAbsolutePath() + "," + celebornJar.getAbsolutePath() + ","
-                + mysqlJar.getAbsolutePath() + "," + glutenCelebornJar.getAbsolutePath();
+        val withGluten = Arrays.stream(config.getKylinExtJarsPath(true).substring(1).split(",")).collect(toSet());
+        val withGlutenExpected = Stream.of(glutenJar.getAbsolutePath(), celebornJar.getAbsolutePath(),
+                mysqlJar.getAbsolutePath(), glutenCelebornJar.getAbsolutePath()).collect(toSet());
         Assertions.assertEquals(withGlutenExpected, withGluten);
 
-        val withoutGluten = config.getKylinExtJarsPath(false);
-        val withoutExpected = "," + celebornJar.getAbsolutePath() + "," + mysqlJar.getAbsolutePath();
+        val withoutGluten = Arrays.stream(config.getKylinExtJarsPath(false).substring(1).split(",")).collect(toSet());
+        val withoutExpected = Stream.of(celebornJar.getAbsolutePath(), mysqlJar.getAbsolutePath()).collect(toSet());
         Assertions.assertEquals(withoutExpected, withoutGluten);
     }
 }
