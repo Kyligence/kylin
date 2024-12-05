@@ -25,6 +25,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 
 import static org.apache.kylin.common.util.TestUtils.getTestConfig;
 
@@ -59,6 +62,8 @@ public class NDataLayoutDetailsManagerTest {
                 Lists.newArrayList(Range.closedOpen(0L, 50L), Range.closedOpen(100L, 200L),
                         Range.closedOpen(201L, 300L)),
                 ranges2);
+        layoutFragmentMgr.removeDetails(dataflow.getId(), new HashSet<>(Collections.singletonList(layoutEntity.getId())));
+        Assertions.assertNull(layoutFragmentMgr.getNDataLayoutDetails(dataflow.getId(), layoutEntity.getId()));
     }
 
 }
