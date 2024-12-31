@@ -42,6 +42,7 @@ import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.engine.spark.builder.SnapshotBuilder;
 import org.apache.kylin.engine.spark.job.step.ParamPropagation;
 import org.apache.kylin.engine.spark.job.step.StageExec;
+import org.apache.kylin.engine.spark.job.step.build.BuildStepExec;
 import org.apache.kylin.guava30.shaded.common.base.Throwables;
 import org.apache.kylin.guava30.shaded.common.collect.Lists;
 import org.apache.kylin.job.execution.ExecutableState;
@@ -101,7 +102,7 @@ public class SegmentBuildJob extends SegmentJob {
                 infos.clearCuboidsNumPerLayer(segment.getId());
 
                 val stepId = StringUtils.replace(infos.getJobStepId(), JOB_NAME_PREFIX, "");
-                val step = new StepExec(stepId);
+                val step = new BuildStepExec(stepId);
 
                 final ParamPropagation params = new ParamPropagation();
 
