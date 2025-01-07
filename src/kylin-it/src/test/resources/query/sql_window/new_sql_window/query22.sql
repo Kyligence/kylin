@@ -21,4 +21,4 @@
 -- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --
-select lag(cal_dt,1,CURRENT_DATE) over (partition by seller_id order by cal_dt) from test_kylin_fact
+select lag(cal_dt,1,CURRENT_DATE) over (partition by seller_id order by cal_dt, order_id) from test_kylin_fact
