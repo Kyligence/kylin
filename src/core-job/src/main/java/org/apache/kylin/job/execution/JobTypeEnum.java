@@ -52,7 +52,8 @@ public enum JobTypeEnum {
     ROUTINE(Category.CRON), //
     META(Category.CRON), //
     SOURCE_USAGE(Category.CRON), //
-    AUTO_REFRESH(Category.CRON);
+    AUTO_REFRESH(Category.CRON), //
+    SPRING_SESSION_CLEAN_EXPIRED(Category.CRON);
 
     @Getter
     private final String category;
