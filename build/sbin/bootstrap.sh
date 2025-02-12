@@ -76,7 +76,10 @@ function checkRestPort() {
 }
 
 function checkZookeeperRole {
-    source ${KYLIN_HOME}/sbin/check-2000-zookeeper-role.sh
+    KYLIN_ZOOKEEPER_ENABLED=$("$KYLIN_HOME"/bin/get-properties.sh kylin.env.zookeeper.enabled)
+    if [[ $KYLIN_ZOOKEEPER_ENABLED == "true" ]]; then
+        source ${KYLIN_HOME}/sbin/check-2000-zookeeper-role.sh
+    fi
 }
 
 function checkSparkDir() {

@@ -675,9 +675,12 @@ public abstract class KylinConfigBase implements Serializable {
     }
 
     public DistributedLockFactory getDistributedLockFactory() {
-        String clsName = getOptional("kylin.metadata.distributed-lock-impl",
+        return (DistributedLockFactory) ClassUtil.newInstance(getDistributedLockFactoryFullClassName());
+    }
+
+    public String getDistributedLockFactoryFullClassName() {
+        return getOptional("kylin.metadata.distributed-lock-impl",
                 "org.apache.kylin.common.lock.curator.CuratorDistributedLockFactory");
-        return (DistributedLockFactory) ClassUtil.newInstance(clsName);
     }
 
     public StorageURL getJDBCDistributedLockURL() {
@@ -2475,7 +2478,7 @@ public abstract class KylinConfigBase implements Serializable {
 
     public String getMetadataStoreType() {
         if (!isJobNode()) {
-            return this.getOptional("kylin.server.store-type", "hdfs");
+            return this.getOptional("kylin.server.store-type", "jdbc");
         } else {
             return "jdbc";
         }
@@ -4456,5 +4459,18 @@ public abstract class KylinConfigBase implements Serializable {
 
     public boolean isImprovedSumDecimalPrecisionEnabled() {
         return Boolean.parseBoolean(getOptional("kylin.query.improved-sum-decimal-precision.enabled", FALSE));
+    }
+
+    public String getServerNodeRegistryJdbcRenewCron() {
+        return getOptional("kylin.server.node-registry.jdbc.renew-cron", "0/30 * * * * *");
+    }
+
+    public String getServerNodeRegistryJdbcCheckCron() {
+        return getOptional("kylin.server.node-registry.jdbc.check-cron", "0 */2 * * * *");
+    }
+
+    public long getNodeRegistryJdbcExpireThreshold() {
+        return TimeUtil.timeStringAs(getOptional("kylin.server.node-registry.jdbc.expire-threshold", "90s"),
+                TimeUnit.MILLISECONDS);
     }
 }
