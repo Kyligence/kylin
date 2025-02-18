@@ -44,10 +44,12 @@ import org.apache.kylin.common.util.JsonUtil;
 import org.apache.kylin.common.util.RandomUtil;
 import org.apache.kylin.engine.spark.NLocalWithSparkSessionTestBase;
 import org.apache.kylin.engine.spark.job.BuildJobInfos;
+import org.apache.kylin.engine.spark.job.InternalTableLoadJob;
 import org.apache.kylin.engine.spark.job.KylinBuildEnv;
 import org.apache.kylin.engine.spark.job.MockJobProgressReport;
 import org.apache.kylin.engine.spark.job.ParamsConstants;
 import org.apache.kylin.engine.spark.job.RestfulJobProgressReport;
+import org.apache.kylin.engine.spark.job.SegmentBuildJob;
 import org.apache.kylin.engine.spark.scheduler.JobFailed;
 import org.apache.kylin.guava30.shaded.common.collect.Maps;
 import org.apache.kylin.guava30.shaded.common.collect.Sets;
@@ -73,8 +75,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import io.kyligence.kap.engine.spark.job.InternalTableLoadJob;
-import io.kyligence.kap.engine.spark.job.SegmentBuildJob;
 import lombok.val;
 
 public class SparkApplicationTest extends NLocalWithSparkSessionTestBase {
